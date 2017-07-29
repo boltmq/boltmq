@@ -1,0 +1,14 @@
+{
+    "log": {
+        "engine": {
+            "adapter": "file",
+            "config": {
+                "filename": "test.log"
+            }
+        },
+        "path": "",
+        "cache_size": 10000,
+        "enable_func_call_depth": true,
+        "func_call_depth": 3
+    }
+}
