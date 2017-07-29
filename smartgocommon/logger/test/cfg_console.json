@@ -1,0 +1,13 @@
+{
+    "log": {
+        "engine": {
+            "adapter": "console",
+            "config": {
+            }
+        },
+        "path": "",
+        "cache_size": 10000,
+        "enable_func_call_depth": true,
+        "func_call_depth": 3
+    }
+}

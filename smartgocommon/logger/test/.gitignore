@@ -20,8 +20,8 @@ _cgo_export.*
 _testmain.go
 
 *.exe
-
-*.iml
-.idea/
-.idea/vcs.xml
-.idea/preferred-vcs.xml
+*.test
+*.prof
+*.swp
+example
+test.log
