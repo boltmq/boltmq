@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"git.oschina.net/cloudzone/cloudcommon-go/logger"
+	"git.oschina.net/cloudzone/smartgo/smartgocommon/logger"
 )
 
 // Config test example
