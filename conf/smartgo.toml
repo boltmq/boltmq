@@ -1,0 +1,18 @@
+# This is a TOML document.
+
+#global配置信息
+[global]
+    # 此处表示部署环境（dev | test | pro）
+    env = "dev"
+
+    # 此处表示smartgo的home目录
+    stghome = "/home/"
+
+#nameser的etcd地址配置信息
+[namesrv]
+	[namesrv.dev]
+		etcdaddrs=["http://192.168.8.8:2379"]
+	[namesrv.test]
+        etcdaddrs=["http://localhost:2181"]
+	[namesrv.pro]
+        etcdaddrs=["http://localhost:2181", "http://localhost:2182"]
