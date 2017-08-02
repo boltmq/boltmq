@@ -19,7 +19,7 @@ SmartGo是什么是参考AMQP、JMS、Mqtt协议、Kafka，RocketMQ，RabbitMq�
 
 当前最新版本功能支持：
 * 1、将整个项目命名为smartgo-1.0.0
-* 2、将项目中所有子工程命名为smartgo-*
+* 2、将项目中所有子工程命名为smg-*
 
 
 ----------
