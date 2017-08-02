@@ -1,7 +1,7 @@
-package smartgonamesrv
+package stgregistry
 
 import (
-	"git.oschina.net/cloudzone/smartgo/smartgocommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"strconv"
 	"time"
 	"log"

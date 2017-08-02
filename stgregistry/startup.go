@@ -1,4 +1,4 @@
-package smartgonamesrv
+package stgregistry
 
 import (
 	"time"
