@@ -1,5 +1,5 @@
 #smartgo
-<img src="https://gitee.com/cloudzone/smartgo/raw/dev/docs/static/goland.png" width = "300" alt="SmartGo" align=center />
+<img src="https://gitee.com/cloudzone/smartgo/raw/dev/docs/static/goland.png" width="" height="" alt="SmartGo" align=center />
 
 
 ### smartgo整体架构图
