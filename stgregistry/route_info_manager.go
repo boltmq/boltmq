@@ -1,4 +1,4 @@
-package smartgonamesrv
+package stgregistry
 
 type RouteInfoManager struct {
 }
