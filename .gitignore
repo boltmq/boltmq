@@ -25,3 +25,8 @@ _testmain.go
 .idea/
 .idea/vcs.xml
 .idea/preferred-vcs.xml
+
+*.tmp
+unit_test_*/*
+
+
