@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Get http Get请求中取数据
+// Read http Get请求中取数据
 func Get(requestURL string, params url.Values, body interface{}) error {
 	if strings.Contains(requestURL, "?") && params != nil {
 		requestURL += params.Encode()
