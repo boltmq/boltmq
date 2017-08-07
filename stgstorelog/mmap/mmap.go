@@ -90,6 +90,7 @@ func (m MemoryMap) Unlock() error {
 // Flush synchronizes the mapping's contents to the file's contents on disk.
 func (m MemoryMap) Flush() error {
 	dh := m.header()
+
 	return flush(dh.Data, uintptr(dh.Len))
 }
 

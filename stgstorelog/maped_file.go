@@ -62,12 +62,12 @@ func NewMapedFile(dir string, fileName string, filesize int) *MapedFile {
 
 	mapedFile.dirNotExistAndCreateDir(dir)
 
-	file, err := os.OpenFile(path.Join(dir, fileName), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(path.Join(dir, fileName), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		panic(err.Error())
 	}
 	mapedFile.file = file
-	bytes := make([]byte, filesize)
+	bytes := make([]byte, filesize/2)
 	file.Write(bytes)
 	defer file.Close()
 
@@ -80,9 +80,44 @@ func NewMapedFile(dir string, fileName string, filesize int) *MapedFile {
 
 	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
 
-	logger.Info("mmapBytes addr == %p", mmapBytes)
 	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
 	atomic.AddInt64(&mapedFile.TotalMapedVitualMemory, int64(filesize))
+	atomic.AddInt32(&mapedFile.TotalMapedFiles, 1)
+
+	return mapedFile
+}
+
+// OpenMapedFile 根据文件名映射mapedfile
+// Author: tantexian, <my.oschina.net/tantexian>
+// Since: 17/8/5
+func OpenMapedFile(dir string, fileName string) *MapedFile {
+	mapedFile := &MapedFile{}
+	mapedFile.fileName = fileName
+
+	file, err := os.OpenFile(path.Join(dir, fileName), os.O_RDWR, 0666)
+	if err != nil {
+		panic(err.Error())
+	}
+	filestat, error := file.Stat()
+	if error != nil {
+		panic(err.Error())
+	}
+
+	mapedFile.fileSize = int(filestat.Size())
+	mapedFile.file = file
+	defer file.Close()
+
+	// 文件名即offset起始地址
+	offset, err := strconv.ParseInt(mapedFile.fileName, 10, 64)
+	if err != nil {
+		panic(err.Error())
+	}
+	mapedFile.fileFromOffset = offset
+
+	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
+
+	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
+	atomic.AddInt64(&mapedFile.TotalMapedVitualMemory, int64(mapedFile.fileSize))
 	atomic.AddInt32(&mapedFile.TotalMapedFiles, 1)
 
 	return mapedFile
@@ -132,14 +167,12 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 func (self *MapedFile) appendMessage(data []byte) bool {
 	currPos := int(self.wrotePostion)
 	if currPos+len(data) <= self.fileSize {
-		//self.mappedByteBuffer.Write([]byte(data))
-		//self.mappedByteBuffer.mMapBuf[0] = data[0]
-		//self.mappedByteBuffer.mMapBuf[1] = data[1]
-		//self.mappedByteBuffer.mMapBuf[2] = data[2]
-		for index, value := range data {
-			self.mappedByteBuffer.mMapBuf[currPos+index+1] = value
+		n, err := self.mappedByteBuffer.Write(data)
+		if err != nil {
+			panic(err)
+			return false
 		}
-		atomic.AddInt32(&self.wrotePostion, int32(len(data)))
+		atomic.AddInt32(&self.wrotePostion, int32(n))
 		return true
 	} else {
 		return false
@@ -179,6 +212,7 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
 	// 获取当前write到缓冲区的位置
 	write := self.wrotePostion
 	if self.isFull() {
+
 		return true
 	}
 	// 只有未刷盘数据满足指定page数目才刷盘

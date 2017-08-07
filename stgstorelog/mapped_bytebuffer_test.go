@@ -8,41 +8,37 @@ package stgstorelog
 import (
 	"testing"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"bytes"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 )
 
-type BytesStr struct {
-	buf mmap.MemoryMap
-}
-
-func NewBytesStr(mMap mmap.MemoryMap) *BytesStr {
-	b := &BytesStr{}
-	b.buf = mMap
-	return b
-}
-
 func TestNewMappedByteBuffer(t *testing.T) {
-	//mmapBuffer := NewMappedByteBuffer([]byte("hello world"))
-	//mmapBuffer.WriteString(" beautiful golang.")
-	//
-	//logger.Info("len = %v, cap = %v", mmapBuffer.Len(), mmapBuffer.Cap())
-	//logger.Info(string(mmapBuffer.mMapBuf))
+	myBytes := make([]byte, 100)
+	logger.Info("myBytes len == %v, cap == %v", len(myBytes), cap(myBytes))
+	buffer := NewMappedByteBuffer(myBytes)
+	buffer.WriteInt32(1)
+	buffer.WriteInt32(20080808)
+	buffer.WriteInt32(9)
 
-	bytes := []byte("hello world")
-	lenth := len(bytes)
-	bytes[lenth] = '1'
-	bytes[lenth+1] = '2'
-	logger.Info(string(bytes))
+	buffer.Write([]byte("Hello"))
 
-	var mMap mmap.MemoryMap
-	mMap = append(mMap, '1')
-	logger.Info("mybytes = %v(%p)", mMap, mMap)
-	logger.Info("&mybytes = %p", &mMap)
+	logger.Info("%d", buffer.ReadInt32())
+	logger.Info("%d", buffer.ReadInt32())
+	logger.Info("%d", buffer.ReadInt32())
+	data := make([]byte, 5)
+	buffer.Read(data)
+	logger.Info(string(data))
 
-	str := NewBytesStr(mMap)
-	logger.Info("str.buf = %v(%p)", str.buf, str.buf)
+	logger.Info(string(buffer.MMapBuf))
+}
 
+func TestBytesAndInt32(t *testing.T) {
+	int10 := 1288
+	toBytes := utils.Int32ToBytes(int32(int10))
+	logger.Info("toBytes == %b len == %d ", toBytes, len(toBytes))
+
+	resultInt := utils.BytesToInt32(toBytes)
+	logger.Info("resultInt == %d ", resultInt)
 }
 
 func TestByteBuffer(t *testing.T) {
