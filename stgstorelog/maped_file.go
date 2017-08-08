@@ -1,6 +1,5 @@
-// Copyright 2017 The Authors. All rights reserved.
-// Use of this source code is governed by a Apache
-// license that can be found in the LICENSE file.
+// Copyright (c) 2015-2018 All rights reserved.
+// 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
 // Author: tantexian, <my.oschina.net/tantexian>
 // Since: 17/8/5
 package stgstorelog
@@ -15,6 +14,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"sync"
 	"path"
+	"github.com/toolkits/file"
 )
 
 const (
@@ -35,7 +35,7 @@ type MapedFile struct {
 	// 映射的起始偏移量
 	fileFromOffset int64
 	// 映射的文件大小，定长
-	fileSize int
+	fileSize int64
 	// 映射的文件
 	file *os.File
 	// 映射的内存对象，position永远不变
@@ -55,7 +55,7 @@ type MapedFile struct {
 // NewMapedFile 根据文件名新建mapedfile
 // Author: tantexian, <my.oschina.net/tantexian>
 // Since: 17/8/5
-func NewMapedFile(dir string, fileName string, filesize int) *MapedFile {
+func NewMapedFile(dir string, fileName string, filesize int64) *MapedFile {
 	mapedFile := &MapedFile{}
 	mapedFile.fileName = fileName
 	mapedFile.fileSize = filesize
@@ -103,7 +103,7 @@ func OpenMapedFile(dir string, fileName string) *MapedFile {
 		panic(err.Error())
 	}
 
-	mapedFile.fileSize = int(filestat.Size())
+	mapedFile.fileSize = filestat.Size()
 	mapedFile.file = file
 	defer file.Close()
 
@@ -147,8 +147,8 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 
 	curPos := atomic.LoadInt32(&self.wrotePostion)
 	// 表示还有剩余空间
-	if int(curPos) < self.fileSize {
-		appendNums := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, self.fileSize-int(curPos), msg)
+	if curPos < int32(self.fileSize) {
+		appendNums := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, int(self.fileSize)-int(curPos), msg)
 		atomic.AddInt32(&self.wrotePostion, int32(appendNums))
 		self.storeTimestamp = time.Now().UnixNano()
 		return appendNums
@@ -165,8 +165,8 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 // Author: tantexian, <my.oschina.net/tantexian>
 // Since: 17/8/6
 func (self *MapedFile) appendMessage(data []byte) bool {
-	currPos := int(self.wrotePostion)
-	if currPos+len(data) <= self.fileSize {
+	currPos := self.wrotePostion
+	if int64(currPos)+int64(len(data)) <= self.fileSize {
 		n, err := self.mappedByteBuffer.Write(data)
 		if err != nil {
 			panic(err)
@@ -191,7 +191,7 @@ func (self *MapedFile) Commit(flushLeastPages int32) (flushPosition int32) {
 		// 获取当前写的位置
 		currPos := self.wrotePostion
 		// 将mappedByteBuffer的数据强制刷新到磁盘文件中
-		self.mappedByteBuffer.Flush()
+		self.Flush()
 		//self.mmapBytes
 		// 刷新完毕，则将committedPosition即flush的位置更新为当前位置记录
 		self.committedPosition = currPos
@@ -199,6 +199,16 @@ func (self *MapedFile) Commit(flushLeastPages int32) (flushPosition int32) {
 		self.rwLock.Unlock()
 	}
 	return self.committedPosition
+}
+
+func (self *MapedFile) Flush() {
+	self.mappedByteBuffer.flush()
+}
+
+func (self *MapedFile) Unmap() {
+	atomic.AddInt64(&self.TotalMapedVitualMemory, -int64(self.fileSize))
+	atomic.AddInt32(&self.TotalMapedFiles, -1)
+	self.mappedByteBuffer.unmap()
 }
 
 // isAbleToFlush 根据最少需要刷盘page数值来判断当前是否需要立即刷新缓存数据到磁盘
@@ -228,5 +238,15 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
 }
 
 func (self *MapedFile) isFull() bool {
-	return self.fileSize == int(self.wrotePostion)
+	return self.fileSize == int64(self.wrotePostion)
+}
+
+func (self *MapedFile) destroy() bool {
+	self.Unmap()
+	error := file.Remove(self.file.Name())
+	if error != nil {
+		logger.Error(error.Error())
+		return false
+	}
+	return true
 }
