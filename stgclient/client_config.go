@@ -8,12 +8,9 @@ import (
 	"strings"
 	"strconv"
 )
-/*
-    Description: producer和consumer公共配置
-
-    Author: yintongqiang
-    Since:  2017/8/7
- */
+// 发送状态枚举
+// Author: yintongqiang
+// Since:  2017/8/8
 
 type ClientConfig struct {
 	NamesrvAddr                   string
@@ -62,5 +59,26 @@ func (client *ClientConfig) ChangeInstanceNameToPID() {
 		client.InstanceName = strconv.Itoa(os.Getpid())
 	}
 }
+
+func (client *ClientConfig) CloneClientConfig() *ClientConfig {
+	return &ClientConfig{NamesrvAddr:client.NamesrvAddr,
+		InstanceName: client.InstanceName,
+		ClientIP:client.ClientIP,
+		ClientCallbackExecutorThreads:client.ClientCallbackExecutorThreads,
+		PollNameServerInterval:client.PollNameServerInterval,
+		HeartbeatBrokerInterval:client.HeartbeatBrokerInterval,
+		PersistConsumerOffsetInterval:client.PersistConsumerOffsetInterval}
+}
+
+func (client *ClientConfig) ResetClientConfig(cc*ClientConfig) {
+	client.NamesrvAddr = cc.NamesrvAddr;
+	client.ClientIP = cc.ClientIP;
+	client.InstanceName = cc.InstanceName;
+	client.ClientCallbackExecutorThreads = cc.ClientCallbackExecutorThreads;
+	client.PollNameServerInterval = cc.PollNameServerInterval;
+	client.HeartbeatBrokerInterval = cc.HeartbeatBrokerInterval;
+	client.PersistConsumerOffsetInterval = cc.PersistConsumerOffsetInterval;
+}
+
 
 

@@ -1,18 +1,16 @@
 package producer
 
-import "git.oschina.net/cloudzone/smartgo/stgcommon"
 import (
-	"git.oschina.net/cloudzone/smartgo/stgclient/impl/producer"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
-/*
-    Description: 默认发送
+// 默认发送
+// Author: yintongqiang
+// Since:  2017/8/8
 
-    Author: yintongqiang
-    Since:  2017/8/7
- */
 type DefaultMQProducer struct {
-	DefaultMQProducerImpl            *producer.DefaultMQProducerImpl
+	DefaultMQProducerImpl            *DefaultMQProducerImpl
 	ProducerGroup                    string
 	CreateTopicKey                   string
 	DefaultTopicQueueNums            int
@@ -22,6 +20,7 @@ type DefaultMQProducer struct {
 	RetryAnotherBrokerWhenNotStoreOK bool
 	MaxMessageSize                   int
 	UnitMode                         bool
+	ClientConfig                     *stgclient.ClientConfig
 }
 
 func NewDefaultMQProducer(producerGroup string) *DefaultMQProducer {
@@ -34,24 +33,25 @@ func NewDefaultMQProducer(producerGroup string) *DefaultMQProducer {
 		RetryTimesWhenSendFailed:2,
 		RetryAnotherBrokerWhenNotStoreOK:false,
 		MaxMessageSize:1024 * 128,
-		UnitMode:false}
-	defaultMQProducer.DefaultMQProducerImpl = producer.NewDefaultMQProducerImpl(defaultMQProducer)
+		UnitMode:false,
+		ClientConfig:stgclient.NewClientConfig("")}
+	defaultMQProducer.DefaultMQProducerImpl=NewDefaultMQProducerImpl(defaultMQProducer)
 	return defaultMQProducer
 }
 
-func (mqProducer MQProducer) start() {
-	defaultMQProducer := mqProducer.(*DefaultMQProducer)
+func (defaultMQProducer *DefaultMQProducer) SetNamesrvAddr(namesrvAddr string) {
+	defaultMQProducer.ClientConfig.NamesrvAddr = namesrvAddr
+}
+
+func (defaultMQProducer *DefaultMQProducer) Start() {
 	defaultMQProducer.DefaultMQProducerImpl.Start()
 
 }
 
-func (mqProducer MQProducer) shutdown() {
-	defaultMQProducer := mqProducer.(*DefaultMQProducer)
+func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 	defaultMQProducer.DefaultMQProducerImpl.Shutdown()
 }
 
-func (mqProducer MQProducer) Send(msg message.Message) (*SendResult, error) {
-	defaultMQProducer := mqProducer.(*DefaultMQProducer)
-	defaultMQProducer.DefaultMQProducerImpl
+func (defaultMQProducer *DefaultMQProducer) Send(msg message.Message) (*SendResult, error) {
 	return &SendResult{}, nil
 }
