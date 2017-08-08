@@ -1,6 +1,8 @@
 package sync
 
-import concurrent "github.com/fanliao/go-concurrentMap"
+import (
+	concurrent "github.com/fanliao/go-concurrentMap"
+)
 
 // Map 线程安全的map
 type Map struct {
@@ -12,5 +14,12 @@ type Map struct {
 func NewMap() *Map {
 	return &Map{
 		ConcurrentMap: concurrent.NewConcurrentMap(),
+	}
+}
+
+// NewMapFromOtherMap 返回线程安全map
+func NewMapFromOtherMap(m map[interface{}]interface{}) *Map {
+	return &Map{
+		ConcurrentMap: concurrent.NewConcurrentMapFromMap(m),
 	}
 }
