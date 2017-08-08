@@ -1,8 +1,9 @@
-package producer
+package main
 
-// 发送状态枚举
-// Author: yintongqiang
-// Since:  2017/8/8
+import (
+	"git.oschina.net/cloudzone/smartgo/stgclient/producer"
+)
+// 实现枚举例子
 
 type State int
 
@@ -26,4 +27,10 @@ func (state State) String() string {
 	default:
 		return "Unknow"
 	}
+}
+
+func main() {
+	defaultMQProducer := producer.NewDefaultMQProducer("producer")
+	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
+	defaultMQProducer.Start()
 }

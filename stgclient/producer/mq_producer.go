@@ -1,11 +1,9 @@
 package producer
 
-/*
-    Description: 客户对外使用的producer接口
+// 客户端对外使用的producer接口
+// Author: yintongqiang
+// Since:  2017/8/8
 
-    Author: yintongqiang
-    Since:  2017/8/7
- */
 import "git.oschina.net/cloudzone/smartgo/stgcommon/message"
 
 type MQProducer interface {
