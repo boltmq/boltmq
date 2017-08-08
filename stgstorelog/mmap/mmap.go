@@ -1,6 +1,5 @@
-// Copyright 2017 The Authors. All rights reserved.
-// Use of this source code is governed by a Apache
-// license that can be found in the LICENSE file.
+// Copyright (c) 2015-2018 All rights reserved.
+// 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
 // Author: tantexian, <my.oschina.net/tantexian>
 // Since: 17/8/5
 package mmap
@@ -87,19 +86,19 @@ func (m MemoryMap) Unlock() error {
 	return unlock(dh.Data, uintptr(dh.Len))
 }
 
-// Flush synchronizes the mapping's contents to the file's contents on disk.
+// flush synchronizes the mapping's contents to the file's contents on disk.
 func (m MemoryMap) Flush() error {
 	dh := m.header()
 
 	return flush(dh.Data, uintptr(dh.Len))
 }
 
-// Unmap deletes the memory mapped region, flushes any remaining changes, and sets
+// unmap deletes the memory mapped region, flushes any remaining changes, and sets
 // m to nil.
-// Trying to read or write any remaining references to m after Unmap is called will
+// Trying to read or write any remaining references to m after unmap is called will
 // result in undefined behavior.
-// Unmap should only be called on the slice value that was originally returned from
-// a call to Map. Calling Unmap on a derived slice may cause errors.
+// unmap should only be called on the slice value that was originally returned from
+// a call to Map. Calling unmap on a derived slice may cause errors.
 func (m *MemoryMap) Unmap() error {
 	dh := m.header()
 	err := unmap(dh.Data, uintptr(dh.Len))

@@ -1,6 +1,5 @@
-// Copyright 2017 The Authors. All rights reserved.
-// Use of this source code is governed by a Apache 
-// license that can be found in the LICENSE file.
+// Copyright (c) 2015-2018 All rights reserved.
+// 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
 // Author: tantexian, <my.oschina.net/tantexian>
 // Since: 17/8/6
 package stgstorelog
@@ -10,7 +9,6 @@ import (
 	"os"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"strconv"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 )
 
 func TestOpenMapedFile(t *testing.T) {
@@ -34,8 +32,8 @@ func TestMapedFile_Write(t *testing.T) {
 	}
 	logger.Info("data Size == %vk", size/1024)
 	//logger.Info(string(mapFile.MappedByteBuffer.MMapBuf))
-	mapFile.mappedByteBuffer.Flush()
-	mapFile.mappedByteBuffer.Unmap()
+	mapFile.Flush()
+	mapFile.Unmap()
 }
 
 func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
@@ -55,8 +53,8 @@ func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
 	logger.Info("%v", byteBuffer.ReadInt32())
 	logger.Info("%v", byteBuffer.ReadInt32())
 	//logger.Info("MMapBuf == %v Size == %v", buffer.MMapBuf, size)
-	buffer.Flush()
-	buffer.Unmap()
+	mapFile.Flush()
+	mapFile.Unmap()
 }
 
 func TestMapedFile_WriteAndRead(t *testing.T) {
@@ -72,22 +70,9 @@ func TestMapedFile_WriteAndRead(t *testing.T) {
 	logger.Info("-- %v", mappedByteBuffer.ReadInt32())
 }
 
-func TestMapedFile_AppendMessageWithCallBack(t *testing.T) {
-	// mapFile := NewMapedFile("./unit_test_store/MapedFileTest/", "001", 1024*64)
-	//mapFile.AppendMessageWithCallBack()
-}
-
 func TestCreateAndRemoveDir(t *testing.T) {
 	var mapFile MapedFile
 	path := "./tmp/test/"
 	mapFile.dirNotExistAndCreateDir(path)
 	os.RemoveAll("./tmp")
-}
-
-type myAppendMessageWithCallBack struct {
-}
-
-func (self *myAppendMessageWithCallBack) doAppend(fileFromOffset int64, mmapBytes mmap.MemoryMap, maxBlank int, msg interface{}) (int) {
-	// write MapedByteBuffer,and return How many bytes to write
-	return 0
 }

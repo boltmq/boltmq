@@ -30,3 +30,7 @@ _testmain.go
 unit_test_*/*
 
 
+.DS_Store
+docs/.DS_Store
+docs/static/.DS_Store
+/stgstorelog/unit_test_store/
