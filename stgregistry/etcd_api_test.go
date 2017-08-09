@@ -56,8 +56,8 @@ func TestGet(t *testing.T) {
 }
 
 // TestWatch watch监听回调
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/7/30
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/7/30
 func TestWatch(t *testing.T) {
 	TestCreate(&testing.T{})
 	kApi := getKApi()

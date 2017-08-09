@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 All rights reserved.
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 package stgstorelog
 
 import (
@@ -9,16 +9,17 @@ import (
 	"os"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"strconv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
 )
 
 func TestOpenMapedFile(t *testing.T) {
-	mapFile := OpenMapedFile("./unit_test_store/MapedFileTest/", "001")
+	mapFile, _ := NewMapedFile("./unit_test_store/MapedFileTest/001", 1024*64)
 	maps := mapFile.mappedByteBuffer.MMapBuf
 	logger.Info("len == %v cap == %v  \nbuf == %v", len(maps), cap(maps), maps)
 }
 
 func TestMapedFile_Write(t *testing.T) {
-	mapFile := NewMapedFile("./unit_test_store/MapedFileTest/", "001", 1024*64)
+	mapFile, _ := NewMapedFile("./unit_test_store/MapedFileTest/001", 1024*64)
 	logger.Info("MMapBuf == %p", mapFile.mappedByteBuffer.MMapBuf)
 	msg := "hello word "
 	i := 0
@@ -37,7 +38,7 @@ func TestMapedFile_Write(t *testing.T) {
 }
 
 func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
-	mapFile := NewMapedFile("./unit_test_store/MapedFileTest/", "001", 1024*64)
+	mapFile, _ := NewMapedFile("./unit_test_store/MapedFileTest/001", 1024*64)
 	byteBuffer := mapFile.mappedByteBuffer
 	buffer := byteBuffer
 	logger.Info("MMapBuf == %p", buffer.MMapBuf)
@@ -59,7 +60,7 @@ func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
 
 func TestMapedFile_WriteAndRead(t *testing.T) {
 	TestMapedFile_MMapBufferWithInt32(t)
-	mapFile := OpenMapedFile("./unit_test_store/MapedFileTest/", "001")
+	mapFile, _ := NewMapedFile("./unit_test_store/MapedFileTest/001", 1024*64)
 	mappedByteBuffer := mapFile.mappedByteBuffer
 	logger.Info("-- %v", mappedByteBuffer.ReadInt32())
 	logger.Info("-- %v", mappedByteBuffer.ReadInt32())
@@ -71,8 +72,7 @@ func TestMapedFile_WriteAndRead(t *testing.T) {
 }
 
 func TestCreateAndRemoveDir(t *testing.T) {
-	var mapFile MapedFile
-	path := "./tmp/test/"
-	mapFile.dirNotExistAndCreateDir(path)
+	path := "./tmp/test/001"
+	fileutil.EnsureDir(path)
 	os.RemoveAll("./tmp")
 }
