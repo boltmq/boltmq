@@ -35,12 +35,16 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 	switch defaultMQProducerImpl.ServiceState{
 	case stgcommon.CREATE_JUST:
 		defaultMQProducerImpl.ServiceState =stgcommon.START_FAILED
+		// 检查配置
 		defaultMQProducerImpl.checkConfig()
-		if strings.EqualFold(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup, stgcommon.CLIENT_INNER_PRODUCER_GROUP) {
+		if !strings.EqualFold(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup, stgcommon.CLIENT_INNER_PRODUCER_GROUP) {
 			defaultMQProducerImpl.DefaultMQProducer.ClientConfig.ChangeInstanceNameToPID()
 		}
+		// 初始化MQClientInstance
 		defaultMQProducerImpl.MQClientFactory = GetInstance().GetAndCreateMQClientInstance(defaultMQProducerImpl.DefaultMQProducer.ClientConfig)
+		// 注册producer
 		defaultMQProducerImpl.MQClientFactory.RegisterProducer(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup, defaultMQProducerImpl)
+		// 保存topic信息
 		defaultMQProducerImpl.TopicPublishInfoTable.Put(defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey, NewTopicPublishInfo())
 		// 启动核心
 		if startFactory{
