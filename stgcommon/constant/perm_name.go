@@ -1,9 +1,5 @@
 package constant
 
-import (
-	"strings"
-)
-
 // PERM 读写权限
 // @author gaoyanlei
 // @since 2017/8/9
@@ -29,15 +25,15 @@ func isInherited(perm int) bool {
 func Perm2String(perm int) string {
 	str := "---"
 	if isReadable(perm) {
-		str = strings.Replace(str, "---", "R--", -1)
+		str = "R--"
 	}
 
 	if isWriteable(perm) {
-		str = strings.Replace(str, "---", "-W-", -1)
+		str = "-W-"
 	}
 
 	if isInherited(perm) {
-		str = strings.Replace(str, "---", "--X", -1)
+		str = "--X"
 	}
 	return str
 }
