@@ -63,9 +63,9 @@ func (mqClientInstance *MQClientInstance)Start() {
 		//Start various schedule tasks
 		mqClientInstance.StartScheduledTask()
 		//Start pull service
-		mqClientInstance.PullMessageService.Start()
+		go mqClientInstance.PullMessageService.Start()
 		//Start rebalance service
-		mqClientInstance.RebalanceService.Start()
+		go mqClientInstance.RebalanceService.Start()
 		//Start push service
 		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.StartFlag(false);
 		mqClientInstance.ServiceState = stgcommon.RUNNING
@@ -94,7 +94,7 @@ func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
 	defer mqClientInstance.LockHeartbeat.Unlock()
 
 }
-
+// 向所有boker发送心跳
 func (mqClientInstance *MQClientInstance)sendHeartbeatToAllBroker() {
 	heartbeatData := mqClientInstance.prepareHeartbeatData()
 	//todo consumer 后续添加
@@ -103,41 +103,43 @@ func (mqClientInstance *MQClientInstance)sendHeartbeatToAllBroker() {
 	}
 	mapIterator := mqClientInstance.BrokerAddrTable.Iterator()
 	for {
+		if !mapIterator.HasNext() {
+			break
+		}
 		k, v, _ := mapIterator.Next()
 		brokerName := k.(string)
 		oneTable := v.(sync.Map)
 		iterator := oneTable.Iterator()
 		for {
+			if !iterator.HasNext() {
+				break
+			}
 			brokerId, address, _ := iterator.Next()
 			if address != nil {
               //todo consumer处理
 				mqClientInstance.MQClientAPIImpl.SendHeartbeat(address.(string),heartbeatData,3000)
 				fmt.Println("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address);
 			}
-			if !iterator.HasNext() {
-				break
-			}
+
 		}
-		if !mapIterator.HasNext() {
-			break
-		}
+
 	}
 }
 
+// 准备心跳数据
 func (mqClientInstance *MQClientInstance)prepareHeartbeatData() *heartbeat.HeartbeatData {
 	heartbeatData := &heartbeat.HeartbeatData{ClientID:mqClientInstance.ClientId, ProducerDataSet:set.NewSet(), ConsumerDataSet:set.NewSet()}
 	// producer
 	mapIterator := mqClientInstance.ProducerTable.Iterator()
 	for {
+		if !mapIterator.HasNext() {
+			break
+		}
 		k, v, l := mapIterator.Next()
 		if v != nil && l {
 			producerData := &heartbeat.ProducerData{GroupName:k.(string)}
 			heartbeatData.ProducerDataSet.Add(producerData)
 		}
-		if !mapIterator.HasNext() {
-			break
-		}
-
 	}
 	//todo consumer
 	return heartbeatData

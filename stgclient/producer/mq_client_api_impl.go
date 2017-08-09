@@ -16,7 +16,7 @@ func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQCli
 		ClientRemotingProcessor:clientRemotingProcessor,
 	}
 }
-
+// 调用romoting的start
 func (impl *MQClientAPIImpl)Start() {
 
 }
