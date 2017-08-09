@@ -1,13 +1,13 @@
 package stgregistry
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"strconv"
 	"time"
 	"log"
 	"github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
 	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 )
 
 type SmartgoConfig struct {
@@ -27,7 +27,7 @@ type namesrv struct {
 func etcdAddrsFromConfig() ([]string) {
 	namesrvConfPath := "../conf/smartgo.toml"
 	var smartgoConfig SmartgoConfig
-	utils.ParseConf(namesrvConfPath, &smartgoConfig)
+	parseutil.ParseConf(namesrvConfPath, &smartgoConfig)
 
 	var etcdAddrs []string
 	for key, val := range smartgoConfig.Namesrv {
