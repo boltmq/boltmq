@@ -3,6 +3,7 @@ package producer
 import (
 	"sync"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	syncMap"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"sync/atomic"
 )
 
@@ -24,25 +25,25 @@ func GetInstance() *MQClientManager {
 }
 
 type MQClientManager struct {
-	FactoryTable          map[string]*MQClientInstance
+	FactoryTable          *syncMap.Map
 	FactoryIndexGenerator int32
 }
 
 func NewMQClientManager() *MQClientManager {
-	return &MQClientManager{FactoryTable:make(map[string]*MQClientInstance)}
+	return &MQClientManager{FactoryTable:syncMap.NewMap()}
 }
 
 func (mQClientManager *MQClientManager) GetAndCreateMQClientInstance(clientConfig *stgclient.ClientConfig) *MQClientInstance {
 	clientId := clientConfig.BuildMQClientId()
-	instance := mQClientManager.FactoryTable[clientId]
+	instance,_ := mQClientManager.FactoryTable.Get(clientId)
 	if (nil == instance) {
 		instance = NewMQClientInstance(clientConfig.CloneClientConfig(), atomic.AddInt32(&mQClientManager.FactoryIndexGenerator, 1), clientId);
-		prev := mQClientManager.FactoryTable[clientId]
+		prev,_ := mQClientManager.FactoryTable.PutIfAbsent(clientId,instance)
 		if (prev != nil) {
 			instance = prev;
 		} else {
-			mQClientManager.FactoryTable[clientId] = instance
+			//todo
 		}
 	}
-	return instance
+	return instance.(*MQClientInstance)
 }

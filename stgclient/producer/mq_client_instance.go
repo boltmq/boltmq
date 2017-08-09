@@ -2,9 +2,13 @@ package producer
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
+	//"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	lock"sync"
+	set "github.com/deckarep/golang-set"
+	"fmt"
 )
 // producer和consumer核心
 // Author: yintongqiang
@@ -14,14 +18,14 @@ type MQClientInstance struct {
 	ClientConfig            *stgclient.ClientConfig
 	InstanceIndex           int32
 	ClientId                string
-	ProducerTable           map[string]MQProducerInner
-	ConsumerTable           map[string]MQProducerInner
+	ProducerTable           *sync.Map
+	ConsumerTable           *sync.Map
 	MQClientAPIImpl         *MQClientAPIImpl
-	TopicRouteTable         map[string]*route.TopicRouteData
+	TopicRouteTable         *sync.Map
 
-	LockNamesrv             sync.RWMutex
-	LockHeartbeat           sync.RWMutex
-	BrokerAddrTable         map[string]map[int64]string
+	LockNamesrv             lock.RWMutex
+	LockHeartbeat           lock.RWMutex
+	BrokerAddrTable         *sync.Map
 
 	ClientRemotingProcessor *ClientRemotingProcessor;
 	PullMessageService      *PullMessageService
@@ -35,7 +39,11 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 		ClientConfig:clientConfig,
 		InstanceIndex:instanceIndex,
 		ClientId:clientId,
-	ProducerTable:make(map[string]MQProducerInner)}
+		ProducerTable:sync.NewMap(),
+		ConsumerTable:sync.NewMap(),
+		TopicRouteTable:sync.NewMap(),
+		BrokerAddrTable:sync.NewMap(),
+	}
 	mqClientInstance.ClientRemotingProcessor = NewClientRemotingProcessor(mqClientInstance)
 	mqClientInstance.MQClientAPIImpl = NewMQClientAPIImpl(mqClientInstance.ClientRemotingProcessor)
 	mqClientInstance.PullMessageService = NewPullMessageService(mqClientInstance)
@@ -46,14 +54,14 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 	return mqClientInstance
 }
 
-func (mqClientInstance *MQClientInstance)Start()  {
+func (mqClientInstance *MQClientInstance)Start() {
 	switch mqClientInstance.ServiceState{
 	case stgcommon.CREATE_JUST:
 		mqClientInstance.ServiceState = stgcommon.START_FAILED
 		//Start request-response channel
 		mqClientInstance.MQClientAPIImpl.Start()
 		//Start various schedule tasks
-		mqClientInstance.MQClientAPIImpl.StartScheduledTask()
+		mqClientInstance.StartScheduledTask()
 		//Start pull service
 		mqClientInstance.PullMessageService.Start()
 		//Start rebalance service
@@ -72,9 +80,69 @@ func (mqClientInstance *MQClientInstance)Start()  {
 }
 
 func (mqClientInstance *MQClientInstance)RegisterProducer(group string, producer *DefaultMQProducerImpl) bool {
-	prev := mqClientInstance.ProducerTable[group]
+	prev, _ := mqClientInstance.ProducerTable.Get(group)
 	if prev == nil {
-		mqClientInstance.ProducerTable[group] = producer
+		mqClientInstance.ProducerTable.PutIfAbsent(group, producer)
 	}
 	return true
+}
+// 向所有boker发送心跳
+func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
+	mqClientInstance.LockHeartbeat.Lock()
+	mqClientInstance.sendHeartbeatToAllBroker()
+	//todo uploadFilterClassSource
+	defer mqClientInstance.LockHeartbeat.Unlock()
+
+}
+
+func (mqClientInstance *MQClientInstance)sendHeartbeatToAllBroker() {
+	heartbeatData := mqClientInstance.prepareHeartbeatData()
+	//todo consumer 后续添加
+	if len(heartbeatData.ProducerDataSet.ToSlice()) == 0 {
+		return
+	}
+	mapIterator := mqClientInstance.BrokerAddrTable.Iterator()
+	for {
+		k, v, _ := mapIterator.Next()
+		brokerName := k.(string)
+		oneTable := v.(sync.Map)
+		iterator := oneTable.Iterator()
+		for {
+			brokerId, address, _ := iterator.Next()
+			if address != nil {
+              //todo consumer处理
+				mqClientInstance.MQClientAPIImpl.SendHeartbeat(address.(string),heartbeatData,3000)
+				fmt.Println("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address);
+			}
+			if !iterator.HasNext() {
+				break
+			}
+		}
+		if !mapIterator.HasNext() {
+			break
+		}
+	}
+}
+
+func (mqClientInstance *MQClientInstance)prepareHeartbeatData() *heartbeat.HeartbeatData {
+	heartbeatData := &heartbeat.HeartbeatData{ClientID:mqClientInstance.ClientId, ProducerDataSet:set.NewSet(), ConsumerDataSet:set.NewSet()}
+	// producer
+	mapIterator := mqClientInstance.ProducerTable.Iterator()
+	for {
+		k, v, l := mapIterator.Next()
+		if v != nil && l {
+			producerData := &heartbeat.ProducerData{GroupName:k.(string)}
+			heartbeatData.ProducerDataSet.Add(producerData)
+		}
+		if !mapIterator.HasNext() {
+			break
+		}
+
+	}
+	//todo consumer
+	return heartbeatData
+
+}
+func (mqClientInstance *MQClientInstance)StartScheduledTask() {
+
 }
