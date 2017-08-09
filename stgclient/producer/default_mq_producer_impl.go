@@ -2,7 +2,7 @@ package producer
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"strings"
 )
 
@@ -15,34 +15,14 @@ import (
 
 type DefaultMQProducerImpl struct {
 	DefaultMQProducer     *DefaultMQProducer
-	TopicPublishInfoTable *ConcurrentHashMap
+	TopicPublishInfoTable *sync.Map
 	ServiceState          stgcommon.State
 	MQClientFactory       *MQClientInstance
 }
 
-type ConcurrentHashMap struct {
-	TopicPublishInfoTable map[string]*TopicPublishInfo
-	Lock                  sync.RWMutex
-}
-
-func (cMap ConcurrentHashMap) Get(k string) *TopicPublishInfo {
-	cMap.Lock.RLock()
-	defer cMap.Lock.RUnlock()
-	return cMap.TopicPublishInfoTable[k]
-}
-
-func (cMap ConcurrentHashMap) Set(k string, v *TopicPublishInfo) {
-	cMap.Lock.Lock()
-	defer cMap.Lock.Unlock()
-	cMap.TopicPublishInfoTable[k] = v
-}
-
 func NewDefaultMQProducerImpl(defaultMQProducer *DefaultMQProducer) *DefaultMQProducerImpl {
-	cMap := new(ConcurrentHashMap)
-	cMap.TopicPublishInfoTable = make(map[string]*TopicPublishInfo)
-
 	return &DefaultMQProducerImpl{DefaultMQProducer:defaultMQProducer,
-		TopicPublishInfoTable:cMap,
+		TopicPublishInfoTable:sync.NewMap(),
 		ServiceState:stgcommon.CREATE_JUST}
 }
 
@@ -61,7 +41,8 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 		}
 		defaultMQProducerImpl.MQClientFactory = GetInstance().GetAndCreateMQClientInstance(defaultMQProducerImpl.DefaultMQProducer.ClientConfig)
 		defaultMQProducerImpl.MQClientFactory.RegisterProducer(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup, defaultMQProducerImpl)
-		defaultMQProducerImpl.TopicPublishInfoTable.Set(defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey, NewTopicPublishInfo())
+		defaultMQProducerImpl.TopicPublishInfoTable.Put(defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey, NewTopicPublishInfo())
+		// 启动核心
 		if startFactory{
 			defaultMQProducerImpl.MQClientFactory.Start();
 		}
@@ -72,6 +53,8 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 	case stgcommon.START_FAILED:
 	default:break
 	}
+	// 向所有broker发送心跳
+	defaultMQProducerImpl.MQClientFactory.SendHeartbeatToAllBrokerWithLock()
 	return nil
 }
 
