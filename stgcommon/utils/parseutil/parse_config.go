@@ -1,4 +1,4 @@
-package utils
+package parseutil
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 // ParseConf 用于加载解析toml配置文件
-// Author: tantexian, <my.oschina.net/tantexian>
+// Author: tantexian, <tantexian@qq.com>
 // Since: 2017/7/29
 func ParseConf(path string, configStruct interface{}) {
 

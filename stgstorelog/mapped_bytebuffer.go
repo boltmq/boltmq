@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 All rights reserved.
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 package stgstorelog
 
 import "bytes"
@@ -9,7 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 	"errors"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/byteutil"
 )
 
 type MappedByteBuffer struct {
@@ -44,7 +44,7 @@ func (m *MappedByteBuffer) Write(data []byte) (n int, err error) {
 }
 
 func (self *MappedByteBuffer) WriteInt32(i int32) (mappedByteBuffer *MappedByteBuffer) {
-	toBytes := utils.Int32ToBytes(i)
+	toBytes := byteutil.Int32ToBytes(i)
 	self.Write(toBytes)
 	return self
 }
@@ -62,13 +62,13 @@ func (m *MappedByteBuffer) Read(data []byte) (n int, err error) {
 func (self *MappedByteBuffer) ReadInt32() (i int32) {
 	int32bytes := make([]byte, 4)
 	self.Read(int32bytes)
-	i = utils.BytesToInt32(int32bytes)
+	i = byteutil.BytesToInt32(int32bytes)
 	return i
 }
 
 // slice 返回当前MappedByteBuffer.byteBuffer中从开始位置到len的分片buffer
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 func (self *MappedByteBuffer) slice() (*bytes.Buffer) {
 	return bytes.NewBuffer(self.MMapBuf[:self.ReadPos])
 }
