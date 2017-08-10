@@ -9,6 +9,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"github.com/kataras/go-errors"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 )
 
 
@@ -123,7 +125,45 @@ sendCallback SendCallback, timeout int64) SendResult {
 // 指定发送到某个queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg message.Message, mq *message.MessageQueue,
 communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) SendResult {
-	return SendResult{}
+	sendResult := SendResult{}
+	brokerAddr := defaultMQProducerImpl.MQClientFactory.findBrokerAddressInPublish(mq.BrokerName)
+	if strings.EqualFold(brokerAddr, "") {
+		defaultMQProducerImpl.tryToFindTopicPublishInfo(mq.Topic)
+		brokerAddr = defaultMQProducerImpl.MQClientFactory.findBrokerAddressInPublish(mq.BrokerName)
+	}
+	if !strings.EqualFold(brokerAddr, "") {
+		prevBody := msg.Body
+		sysFlag := 0
+		if defaultMQProducerImpl.tryToCompressMessage(&msg) {
+			sysFlag |= sysflag.CompressedFlag
+		}
+		//todo 事务消息处理
+		//todo 自定义hook处理
+		// 构造SendMessageRequestHeader
+		requestHeader := header.SendMessageRequestHeader{
+			ProducerGroup:defaultMQProducerImpl.DefaultMQProducer.ProducerGroup,
+			Topic:msg.Topic,
+			DefaultTopic:defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey,
+			DefaultTopicQueueNums:defaultMQProducerImpl.DefaultMQProducer.DefaultTopicQueueNums,
+			QueueId:mq.QueueId,
+			SysFlag:sysFlag,
+			BornTimestamp:time.Now().Unix() * 1000,
+			Flag:msg.Flag,
+			//todo MessageDecoder.messageProperties2String
+			Properties:"",
+			ReconsumeTimes:0,
+			UnitMode:defaultMQProducerImpl.DefaultMQProducer.UnitMode,
+		}
+
+		if strings.HasPrefix(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
+			//todo 设置reconsumeTimes
+		}
+		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.sendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
+		msg.Body = prevBody
+	} else {
+		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
+	}
+	return sendResult
 }
 // 检查配置文件
 func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
@@ -179,4 +219,15 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(top
 		topicPublishInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic);
 		return topicPublishInfo.(*TopicPublishInfo)
 	}
+}
+// 压缩消息体
+func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToCompressMessage(msg *message.Message) bool {
+	if msg != nil&& len(msg.Body) > 0 {
+		if len(msg.Body) >= defaultMQProducerImpl.DefaultMQProducer.CompressMsgBodyOverHowmuch {
+			data := stgcommon.Compress(msg.Body)
+			msg.Body = data
+			return true
+		}
+	}
+	return false
 }

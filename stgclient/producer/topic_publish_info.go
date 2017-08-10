@@ -8,6 +8,9 @@ import (
 	"sync/atomic"
 	"math"
 )
+// TopicPublishInfo: topic发布信息
+// Author: yintongqiang
+// Since:  2017/8/10
 
 type TopicPublishInfo struct {
 	OrderTopic          bool

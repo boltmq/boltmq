@@ -1,7 +1,7 @@
 package heartbeat
 
 import 	set "github.com/deckarep/golang-set"
-// 客户端与broker心跳结构体
+// HeartbeatData 客户端与broker心跳结构体
 // Author: yintongqiang
 // Since:  2017/8/8
 

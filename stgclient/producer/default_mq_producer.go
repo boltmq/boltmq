@@ -13,9 +13,9 @@ type DefaultMQProducer struct {
 	DefaultMQProducerImpl            *DefaultMQProducerImpl
 	ProducerGroup                    string
 	CreateTopicKey                   string
-	DefaultTopicQueueNums            int32
+	DefaultTopicQueueNums            int
 	SendMsgTimeout                   int64
-	CompressMsgBodyOverHowmuch       int32
+	CompressMsgBodyOverHowmuch       int
 	RetryTimesWhenSendFailed         int32
 	RetryAnotherBrokerWhenNotStoreOK bool
 	MaxMessageSize                   int

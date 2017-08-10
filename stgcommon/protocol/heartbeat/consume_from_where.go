@@ -16,7 +16,7 @@ const (
 	// 时间点设置参见DefaultMQPushConsumer.consumeTimestamp参数
 	CONSUME_FROM_TIMESTAMP
 )
-// Consumer从哪里开始消费
+// ConsumeFromWhere 从哪里开始消费
 // Author: yintongqiang
 // Since:  2017/8/8
 

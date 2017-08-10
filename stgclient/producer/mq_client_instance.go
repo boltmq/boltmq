@@ -3,7 +3,6 @@ package producer
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	//"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
@@ -14,6 +13,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"strconv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -118,7 +118,7 @@ func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 			if !strings.EqualFold(address, "") {
 				//todo consumer处理
 				mqClientInstance.MQClientAPIImpl.SendHeartbeat(address, heartbeatData, 3000)
-				fmt.Println("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
+				logger.Info("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
 			}
 		}
 
@@ -313,4 +313,17 @@ func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 
 // 持久化所有consumer的offset
 func (mqClientInstance *MQClientInstance) persistAllConsumerOffset() {
+}
+
+// 查找broker的master地址
+func (mqClientInstance *MQClientInstance)findBrokerAddressInPublish(brokerName string)string{
+
+	brokerAddr,_:=mqClientInstance.BrokerAddrTable.Get(brokerName)
+	if brokerAddr!=nil{
+		bMap:=brokerAddr.(map[int]string)
+		if len(bMap)>0{
+			return bMap[stgcommon.MASTER_ID]
+		}
+	}
+   return ""
 }

@@ -8,7 +8,7 @@ const (
 	// 被动方式消费
 	CONSUME_PASSIVELY
 )
-// 消费类型枚举
+// ConsumeType 消费类型枚举
 // Author: yintongqiang
 // Since:  2017/8/8
 
