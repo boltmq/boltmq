@@ -2,6 +2,9 @@ package main
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/producer"
+	"fmt"
+	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 // 实现枚举例子
 
@@ -28,9 +31,59 @@ func (state State) String() string {
 		return "Unknow"
 	}
 }
-
+func task1(t *time.Ticker)  {
+	for {
+		select {
+		case <-t.C:
+			fmt.Println("task1")
+			t.Stop()
+		}
+	}
+}
+func task2(t *time.Ticker)  {
+	for {
+		select {
+		case <-t.C:
+			fmt.Println("task2")
+		}
+	}
+}
+func task3(t *time.Ticker)  {
+	for {
+		select {
+		case <-t.C:
+			fmt.Println("task3")
+		}
+	}
+}
+type ArrayTest struct {
+	Names []string
+	A ABC
+	B *ABC
+}
+type ABC struct {
+ B int
+}
 func main() {
+	//abc:=&ArrayTest{}
+	//fmt.Print(abc.A)
+	//fmt.Print(abc.B)
+	//index:=1
+	//a:=float64(index)
+	//fmt.Print(a)
+	//test:=&ArrayTest{}
+	//for i:=0;i<100;i++{
+	//	test.Names=append(test.Names,"1")
+	//}
 	defaultMQProducer := producer.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQProducer.Start()
+	defaultMQProducer.Send(message.NewMessage("TestTopic","tagA",[]byte("I'm so diao!")))
+
+	//t.Stop()
+	//time.Sleep(time.Second * 3)
+
+	//select {
+	//
+	//}
 }

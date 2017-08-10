@@ -4,17 +4,17 @@ package producer
 // Author: yintongqiang
 // Since:  2017/8/8
 
-type State int
+type SendStatus int
 
 const (
-	SEND_OK State = iota
+	SEND_OK SendStatus = iota
 	FLUSH_DISK_TIMEOUT
 	FLUSH_SLAVE_TIMEOUT
 	SLAVE_NOT_AVAILABLE
 )
 
-func (state State) String() string {
-	switch state {
+func (status SendStatus) String() string {
+	switch status {
 	case SEND_OK:
 		return "SEND_OK"
 	case FLUSH_DISK_TIMEOUT:

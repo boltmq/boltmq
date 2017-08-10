@@ -1,8 +1,9 @@
-package stgclient
+package producer
 
 import (
 	"strings"
 	"errors"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 
 const CHARACTER_MAX_LENGTH = 255
@@ -15,4 +16,8 @@ func CheckGroup(group string) error {
 		return errors.New("the specified group is longer than group max length 255.")
 	}
 	return nil
+}
+
+func CheckMessage(msg message.Message, defaultMQProducer DefaultMQProducer)  {
+	
 }
