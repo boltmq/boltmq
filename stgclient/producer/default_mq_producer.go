@@ -13,10 +13,10 @@ type DefaultMQProducer struct {
 	DefaultMQProducerImpl            *DefaultMQProducerImpl
 	ProducerGroup                    string
 	CreateTopicKey                   string
-	DefaultTopicQueueNums            int
-	SendMsgTimeout                   int
-	CompressMsgBodyOverHowmuch       int
-	RetryTimesWhenSendFailed         int
+	DefaultTopicQueueNums            int32
+	SendMsgTimeout                   int64
+	CompressMsgBodyOverHowmuch       int32
+	RetryTimesWhenSendFailed         int32
 	RetryAnotherBrokerWhenNotStoreOK bool
 	MaxMessageSize                   int
 	UnitMode                         bool
@@ -35,7 +35,7 @@ func NewDefaultMQProducer(producerGroup string) *DefaultMQProducer {
 		MaxMessageSize:1024 * 128,
 		UnitMode:false,
 		ClientConfig:stgclient.NewClientConfig("")}
-	defaultMQProducer.DefaultMQProducerImpl=NewDefaultMQProducerImpl(defaultMQProducer)
+	defaultMQProducer.DefaultMQProducerImpl = NewDefaultMQProducerImpl(defaultMQProducer)
 	return defaultMQProducer
 }
 
@@ -52,6 +52,6 @@ func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 	defaultMQProducer.DefaultMQProducerImpl.Shutdown()
 }
 
-func (defaultMQProducer *DefaultMQProducer) Send(msg message.Message) (*SendResult, error) {
-	return &SendResult{}, nil
+func (defaultMQProducer *DefaultMQProducer) Send(msg message.Message) (SendResult, error) {
+	return defaultMQProducer.DefaultMQProducerImpl.Send(msg), nil
 }

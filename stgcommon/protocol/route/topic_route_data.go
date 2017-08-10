@@ -35,7 +35,15 @@ type QueueData struct {
 }
 type BrokerData struct {
 	BrokerName      string
-	BrokerAddrs     map[string]string
+	BrokerAddrs     map[int]string
 	BrokerAddrsLock sync.RWMutex
 }
 
+func (topicRouteData*TopicRouteData)CloneTopicRouteData() *TopicRouteData {
+	return &TopicRouteData{
+		OrderTopicConf:topicRouteData.OrderTopicConf,
+		//todo 有引用问题
+		QueueDatas:topicRouteData.QueueDatas,
+		BrokerDatas:topicRouteData.BrokerDatas,
+	}
+}

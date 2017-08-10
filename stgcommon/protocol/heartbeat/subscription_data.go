@@ -1,7 +1,7 @@
 package heartbeat
 
 import set "github.com/deckarep/golang-set"
-// 订阅信息结构体
+// SubscriptionData: 订阅信息结构体
 // Author: yintongqiang
 // Since:  2017/8/9
 

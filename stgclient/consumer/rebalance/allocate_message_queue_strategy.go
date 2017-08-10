@@ -2,7 +2,7 @@ package rebalance
 
 import "container/list"
 
-// 消费负载策略接口
+// AllocateMessageQueueStrategy 消费负载策略接口
 // Author: yintongqiang
 // Since:  2017/8/8
 

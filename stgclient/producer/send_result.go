@@ -6,7 +6,7 @@ package producer
 import "git.oschina.net/cloudzone/smartgo/stgcommon/message"
 
 type SendResult struct {
-	SendStatus    string
+	SendStatus    SendStatus
 	MsgId         string
 	MessageQueue  message.MessageQueue
 	QueueOffset   int64
