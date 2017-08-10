@@ -1,7 +1,7 @@
 package heartbeat
 
 import set "github.com/deckarep/golang-set"
-// 消费者
+// ConsumerData 消费者
 // Author: yintongqiang
 // Since:  2017/8/8
 type ConsumerData struct {

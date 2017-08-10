@@ -28,10 +28,10 @@ type TopicRouteData struct {
 }
 type QueueData struct {
 	BrokerName     string
-	ReadQueueNums  int32
-	WriteQueueNums int32
-	Perm           int32
-	TopicSynFlag   int32
+	ReadQueueNums  int
+	WriteQueueNums int
+	Perm           int
+	TopicSynFlag   int
 }
 type BrokerData struct {
 	BrokerName      string

@@ -1,5 +1,5 @@
 package heartbeat
-// 消息类型枚举
+// MessageModel 消息类型枚举
 // Author: yintongqiang
 // Since:  2017/8/8
 

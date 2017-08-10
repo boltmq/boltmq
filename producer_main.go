@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 // 实现枚举例子
 
@@ -65,6 +66,12 @@ type ABC struct {
  B int
 }
 func main() {
+	src:=[]byte("say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!say hello!")
+	fmt.Println(len(src))
+	cSrc:=stgcommon.Compress(src)
+	fmt.Println(len(cSrc))
+	fmt.Println(len(stgcommon.UnCompress(cSrc)))
+	fmt.Println(string(stgcommon.UnCompress(cSrc)))
 	//abc:=&ArrayTest{}
 	//fmt.Print(abc.A)
 	//fmt.Print(abc.B)
@@ -79,6 +86,7 @@ func main() {
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQProducer.Start()
 	defaultMQProducer.Send(message.NewMessage("TestTopic","tagA",[]byte("I'm so diao!")))
+	defaultMQProducer.Send(message.NewMessage("TestTopic","tagA",[]byte("I'm so diao!")))
 
 	//t.Stop()
 	//time.Sleep(time.Second * 3)
@@ -87,3 +95,4 @@ func main() {
 	//
 	//}
 }
+

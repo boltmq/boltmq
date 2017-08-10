@@ -1,5 +1,14 @@
 package stgcommon
 
+import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
+)
+// mix_all: 大杂烩
+// Author: yintongqiang
+// Since:  2017/8/10
+
 const (
 	CLOUDMQ_HOME_ENV = "CLOUDMQ_HOME"
 	CLOUDMQ_HOME_PROPERTY = "cloudmq.home.dir"
@@ -29,3 +38,19 @@ const (
 	// 为每个Consumer Group建立一个默认的Topic，前缀 + GroupName，用来保存重试多次都失败，接下来不再重试的消息
 	DLQ_GROUP_TOPIC_PREFIX = "%DLQ%"
 )
+// 压缩
+func Compress(src[]byte) []byte {
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	defer w.Close()
+	w.Write(src)
+	w.Flush()
+	return b.Bytes()
+}
+// 解压
+func UnCompress(src[]byte) []byte {
+	r, _ := gzip.NewReader(bytes.NewBuffer(src))
+	defer r.Close()
+	data, _ := ioutil.ReadAll(r)
+	return data
+}
