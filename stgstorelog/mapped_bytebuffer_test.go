@@ -1,14 +1,14 @@
 // Copyright (c) 2015-2018 All rights reserved.
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 package stgstorelog
 
 import (
 	"testing"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"bytes"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/byteutil"
 )
 
 func TestNewMappedByteBuffer(t *testing.T) {
@@ -33,10 +33,10 @@ func TestNewMappedByteBuffer(t *testing.T) {
 
 func TestBytesAndInt32(t *testing.T) {
 	int10 := 1288
-	toBytes := utils.Int32ToBytes(int32(int10))
+	toBytes := byteutil.Int32ToBytes(int32(int10))
 	logger.Info("toBytes == %b len == %d ", toBytes, len(toBytes))
 
-	resultInt := utils.BytesToInt32(toBytes)
+	resultInt := byteutil.BytesToInt32(toBytes)
 	logger.Info("resultInt == %d ", resultInt)
 }
 

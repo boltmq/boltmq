@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 All rights reserved.
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/7
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/7
 package stgstorelog
 
 import (
@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"os"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"sort"
 )
 
 func TestPathWalk(t *testing.T) {
@@ -22,4 +23,21 @@ func TestPathWalk(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+func TestSort(t *testing.T) {
+	var paths []string
+	paths = append(paths, "008")
+	paths = append(paths, "021")
+	paths = append(paths, "001")
+	paths = append(paths, "111")
+	paths = append(paths, "123")
+	for _, val := range paths {
+		logger.Info(val)
+	}
+	sort.Strings(paths)
+	logger.Info("-------------------------")
+	for _, val := range paths {
+		logger.Info(val)
+	}
 }

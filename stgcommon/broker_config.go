@@ -5,7 +5,7 @@ import (
 	"runtime"
 )
 
-// Broker配置
+// BrokerConfig Broker配置项
 // @author gaoyanlei
 // @since 2017/8/8
 type BrokerConfig struct {
@@ -66,62 +66,45 @@ type BrokerConfig struct {
 	OffsetCheckInSlave bool
 }
 
-// NewBrokerConfig
+// NewBrokerConfig 初始化BrokerConfig
+// @author gaoyanlei
+// @since 2017/8/9
 func NewBrokerConfig() *BrokerConfig {
-	var brokerConfig = new(BrokerConfig)
-	brokerConfig.RocketmqHome = os.Getenv(CLOUDMQ_HOME_ENV)
-	brokerConfig.NamesrvAddr = os.Getenv(NAMESRV_ADDR_ENV)
-
-	//TODO 获取getLocalAddress
-	//brokerConfig.BrokerIP1=
-	//brokerConfig.BrokerIP2=
-
-	brokerConfig.BrokerName = localHostName()
-	brokerConfig.BrokerClusterName = "DefaultCluster"
-	brokerConfig.BrokerId = MASTER_ID
-
-	// TODO PermName常量
-	//brokerConfig.BrokerPermission="DefaultCluster"
-
-	brokerConfig.DefaultTopicQueueNums = 8
-
-	// 自动创建Topic功能是否开启
-	brokerConfig.AutoCreateTopicEnable = true
-
-	brokerConfig.ClusterTopicEnable = true
-
-	// 自动创建以服务器名字命名的Topic功能是否开启
-	brokerConfig.BrokerTopicEnable = true
-
-	// 自动创建订阅组功能是否开启（线上建议关闭）
-	brokerConfig.AutoCreateSubscriptionGroup = true
-
-	// SendMessageProcessor处理线程数
-	brokerConfig.SendMessageThreadPoolNums = 16 + runtime.NumCPU()*4
-
-	brokerConfig.PullMessageThreadPoolNums = 16 + runtime.NumCPU()*2
-
-	brokerConfig.AdminBrokerThreadPoolNums = 16
-
-	brokerConfig.ClientManageThreadPoolNums = 16
-
-	brokerConfig.FlushConsumerOffsetInterval = 1000 * 5
-
-	brokerConfig.FlushConsumerOffsetHistoryInterval = 1000 * 60
-	brokerConfig.RejectTransactionMessage = false
-	brokerConfig.FetchNamesrvAddrByAddressServer = false
-	brokerConfig.FetchNamesrvAddrByAddressServer = false
-	brokerConfig.SendThreadPoolQueueCapacity = 100000
-	brokerConfig.PullThreadPoolQueueCapacity = 100000
-	brokerConfig.FilterServerNums = 0
-	brokerConfig.LongPollingEnable = true
-	brokerConfig.ShortPollingTimeMills = 1000
-	brokerConfig.NotifyConsumerIdsChangedEnable = true
-	brokerConfig.OffsetCheckInSlave = true
-	return brokerConfig
+	return &BrokerConfig{
+		RocketmqHome: os.Getenv(CLOUDMQ_HOME_ENV),
+		NamesrvAddr:  os.Getenv(NAMESRV_ADDR_ENV),
+		//TODO 获取getLocalAddress
+		//BrokerIP1=
+		//BrokerIP2=
+		BrokerName:        localHostName(),
+		BrokerClusterName: "DefaultCluster",
+		BrokerId:          MASTER_ID,
+		// TODO PermName常量
+		//BrokerPermission="DefaultCluster"
+		DefaultTopicQueueNums:              8,
+		AutoCreateTopicEnable:              true,
+		ClusterTopicEnable:                 true,
+		BrokerTopicEnable:                  true,
+		AutoCreateSubscriptionGroup:        true,
+		SendMessageThreadPoolNums:          16 + runtime.NumCPU()*4,
+		PullMessageThreadPoolNums:          16 + runtime.NumCPU()*2,
+		AdminBrokerThreadPoolNums:          16,
+		ClientManageThreadPoolNums:         16,
+		FlushConsumerOffsetInterval:        1000 * 5,
+		FlushConsumerOffsetHistoryInterval: 1000 * 60,
+		RejectTransactionMessage:           false,
+		FetchNamesrvAddrByAddressServer:    false,
+		SendThreadPoolQueueCapacity:        100000,
+		PullThreadPoolQueueCapacity:        100000,
+		FilterServerNums:                   0,
+		LongPollingEnable:                  true,
+		ShortPollingTimeMills:              1000,
+		NotifyConsumerIdsChangedEnable:     true,
+		OffsetCheckInSlave:                 true,
+	}
 }
 
-// 获取当前机器hostName
+// localHostName 获取当前机器hostName
 // @author gaoyanlei
 // @since 2017/8/8
 func localHostName() string {

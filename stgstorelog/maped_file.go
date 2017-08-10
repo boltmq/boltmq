@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 All rights reserved.
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/5
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/5
 package stgstorelog
 
 import (
@@ -10,11 +10,11 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 	"sync/atomic"
 	"errors"
-	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"sync"
-	"path"
 	"github.com/toolkits/file"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 const (
@@ -23,8 +23,8 @@ const (
 )
 
 // maped_file 封装mapedfile类用于操作commitlog文件及consumelog文件
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/5
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/5
 type MapedFile struct {
 	// 当前映射的虚拟内存总大小
 	TotalMapedVitualMemory int64
@@ -42,9 +42,9 @@ type MapedFile struct {
 	mappedByteBuffer *MappedByteBuffer
 	//mmapBytes        mmap.MemoryMap
 	// 当前写到什么位置
-	wrotePostion int32
+	wrotePostion int64
 	// Flush到什么位置
-	committedPosition int32
+	committedPosition int64
 	// 最后一条消息存储时间
 	storeTimestamp     int64
 	firstCreateInQueue bool
@@ -53,104 +53,66 @@ type MapedFile struct {
 }
 
 // NewMapedFile 根据文件名新建mapedfile
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/5
-func NewMapedFile(dir string, fileName string, filesize int64) *MapedFile {
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/5
+func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mapedFile := &MapedFile{}
-	mapedFile.fileName = fileName
+	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
 
-	mapedFile.dirNotExistAndCreateDir(dir)
+	fileutil.EnsureDir(filePath)
+	exist := fileutil.IsExist(filePath)
 
-	file, err := os.OpenFile(path.Join(dir, fileName), os.O_CREATE|os.O_RDWR, 0666)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+	defer file.Close()
 	if err != nil {
-		panic(err.Error())
+		logger.Error(err.Error())
+		return nil, err
 	}
 	mapedFile.file = file
-	bytes := make([]byte, filesize/2)
-	file.Write(bytes)
-	defer file.Close()
+
+	if exist == false {
+		// 如果文件不存在则新建filesize大小文件
+		bytes := make([]byte, filesize)
+		file.Write(bytes)
+	}
 
 	// 文件名即offset起始地址
-	offset, err := strconv.ParseInt(mapedFile.fileName, 10, 64)
+	offset, err := strconv.ParseInt(fileutil.Basename(mapedFile.fileName), 10, 64)
 	if err != nil {
-		panic(err.Error())
+		logger.Error(err.Error())
+		return nil, err
 	}
 	mapedFile.fileFromOffset = offset
 
 	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil, err
+	}
 
 	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
 	atomic.AddInt64(&mapedFile.TotalMapedVitualMemory, int64(filesize))
 	atomic.AddInt32(&mapedFile.TotalMapedFiles, 1)
 
-	return mapedFile
-}
-
-// OpenMapedFile 根据文件名映射mapedfile
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/5
-func OpenMapedFile(dir string, fileName string) *MapedFile {
-	mapedFile := &MapedFile{}
-	mapedFile.fileName = fileName
-
-	file, err := os.OpenFile(path.Join(dir, fileName), os.O_RDWR, 0666)
-	if err != nil {
-		panic(err.Error())
-	}
-	filestat, error := file.Stat()
-	if error != nil {
-		panic(err.Error())
-	}
-
-	mapedFile.fileSize = filestat.Size()
-	mapedFile.file = file
-	defer file.Close()
-
-	// 文件名即offset起始地址
-	offset, err := strconv.ParseInt(mapedFile.fileName, 10, 64)
-	if err != nil {
-		panic(err.Error())
-	}
-	mapedFile.fileFromOffset = offset
-
-	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
-
-	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
-	atomic.AddInt64(&mapedFile.TotalMapedVitualMemory, int64(mapedFile.fileSize))
-	atomic.AddInt32(&mapedFile.TotalMapedFiles, 1)
-
-	return mapedFile
-}
-
-// dirNotExistAndCreateDir 目录不存在则创建该目录
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
-func (self *MapedFile) dirNotExistAndCreateDir(path string) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		err := os.MkdirAll(path, 0777)
-		if err != nil {
-			panic(err)
-		}
-	}
+	return mapedFile, nil
 }
 
 // AppendMessageWithCallBack 向MapedBuffer追加消息
 // Return: appendNums 成功添加消息字节数
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/5
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/5
 func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageCallback AppendMessageCallback) (appendNums int) {
 	if msg == nil {
 		panic(errors.New("AppendMessage nil msg error!!!"))
 	}
 
-	curPos := atomic.LoadInt32(&self.wrotePostion)
+	curPos := atomic.LoadInt64(&self.wrotePostion)
 	// 表示还有剩余空间
-	if curPos < int32(self.fileSize) {
+	if curPos < self.fileSize {
 		appendNums := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, int(self.fileSize)-int(curPos), msg)
-		atomic.AddInt32(&self.wrotePostion, int32(appendNums))
-		self.storeTimestamp = time.Now().UnixNano()
+		atomic.AddInt64(&self.wrotePostion, int64(appendNums))
+		self.storeTimestamp = timeutil.NowTimestamp()
 		return appendNums
 	}
 
@@ -162,8 +124,8 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 // appendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
 // Params: data 追加数据
 // Return: 追加是否成功
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 func (self *MapedFile) appendMessage(data []byte) bool {
 	currPos := self.wrotePostion
 	if int64(currPos)+int64(len(data)) <= self.fileSize {
@@ -172,7 +134,7 @@ func (self *MapedFile) appendMessage(data []byte) bool {
 			panic(err)
 			return false
 		}
-		atomic.AddInt32(&self.wrotePostion, int32(n))
+		atomic.AddInt64(&self.wrotePostion, int64(n))
 		return true
 	} else {
 		return false
@@ -182,9 +144,9 @@ func (self *MapedFile) appendMessage(data []byte) bool {
 // Commit 消息提交刷盘
 // Params: flushLeastPages 一次刷盘最少个数
 // Return: flushPosition 当前刷盘位置
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
-func (self *MapedFile) Commit(flushLeastPages int32) (flushPosition int32) {
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
+func (self *MapedFile) Commit(flushLeastPages int32) (flushPosition int64) {
 	if self.isAbleToFlush(flushLeastPages) {
 		// 对文件加写锁
 		self.rwLock.Lock()
@@ -214,8 +176,8 @@ func (self *MapedFile) Unmap() {
 // isAbleToFlush 根据最少需要刷盘page数值来判断当前是否需要立即刷新缓存数据到磁盘
 // Params: flushLeastPages一次刷盘最少个数
 // Return: 是否需要立即刷盘
-// Author: tantexian, <my.oschina.net/tantexian>
-// Since: 17/8/6
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/6
 func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
 	// 获取当前flush到磁盘的位置
 	flush := self.committedPosition
@@ -230,11 +192,11 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
 	if (flushLeastPages > 0) {
 		// 计算出前期写缓冲区的位置到已刷盘的数据位置之间的数据，是否大于等于设置的至少得刷盘page个数
 		// 超过则需要刷盘
-		return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= flushLeastPages;
+		return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= int64(flushLeastPages)
 	}
 
 	// 如果flushLeastPages为0，那么则是每次有数据写入缓冲区则则直接刷盘
-	return write > flush;
+	return write > flush
 }
 
 func (self *MapedFile) isFull() bool {
@@ -242,6 +204,7 @@ func (self *MapedFile) isFull() bool {
 }
 
 func (self *MapedFile) destroy() bool {
+	// TODO: 次数没有使用this.shutdown(intervalForcibly)，是否有问题？？？
 	self.Unmap()
 	error := file.Remove(self.file.Name())
 	if error != nil {
