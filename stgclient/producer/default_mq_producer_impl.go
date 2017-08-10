@@ -15,7 +15,7 @@ import (
 
 
 
-// 内部发送接口实现
+// DefaultMQProducerImpl: 内部发送接口实现
 // Author: yintongqiang
 // Since:  2017/8/8
 
@@ -23,7 +23,7 @@ import (
 type DefaultMQProducerImpl struct {
 	DefaultMQProducer     *DefaultMQProducer
 	TopicPublishInfoTable *sync.Map
-	ServiceState          stgcommon.State
+	ServiceState          stgcommon.ServiceState
 	MQClientFactory       *MQClientInstance
 }
 
@@ -72,6 +72,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 func (defaultMQProducerImpl *DefaultMQProducerImpl) Shutdown() {
 }
 
+// 对外提供消息发送方法
 func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg message.Message) SendResult {
 	return defaultMQProducerImpl.SendByTimeout(msg, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
 }
@@ -177,6 +178,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
 
 }
 
+// 获取topic发布集合
 func (defaultMQProducerImpl *DefaultMQProducerImpl)GetPublishTopicList() set.Set {
 	topicList := set.NewSet()
 	for it := defaultMQProducerImpl.TopicPublishInfoTable.Iterator(); it.HasNext(); {
@@ -186,6 +188,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)GetPublishTopicList() set.Set
 	return topicList
 }
 
+// 是否需要更新topic信息
 func (defaultMQProducerImpl *DefaultMQProducerImpl)IsPublishTopicNeedUpdate(topic string) bool {
 	topicInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 	if topicInfo == nil {
@@ -195,6 +198,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)IsPublishTopicNeedUpdate(topi
 	}
 }
 
+// 更新topic信息
 func (defaultMQProducerImpl *DefaultMQProducerImpl)UpdateTopicPublishInfo(topic string, info *TopicPublishInfo) {
 	if !strings.EqualFold(topic, "") && info != nil {
 		prev, _ := defaultMQProducerImpl.TopicPublishInfoTable.Put(topic, info)
@@ -204,6 +208,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)UpdateTopicPublishInfo(topic 
 	}
 }
 
+// 查询topic不存在则从nameserver更新
 func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(topic string) *TopicPublishInfo {
 	info, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 	if nil == info || len(info.(*TopicPublishInfo).MessageQueueList) == 0 {
@@ -216,7 +221,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(top
 		return info.(*TopicPublishInfo)
 	} else {
 		defaultMQProducerImpl.MQClientFactory.updateTopicRouteInfoFromNameServerByArgs(topic, true, defaultMQProducerImpl.DefaultMQProducer)
-		topicPublishInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic);
+		topicPublishInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 		return topicPublishInfo.(*TopicPublishInfo)
 	}
 }

@@ -11,9 +11,20 @@ var (
 	once sync.Once
 	instance *MQClientManager
 )
-// MQClientInstance管理类
+// MQClientManager: MQClientInstance管理类
 // Author: yintongqiang
 // Since:  2017/8/8
+
+
+type MQClientManager struct {
+	FactoryTable          *syncMap.Map
+	FactoryIndexGenerator int32
+}
+
+
+func NewMQClientManager() *MQClientManager {
+	return &MQClientManager{FactoryTable:syncMap.NewMap()}
+}
 
 func GetInstance() *MQClientManager {
 	if instance == nil {
@@ -24,15 +35,7 @@ func GetInstance() *MQClientManager {
 	return instance
 }
 
-type MQClientManager struct {
-	FactoryTable          *syncMap.Map
-	FactoryIndexGenerator int32
-}
-
-func NewMQClientManager() *MQClientManager {
-	return &MQClientManager{FactoryTable:syncMap.NewMap()}
-}
-
+// 从集合中查询MQClientInstance，无则创建一个
 func (mQClientManager *MQClientManager) GetAndCreateMQClientInstance(clientConfig *stgclient.ClientConfig) *MQClientInstance {
 	clientId := clientConfig.BuildMQClientId()
 	instance,_ := mQClientManager.FactoryTable.Get(clientId)

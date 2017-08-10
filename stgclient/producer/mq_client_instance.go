@@ -14,6 +14,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"strconv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -37,7 +38,7 @@ type MQClientInstance struct {
 	PullMessageService      *PullMessageService
 	RebalanceService        *RebalanceService
 	DefaultMQProducer       *DefaultMQProducer
-	ServiceState            stgcommon.State
+	ServiceState            stgcommon.ServiceState
 }
 
 func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int32, clientId string) *MQClientInstance {
@@ -84,7 +85,7 @@ func (mqClientInstance *MQClientInstance) Start() {
 	}
 
 }
-
+// 将生产者group和发送类保存到内存中
 func (mqClientInstance *MQClientInstance) RegisterProducer(group string, producer *DefaultMQProducerImpl) bool {
 	prev, _ := mqClientInstance.ProducerTable.Get(group)
 	if prev == nil {
@@ -105,19 +106,20 @@ func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
 // 向所有boker发送心跳
 func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 	heartbeatData := mqClientInstance.prepareHeartbeatData()
-	//todo consumer 后续添加
-	if len(heartbeatData.ProducerDataSet.ToSlice()) == 0 {
+	if len(heartbeatData.ProducerDataSet.ToSlice()) == 0  && len(heartbeatData.ConsumerDataSet.ToSlice()) == 0 {
+		logger.Warn("sending hearbeat, but no consumer and no producer");
 		return
 	}
-
 	for mapIterator := mqClientInstance.BrokerAddrTable.Iterator(); mapIterator.HasNext(); {
 		k, v, _ := mapIterator.Next()
 		brokerName := k.(string)
 		oneTable := v.(map[int]string)
 		for brokerId, address := range oneTable {
 			if !strings.EqualFold(address, "") {
-				//todo consumer处理
-				mqClientInstance.MQClientAPIImpl.SendHeartbeat(address, heartbeatData, 3000)
+				if len(heartbeatData.ConsumerDataSet.ToSlice()) == 0 && brokerId != stgcommon.MASTER_ID {
+					continue
+				}
+				mqClientInstance.MQClientAPIImpl.sendHeartbeat(address, heartbeatData, 3000)
 				logger.Info("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
 			}
 		}
@@ -316,14 +318,23 @@ func (mqClientInstance *MQClientInstance) persistAllConsumerOffset() {
 }
 
 // 查找broker的master地址
-func (mqClientInstance *MQClientInstance)findBrokerAddressInPublish(brokerName string)string{
+func (mqClientInstance *MQClientInstance)findBrokerAddressInPublish(brokerName string) string {
 
-	brokerAddr,_:=mqClientInstance.BrokerAddrTable.Get(brokerName)
-	if brokerAddr!=nil{
-		bMap:=brokerAddr.(map[int]string)
-		if len(bMap)>0{
+	brokerAddr, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
+	if brokerAddr != nil {
+		bMap := brokerAddr.(map[int]string)
+		if len(bMap) > 0 {
 			return bMap[stgcommon.MASTER_ID]
 		}
 	}
-   return ""
+	return ""
+}
+
+func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.MQConsumerInner{
+	mqCInner,_:=mqClientInstance.ConsumerTable.Get(group)
+	if mqCInner!=nil{
+		return mqCInner.(consumer.MQConsumerInner)
+	}else{
+		return nil
+	}
 }

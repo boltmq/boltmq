@@ -26,11 +26,30 @@ func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQCli
 }
 // 调用romoting的start
 func (impl *MQClientAPIImpl)Start() {
+	//todo 初始化远程
+	//impl.ProjectGroupPrefix
 
 }
-
-func (impl *MQClientAPIImpl)SendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
-
+// 发送心跳到broker
+func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
+    if strings.EqualFold(impl.ProjectGroupPrefix,""){
+		consumerDatas:=heartbeatData.ConsumerDataSet
+		for data := range consumerDatas.Iterator().C {
+			consumerData:=data.(*heartbeat.ConsumerData)
+			consumerData.GroupName=stgclient.BuildWithProjectGroup(consumerData.GroupName,impl.ProjectGroupPrefix)
+			subscriptionDatas:=consumerData.SubscriptionDataSet
+			for subData := range subscriptionDatas.Iterator().C {
+				subscriptionData:=subData.(*heartbeat.SubscriptionData)
+				subscriptionData.Topic=stgclient.BuildWithProjectGroup(subscriptionData.Topic,impl.ProjectGroupPrefix)
+			}
+		}
+		producerDatas:=heartbeatData.ProducerDataSet
+		for pData := range producerDatas.Iterator().C {
+			producerData:=pData.(*heartbeat.ProducerData)
+			producerData.GroupName=stgclient.BuildWithProjectGroup(producerData.GroupName,impl.ProjectGroupPrefix)
+		}
+	}
+	//todo 创建request调用invokeSync
 }
 
 func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {

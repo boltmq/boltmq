@@ -1,15 +1,18 @@
 package stgcommon
 
-type State int
+type ServiceState int
+// ServiceState: 服务状态枚举
+// Author: yintongqiang
+// Since:  2017/8/10
 
 const (
-	CREATE_JUST State = iota
+	CREATE_JUST ServiceState = iota
 	RUNNING
 	SHUTDOWN_ALREADY
 	START_FAILED
 )
 
-func (state State) String() string {
+func (state ServiceState) String() string {
 	switch state {
 	case CREATE_JUST:
 		return "CREATE_JUST"
