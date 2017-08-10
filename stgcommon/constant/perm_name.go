@@ -10,29 +10,29 @@ const (
 	PERM_INHERIT  = 0x1 << 0
 )
 
-func isReadable(perm int) bool {
+func IsReadable(perm int32) bool {
 	return (perm & PERM_READ) == PERM_READ
 }
 
-func isWriteable(perm int) bool {
+func IsWriteable(perm int32) bool {
 	return (perm & PERM_WRITE) == PERM_WRITE
 }
 
-func isInherited(perm int) bool {
+func IsInherited(perm int32) bool {
 	return (perm & PERM_INHERIT) == PERM_INHERIT
 }
 
-func Perm2String(perm int) string {
+func Perm2String(perm int32) string {
 	str := "---"
-	if isReadable(perm) {
+	if IsReadable(perm) {
 		str = "R--"
 	}
 
-	if isWriteable(perm) {
+	if IsWriteable(perm) {
 		str = "-W-"
 	}
 
-	if isInherited(perm) {
+	if IsInherited(perm) {
 		str = "--X"
 	}
 	return str
