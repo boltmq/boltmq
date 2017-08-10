@@ -28,7 +28,7 @@ type BrokerController struct {
 	// RebalanceLockManager
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
-	// SlaveSynchronize
+	SlaveSynchronize *SlaveSynchronize
 	// MessageStore
 	// RemotingServer
 	TopicConfigManager *TopicConfigManager
@@ -56,5 +56,12 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	brokerController.SubscriptionGroupManager = NewSubscriptionGroupManager(brokerController)
 	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI()
 	// TODO filterServerManager
+	// TODO  if (this.brokerConfig.getNamesrvAddr() != null) {
+	// TODO this.brokerOuterAPI.updateNameServerAddressList(this.brokerConfig.getNamesrvAddr());
+	// TODO log.info("user specfied name server address: {}", this.brokerConfig.getNamesrvAddr());
+	brokerController.SlaveSynchronize = NewSlaveSynchronize(brokerController)
+	// TODO  this.sendThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getSendThreadPoolQueueCapacity());
+	// TODO   this.pullThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getPullThreadPoolQueueCapacity());
+
 	return brokerController
 }
