@@ -65,3 +65,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 
 	return brokerController
 }
+
+func start()  {
+	
+}
