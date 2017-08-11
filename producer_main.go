@@ -1,7 +1,7 @@
 package main
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgclient/producer"
+	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"time"
 )
@@ -16,7 +16,7 @@ func task() {
 	}
 }
 func main() {
-	defaultMQProducer := producer.NewDefaultMQProducer("producer")
+	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQProducer.Start()
 	for i := 0; i < 10; i++ {

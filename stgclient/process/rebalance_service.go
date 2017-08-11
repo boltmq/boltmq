@@ -1,4 +1,4 @@
-package producer
+package process
 
 // 消费端rebalance服务
 // Author: yintongqiang

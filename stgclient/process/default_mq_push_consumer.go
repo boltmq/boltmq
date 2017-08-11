@@ -1,4 +1,4 @@
-package consumer
+package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
@@ -81,9 +81,10 @@ func (pushConsumer *DefaultMQPushConsumer) Subscribe(topic string, subExpression
 
 // 注册监听器
 func (pushConsumer *DefaultMQPushConsumer) RegisterMessageListener(messageListener listener.MessageListener) {
+	pushConsumer.messageListener=messageListener
 	pushConsumer.defaultMQPushConsumerImpl.registerMessageListener(messageListener)
 }
 // 启动消费服务
 func (pushConsumer *DefaultMQPushConsumer) Start() {
-
+	pushConsumer.defaultMQPushConsumerImpl.Start()
 }

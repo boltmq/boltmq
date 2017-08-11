@@ -1,4 +1,4 @@
-package producer
+package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -55,7 +55,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 		defaultMQProducerImpl.TopicPublishInfoTable.Put(defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey, NewTopicPublishInfo())
 		// 启动核心
 		if startFactory {
-			defaultMQProducerImpl.MQClientFactory.Start();
+			defaultMQProducerImpl.MQClientFactory.Start()
 		}
 		defaultMQProducerImpl.ServiceState = stgcommon.RUNNING
 		break
@@ -127,10 +127,10 @@ sendCallback SendCallback, timeout int64) SendResult {
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg message.Message, mq *message.MessageQueue,
 communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) SendResult {
 	sendResult := SendResult{}
-	brokerAddr := defaultMQProducerImpl.MQClientFactory.findBrokerAddressInPublish(mq.BrokerName)
+	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		defaultMQProducerImpl.tryToFindTopicPublishInfo(mq.Topic)
-		brokerAddr = defaultMQProducerImpl.MQClientFactory.findBrokerAddressInPublish(mq.BrokerName)
+		brokerAddr = defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	}
 	if !strings.EqualFold(brokerAddr, "") {
 		prevBody := msg.Body
@@ -159,7 +159,7 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) S
 		if strings.HasPrefix(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
 			//todo 设置reconsumeTimes
 		}
-		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.sendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
+		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
 		msg.Body = prevBody
 	} else {
 		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
@@ -213,14 +213,14 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(top
 	info, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 	if nil == info || len(info.(*TopicPublishInfo).MessageQueueList) == 0 {
 		defaultMQProducerImpl.TopicPublishInfoTable.PutIfAbsent(topic, &TopicPublishInfo{})
-		defaultMQProducerImpl.MQClientFactory.updateTopicRouteInfoFromNameServerByTopic(topic)
+		defaultMQProducerImpl.MQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(topic)
 		inf, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 		info = inf
 	}
 	if info != nil && info.(*TopicPublishInfo).HaveTopicRouterInfo && len(info.(*TopicPublishInfo).MessageQueueList) != 0 {
 		return info.(*TopicPublishInfo)
 	} else {
-		defaultMQProducerImpl.MQClientFactory.updateTopicRouteInfoFromNameServerByArgs(topic, true, defaultMQProducerImpl.DefaultMQProducer)
+		defaultMQProducerImpl.MQClientFactory.UpdateTopicRouteInfoFromNameServerByArgs(topic, true, defaultMQProducerImpl.DefaultMQProducer)
 		topicPublishInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 		return topicPublishInfo.(*TopicPublishInfo)
 	}

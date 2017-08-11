@@ -4,6 +4,6 @@ package consumer
 // Since:  2017/8/10
 
 type ProcessQueue struct {
-	dropped bool
-	lastPullTimestamp int64
+	Dropped bool
+	LastPullTimestamp int64
 }

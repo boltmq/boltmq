@@ -1,4 +1,4 @@
-package producer
+package process
 
 import set "github.com/deckarep/golang-set"
 // MQProducerInner client内部使用发送接口
