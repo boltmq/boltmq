@@ -1,6 +1,8 @@
 package rebalance
 
-import "container/list"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+)
 
 // AllocateMessageQueueStrategy 消费负载策略接口
 // Author: yintongqiang
@@ -15,8 +17,8 @@ type AllocateMessageQueueStrategy interface {
 	Allocate(
 	consumerGroup  string,
 	currentCID string,
-	mqAll *list.List,
-	cidAll *list.List) *list.List
+	mqAll [] message.MessageQueue,
+	cidAll [] string)[]message.MessageQueue
 	// Algorithm name
 	GetName() string
 }

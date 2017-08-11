@@ -324,7 +324,7 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic 
 		qds := topicRouteData.QueueDatas
 		for _, queueData := range qds {
 
-			if constant.IsWriteable(int32(queueData.Perm)) {
+			if constant.IsWriteable(queueData.Perm) {
 				var brokerData *route.BrokerData
 				for _, bd := range topicRouteData.BrokerDatas {
 					if strings.EqualFold(bd.BrokerName, queueData.BrokerName) {
@@ -355,7 +355,7 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic 
 func (mqClientInstance *MQClientInstance) topicRouteData2TopicSubscribeInfo(topic string, topicRouteData *route.TopicRouteData) set.Set {
 	mqList := set.NewSet()
 	for _, qd := range topicRouteData.QueueDatas {
-		if constant.IsReadable(int32(qd.Perm)) {
+		if constant.IsReadable(qd.Perm) {
 			for i := 0; i < qd.ReadQueueNums; i++ {
 				mq := message.MessageQueue{Topic:topic, BrokerName:qd.BrokerName, QueueId:i}
 				mqList.Add(mq)
@@ -405,29 +405,54 @@ func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.
 	}
 }
 
+func (mqClientInstance *MQClientInstance) findConsumerIdList(topic string, group string) []string {
+	brokerAddr := mqClientInstance.findBrokerAddrByTopic(topic)
+	if !strings.EqualFold(brokerAddr, "") {
+		mqClientInstance.UpdateTopicRouteInfoFromNameServerByTopic(topic)
+		brokerAddr = mqClientInstance.findBrokerAddrByTopic(topic)
+	}
+	if strings.EqualFold(brokerAddr, "") {
+		return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
+	}
+	return []string{}
+}
+
+func (mqClientInstance *MQClientInstance) findBrokerAddrByTopic(topic string) string {
+	topicRouteData, _ := mqClientInstance.TopicRouteTable.Get(topic)
+	if topicRouteData != nil {
+		brokers := topicRouteData.(*route.TopicRouteData).BrokerDatas
+		if len(brokers) > 0 {
+			bd := brokers[0]
+			return bd.SelectBrokerAddr()
+
+		}
+	}
+	return ""
+}
+
 func (mqClientInstance *MQClientInstance) findBrokerAddressInAdmin(brokerName string) FindBrokerResult {
 	var brokerAddr string
 	var slave bool
 	var found bool
-	getBrokerMap,_ := mqClientInstance.BrokerAddrTable.Get(brokerName)
-	brokerMap:=getBrokerMap.(map[int]string)
-	if len(brokerMap)>0{
-		for brokerId,addr:=range brokerMap{
-			brokerAddr=addr
-			if !strings.EqualFold(brokerAddr,""){
-				found=true
-				if brokerId==stgcommon.MASTER_ID{
-					slave=false
+	getBrokerMap, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
+	brokerMap := getBrokerMap.(map[int]string)
+	if len(brokerMap) > 0 {
+		for brokerId, addr := range brokerMap {
+			brokerAddr = addr
+			if !strings.EqualFold(brokerAddr, "") {
+				found = true
+				if brokerId == stgcommon.MASTER_ID {
+					slave = false
 					break
-				}else{
-					slave=true
+				} else {
+					slave = true
 				}
-             break
+				break
 			}
 		}
 	}
-	if found{
-		return FindBrokerResult{brokerAddr:brokerAddr,slave:slave}
+	if found {
+		return FindBrokerResult{brokerAddr:brokerAddr, slave:slave}
 	}
 	return FindBrokerResult{}
 }
