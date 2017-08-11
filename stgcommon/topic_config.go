@@ -11,7 +11,7 @@ type TopicConfig struct {
 	TopicName       string
 	ReadQueueNums   int32
 	WriteQueueNums  int32
-	Perm            int32
+	Perm            int
 	TopicFilterType TopicFilterType
 	TopicSysFlag    int32
 	Order           bool
@@ -31,7 +31,7 @@ func NewTopicConfigByName(topicName string) *TopicConfig {
 	return topicConfig
 }
 
-func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums, perm int32) *TopicConfig {
+func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int32, perm int) *TopicConfig {
 	topicConfig := NewTopicConfigByName(topicName)
 	topicConfig.ReadQueueNums = readQueueNums
 	topicConfig.WriteQueueNums = writeQueueNums
