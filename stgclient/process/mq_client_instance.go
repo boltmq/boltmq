@@ -404,3 +404,30 @@ func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.
 		return nil
 	}
 }
+
+func (mqClientInstance *MQClientInstance) findBrokerAddressInAdmin(brokerName string) FindBrokerResult {
+	var brokerAddr string
+	var slave bool
+	var found bool
+	getBrokerMap,_ := mqClientInstance.BrokerAddrTable.Get(brokerName)
+	brokerMap:=getBrokerMap.(map[int]string)
+	if len(brokerMap)>0{
+		for brokerId,addr:=range brokerMap{
+			brokerAddr=addr
+			if !strings.EqualFold(brokerAddr,""){
+				found=true
+				if brokerId==stgcommon.MASTER_ID{
+					slave=false
+					break
+				}else{
+					slave=true
+				}
+             break
+			}
+		}
+	}
+	if found{
+		return FindBrokerResult{brokerAddr:brokerAddr,slave:slave}
+	}
+	return FindBrokerResult{}
+}
