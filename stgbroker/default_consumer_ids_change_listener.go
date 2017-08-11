@@ -22,7 +22,7 @@ func NewDefaultConsumerIdsChangeListener(brokerController *BrokerController) *De
 // @author gaoyanlei
 // @since 2017/8/9
 func (listener *DefaultConsumerIdsChangeListener) ConsumerIdsChanged(group string, channels []string) {
-	if channels != nil && listener.BrokerController.brokerConfig.NotifyConsumerIdsChangedEnable {
+	if channels != nil && listener.BrokerController.BrokerConfig.NotifyConsumerIdsChangedEnable {
 
 		for index, value := range channels {
 			// TODO Broker主动通知Consumer，Id列表发生变化，
