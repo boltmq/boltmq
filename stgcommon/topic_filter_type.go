@@ -12,8 +12,8 @@ const (
 	MULTI_TAG
 )
 
-func (topicFilterType TopicFilterType) String() string {
-	switch topicFilterType {
+func (self TopicFilterType) String() string {
+	switch self {
 	case SINGLE_TAG:
 		return "SINGLE_TAG"
 	case MULTI_TAG:
