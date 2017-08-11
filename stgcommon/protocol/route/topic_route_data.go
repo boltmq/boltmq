@@ -19,6 +19,8 @@ package route
 
 import (
 	"sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"strings"
 )
 
 type TopicRouteData struct {
@@ -37,6 +39,16 @@ type BrokerData struct {
 	BrokerName      string
 	BrokerAddrs     map[int]string
 	BrokerAddrsLock sync.RWMutex
+}
+
+func (brokerData*BrokerData)SelectBrokerAddr() string {
+	value := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
+	if strings.EqualFold(value, "") {
+		for _, value := range brokerData.BrokerAddrs {
+			return value
+		}
+	}
+	return value
 }
 
 func (topicRouteData*TopicRouteData)CloneTopicRouteData() *TopicRouteData {

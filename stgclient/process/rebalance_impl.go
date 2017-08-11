@@ -42,10 +42,10 @@ func NewRebalanceImplExt() RebalanceImplExt {
 }
 
 func (ext RebalanceImplExt)doRebalance() {
-	for ite := 	ext.SubscriptionInner.Iterator(); ite.HasNext(); {
+	for ite := ext.SubscriptionInner.Iterator(); ite.HasNext(); {
 		k, _, _ := ite.Next()
-		topic:=k.(string)
-        ext.rebalanceByTopic(topic)
+		topic := k.(string)
+		ext.rebalanceByTopic(topic)
 	}
 
 }
@@ -54,7 +54,17 @@ func (ext RebalanceImplExt)rebalanceByTopic(topic string) {
 	switch ext.MessageModel {
 	case heartbeat.BROADCASTING://todo 广播消费后续添加
 	case heartbeat.CLUSTERING:
-       ext.TopicSubscribeInfoTable.Get(topic)
+		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
+
+		cidAll := ext.MQClientFactory.findConsumerIdList(topic, ext.ConsumerGroup)
+		if mqSet != nil&& len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
+			mqAll:=[]message.MessageQueue{}
+			for val := range mqSet.(set.Set).Iterator().C {
+				mqAll=append(mqAll,val.(message.MessageQueue))
+			}
+			strategy:=ext.AllocateMessageQueueStrategy
+			strategy.Allocate(ext.ConsumerGroup,ext.MQClientFactory.ClientId,mqAll,cidAll)
+		}
 	}
 
 }

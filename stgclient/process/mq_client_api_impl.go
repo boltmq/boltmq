@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -92,7 +93,22 @@ func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg 
 }
 
 func (impl *MQClientAPIImpl)UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
+		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
+	}
+	// todo 创建request
+}
 
+func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup string, timeoutMillis int64) []string {
+	consumerGroupWithProjectGroup := consumerGroup
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
+	}
+	requestHeader := header.GetConsumerListByGroupRequestHeader{ConsumerGroup:consumerGroupWithProjectGroup}
+	logger.Info(requestHeader.ConsumerGroup)
+	// todo 创建request
+	return []string{}
 }
 
 

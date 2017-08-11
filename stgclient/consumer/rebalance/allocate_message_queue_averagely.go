@@ -1,6 +1,8 @@
 package rebalance
 
-import "container/list"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+)
 
 
 // 平均负载
@@ -11,9 +13,9 @@ type AllocateMessageQueueAveragely struct {
 
 }
 
-func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup  string, currentCID string, mqAll *list.List, cidAll *list.List) *list.List {
-	result := list.New()
-	return result
+func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, currentCID string, mqAll [] message.MessageQueue, cidAll [] string) [] message.MessageQueue {
+
+	return []message.MessageQueue{}
 }
 
 func (strategy AllocateMessageQueueAveragely) GetName() string {
