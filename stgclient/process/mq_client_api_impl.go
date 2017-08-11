@@ -32,21 +32,21 @@ func (impl *MQClientAPIImpl)Start() {
 }
 // 发送心跳到broker
 func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
-    if strings.EqualFold(impl.ProjectGroupPrefix,""){
-		consumerDatas:=heartbeatData.ConsumerDataSet
+	if strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		consumerDatas := heartbeatData.ConsumerDataSet
 		for data := range consumerDatas.Iterator().C {
-			consumerData:=data.(*heartbeat.ConsumerData)
-			consumerData.GroupName=stgclient.BuildWithProjectGroup(consumerData.GroupName,impl.ProjectGroupPrefix)
-			subscriptionDatas:=consumerData.SubscriptionDataSet
+			consumerData := data.(*heartbeat.ConsumerData)
+			consumerData.GroupName = stgclient.BuildWithProjectGroup(consumerData.GroupName, impl.ProjectGroupPrefix)
+			subscriptionDatas := consumerData.SubscriptionDataSet
 			for subData := range subscriptionDatas.Iterator().C {
-				subscriptionData:=subData.(*heartbeat.SubscriptionData)
-				subscriptionData.Topic=stgclient.BuildWithProjectGroup(subscriptionData.Topic,impl.ProjectGroupPrefix)
+				subscriptionData := subData.(*heartbeat.SubscriptionData)
+				subscriptionData.Topic = stgclient.BuildWithProjectGroup(subscriptionData.Topic, impl.ProjectGroupPrefix)
 			}
 		}
-		producerDatas:=heartbeatData.ProducerDataSet
+		producerDatas := heartbeatData.ProducerDataSet
 		for pData := range producerDatas.Iterator().C {
-			producerData:=pData.(*heartbeat.ProducerData)
-			producerData.GroupName=stgclient.BuildWithProjectGroup(producerData.GroupName,impl.ProjectGroupPrefix)
+			producerData := pData.(*heartbeat.ProducerData)
+			producerData.GroupName = stgclient.BuildWithProjectGroup(producerData.GroupName, impl.ProjectGroupPrefix)
 		}
 	}
 	//todo 创建request调用invokeSync
@@ -68,9 +68,9 @@ func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeou
 
 func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
-		msg.Topic=stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
-		requestHeader.ProducerGroup=stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
-		requestHeader.Topic=stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
+		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
+		requestHeader.ProducerGroup = stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
+		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
 	// 默认send采用v2版本
 	//requestHeaderV2:=header.CreateSendMessageRequestHeaderV2(requestHeader)
@@ -87,7 +87,12 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 	return SendResult{}
 }
 
-func (impl *MQClientAPIImpl)sendMessageSync(addr string,brokerName string,msg message.Message,timeoutMillis int64)SendResult  {
-return  SendResult{}
+func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg message.Message, timeoutMillis int64) SendResult {
+	return SendResult{}
 }
+
+func (impl *MQClientAPIImpl)UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {
+
+}
+
 
