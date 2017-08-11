@@ -1,4 +1,4 @@
-package producer
+package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
@@ -66,7 +66,7 @@ func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeou
 	return routeData
 }
 
-func (impl *MQClientAPIImpl)sendMessage(addr string, brokerName string, msg message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
+func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		msg.Topic=stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 		requestHeader.ProducerGroup=stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)

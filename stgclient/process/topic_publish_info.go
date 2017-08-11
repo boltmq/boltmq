@@ -1,4 +1,4 @@
-package producer
+package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"

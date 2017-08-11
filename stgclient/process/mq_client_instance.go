@@ -1,4 +1,4 @@
-package producer
+package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -94,6 +95,14 @@ func (mqClientInstance *MQClientInstance) RegisterProducer(group string, produce
 	return true
 }
 
+// 将生产者group和发送类保存到内存中
+func (mqClientInstance *MQClientInstance) RegisterConsumer(group string, consumer consumer.MQConsumerInner) bool {
+	prev, _ := mqClientInstance.ConsumerTable.PutIfAbsent(group, consumer)
+	if prev == nil {
+	}
+	return true
+}
+
 // 向所有boker发送心跳
 func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
 	mqClientInstance.LockHeartbeat.Lock()
@@ -139,7 +148,22 @@ func (mqClientInstance *MQClientInstance) prepareHeartbeatData() *heartbeat.Hear
 			heartbeatData.ProducerDataSet.Add(producerData)
 		}
 	}
-	//todo consumer
+	// consumer
+	for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+		_, v, l := ite.Next()
+		if v != nil && l {
+			impl := v.(consumer.MQConsumerInner)
+			consumerData := heartbeat.ConsumerData{GroupName:impl.GroupName(),
+				ConsumeType:impl.ConsumeType(),
+				ConsumeFromWhere:impl.ConsumeFromWhere(),
+				MessageModel:impl.MessageModel(),
+				UnitMode:impl.IsUnitMode()}
+			for data := range impl.Subscriptions().Iterator().C {
+				consumerData.SubscriptionDataSet.Add(data)
+			}
+			heartbeatData.ConsumerDataSet.Add(consumerData)
+		}
+	}
 	return heartbeatData
 
 }
@@ -151,7 +175,7 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	//time:=time.NewTicker()
 
 	// 定时从nameserver更新topic route信息
-	mqClientInstance.updateTopicRouteInfoFromNameServer()
+	mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 	// 定时清理离线的broker并发送心跳数据
 	mqClientInstance.cleanOfflineBroker()
 	mqClientInstance.SendHeartbeatToAllBrokerWithLock()
@@ -161,15 +185,20 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 }
 
 // 从nameserver更新路由信息
-func (mqClientInstance *MQClientInstance) updateTopicRouteInfoFromNameServer() {
+func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServer() {
 
 	// consumer
 	{
 
-		//for it:=mqClientInstance.ConsumerTable.Iterator(); it.HasNext();{
-		//	k, v, l := it.Next()
-		//
-		//}
+		for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+			_, v, _ := ite.Next()
+			subscriptions := v.(consumer.MQConsumerInner).Subscriptions()
+			for data := range subscriptions.Iterator().C {
+				subscriptionData := data.(heartbeat.SubscriptionData)
+				mqClientInstance.UpdateTopicRouteInfoFromNameServerByTopic(subscriptionData.Topic)
+			}
+
+		}
 	}
 
 	// producer
@@ -178,17 +207,17 @@ func (mqClientInstance *MQClientInstance) updateTopicRouteInfoFromNameServer() {
 			_, v, _ := ite.Next()
 			topicList := v.(MQProducerInner).GetPublishTopicList()
 			for topic := range topicList.Iterator().C {
-				mqClientInstance.updateTopicRouteInfoFromNameServerByTopic(topic.(string))
+				mqClientInstance.UpdateTopicRouteInfoFromNameServerByTopic(topic.(string))
 			}
 		}
 	}
 }
 
-func (mqClientInstance *MQClientInstance) updateTopicRouteInfoFromNameServerByTopic(topic string) bool {
-	return mqClientInstance.updateTopicRouteInfoFromNameServerByArgs(topic, false, nil)
+func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByTopic(topic string) bool {
+	return mqClientInstance.UpdateTopicRouteInfoFromNameServerByArgs(topic, false, nil)
 }
 
-func (mqClientInstance *MQClientInstance) updateTopicRouteInfoFromNameServerByArgs(topic string, isDefault bool, defaultMQProducer *DefaultMQProducer) bool {
+func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByArgs(topic string, isDefault bool, defaultMQProducer *DefaultMQProducer) bool {
 	mqClientInstance.LockNamesrv.Lock()
 	defer mqClientInstance.LockNamesrv.Unlock()
 	var topicRouteData *route.TopicRouteData
@@ -234,9 +263,14 @@ func (mqClientInstance *MQClientInstance) updateTopicRouteInfoFromNameServerByAr
 				}
 			}
 			// update sub info
-			// todo consumer
 			{
-
+				subscribeInfo := mqClientInstance.topicRouteData2TopicSubscribeInfo(topic, topicRouteData)
+				for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+					_, impl, _ := ite.Next()
+					if impl != nil {
+						impl.(consumer.MQConsumerInner).UpdateTopicSubscribeInfo(topic, subscribeInfo)
+					}
+				}
 			}
 		}
 	}
@@ -254,13 +288,22 @@ func (mqClientInstance *MQClientInstance) isNeedUpdateTopicRouteInfo(topic strin
 	// producer
 	{
 		for ite := mqClientInstance.ProducerTable.Iterator(); ite.HasNext(); {
-			topic, impl, ok := ite.Next()
+			_, impl, ok := ite.Next()
 			if impl != nil && ok {
-				result = impl.(MQProducerInner).IsPublishTopicNeedUpdate(topic.(string))
+				result = impl.(MQProducerInner).IsPublishTopicNeedUpdate(topic)
 			}
 		}
 	}
-	//todo consumer
+	// consumer
+	{
+		for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+			_, impl, ok := ite.Next()
+			if impl != nil && ok {
+				result = impl.(consumer.MQConsumerInner).IsSubscribeTopicNeedUpdate(topic)
+			}
+		}
+	}
+
 	return result
 }
 
@@ -280,8 +323,8 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic 
 	} else {
 		qds := topicRouteData.QueueDatas
 		for _, queueData := range qds {
-			//todo 队列权限进行判断
-			if true {
+
+			if constant.IsWriteable(int32(queueData.Perm)) {
 				var brokerData *route.BrokerData
 				for _, bd := range topicRouteData.BrokerDatas {
 					if strings.EqualFold(bd.BrokerName, queueData.BrokerName) {
@@ -307,6 +350,21 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic 
 	return info
 }
 
+
+// 路由信息转订阅信息
+func (mqClientInstance *MQClientInstance) topicRouteData2TopicSubscribeInfo(topic string, topicRouteData *route.TopicRouteData) set.Set {
+	mqList := set.NewSet()
+	for _, qd := range topicRouteData.QueueDatas {
+		if constant.IsReadable(int32(qd.Perm)) {
+			for i := 0; i < qd.ReadQueueNums; i++ {
+				mq := message.MessageQueue{Topic:topic, BrokerName:qd.BrokerName, QueueId:i}
+				mqList.Add(mq)
+			}
+		}
+	}
+	return mqList
+}
+
 // Remove offline broker
 func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 	mqClientInstance.LockNamesrv.Lock()
@@ -315,10 +373,18 @@ func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 
 // 持久化所有consumer的offset
 func (mqClientInstance *MQClientInstance) persistAllConsumerOffset() {
+	for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+		_, impl, _ := ite.Next()
+		impl.(consumer.MQConsumerInner).PersistConsumerOffset()
+	}
+}
+// 立即执行负载
+func (mqClientInstance *MQClientInstance) rebalanceImmediately() {
+	mqClientInstance.RebalanceService.Start()
 }
 
 // 查找broker的master地址
-func (mqClientInstance *MQClientInstance)findBrokerAddressInPublish(brokerName string) string {
+func (mqClientInstance *MQClientInstance)FindBrokerAddressInPublish(brokerName string) string {
 
 	brokerAddr, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
 	if brokerAddr != nil {
@@ -330,11 +396,11 @@ func (mqClientInstance *MQClientInstance)findBrokerAddressInPublish(brokerName s
 	return ""
 }
 
-func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.MQConsumerInner{
-	mqCInner,_:=mqClientInstance.ConsumerTable.Get(group)
-	if mqCInner!=nil{
+func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.MQConsumerInner {
+	mqCInner, _ := mqClientInstance.ConsumerTable.Get(group)
+	if mqCInner != nil {
 		return mqCInner.(consumer.MQConsumerInner)
-	}else{
+	} else {
 		return nil
 	}
 }
