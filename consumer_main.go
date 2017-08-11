@@ -30,8 +30,10 @@ func main() {
 	defaultMQPushConsumer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQPushConsumer.Subscribe("TestTopic", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
-	var listener consumer.MessageListenerConcurrently = &MessageListenerImpl{}
-	listener.ConsumeMessage(nil,consumer.ConsumeConcurrentlyContext{})
+	var listener listener.MessageListener = &MessageListenerImpl{}
+
+	var listener1 =listener.(consumer.MessageListenerConcurrently)
+	listener1.ConsumeMessage(nil,consumer.ConsumeConcurrentlyContext{})
 	defaultMQPushConsumer.Start()
 	go taskC()
 	select {
