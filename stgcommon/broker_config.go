@@ -6,8 +6,8 @@ import (
 )
 
 // BrokerConfig Broker配置项
-// @author gaoyanlei
-// @since 2017/8/8
+// Author gaoyanlei
+// Since 2017/8/8
 type BrokerConfig struct {
 	// mqHome
 	RocketmqHome string
@@ -67,8 +67,8 @@ type BrokerConfig struct {
 }
 
 // NewBrokerConfig 初始化BrokerConfig
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 func NewBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
 		RocketmqHome: os.Getenv(CLOUDMQ_HOME_ENV),
@@ -105,8 +105,8 @@ func NewBrokerConfig() *BrokerConfig {
 }
 
 // localHostName 获取当前机器hostName
-// @author gaoyanlei
-// @since 2017/8/8
+// Author gaoyanlei
+// Since 2017/8/8
 func localHostName() string {
 	host, err := os.Hostname()
 	if err != nil {

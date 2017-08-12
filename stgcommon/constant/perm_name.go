@@ -1,8 +1,8 @@
 package constant
 
 // PERM 读写权限
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 const (
 	PERM_PRIORITY = 0x1 << 3
 	PERM_READ     = 0x1 << 2

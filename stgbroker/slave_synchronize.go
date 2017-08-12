@@ -1,8 +1,8 @@
 package stgbroker
 
 // SlaveSynchronize Slave从Master同步信息（非消息）
-// @author gaoyanlei
-// @since 2017/8/10
+// Author gaoyanlei
+// Since 2017/8/10
 type SlaveSynchronize struct {
 	// TODO Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 	BrokerController *BrokerController
@@ -10,8 +10,8 @@ type SlaveSynchronize struct {
 }
 
 // NewSlaveSynchronize 初始化SubscriptionGroupManager
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 func NewSlaveSynchronize(brokerController *BrokerController) *SlaveSynchronize {
 	var slaveSynchronize = new(SlaveSynchronize)
 	slaveSynchronize.BrokerController = brokerController
