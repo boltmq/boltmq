@@ -22,8 +22,8 @@ type TopicConfigManager struct {
 }
 
 // NewTopicConfigManager 初始化SubscriptionGroupManager
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManager {
 	var topicConfigManager = new(TopicConfigManager)
 	topicConfigManager.BrokerController = brokerController
@@ -126,8 +126,8 @@ func (self *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
 }
 
 // selectTopicConfig 根据topic查找
-// @author gaoyanlei
-// @since 2017/8/11
+// Author gaoyanlei
+// Since 2017/8/11
 func (self *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicConfig {
 
 	topicConfig, err := self.TopicConfigTable.Get(topic)
@@ -143,8 +143,8 @@ func (self *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.Topic
 }
 
 // createTopicInSendMessageMethod 创建topic
-// @author gaoyanlei
-// @since 2017/8/10
+// Author gaoyanlei
+// Since 2017/8/10
 func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
 	remoteAddress string, clientDefaultTopicQueueNums, topicSysFlag int32) (topicConfig *stgcommon.TopicConfig, err error) {
 	self.lockTopicConfigTable.Lock()
@@ -212,8 +212,8 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 }
 
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
-// @author gaoyanlei
-// @since 2017/8/11
+// Author gaoyanlei
+// Since 2017/8/11
 func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm int,
 	clientDefaultTopicQueueNums, topicSysFlag int32) (topicConfig *stgcommon.TopicConfig, err error) {
 	self.lockTopicConfigTable.Lock()
@@ -247,8 +247,8 @@ func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 }
 
 // updateTopicConfig 更新topic信息
-// @author gaoyanlei
-// @since 2017/8/10
+// Author gaoyanlei
+// Since 2017/8/10
 func (self *TopicConfigManager) updateTopicConfig(topicConfig *stgcommon.TopicConfig, err error) {
 	value, err := self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if value != nil && err == nil {
@@ -260,8 +260,8 @@ func (self *TopicConfigManager) updateTopicConfig(topicConfig *stgcommon.TopicCo
 }
 
 // updateOrderTopicConfig 更新顺序topic
-// @author gaoyanlei
-// @since 2017/8/11
+// Author gaoyanlei
+// Since 2017/8/11
 func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.KVTable) {
 	if orderKVTableFromNs.Table != nil {
 		isChange := false
@@ -297,8 +297,8 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.K
 }
 
 // isOrderTopic 判断是否是顺序topic
-// @author gaoyanlei
-// @since 2017/8/10
+// Author gaoyanlei
+// Since 2017/8/10
 func (self *TopicConfigManager) isOrderTopic(topic string) bool {
 	value, err := self.TopicConfigTable.Get(topic)
 	if value == nil && err != nil {
@@ -312,8 +312,8 @@ func (self *TopicConfigManager) isOrderTopic(topic string) bool {
 }
 
 // deleteTopicConfig 删除topic
-// @author gaoyanlei
-// @since 2017/8/10
+// Author gaoyanlei
+// Since 2017/8/10
 func (self *TopicConfigManager) deleteTopicConfig(topic string) {
 	value, err := self.TopicConfigTable.Remove(topic)
 	if value != nil && err == nil {
@@ -326,10 +326,14 @@ func (self *TopicConfigManager) deleteTopicConfig(topic string) {
 }
 
 // buildTopicConfigSerializeWrapper 创建TopicConfigSerializeWrapper
-// @author gaoyanlei
-// @since 2017/8/11
+// Author gaoyanlei
+// Since 2017/8/11
 func (self *TopicConfigManager) buildTopicConfigSerializeWrapper() {
 	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
 	topicConfigSerializeWrapper.DataVersion = self.DataVersion
 	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
+}
+
+func (self *TopicConfigManager) Load() bool{
+
 }

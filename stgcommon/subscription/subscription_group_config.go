@@ -3,8 +3,8 @@ package subscription
 import "git.oschina.net/cloudzone/smartgo/stgcommon"
 
 // SubscriptionGroupConfig 订阅关系配置
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 type SubscriptionGroupConfig struct {
 	// 订阅组名
 	GroupName string
@@ -25,8 +25,8 @@ type SubscriptionGroupConfig struct {
 }
 
 // NewSubscriptionGroupConfig 初始化SubscriptionGroupConfig
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 func NewSubscriptionGroupConfig() *SubscriptionGroupConfig {
 	return &SubscriptionGroupConfig{
 		ConsumeEnable:          true,
