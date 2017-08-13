@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
 )
 
 // RemoteBrokerOffsetStore: 保存offset到broker
@@ -59,6 +60,10 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 }
 
 func (store *RemoteBrokerOffsetStore)Persist(mq message.MessageQueue) {
+	offset, _ := store.offsetTable.Get(mq)
+	if offset != nil {
+		store.updateConsumeOffsetToBroker(mq, offset.(int64))
+	}
 
 }
 
@@ -70,12 +75,50 @@ func (store *RemoteBrokerOffsetStore)updateConsumeOffsetToBroker(mq message.Mess
 	}
 
 	if !strings.EqualFold(findBrokerResult.brokerAddr, "") {
-		requestHeader:=header.UpdateConsumerOffsetRequestHeader{
+		requestHeader := header.UpdateConsumerOffsetRequestHeader{
 			Topic:mq.Topic,
 			ConsumerGroup:store.groupName,
 			QueueId:mq.QueueId,
 			CommitOffset:offset,
 		}
-		store.mQClientFactory.MQClientAPIImpl.UpdateConsumerOffsetOneway(findBrokerResult.brokerAddr,requestHeader,1000*5)
+		store.mQClientFactory.MQClientAPIImpl.UpdateConsumerOffsetOneway(findBrokerResult.brokerAddr, requestHeader, 1000 * 5)
 	}
+}
+
+func (store *RemoteBrokerOffsetStore)RemoveOffset(mq message.MessageQueue) {
+	store.offsetTable.Remove(mq)
+	logger.Info("remove unnecessary messageQueue offset. mq, offsetTableSize")
+}
+func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq message.MessageQueue, rType store.ReadOffsetType) int64 {
+	switch rType {
+	case store.MEMORY_FIRST_THEN_STORE:
+	case store.READ_FROM_MEMORY:
+		offset, _ := rStore.offsetTable.Get(mq)
+		if offset != nil {
+			return offset.(int64)
+		}
+	case store.READ_FROM_STORE:
+		brokerOffset := rStore.fetchConsumeOffsetFromBroker(mq)
+		rStore.UpdateOffset(mq,brokerOffset,false)
+		return brokerOffset
+
+	}
+	return -1
+}
+
+func (store *RemoteBrokerOffsetStore)UpdateOffset(mq message.MessageQueue,offset int64,increaseOnly bool) {
+offsetOld,_:=	store.offsetTable.Get(mq)
+	if offsetOld==nil{
+		offsetOld,_=store.offsetTable.PutIfAbsent(mq,offsetOld)
+	}else{
+		if increaseOnly{
+
+		}
+
+	}
+	return
+}
+
+func (store *RemoteBrokerOffsetStore)fetchConsumeOffsetFromBroker(mq message.MessageQueue) int64 {
+	return -1
 }

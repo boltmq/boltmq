@@ -16,6 +16,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
+	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -157,6 +159,7 @@ func (mqClientInstance *MQClientInstance) prepareHeartbeatData() *heartbeat.Hear
 				ConsumeType:impl.ConsumeType(),
 				ConsumeFromWhere:impl.ConsumeFromWhere(),
 				MessageModel:impl.MessageModel(),
+				SubscriptionDataSet:set.NewSet(),
 				UnitMode:impl.IsUnitMode()}
 			for data := range impl.Subscriptions().Iterator().C {
 				consumerData.SubscriptionDataSet.Add(data)
@@ -172,16 +175,24 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	if strings.EqualFold(mqClientInstance.ClientConfig.NamesrvAddr, "") {
 		//todo namesrv地址为空通过http获取
 	}
-	//time:=time.NewTicker()
 
 	// 定时从nameserver更新topic route信息
-	mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+	updateRouteTicker:=utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval/1000,1)
+	go updateRouteTicker.Do(func(tm time.Time) {
+		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+	})
 	// 定时清理离线的broker并发送心跳数据
-	mqClientInstance.cleanOfflineBroker()
-	mqClientInstance.SendHeartbeatToAllBrokerWithLock()
+	cleanAndHBTicker:=utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval/1000,1)
+	go cleanAndHBTicker.Do(func(tm time.Time) {
+		mqClientInstance.cleanOfflineBroker()
+		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
+	})
+	persistOffsetTicker:=utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval/1000,10)
 	// 定时持久化consumer的offset
-	mqClientInstance.persistAllConsumerOffset()
-	// 定时调整线程池的数量
+	go persistOffsetTicker.Do(func(tm time.Time) {
+		mqClientInstance.persistAllConsumerOffset()
+	})
+	//todo 定时调整线程池的数量
 }
 
 // 从nameserver更新路由信息

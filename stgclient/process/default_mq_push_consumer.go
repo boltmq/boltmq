@@ -60,6 +60,7 @@ type DefaultMQPushConsumer struct {
 func NewDefaultMQPushConsumer(consumerGroup string) *DefaultMQPushConsumer {
 	pushConsumer := &DefaultMQPushConsumer{clientConfig:stgclient.NewClientConfig("")}
 	pushConsumer.consumerGroup = consumerGroup
+	pushConsumer.messageModel=heartbeat.CLUSTERING
 	pushConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
 	pushConsumer.defaultMQPushConsumerImpl = NewDefaultMQPushConsumerImpl(pushConsumer)
 	return pushConsumer
