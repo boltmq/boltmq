@@ -6,8 +6,8 @@ import (
 )
 
 // ConsumerManager 消费者管理
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 type ConsumerManager struct {
 	consumerTable             *sync.Map
 	ConsumerIdsChangeListener rebalance.ConsumerIdsChangeListener
@@ -15,8 +15,8 @@ type ConsumerManager struct {
 }
 
 // NewConsumerOffsetManager 初始化ConsumerOffsetManager
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/9
 func NewConsumerManager(consumerIdsChangeListener rebalance.ConsumerIdsChangeListener) *ConsumerManager {
 	var consumerManager = new(ConsumerManager)
 	consumerManager.consumerTable = sync.NewMap()
