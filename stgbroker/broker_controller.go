@@ -66,6 +66,20 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	return brokerController
 }
 
-func start()  {
-	
+func (self *BrokerController) start() {
+	result := true
+	result = result && self.TopicConfigManager.Load()
+	result = result && self.ConsumerOffsetManager.Load()
+	result = result && self.SubscriptionGroupManager.Load()
+
+	if result {
+		// TODO  this.messageStore = new DefaultMessageStore(this.messageStoreConfig, this.defaultTransactionCheckExecuter,this.brokerStatsManager);
+	}
+
+	// TODO result = result && self.messageStore.Load()
+
+	if result {
+		// TODO this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
+
+	}
 }
