@@ -7,6 +7,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 // RebalanceImpl: rebalance接口
 // Author: yintongqiang
@@ -25,7 +27,8 @@ type RebalanceImpl interface {
 // Since:  2017/8/11
 
 type RebalanceImplExt  struct {
-	ProcessQueueTable            *sync.Map
+	RebalanceImpl                RebalanceImpl
+	ProcessQueueTable            *sync.Map //MessageQueue, ProcessQueue
 	TopicSubscribeInfoTable      *sync.Map
 	SubscriptionInner            *sync.Map
 	ConsumerGroup                string
@@ -34,8 +37,9 @@ type RebalanceImplExt  struct {
 	MQClientFactory              *MQClientInstance
 }
 
-func NewRebalanceImplExt() RebalanceImplExt {
+func NewRebalanceImplExt(rebalanceImpl RebalanceImpl) RebalanceImplExt {
 	return RebalanceImplExt{
+		RebalanceImpl:rebalanceImpl,
 		ProcessQueueTable:sync.NewMap(),
 		TopicSubscribeInfoTable:sync.NewMap(),
 		SubscriptionInner:sync.NewMap()}
@@ -55,16 +59,82 @@ func (ext RebalanceImplExt)rebalanceByTopic(topic string) {
 	case heartbeat.BROADCASTING://todo 广播消费后续添加
 	case heartbeat.CLUSTERING:
 		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
-
 		cidAll := ext.MQClientFactory.findConsumerIdList(topic, ext.ConsumerGroup)
 		if mqSet != nil&& len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
-			mqAll:=[]message.MessageQueue{}
+			mqAll := []message.MessageQueue{}
 			for val := range mqSet.(set.Set).Iterator().C {
-				mqAll=append(mqAll,val.(message.MessageQueue))
+				mqAll = append(mqAll, val.(message.MessageQueue))
 			}
-			strategy:=ext.AllocateMessageQueueStrategy
-			strategy.Allocate(ext.ConsumerGroup,ext.MQClientFactory.ClientId,mqAll,cidAll)
+			strategy := ext.AllocateMessageQueueStrategy
+			allocateResult := strategy.Allocate(ext.ConsumerGroup, ext.MQClientFactory.ClientId, mqAll, cidAll)
+			allocateResultSet:=set.NewSet(allocateResult)
+			changed:=ext.updateProcessQueueTableInRebalance(topic,allocateResultSet)
+		    if changed{
+				logger.Info(
+					"rebalanced allocate source. allocateMessageQueueStrategyName, group, topic, mqAllSize, cidAllSize, mqAll, cidAll")
+				logger.Info(
+					"rebalanced result changed. allocateMessageQueueStrategyName, group, topic, ConsumerId, rebalanceSize, rebalanceMqSet")
+				ext.RebalanceImpl.MessageQueueChanged(topic,set.NewSet(mqAll),allocateResultSet)
+			}
 		}
 	}
 
+}
+
+func (ext RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqSet set.Set) bool {
+	changed := false
+
+	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
+		msgQ, pQ, _ := ite.Next()
+		mq := msgQ.(message.MessageQueue)
+		pq := pQ.(consumer.ProcessQueue)
+		if strings.EqualFold(mq.Topic, topic) {
+			if !mqSet.Contains(mq) {
+				pq.Dropped = true
+				if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {
+					ite.Remove()
+					changed = true
+					logger.Info("doRebalance, remove unnecessary")
+				}
+			} else if pq.IsPullExpired() {
+				switch ext.RebalanceImpl.ConsumeType() {
+				case heartbeat.CONSUME_ACTIVELY:
+					break
+				case heartbeat.CONSUME_PASSIVELY:
+					pq.Dropped = true
+					if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {
+						ite.Remove()
+						changed = true
+						logger.Error("[BUG]doRebalance, remove unnecessary mq, because pull is pause, so try to fixed it")
+					}
+				default:
+					break
+
+				}
+			}
+		}
+	}
+	pullRequestList := []consumer.PullRequest{}
+	for mq := range mqSet.Iterator().C {
+		ok,_:=ext.ProcessQueueTable.ContainsKey(mq)
+		if !ok {
+			pullRequest := consumer.PullRequest{
+				ConsumerGroup:ext.ConsumerGroup,
+				MessageQueue:mq.(message.MessageQueue),
+				ProcessQueue:consumer.NewProcessQueue(),
+			}
+			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(message.MessageQueue))
+			if nextOffset >= 0 {
+				pullRequest.NextOffset = nextOffset
+				pullRequestList=append(pullRequestList,pullRequest)
+				changed = true
+				ext.ProcessQueueTable.Put(mq, pullRequest.ProcessQueue)
+				logger.Info("doRebalance, add a new mq")
+			} else {
+				logger.Warn("doRebalance, add new mq failed")
+			}
+		}
+	}
+	ext.RebalanceImpl.DispatchPullRequest(pullRequestList)
+	return changed
 }

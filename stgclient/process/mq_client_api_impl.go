@@ -36,11 +36,11 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 	if strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerDatas := heartbeatData.ConsumerDataSet
 		for data := range consumerDatas.Iterator().C {
-			consumerData := data.(*heartbeat.ConsumerData)
+			consumerData := data.(heartbeat.ConsumerData)
 			consumerData.GroupName = stgclient.BuildWithProjectGroup(consumerData.GroupName, impl.ProjectGroupPrefix)
 			subscriptionDatas := consumerData.SubscriptionDataSet
 			for subData := range subscriptionDatas.Iterator().C {
-				subscriptionData := subData.(*heartbeat.SubscriptionData)
+				subscriptionData := subData.(heartbeat.SubscriptionData)
 				subscriptionData.Topic = stgclient.BuildWithProjectGroup(subscriptionData.Topic, impl.ProjectGroupPrefix)
 			}
 		}

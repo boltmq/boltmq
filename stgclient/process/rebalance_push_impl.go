@@ -5,6 +5,7 @@ import (
 	set "github.com/deckarep/golang-set"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
 )
 // RebalancePushImpl: push负载实现类
 // Author: yintongqiang
@@ -16,7 +17,9 @@ type RebalancePushImpl struct {
 }
 
 func NewRebalancePushImpl(defaultMQPushConsumerImpl *DefaultMQPushConsumerImpl) RebalancePushImpl {
-	return RebalancePushImpl{defaultMQPushConsumerImpl:defaultMQPushConsumerImpl,rebalanceImplExt:NewRebalanceImplExt()}
+	rebalanceImpl:=RebalancePushImpl{defaultMQPushConsumerImpl:defaultMQPushConsumerImpl}
+	rebalanceImpl.rebalanceImplExt=NewRebalanceImplExt(rebalanceImpl)
+	return rebalanceImpl
 }
 
 func (pushImpl RebalancePushImpl)DispatchPullRequest(pullRequestList []consumer.PullRequest) {
@@ -31,9 +34,19 @@ func (pushImpl RebalancePushImpl)MessageQueueChanged(topic string, mqAll set.Set
 }
 
 func (pushImpl RebalancePushImpl)RemoveUnnecessaryMessageQueue(mq message.MessageQueue, pq consumer.ProcessQueue) bool {
-	return false
+	pushImpl.defaultMQPushConsumerImpl.OffsetStore.Persist(mq)
+	pushImpl.defaultMQPushConsumerImpl.OffsetStore.RemoveOffset(mq)
+	//todo 各种lock
+	return true
 }
 
 func (pushImpl RebalancePushImpl)ComputePullFromWhere(mq message.MessageQueue) int64 {
-	return 1
+	var result int64=-1
+	consumeFromWhere:=pushImpl.defaultMQPushConsumerImpl.ConsumeFromWhere()
+	offsetStore:=pushImpl.defaultMQPushConsumerImpl.OffsetStore
+	switch consumeFromWhere {
+	case heartbeat.CONSUME_FROM_LAST_OFFSET:
+		/*lastOffset:=*/offsetStore.ReadOffset(mq,store.READ_FROM_STORE)
+	}
+	return result
 }
