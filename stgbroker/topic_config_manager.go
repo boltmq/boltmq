@@ -334,6 +334,7 @@ func (self *TopicConfigManager) buildTopicConfigSerializeWrapper() {
 	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
 }
 
-func (self *TopicConfigManager) Load() bool{
-
-}
+//func (self *TopicConfigManager) Load() bool{
+//
+//	return
+//}
