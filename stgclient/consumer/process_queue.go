@@ -9,6 +9,7 @@ type ProcessQueue struct {
 	Dropped           bool
 	LastPullTimestamp int64
 	PullMaxIdleTime   int64
+	MsgCount          int
 }
 
 func NewProcessQueue()ProcessQueue {

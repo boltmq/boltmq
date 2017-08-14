@@ -3,6 +3,7 @@ package process
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"time"
 )
 
 // PullMessageService: 拉取服务
@@ -22,15 +23,28 @@ func (service *PullMessageService) Start() {
 	service.run()
 }
 
+func (service *PullMessageService) ExecutePullRequestImmediately(pullRequest consumer.PullRequest) {
+	service.PullRequestQueue <- pullRequest
+}
+func (service *PullMessageService) ExecutePullRequestLater(pullRequest consumer.PullRequest,timeDelay int) {
+	go func() {
+		time.Sleep(time.Millisecond*time.Duration(timeDelay))
+		service.ExecutePullRequestImmediately(pullRequest)
+	}()
+}
+
 func (service *PullMessageService) run() {
 	logger.Info(" service started")
 	for {
-		request:=<-service.PullRequestQueue
+		request := <-service.PullRequestQueue
 		service.pullMessage(request)
 
 	}
 }
 
 func (service *PullMessageService) pullMessage(pullRequest consumer.PullRequest) {
-	service.MQClientFactory.selectConsumer(pullRequest.ConsumerGroup)
+	mConsumer := service.MQClientFactory.selectConsumer(pullRequest.ConsumerGroup)
+	if mConsumer != nil {
+		mConsumer.(*DefaultMQPushConsumerImpl).pullMessage(pullRequest)
+	}
 }

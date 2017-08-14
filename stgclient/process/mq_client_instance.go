@@ -31,6 +31,7 @@ type MQClientInstance struct {
 	ProducerTable           *sync.Map
 	ConsumerTable           *sync.Map
 	MQClientAPIImpl         *MQClientAPIImpl
+	MQAdminImpl             *MQAdminImpl
 	TopicRouteTable         *sync.Map
 
 	LockNamesrv             lock.RWMutex
@@ -56,6 +57,7 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 	}
 	mqClientInstance.ClientRemotingProcessor = NewClientRemotingProcessor(mqClientInstance)
 	mqClientInstance.MQClientAPIImpl = NewMQClientAPIImpl(mqClientInstance.ClientRemotingProcessor)
+	mqClientInstance.MQAdminImpl = NewMQAdminImpl(mqClientInstance)
 	mqClientInstance.PullMessageService = NewPullMessageService(mqClientInstance)
 	mqClientInstance.RebalanceService = NewRebalanceService(mqClientInstance)
 	mqClientInstance.DefaultMQProducer = NewDefaultMQProducer(stgcommon.CLIENT_INNER_PRODUCER_GROUP)
@@ -177,17 +179,17 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	}
 
 	// 定时从nameserver更新topic route信息
-	updateRouteTicker:=utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval/1000,1)
+	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
 	go updateRouteTicker.Do(func(tm time.Time) {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 	})
 	// 定时清理离线的broker并发送心跳数据
-	cleanAndHBTicker:=utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval/1000,1)
+	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
 	go cleanAndHBTicker.Do(func(tm time.Time) {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
 	})
-	persistOffsetTicker:=utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval/1000,10)
+	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
 	// 定时持久化consumer的offset
 	go persistOffsetTicker.Do(func(tm time.Time) {
 		mqClientInstance.persistAllConsumerOffset()
@@ -461,6 +463,33 @@ func (mqClientInstance *MQClientInstance) findBrokerAddressInAdmin(brokerName st
 				break
 			}
 		}
+	}
+	if found {
+		return FindBrokerResult{brokerAddr:brokerAddr, slave:slave}
+	}
+	return FindBrokerResult{}
+}
+
+func (mqClientInstance *MQClientInstance) findBrokerAddressInSubscribe(brokerName string,brokerId int,onlyThisBroker bool) FindBrokerResult {
+	var brokerAddr string
+	var slave bool
+	var found bool
+	getBrokerMap, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
+	brokerMap := getBrokerMap.(map[int]string)
+	if len(brokerMap) > 0 {
+			brokerAddr = brokerMap[brokerId]
+		  slave=(brokerId!=stgcommon.MASTER_ID)
+		found=!strings.EqualFold(brokerAddr,"")
+			if !found && !onlyThisBroker{
+				for brokerId, addr := range brokerMap {
+					brokerAddr = addr
+					if !strings.EqualFold(brokerAddr, "") {
+						slave=(brokerId!=stgcommon.MASTER_ID)
+						found=true
+						break
+					}
+				}
+			}
 	}
 	if found {
 		return FindBrokerResult{brokerAddr:brokerAddr, slave:slave}

@@ -4,14 +4,15 @@ package message
 // Since:  2017/8/10
 
 type MessageExt struct {
-	// 消息主题
-	Topic                     string
-	// 消息标志，系统不做干预，完全由应用决定如何使用
-	Flag                      int
-	// 消息属性，都是系统属性，禁止应用设置
-	Properties                map[string]string
-	// 消息体
-	Body                      []byte
+	//// 消息主题
+	//Topic                     string
+	//// 消息标志，系统不做干预，完全由应用决定如何使用
+	//Flag                      int
+	//// 消息属性，都是系统属性，禁止应用设置
+	//Properties                map[string]string
+	//// 消息体
+	//Body                      []byte
+	Message
 	// 队列ID <PUT>
 	queueId                   int
 	// 存储记录大小

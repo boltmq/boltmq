@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/ioutil"
+	"sync/atomic"
 )
 // mix_all: 大杂烩
 // Author: yintongqiang
@@ -53,4 +54,14 @@ func UnCompress(src[]byte) []byte {
 	defer r.Close()
 	data, _ := ioutil.ReadAll(r)
 	return data
+}
+
+func CompareAndIncreaseOnly(target *int64, value int64) bool {
+	if value > *target {
+		updated := atomic.CompareAndSwapInt64(target, *target, value)
+		if updated {
+			return true
+		}
+	}
+	return false
 }
