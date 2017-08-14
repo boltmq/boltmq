@@ -6,7 +6,7 @@ import "git.oschina.net/cloudzone/smartgo/stgcommon/message"
 // Since:  2017/8/10
 
 type ConsumeConcurrentlyContext struct {
-	messageQueue              message.MessageQueue
-	delayLevelWhenNextConsume int
-	ackIndex                  int
+	MessageQueue              message.MessageQueue
+	DelayLevelWhenNextConsume int
+	AckIndex                  int
 }

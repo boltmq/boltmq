@@ -1,23 +1,88 @@
 package consumer
 
-import "time"
+import (
+	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"sort"
+	"sync/atomic"
+	"strings"
+	"strconv"
+	"sync"
+)
 // ProcessQueue: 消息处理队列
 // Author: yintongqiang
 // Since:  2017/8/10
 
 type ProcessQueue struct {
+	sync.RWMutex
 	Dropped           bool
 	LastPullTimestamp int64
 	PullMaxIdleTime   int64
 	MsgCount          int
+	TreeMap           *TreeMap
+	QueueOffsetMax    int
+	Consuming         bool
+	MsgAccCnt         int
+}
+type TreeMap struct {
+	keys     []int
+	innerMap map[int]*message.MessageExt
 }
 
-func NewProcessQueue()ProcessQueue {
+func NewTreeMap() *TreeMap {
+	return &TreeMap{
+		innerMap:make(map[int]*message.MessageExt)}
+}
+
+func (treeMap *TreeMap)put(offset int, msg *message.MessageExt) *message.MessageExt {
+	treeMap.innerMap[offset] = msg
+	treeMap.keys = append(treeMap.keys, offset)
+	sort.Ints(treeMap.keys)
+	return msg
+}
+func (treeMap *TreeMap)get(offset int) *message.MessageExt {
+	return treeMap.innerMap[offset]
+}
+
+func NewProcessQueue() ProcessQueue {
 	return ProcessQueue{
 		PullMaxIdleTime:120000,
+		TreeMap:NewTreeMap(),
 	}
 }
 
-func (pq ProcessQueue ) IsPullExpired() bool {
+func (pq ProcessQueue) IsPullExpired() bool {
 	return (time.Now().Unix() * 1000 - pq.LastPullTimestamp) > pq.PullMaxIdleTime
+}
+
+func (pq ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
+	pq.Lock()
+	defer pq.Unlock()
+	dispatchToConsume := false
+	var validMsgCnt int32 = 0
+	for _, msg := range msgs {
+		old:=pq.TreeMap.put(msg.QueueId, &msg)
+		if old==nil{
+			validMsgCnt++
+			pq.QueueOffsetMax=msg.QueueOffset
+		}
+
+	}
+	atomic.AddInt32(&validMsgCnt,1)
+	if len(pq.TreeMap.innerMap)>0&& !pq.Consuming{
+		dispatchToConsume=true
+		pq.Consuming=true
+	}
+	if len(msgs)>0{
+      messageExt:=msgs[len(msgs)-1]
+		property:=messageExt.Properties[message.PROPERTY_MAX_OFFSET]
+		if !strings.EqualFold(property,""){
+			maxOffset,_:=strconv.Atoi(property)
+			accTotal:=maxOffset-messageExt.QueueOffset
+			if accTotal>0{
+				pq.MsgAccCnt=accTotal
+			}
+		}
+	}
+	return dispatchToConsume
 }
