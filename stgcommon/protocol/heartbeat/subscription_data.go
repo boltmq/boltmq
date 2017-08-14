@@ -12,5 +12,5 @@ type SubscriptionData struct {
 	SubString       string
 	TagsSet         set.Set
 	CodeSet         set.Set
-	SubVersion      int64
+	SubVersion      int
 }

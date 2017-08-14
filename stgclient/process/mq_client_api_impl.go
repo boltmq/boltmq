@@ -8,6 +8,7 @@ import (
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -111,4 +112,31 @@ func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup 
 	return []string{}
 }
 
+func (impl *MQClientAPIImpl)GetMaxOffset(addr string,topic string,queueId int,timeoutMillis int64) int64 {
+	topicWithProjectGroup := topic
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
+	}
+	logger.Info(topicWithProjectGroup)
+	// todo 创建request
+	return -1
+}
 
+func (impl *MQClientAPIImpl)PullMessage(addr string,requestHeader header.PullMessageRequestHeader,
+timeoutMillis int,communicationMode CommunicationMode,pullCallback consumer.PullCallback) consumer.PullResult {
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
+		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
+	}
+	// todo 创建request
+	switch communicationMode {
+	case ONEWAY:
+	case ASYNC:
+		// todo 后续操作
+	//impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
+	case SYNC:
+	default:
+
+	}
+	return consumer.PullResult{}
+}

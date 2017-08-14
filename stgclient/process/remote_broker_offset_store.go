@@ -9,6 +9,7 @@ import (
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 // RemoteBrokerOffsetStore: 保存offset到broker
@@ -99,20 +100,27 @@ func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq message.MessageQueue, rType 
 		}
 	case store.READ_FROM_STORE:
 		brokerOffset := rStore.fetchConsumeOffsetFromBroker(mq)
-		rStore.UpdateOffset(mq,brokerOffset,false)
+		rStore.UpdateOffset(mq, brokerOffset, false)
 		return brokerOffset
 
 	}
 	return -1
 }
 
-func (store *RemoteBrokerOffsetStore)UpdateOffset(mq message.MessageQueue,offset int64,increaseOnly bool) {
-offsetOld,_:=	store.offsetTable.Get(mq)
-	if offsetOld==nil{
-		offsetOld,_=store.offsetTable.PutIfAbsent(mq,offsetOld)
-	}else{
-		if increaseOnly{
-
+func (store *RemoteBrokerOffsetStore)UpdateOffset(mq message.MessageQueue, offset int64, increaseOnly bool) {
+	offsetOld, _ := store.offsetTable.Get(mq)
+	if offsetOld == nil {
+		offsetOld, _ = store.offsetTable.PutIfAbsent(mq, offsetOld)
+	} else {
+		if increaseOnly {
+			var offsetV int64=offsetOld.(int64)
+			ok := stgcommon.CompareAndIncreaseOnly(&offsetV, offset)
+			if ok {
+				store.offsetTable.Put(mq, offset)
+			}
+		} else {
+			offsetOld = offset
+			store.offsetTable.Put(mq, offset)
 		}
 
 	}

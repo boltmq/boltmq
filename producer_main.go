@@ -4,7 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"time"
-	"sync/atomic"
+	//"sync/atomic"
 	"fmt"
 )
 
@@ -18,9 +18,14 @@ func Task() {
 	}
 }
 func main() {
-	var a int64=10
-	atomic.CompareAndSwapInt64(&a,1,11)
-	fmt.Println(a)
+	var b int64=10
+	var a *int64=&b
+	fmt.Println(*a)
+	b=11
+	fmt.Println(*a)
+	*a=12
+	fmt.Println(*a)
+	fmt.Println(b)
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQProducer.Start()
