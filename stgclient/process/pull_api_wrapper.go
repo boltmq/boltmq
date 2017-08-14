@@ -8,6 +8,8 @@ import (
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 // PullAPIWrapper: pull包装类
 // Author: yintongqiang
@@ -81,4 +83,27 @@ func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq message.MessageQueue)
 		return suggest.(int)
 	}
 	return stgcommon.MASTER_ID
+}
+
+func (api *PullAPIWrapper) updatePullFromWhichNode(mq message.MessageQueue,brokerId int) {
+	suggest, _ := api.pullFromWhichNodeTable.Get(mq)
+	if suggest == nil {
+		api.pullFromWhichNodeTable.Put(mq,brokerId)
+
+	}else{
+		//todo 考虑value是否应该为指针类型
+		api.pullFromWhichNodeTable.Put(mq,brokerId)
+	}
+}
+
+func (api *PullAPIWrapper) processPullResult(mq message.MessageQueue,pullResult consumer.PullResult,subscriptionData heartbeat.SubscriptionData) consumer.PullResult {
+	projectGroupPrefix:=api.mQClientFactory.MQClientAPIImpl.ProjectGroupPrefix
+	var pullResultExt =PullResultExt{PullResult:pullResult}
+     api.updatePullFromWhichNode(mq,pullResultExt.suggestWhichBrokerId)
+	// todo 有消息编解码操作
+	if consumer.FOUND==pullResult.PullStatus{
+
+	}
+	logger.Info(projectGroupPrefix)
+	return pullResult
 }

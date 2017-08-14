@@ -18,6 +18,8 @@ func Task() {
 	}
 }
 func main() {
+	mapTest:=make(map[int]*message.MessageExt)
+	fmt.Println(mapTest[1])
 	var b int64=10
 	var a *int64=&b
 	fmt.Println(*a)

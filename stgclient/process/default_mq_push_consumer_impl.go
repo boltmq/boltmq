@@ -71,9 +71,10 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest consumer.PullReques
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenException)
 		return
 	}
-	var pullCallBack consumer.PullCallback = &PullCallBackImpl{PullRequest:pullRequest}
+	var pullCallBack consumer.PullCallback = &PullCallBackImpl{PullRequest:pullRequest, DefaultMQPushConsumerImpl:impl,
+		SubscriptionData:subData.(heartbeat.SubscriptionData),beginTimestamp:time.Now().Unix()*1000}
 	commitOffsetEnable := false
-	var commitOffsetValue int64= 0
+	var commitOffsetValue int64 = 0
 	if impl.defaultMQPushConsumer.messageModel == heartbeat.CLUSTERING {
 		commitOffsetValue = impl.OffsetStore.ReadOffset(pullRequest.MessageQueue, store.READ_FROM_MEMORY)
 		if commitOffsetValue > 0 {
@@ -102,10 +103,27 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest consumer.PullReques
 }
 
 type PullCallBackImpl struct {
+	beginTimestamp int64
+	heartbeat.SubscriptionData
 	consumer.PullRequest
+	*DefaultMQPushConsumerImpl
 }
 
 func (backImpl PullCallBackImpl) OnSuccess(pullResult consumer.PullResult) {
+	pullResult = backImpl.pullAPIWrapper.processPullResult(backImpl.MessageQueue, pullResult, backImpl.SubscriptionData)
+	switch pullResult.PullStatus {
+	case consumer.FOUND:
+		//prevRequestOffset := backImpl.NextOffset
+		backImpl.PullRequest.NextOffset=pullResult.NextBeginOffset
+		//pullRT:=time.Now().Unix()*1000-backImpl.beginTimestamp
+		if len(pullResult.MsgFoundList)==0{
+			backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
+		}else{
+			dispathToConsume:=backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
+			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList,backImpl.ProcessQueue,backImpl.PullRequest.MessageQueue,dispathToConsume)
+		}
+
+	}
 
 }
 

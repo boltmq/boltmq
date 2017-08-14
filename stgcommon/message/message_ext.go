@@ -14,11 +14,11 @@ type MessageExt struct {
 	//Body                      []byte
 	Message
 	// 队列ID <PUT>
-	queueId                   int
+	QueueId                   int
 	// 存储记录大小
 	storeSize                 int
 	// 队列偏移量
-	queueOffset               int64
+	QueueOffset               int
 	// 消息标志位 <PUT>
 	sysFlag                   int
 	// 消息在客户端创建时间戳 <PUT>
