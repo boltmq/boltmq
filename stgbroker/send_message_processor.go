@@ -34,7 +34,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack(request protocol.RemotingC
 	return
 }
 func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContext ctx,
-	request protocol.RemotingCommand, context mqtrace.SendMessageContext, header header.SendMessageRequestHeader) protocol.RemotingCommand {
+	request protocol.RemotingCommand, context mqtrace.SendMessageContext, header *header.SendMessageRequestHeader) protocol.RemotingCommand {
 	response := protocol.CreateResponseCommand()
 	response.Opaque = request.Opaque
 	response.Code = -1
