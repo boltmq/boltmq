@@ -140,3 +140,8 @@ timeoutMillis int,communicationMode CommunicationMode,pullCallback consumer.Pull
 	}
 	return consumer.PullResult{}
 }
+
+func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string)  {
+ 	strings.Split(addrs,";")
+	//todo 设置remotingclient的nameserver
+}

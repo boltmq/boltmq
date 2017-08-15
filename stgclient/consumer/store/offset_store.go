@@ -22,4 +22,6 @@ type OffsetStore interface {
 
 	// Get offset from local storage
 	ReadOffset(mq message.MessageQueue,rType ReadOffsetType) int64
+	// Update the offset,store it in memory
+	UpdateOffset(mq message.MessageQueue, offset int64, increaseOnly bool)
 }

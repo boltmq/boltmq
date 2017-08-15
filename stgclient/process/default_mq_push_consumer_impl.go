@@ -121,6 +121,7 @@ func (backImpl PullCallBackImpl) OnSuccess(pullResult consumer.PullResult) {
 		}else{
 			dispathToConsume:=backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
 			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList,backImpl.ProcessQueue,backImpl.PullRequest.MessageQueue,dispathToConsume)
+
 		}
 
 	}
