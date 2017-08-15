@@ -83,3 +83,8 @@ func (self *BrokerController) start() {
 
 	}
 }
+
+func (self *BrokerController) GetBrokerAddr()string {
+	// TODO return self.BrokerConfig.BrokerIP1+":"+self.n
+	return ""
+}
