@@ -31,4 +31,5 @@ func NewConsumerOffsetManager(brokerController *BrokerController) *ConsumerOffse
 
 func (self *ConsumerOffsetManager) Load() bool{
 
+	return true
 }
