@@ -18,7 +18,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
-	"log"
 )
 
 // MQClientInstance: producer和consumer核心
