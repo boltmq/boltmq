@@ -18,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"log"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -28,14 +29,18 @@ type MQClientInstance struct {
 	ClientConfig            *stgclient.ClientConfig
 	InstanceIndex           int32
 	ClientId                string
+	// group MQProducerInner
 	ProducerTable           *sync.Map
+	// group MQConsumerInner
 	ConsumerTable           *sync.Map
 	MQClientAPIImpl         *MQClientAPIImpl
 	MQAdminImpl             *MQAdminImpl
+	// topic TopicRouteData
 	TopicRouteTable         *sync.Map
 
 	LockNamesrv             lock.RWMutex
 	LockHeartbeat           lock.RWMutex
+	// broker name  map[int(brokerId)] string(address)
 	BrokerAddrTable         *sync.Map
 
 	ClientRemotingProcessor *ClientRemotingProcessor
@@ -57,11 +62,16 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 	}
 	mqClientInstance.ClientRemotingProcessor = NewClientRemotingProcessor(mqClientInstance)
 	mqClientInstance.MQClientAPIImpl = NewMQClientAPIImpl(mqClientInstance.ClientRemotingProcessor)
+	if !strings.EqualFold(mqClientInstance.ClientConfig.NamesrvAddr, "") {
+		mqClientInstance.MQClientAPIImpl.UpdateNameServerAddressList(mqClientInstance.ClientConfig.NamesrvAddr)
+		logger.Info("user specified name server address: %v", mqClientInstance.ClientConfig.NamesrvAddr)
+	}
 	mqClientInstance.MQAdminImpl = NewMQAdminImpl(mqClientInstance)
 	mqClientInstance.PullMessageService = NewPullMessageService(mqClientInstance)
 	mqClientInstance.RebalanceService = NewRebalanceService(mqClientInstance)
 	mqClientInstance.DefaultMQProducer = NewDefaultMQProducer(stgcommon.CLIENT_INNER_PRODUCER_GROUP)
 	mqClientInstance.DefaultMQProducer.ClientConfig.ResetClientConfig(clientConfig)
+	//todo 消费统计管理器初始化
 
 	return mqClientInstance
 }
@@ -285,6 +295,7 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 					}
 				}
 			}
+			mqClientInstance.TopicRouteTable.Put(topic, cloneTopicRouteData)
 		}
 	}
 	return true
@@ -382,6 +393,51 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicSubscribeInfo(topi
 func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 	mqClientInstance.LockNamesrv.Lock()
 	defer mqClientInstance.LockNamesrv.Unlock()
+	updatedTable := sync.NewMap()
+	for ite := mqClientInstance.BrokerAddrTable.Iterator(); ite.HasNext(); {
+		brokerName, oneTable, _ := ite.Next()
+		cloneAddrTable := make(map[int]string)
+		for brokerId, addr := range oneTable.(map[int]string) {
+			cloneAddrTable[brokerId] = addr
+		}
+		for cBId, cAddr := range cloneAddrTable {
+			if mqClientInstance.isBrokerAddrExistInTopicRouteTable(cAddr) {
+				delete(cloneAddrTable, cBId)
+				logger.Info("the broker addr[%v %v] is offline, remove it", brokerName, cAddr)
+			}
+		}
+		if len(cloneAddrTable) == 0 {
+			ite.Remove()
+			logger.Info("the broker[%v] name's host is offline, remove it", brokerName)
+		} else {
+			updatedTable.Put(brokerName, cloneAddrTable)
+		}
+
+	}
+	if len(updatedTable) > 0 {
+		for ite := updatedTable.Iterator(); ite.HasNext(); {
+			key, value, _ := ite.Next()
+			mqClientInstance.BrokerAddrTable.Put(key, value)
+		}
+	}
+
+}
+
+// 判断brokder地址在路由表中是否存在
+func (mqClientInstance *MQClientInstance) isBrokerAddrExistInTopicRouteTable(addr string) bool {
+	for ite := mqClientInstance.TopicRouteTable.Iterator(); ite.HasNext(); {
+		_, routeData, _ := ite.Next()
+		topicRouteData := routeData.(*route.TopicRouteData)
+		bds := topicRouteData.BrokerDatas
+		for _, brokerData := range bds {
+			for _, brokderAddr := range brokerData.BrokerAddrs {
+				if strings.EqualFold(brokderAddr, addr) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // 持久化所有consumer的offset
@@ -391,6 +447,7 @@ func (mqClientInstance *MQClientInstance) persistAllConsumerOffset() {
 		impl.(consumer.MQConsumerInner).PersistConsumerOffset()
 	}
 }
+
 // 立即执行负载
 func (mqClientInstance *MQClientInstance) rebalanceImmediately() {
 	mqClientInstance.RebalanceService.Start()
@@ -470,26 +527,26 @@ func (mqClientInstance *MQClientInstance) findBrokerAddressInAdmin(brokerName st
 	return FindBrokerResult{}
 }
 
-func (mqClientInstance *MQClientInstance) findBrokerAddressInSubscribe(brokerName string,brokerId int,onlyThisBroker bool) FindBrokerResult {
+func (mqClientInstance *MQClientInstance) findBrokerAddressInSubscribe(brokerName string, brokerId int, onlyThisBroker bool) FindBrokerResult {
 	var brokerAddr string
 	var slave bool
 	var found bool
 	getBrokerMap, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
 	brokerMap := getBrokerMap.(map[int]string)
 	if len(brokerMap) > 0 {
-			brokerAddr = brokerMap[brokerId]
-		  slave=(brokerId!=stgcommon.MASTER_ID)
-		found=!strings.EqualFold(brokerAddr,"")
-			if !found && !onlyThisBroker{
-				for brokerId, addr := range brokerMap {
-					brokerAddr = addr
-					if !strings.EqualFold(brokerAddr, "") {
-						slave=(brokerId!=stgcommon.MASTER_ID)
-						found=true
-						break
-					}
+		brokerAddr = brokerMap[brokerId]
+		slave = (brokerId != stgcommon.MASTER_ID)
+		found = !strings.EqualFold(brokerAddr, "")
+		if !found && !onlyThisBroker {
+			for brokerId, addr := range brokerMap {
+				brokerAddr = addr
+				if !strings.EqualFold(brokerAddr, "") {
+					slave = (brokerId != stgcommon.MASTER_ID)
+					found = true
+					break
 				}
 			}
+		}
 	}
 	if found {
 		return FindBrokerResult{brokerAddr:brokerAddr, slave:slave}

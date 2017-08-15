@@ -43,7 +43,7 @@ type DefaultMQPushConsumer struct {
 	// Concurrently max span offset.it has no effect on sequential consumption
 	consumeConcurrentlyMaxSpan    int64
 	// Flow control threshold
-	pullThresholdForQueue         int
+	pullThresholdForQueue         int64
 	// Message pull Interval
 	pullInterval                  int64
 	// Batch consumption size

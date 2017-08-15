@@ -18,8 +18,8 @@ type ProcessQueue struct {
 	Dropped           bool
 	LastPullTimestamp int64
 	PullMaxIdleTime   int64
-	MsgCount          int
-	TreeMap           *TreeMap
+	MsgCount          int64
+	MsgTreeMap        *TreeMap
 	QueueOffsetMax    int
 	Consuming         bool
 	MsgAccCnt         int
@@ -40,14 +40,34 @@ func (treeMap *TreeMap)put(offset int, msg *message.MessageExt) *message.Message
 	sort.Ints(treeMap.keys)
 	return msg
 }
+
 func (treeMap *TreeMap)get(offset int) *message.MessageExt {
 	return treeMap.innerMap[offset]
+}
+
+func (treeMap *TreeMap)firstKey() int {
+	return treeMap.keys[0]
+}
+
+
+func (treeMap *TreeMap)remove(offset int) *message.MessageExt {
+	msg:=treeMap.innerMap[offset]
+	newKeys:=[]int{}
+	for _,key:=range treeMap.keys{
+		if key!=offset{
+			newKeys=append(newKeys,key)
+		}
+	}
+	sort.Ints(newKeys)
+	treeMap.keys=newKeys
+	delete(treeMap.innerMap,offset)
+	return msg
 }
 
 func NewProcessQueue() ProcessQueue {
 	return ProcessQueue{
 		PullMaxIdleTime:120000,
-		TreeMap:NewTreeMap(),
+		MsgTreeMap:NewTreeMap(),
 	}
 }
 
@@ -61,28 +81,50 @@ func (pq ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	dispatchToConsume := false
 	var validMsgCnt int32 = 0
 	for _, msg := range msgs {
-		old:=pq.TreeMap.put(msg.QueueId, &msg)
-		if old==nil{
+		old := pq.MsgTreeMap.put(msg.QueueId, &msg)
+		if old == nil {
 			validMsgCnt++
-			pq.QueueOffsetMax=msg.QueueOffset
+			pq.QueueOffsetMax = msg.QueueOffset
 		}
 
 	}
-	atomic.AddInt32(&validMsgCnt,1)
-	if len(pq.TreeMap.innerMap)>0&& !pq.Consuming{
-		dispatchToConsume=true
-		pq.Consuming=true
+	atomic.AddInt32(&validMsgCnt, 1)
+	if len(pq.MsgTreeMap.innerMap) > 0&& !pq.Consuming {
+		dispatchToConsume = true
+		pq.Consuming = true
 	}
-	if len(msgs)>0{
-      messageExt:=msgs[len(msgs)-1]
-		property:=messageExt.Properties[message.PROPERTY_MAX_OFFSET]
-		if !strings.EqualFold(property,""){
-			maxOffset,_:=strconv.Atoi(property)
-			accTotal:=maxOffset-messageExt.QueueOffset
-			if accTotal>0{
-				pq.MsgAccCnt=accTotal
+	if len(msgs) > 0 {
+		messageExt := msgs[len(msgs) - 1]
+		property := messageExt.Properties[message.PROPERTY_MAX_OFFSET]
+		if !strings.EqualFold(property, "") {
+			maxOffset, _ := strconv.Atoi(property)
+			accTotal := maxOffset - messageExt.QueueOffset
+			if accTotal > 0 {
+				pq.MsgAccCnt = accTotal
 			}
 		}
 	}
 	return dispatchToConsume
+}
+
+func (pq ProcessQueue) RemoveMessage(msgs []message.MessageExt) int {
+	result:=-1
+	pq.Lock()
+	defer pq.Unlock()
+	if len(pq.MsgTreeMap.innerMap) > 0 {
+		result = pq.QueueOffsetMax + 1
+		var removedCnt int64= 0
+		for _,msg := range msgs {
+         prev:=pq.MsgTreeMap.remove(msg.QueueOffset)
+			if prev!=nil{
+				removedCnt--
+			}
+		}
+		atomic.AddInt64(&pq.MsgCount,removedCnt)
+		if len(pq.MsgTreeMap.innerMap)>0{
+			result=pq.MsgTreeMap.firstKey()
+		}
+	}
+
+	return result
 }
