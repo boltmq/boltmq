@@ -76,7 +76,10 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 			}
 			strategy := ext.AllocateMessageQueueStrategy
 			allocateResult := strategy.Allocate(ext.ConsumerGroup, ext.MQClientFactory.ClientId, mqAll, cidAll)
-			allocateResultSet:=set.NewSet(allocateResult)
+			allocateResultSet:=set.NewSet()
+			for _,mq:=range  allocateResult{
+				allocateResultSet.Add(mq)
+			}
 			changed:=ext.updateProcessQueueTableInRebalance(topic,allocateResultSet)
 		    if changed{
 				logger.Info(
