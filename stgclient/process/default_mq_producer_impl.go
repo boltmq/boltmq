@@ -11,6 +11,7 @@ import (
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"strconv"
 )
 
 
@@ -151,14 +152,18 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) S
 			SysFlag:sysFlag,
 			BornTimestamp:time.Now().Unix() * 1000,
 			Flag:msg.Flag,
-			//todo MessageDecoder.messageProperties2String
-			Properties:"",
+			Properties:message.MessageProperties2String(msg.Properties),
 			ReconsumeTimes:0,
 			UnitMode:defaultMQProducerImpl.DefaultMQProducer.UnitMode,
 		}
 
 		if strings.HasPrefix(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
-			//todo 设置reconsumeTimes
+			reconsumeTimes := message.GetReconsumeTime(msg)
+			if !strings.EqualFold(reconsumeTimes, "") {
+				times, _ := strconv.Atoi(reconsumeTimes)
+				requestHeader.ReconsumeTimes = times
+				message.ClearProperty(&msg, message.PROPERTY_RECONSUME_TIME)
+			}
 		}
 		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
 		msg.Body = prevBody

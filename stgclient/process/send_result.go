@@ -3,7 +3,11 @@ package process
 // Author: yintongqiang
 // Since:  2017/8/8
 
-import "git.oschina.net/cloudzone/smartgo/stgcommon/message"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgclient"
+)
 
 type SendResult struct {
 	SendStatus    SendStatus
@@ -11,4 +15,15 @@ type SendResult struct {
 	MessageQueue  message.MessageQueue
 	QueueOffset   int64
 	TransactionId string
+}
+
+func NewSendResult(sendStatus SendStatus, msgId string, messageQueue message.MessageQueue, queueOffset int64, projectGroupPrefix string) SendResult {
+	if !strings.EqualFold(projectGroupPrefix, "") {
+		messageQueue.Topic = stgclient.ClearProjectGroup(messageQueue.Topic, projectGroupPrefix)
+	}
+	return SendResult{
+		SendStatus:sendStatus,
+		MsgId:msgId,
+		MessageQueue:messageQueue,
+		QueueOffset:queueOffset}
 }

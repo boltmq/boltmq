@@ -9,6 +9,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -75,13 +77,13 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
 	// 默认send采用v2版本
-	//requestHeaderV2:=header.CreateSendMessageRequestHeaderV2(requestHeader)
-	//todo  request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE_V2, requestHeaderV2)
+	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(requestHeader)
+	request := protocol.CreateRequestCommand(cprotocol.SEND_MESSAGE_V2, requestHeaderV2)
 	switch (communicationMode) {
 	case ONEWAY:
 	case ASYNC:
 	case SYNC:
-		return impl.sendMessageSync(addr, brokerName, msg, timeoutMillis)
+		return impl.sendMessageSync(addr, brokerName, msg, timeoutMillis, request)
 	default:
 		break
 	}
@@ -89,7 +91,39 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 	return SendResult{}
 }
 
-func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg message.Message, timeoutMillis int64) SendResult {
+func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg message.Message, timeoutMillis int64, request *protocol.RemotingCommand) SendResult {
+	//todo 调用远程生成response
+	response:=protocol.CreateResponseCommand()
+	return impl.processSendResponse(brokerName, msg, response)
+}
+
+// 处理发送消息响应
+func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg message.Message, response *protocol.RemotingCommand) SendResult {
+	switch response.Code {
+	case cprotocol.FLUSH_DISK_TIMEOUT:
+	case cprotocol.FLUSH_SLAVE_TIMEOUT:
+	case cprotocol.SLAVE_NOT_AVAILABLE:
+		logger.Warn("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
+	case cprotocol.SUCCESS:
+		sendStatus := SEND_OK
+		switch response.Code {
+		case cprotocol.FLUSH_DISK_TIMEOUT:
+			sendStatus = FLUSH_DISK_TIMEOUT
+		case cprotocol.FLUSH_SLAVE_TIMEOUT:
+			sendStatus = FLUSH_SLAVE_TIMEOUT
+		case cprotocol.SLAVE_NOT_AVAILABLE:
+			sendStatus = SLAVE_NOT_AVAILABLE
+		case cprotocol.SUCCESS:
+			sendStatus = SEND_OK
+		default:
+		}
+		//todo 需从responde中解析出responseHeader
+		responseHeader := header.SendMessageResponseHeader{}
+		messageQueue := message.MessageQueue{Topic:msg.Topic, BrokerName:brokerName, QueueId:responseHeader.QueueId}
+		sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
+		sendResult.TransactionId = responseHeader.TransactionId
+		return sendResult
+	}
 	return SendResult{}
 }
 
@@ -112,7 +146,7 @@ func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup 
 	return []string{}
 }
 
-func (impl *MQClientAPIImpl)GetMaxOffset(addr string,topic string,queueId int,timeoutMillis int64) int64 {
+func (impl *MQClientAPIImpl)GetMaxOffset(addr string, topic string, queueId int, timeoutMillis int64) int64 {
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
@@ -122,8 +156,8 @@ func (impl *MQClientAPIImpl)GetMaxOffset(addr string,topic string,queueId int,ti
 	return -1
 }
 
-func (impl *MQClientAPIImpl)PullMessage(addr string,requestHeader header.PullMessageRequestHeader,
-timeoutMillis int,communicationMode CommunicationMode,pullCallback consumer.PullCallback) consumer.PullResult {
+func (impl *MQClientAPIImpl)PullMessage(addr string, requestHeader header.PullMessageRequestHeader,
+timeoutMillis int, communicationMode CommunicationMode, pullCallback consumer.PullCallback) consumer.PullResult {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
@@ -132,7 +166,7 @@ timeoutMillis int,communicationMode CommunicationMode,pullCallback consumer.Pull
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-		// todo 后续操作
+	// todo 后续操作
 	//impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 	default:
@@ -141,7 +175,7 @@ timeoutMillis int,communicationMode CommunicationMode,pullCallback consumer.Pull
 	return consumer.PullResult{}
 }
 
-func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string)  {
- 	strings.Split(addrs,";")
+func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
+	strings.Split(addrs, ";")
 	//todo 设置remotingclient的nameserver
 }
