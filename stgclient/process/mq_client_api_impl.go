@@ -93,7 +93,7 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 
 func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg message.Message, timeoutMillis int64, request *protocol.RemotingCommand) SendResult {
 	//todo 调用远程生成response
-	response:=protocol.CreateResponseCommand()
+	response := protocol.CreateResponseCommand()
 	return impl.processSendResponse(brokerName, msg, response)
 }
 
@@ -162,12 +162,11 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback consumer.Pu
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
-	// todo 创建request
+	request := protocol.CreateRequestCommand(cprotocol.PULL_MESSAGE, &requestHeader)
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-	// todo 后续操作
-	//impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
+		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 	default:
 
@@ -178,4 +177,25 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback consumer.Pu
 func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
 	strings.Split(addrs, ";")
 	//todo 设置remotingclient的nameserver
+}
+
+func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback consumer.PullCallback) {
+}
+
+func (impl *MQClientAPIImpl)processPullResponse(response protocol.RemotingCommand) *PullResultExt {
+	pullStatus := consumer.NO_NEW_MSG
+	switch response.Code {
+	case cprotocol.SUCCESS:
+		pullStatus = consumer.FOUND
+	case cprotocol.PULL_NOT_FOUND:
+		pullStatus = consumer.NO_NEW_MSG
+	case cprotocol.PULL_RETRY_IMMEDIATELY:
+		pullStatus = consumer.NO_MATCHED_MSG
+	case cprotocol.PULL_OFFSET_MOVED:
+		pullStatus = consumer.OFFSET_ILLEGAL
+	}
+	//todo response生产PullMessageResponseHeader
+	reponseHeader := &header.PullMessageResponseHeader{}
+	return NewPullResultExt(pullStatus, reponseHeader.NextBeginOffset,
+		reponseHeader.MaxOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
 }
