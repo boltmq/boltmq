@@ -9,11 +9,11 @@ const (
 type TopicConfig struct {
 	SEPARATOR       string
 	TopicName       string
-	ReadQueueNums   int32
-	WriteQueueNums  int32
+	ReadQueueNums   int
+	WriteQueueNums  int
 	Perm            int
 	TopicFilterType TopicFilterType
-	TopicSysFlag    int32
+	TopicSysFlag    int
 	Order           bool
 }
 
@@ -31,11 +31,15 @@ func NewTopicConfigByName(topicName string) *TopicConfig {
 	return topicConfig
 }
 
-func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int32, perm int) *TopicConfig {
+func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int, perm int) *TopicConfig {
 	topicConfig := NewTopicConfigByName(topicName)
 	topicConfig.ReadQueueNums = readQueueNums
 	topicConfig.WriteQueueNums = writeQueueNums
 	topicConfig.Perm = perm
 	return topicConfig
 
+}
+
+func (self *TopicConfig) ToString() string {
+	return ""
 }

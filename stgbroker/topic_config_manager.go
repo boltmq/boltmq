@@ -146,7 +146,7 @@ func (self *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.Topic
 // Author gaoyanlei
 // Since 2017/8/10
 func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
-	remoteAddress string, clientDefaultTopicQueueNums, topicSysFlag int32) (topicConfig *stgcommon.TopicConfig, err error) {
+	remoteAddress string, clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	self.lockTopicConfigTable.Lock()
 	defer self.lockTopicConfigTable.Lock()
 	tc, err := self.TopicConfigTable.Get(topic)
@@ -173,7 +173,7 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 		if defaultTopicConfig, ok := value.(*stgcommon.TopicConfig); ok {
 			if constant.IsInherited(defaultTopicConfig.Perm) {
 				// 设置queueNums个数
-				var queueNums int32
+				var queueNums int
 				if clientDefaultTopicQueueNums > defaultTopicConfig.WriteQueueNums {
 					queueNums = defaultTopicConfig.WriteQueueNums
 				} else {
@@ -215,7 +215,7 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 // Author gaoyanlei
 // Since 2017/8/11
 func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm int,
-	clientDefaultTopicQueueNums, topicSysFlag int32) (topicConfig *stgcommon.TopicConfig, err error) {
+	clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	self.lockTopicConfigTable.Lock()
 	defer self.lockTopicConfigTable.Lock()
 	tc, err := self.TopicConfigTable.Get(topic)
@@ -299,7 +299,7 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.K
 // isOrderTopic 判断是否是顺序topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (self *TopicConfigManager) isOrderTopic(topic string) bool {
+func (self *TopicConfigManager) IsOrderTopic(topic string) bool {
 	value, err := self.TopicConfigTable.Get(topic)
 	if value == nil && err != nil {
 		return false
