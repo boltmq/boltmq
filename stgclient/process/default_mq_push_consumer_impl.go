@@ -294,7 +294,6 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSu
 // 获取订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
 	subSet := set.NewSet()
-
 	for it := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Iterator(); it.HasNext(); {
 		_, v, _ := it.Next()
 		subSet.Add(v)
@@ -305,9 +304,11 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)UpdateTopicSubscribeInfo(topic string, info set.Set) {
 
 	sbInner := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
+
 	if sbInner != nil {
-		ok, _ := sbInner.ContainsKey(topic)
-		if ok {
+		//todo ContainsKey 有bug
+		subData, _ := sbInner.Get(topic)
+		if subData != nil {
 			pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable.Put(topic, info)
 		}
 	}
@@ -345,7 +346,6 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)DoRebalance() {
 	pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.doRebalance()
 }
 
-
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 	if pushConsumerImpl.serviceState != stgcommon.RUNNING {
 		panic(errors.New("The consumer service state not OK"))
@@ -361,10 +361,13 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsSubscribeTopicNeedUpdate(topic string) bool {
 	sbInner := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 	info := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable
-	ok, _ := sbInner.ContainsKey(topic)
-	if ok {
-		flag, _ := info.ContainsKey(topic)
-		return !flag
+	//ok, _ := sbInner.ContainsKey(topic)
+	ok, _ := sbInner.Get(topic)
+	if ok==nil {
+		//flag, _ := info.ContainsKey(topic)
+		//return !flag
+		flag, _ := info.Get(topic)
+		return flag==nil
 	}
 	return false
 }

@@ -28,7 +28,7 @@ func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, cur
 	var contains bool = false
 	var index int
 	for in, cid := range cidAll {
-		if strings.EqualFold(cid, consumerGroup) {
+		if strings.EqualFold(cid, currentCID) {
 			index = in
 			contains = true
 			break
