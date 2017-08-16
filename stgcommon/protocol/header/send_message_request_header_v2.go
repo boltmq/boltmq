@@ -22,8 +22,8 @@ func (header *SendMessageRequestHeaderV2) CheckFields() {
 
 }
 
-func CreateSendMessageRequestHeaderV2(v1 SendMessageRequestHeader) SendMessageRequestHeaderV2 {
-	v2 := SendMessageRequestHeaderV2{}
+func CreateSendMessageRequestHeaderV2(v1 *SendMessageRequestHeader) *SendMessageRequestHeaderV2 {
+	v2 := &SendMessageRequestHeaderV2{}
 	v2.a = v1.ProducerGroup
 	v2.b = v1.Topic
 	v2.c = v1.DefaultTopic
