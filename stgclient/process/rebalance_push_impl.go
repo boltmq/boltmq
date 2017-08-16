@@ -24,7 +24,7 @@ func NewRebalancePushImpl(defaultMQPushConsumerImpl *DefaultMQPushConsumerImpl) 
 	return rebalanceImpl
 }
 
-func (pushImpl RebalancePushImpl)DispatchPullRequest(pullRequestList []consumer.PullRequest) {
+func (pushImpl RebalancePushImpl)DispatchPullRequest(pullRequestList []*consumer.PullRequest) {
 	for _, pullRequest := range pullRequestList {
 		pushImpl.defaultMQPushConsumerImpl.ExecutePullRequestImmediately(pullRequest)
 	}

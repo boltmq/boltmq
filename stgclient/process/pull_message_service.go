@@ -12,23 +12,24 @@ import (
 
 type PullMessageService struct {
 	MQClientFactory  *MQClientInstance
-	PullRequestQueue chan consumer.PullRequest
+	PullRequestQueue chan *consumer.PullRequest
 }
 
 func NewPullMessageService(mqClientFactory *MQClientInstance) *PullMessageService {
-	return &PullMessageService{MQClientFactory:mqClientFactory, PullRequestQueue:make(chan consumer.PullRequest)}
+	return &PullMessageService{MQClientFactory:mqClientFactory, PullRequestQueue:make(chan *consumer.PullRequest)}
 }
 
 func (service *PullMessageService) Start() {
 	service.run()
 }
 
-func (service *PullMessageService) ExecutePullRequestImmediately(pullRequest consumer.PullRequest) {
-	service.PullRequestQueue <- pullRequest
+func (service *PullMessageService) ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
+		service.PullRequestQueue <- pullRequest
 }
-func (service *PullMessageService) ExecutePullRequestLater(pullRequest consumer.PullRequest,timeDelay int) {
+
+func (service *PullMessageService) ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
 	go func() {
-		time.Sleep(time.Millisecond*time.Duration(timeDelay))
+		time.Sleep(time.Millisecond * time.Duration(timeDelay))
 		service.ExecutePullRequestImmediately(pullRequest)
 	}()
 }
@@ -42,7 +43,7 @@ func (service *PullMessageService) run() {
 	}
 }
 
-func (service *PullMessageService) pullMessage(pullRequest consumer.PullRequest) {
+func (service *PullMessageService) pullMessage(pullRequest *consumer.PullRequest) {
 	mConsumer := service.MQClientFactory.selectConsumer(pullRequest.ConsumerGroup)
 	if mConsumer != nil {
 		mConsumer.(*DefaultMQPushConsumerImpl).pullMessage(pullRequest)

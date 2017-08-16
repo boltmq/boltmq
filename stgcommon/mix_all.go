@@ -39,6 +39,10 @@ const (
 	// 为每个Consumer Group建立一个默认的Topic，前缀 + GroupName，用来保存重试多次都失败，接下来不再重试的消息
 	DLQ_GROUP_TOPIC_PREFIX = "%DLQ%"
 )
+
+func GetRetryTopic(consumerGroup string) string {
+	return RETRY_GROUP_TOPIC_PREFIX + consumerGroup
+}
 // 压缩
 func Compress(src[]byte) []byte {
 	var b bytes.Buffer

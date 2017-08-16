@@ -19,7 +19,7 @@ type RebalanceImpl interface {
 	ConsumeType() heartbeat.ConsumeType
 	MessageQueueChanged(topic string, mqAll set.Set, mqDivided set.Set)
 	RemoveUnnecessaryMessageQueue(mq message.MessageQueue, pq consumer.ProcessQueue) bool
-	DispatchPullRequest(pullRequestList []consumer.PullRequest)
+	DispatchPullRequest(pullRequestList []*consumer.PullRequest)
 	ComputePullFromWhere(mq message.MessageQueue) int64
 }
 // RebalanceImplExt: 接口基础属性
@@ -30,7 +30,7 @@ type RebalanceImplExt  struct {
 	RebalanceImpl                RebalanceImpl
 	ProcessQueueTable            *sync.Map //MessageQueue, ProcessQueue
 	TopicSubscribeInfoTable      *sync.Map
-	SubscriptionInner            *sync.Map
+	SubscriptionInner            *sync.Map //topic, SubscriptionData
 	ConsumerGroup                string
 	MessageModel                 heartbeat.MessageModel
 	AllocateMessageQueueStrategy rebalance.AllocateMessageQueueStrategy
@@ -50,6 +50,15 @@ func (ext RebalanceImplExt)doRebalance() {
 		k, _, _ := ite.Next()
 		topic := k.(string)
 		ext.rebalanceByTopic(topic)
+	}
+
+}
+func (ext RebalanceImplExt)RemoveProcessQueue(mq message.MessageQueue) {
+	prev,_:=ext.ProcessQueueTable.Remove(mq)
+	if prev!=nil{
+		pq:=prev.(consumer.ProcessQueue)
+		pq.Dropped=true
+		ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq,pq)
 	}
 
 }
@@ -114,11 +123,11 @@ func (ext RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqSe
 			}
 		}
 	}
-	pullRequestList := []consumer.PullRequest{}
+	pullRequestList := []*consumer.PullRequest{}
 	for mq := range mqSet.Iterator().C {
 		ok,_:=ext.ProcessQueueTable.ContainsKey(mq)
 		if !ok {
-			pullRequest := consumer.PullRequest{
+			pullRequest := &consumer.PullRequest{
 				ConsumerGroup:ext.ConsumerGroup,
 				MessageQueue:mq.(message.MessageQueue),
 				ProcessQueue:consumer.NewProcessQueue(),
