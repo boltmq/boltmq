@@ -20,4 +20,6 @@ type MQConsumerInner interface {
 	IsSubscribeTopicNeedUpdate(topic string) bool
 	// 持久化offset
 	PersistConsumerOffset()
+    // 负载
+	DoRebalance()
 }

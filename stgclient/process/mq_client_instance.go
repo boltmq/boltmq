@@ -476,11 +476,11 @@ func (mqClientInstance *MQClientInstance) selectConsumer(group string) consumer.
 
 func (mqClientInstance *MQClientInstance) findConsumerIdList(topic string, group string) []string {
 	brokerAddr := mqClientInstance.findBrokerAddrByTopic(topic)
-	if !strings.EqualFold(brokerAddr, "") {
+	if strings.EqualFold(brokerAddr, "") {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServerByTopic(topic)
 		brokerAddr = mqClientInstance.findBrokerAddrByTopic(topic)
 	}
-	if strings.EqualFold(brokerAddr, "") {
+	if !strings.EqualFold(brokerAddr, "") {
 		return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
 	}
 	return []string{}
@@ -551,4 +551,13 @@ func (mqClientInstance *MQClientInstance) findBrokerAddressInSubscribe(brokerNam
 		return FindBrokerResult{brokerAddr:brokerAddr, slave:slave}
 	}
 	return FindBrokerResult{}
+}
+
+func (mqClientInstance *MQClientInstance) doRebalance() {
+	for ite := mqClientInstance.ConsumerTable.Iterator(); ite.HasNext(); {
+		_, impl, _ := ite.Next()
+		if impl != nil {
+			impl.(consumer.MQConsumerInner).DoRebalance()
+		}
+	}
 }

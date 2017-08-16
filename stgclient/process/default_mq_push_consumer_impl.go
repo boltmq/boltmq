@@ -336,9 +336,15 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsUnitMode() bool {
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestImmediately(pullRequest)
 }
+
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestLater(pullRequest, timeDelay)
 }
+
+func (pushConsumerImpl *DefaultMQPushConsumerImpl)DoRebalance() {
+	pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.doRebalance()
+}
+
 
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 	if pushConsumerImpl.serviceState != stgcommon.RUNNING {

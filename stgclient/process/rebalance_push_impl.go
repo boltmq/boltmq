@@ -15,7 +15,7 @@ import (
 
 type RebalancePushImpl struct {
 	defaultMQPushConsumerImpl *DefaultMQPushConsumerImpl
-	rebalanceImplExt          RebalanceImplExt
+	rebalanceImplExt          *RebalanceImplExt
 }
 
 func NewRebalancePushImpl(defaultMQPushConsumerImpl *DefaultMQPushConsumerImpl) RebalancePushImpl {
