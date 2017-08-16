@@ -66,7 +66,7 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 	if !impl.consumeOrderly {
 
 	}
-	subData, _ := impl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
+	subData, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
 
 	if nil == subData {
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenException)
@@ -84,7 +84,7 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 	}
 	var subExpression string
 	var classFilter bool = false
-	sd, _ := impl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
+	sd, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
 	// todo class filter
 	if sd != nil {
 
@@ -151,7 +151,7 @@ func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
 			time.Sleep(time.Second * 10)
 			backImpl.DefaultMQPushConsumerImpl.OffsetStore.UpdateOffset(backImpl.MessageQueue, backImpl.PullRequest.NextOffset, false)
 			backImpl.DefaultMQPushConsumerImpl.OffsetStore.Persist(backImpl.MessageQueue)
-			backImpl.DefaultMQPushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.RemoveProcessQueue(backImpl.MessageQueue)
+			backImpl.DefaultMQPushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.RemoveProcessQueue(backImpl.MessageQueue)
 		}()
 
 	}
@@ -168,7 +168,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) correctTagsOffset(pullRequest
 // 订阅topic和tag
 func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression string) {
 	subscriptionData := filter.BuildSubscriptionData(impl.defaultMQPushConsumer.consumerGroup, topic, subExpression)
-	var pushImpl RebalancePushImpl = impl.rebalanceImpl.(RebalancePushImpl)
+	var pushImpl *RebalancePushImpl =impl.rebalanceImpl.(*RebalancePushImpl)
 	pushImpl.rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
 	if impl.mQClientFactory != nil {
 		impl.mQClientFactory.SendHeartbeatToAllBrokerWithLock()
@@ -194,7 +194,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 		}
 		pushConsumerImpl.mQClientFactory = GetInstance().GetAndCreateMQClientInstance(pushConsumerImpl.defaultMQPushConsumer.clientConfig)
 
-		var pushReImpl RebalancePushImpl = pushConsumerImpl.rebalanceImpl.(RebalancePushImpl)
+		var pushReImpl *RebalancePushImpl = pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl)
 		pushReImpl.rebalanceImplExt.ConsumerGroup = pushConsumerImpl.defaultMQPushConsumer.consumerGroup
 		pushReImpl.rebalanceImplExt.MessageModel = pushConsumerImpl.defaultMQPushConsumer.messageModel
 		pushReImpl.rebalanceImplExt.AllocateMessageQueueStrategy = pushConsumerImpl.defaultMQPushConsumer.allocateMessageQueueStrategy
@@ -263,7 +263,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
 	if len(sub) > 0 {
 		for topic, subString := range sub {
 			subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, topic, subString)
-			pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
+			pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
 		}
 	}
 	if pushConsumerImpl.messageListenerInner == nil {
@@ -274,14 +274,14 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
 	case heartbeat.CLUSTERING:
 		retryTopic := stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 		subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, retryTopic, "*")
-		pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(retryTopic, subscriptionData)
+		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(retryTopic, subscriptionData)
 	}
 
 }
 
 // 当订阅信息改变时，更新订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSubscriptionChanged() {
-	subTable := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
+	subTable := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 	if subTable != nil {
 		for ite := subTable.Iterator(); ite.HasNext(); {
 			topic, _, _ := ite.Next()
@@ -294,7 +294,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSu
 // 获取订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
 	subSet := set.NewSet()
-	for it := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Iterator(); it.HasNext(); {
+	for it := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Iterator(); it.HasNext(); {
 		_, v, _ := it.Next()
 		subSet.Add(v)
 	}
@@ -303,13 +303,13 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
 // 更新订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)UpdateTopicSubscribeInfo(topic string, info set.Set) {
 
-	sbInner := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
+	sbInner := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 
 	if sbInner != nil {
 		//todo ContainsKey 有bug
 		subData, _ := sbInner.Get(topic)
 		if subData != nil {
-			pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable.Put(topic, info)
+			pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable.Put(topic, info)
 		}
 	}
 }
@@ -343,7 +343,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestLater(pullRe
 }
 
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)DoRebalance() {
-	pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.doRebalance()
+	pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.doRebalance()
 }
 
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
@@ -351,7 +351,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 		panic(errors.New("The consumer service state not OK"))
 	}
 	storeSet := set.NewSet()
-	for ite := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.ProcessQueueTable.Iterator(); ite.HasNext(); {
+	for ite := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		k, _, _ := ite.Next()
 		storeSet.Add(k)
 	}
@@ -359,8 +359,8 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 }
 
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsSubscribeTopicNeedUpdate(topic string) bool {
-	sbInner := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
-	info := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable
+	sbInner := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
+	info := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable
 	//ok, _ := sbInner.ContainsKey(topic)
 	ok, _ := sbInner.Get(topic)
 	if ok==nil {
