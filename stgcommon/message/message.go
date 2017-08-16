@@ -4,32 +4,42 @@ package message
 // Author: yintongqiang
 // Since:  2017/8/9
 
-
 type Message struct {
 	// 消息主题
-	Topic      string
+	Topic string
 	// 消息标志，系统不做干预，完全由应用决定如何使用
-	Flag       int
+	Flag int
 	// 消息属性，都是系统属性，禁止应用设置
 	Properties map[string]string
 	// 消息体
-	Body       []byte
+	Body []byte
 }
 
-func NewMessage(topic string, tags string, body[]byte) Message {
+func NewMessage(topic string, tags string, body []byte) Message {
 	properties := make(map[string]string)
 	properties[PROPERTY_TAGS] = tags
-	return Message{Topic:topic, Properties:properties, Body:body}
+	return Message{Topic: topic, Properties: properties, Body: body}
 }
 
-func (msg *Message)clearProperty(name string) {
+func (msg *Message) clearProperty(name string) {
 	delete(msg.Properties, name)
 }
 
-func(self *Message)  putProperty(name string ,value string)  {
-	if self.Properties!= nil {
-		self.Properties=make( map[string]string)
+func (self *Message) putProperty(name string, value string) {
+	if self.Properties != nil {
+		self.Properties = make(map[string]string)
 	}
 
-	self.Properties[name]=value
+	self.Properties[name] = value
+}
+
+func (self *Message) GetProperty(name string) string {
+	if self.Properties == nil {
+		self.Properties = make(map[string]string)
+	}
+	return self.Properties[name]
+}
+
+func (self *Message) GetTags() string {
+	return self.GetProperty(PROPERTY_TAGS)
 }

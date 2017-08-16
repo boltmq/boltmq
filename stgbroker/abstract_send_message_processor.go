@@ -19,6 +19,7 @@ import (
 type AbstractSendMessageProcessor struct {
 	BrokerController *BrokerController
 	Rand                  *rand.Rand
+	StoreHost        string
 }
 
 // NewAbstractSendMessageProcessor 初始化ConsumerOffsetManager
@@ -59,7 +60,7 @@ func (self *AbstractSendMessageProcessor) buildMsgContext( // TODO ChannelHandle
 // Author gaoyanlei
 // Since 2017/8/16
 func (self *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContext ctx
-	requestHeader header.SendMessageRequestHeader, response *protocol.RemotingCommand) (*protocol.RemotingCommand) {
+	requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) (*protocol.RemotingCommand) {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if constant.IsWriteable(self.BrokerController.BrokerConfig.BrokerPermission) &&
 		self.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {

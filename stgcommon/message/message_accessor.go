@@ -1,4 +1,5 @@
 package message
+
 // MessageAccessor: 消息
 // Author: yintongqiang
 // Since:  2017/8/16
@@ -11,11 +12,14 @@ func ClearProperty(msg *Message, name string) {
 	msg.clearProperty(name)
 }
 
-
 func PutProperty(msg Message, name string, value string) {
 	msg.putProperty(name, value)
 }
 
 func SetProperties(msg Message, name string, value string) {
 	msg.putProperty(name, value)
+}
+
+func SetPropertiesMap(msg Message, properties map[string]string) {
+	msg.Properties = properties
 }
