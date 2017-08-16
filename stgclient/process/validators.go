@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"regexp"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 const (
@@ -25,7 +26,11 @@ func CheckGroup(group string) error {
 
 func CheckMessage(msg message.Message, defaultMQProducer DefaultMQProducer) {
 	if len(msg.Body) == 0 {
-
+		panic("the message body length is zero")
+	}
+	CheckTopic(msg.Topic)
+	if len(msg.Body) > defaultMQProducer.MaxMessageSize {
+		panic(fmt.Sprintf("the message body size over max value, MAX: %v ", defaultMQProducer.MaxMessageSize))
 	}
 }
 
@@ -33,10 +38,16 @@ func CheckTopic(topic string) {
 	if strings.EqualFold(topic, "") {
 		panic("the specified topic is blank")
 	}
-	ok,_:=regexp.MatchString(VALID_PATTERN_STR,topic)
-	if !ok{
+	ok, _ := regexp.MatchString(VALID_PATTERN_STR, topic)
+	if !ok {
 		panic(fmt.Sprintf(
 			"the specified topic[%s] contains illegal characters, allowing only %s", topic,
 			VALID_PATTERN_STR))
+	}
+	if len([]rune(topic)) > CHARACTER_MAX_LENGTH {
+		panic("the specified topic is longer than topic max length 255.")
+	}
+	if strings.EqualFold(stgcommon.DEFAULT_TOPIC, topic) {
+		panic(fmt.Sprintf("the topic[%s] is conflict with default topic.", topic))
 	}
 }

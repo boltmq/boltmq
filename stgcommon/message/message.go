@@ -21,3 +21,7 @@ func NewMessage(topic string, tags string, body[]byte) Message {
 	properties[PROPERTY_TAGS] = tags
 	return Message{Topic:topic, Properties:properties, Body:body}
 }
+
+func (msg *Message)clearProperty(name string) {
+	delete(msg.Properties, name)
+}
