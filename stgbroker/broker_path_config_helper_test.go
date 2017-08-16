@@ -28,6 +28,17 @@ func TestNewClientConfig(t *testing.T) {
 	fmt.Println(homeUnix())
 }
 
+func Test(t *testing.T) {
+	switch 1 {
+	case 1:
+		// TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		fmt.Println(11)
+	case 2:
+		fmt.Println(22)
+
+	}
+}
+
 func homeUnix() (string, error) {
 	// First prefer the HOME environmental variable
 	if home := os.Getenv("HOME"); home != "" {

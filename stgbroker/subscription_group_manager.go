@@ -54,4 +54,5 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 
 func (self *SubscriptionGroupManager) Load() bool{
 
+	return true
 }
