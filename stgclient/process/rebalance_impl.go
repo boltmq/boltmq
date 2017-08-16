@@ -37,15 +37,15 @@ type RebalanceImplExt  struct {
 	MQClientFactory              *MQClientInstance
 }
 
-func NewRebalanceImplExt(rebalanceImpl RebalanceImpl) RebalanceImplExt {
-	return RebalanceImplExt{
+func NewRebalanceImplExt(rebalanceImpl RebalanceImpl) *RebalanceImplExt {
+	return &RebalanceImplExt{
 		RebalanceImpl:rebalanceImpl,
 		ProcessQueueTable:sync.NewMap(),
 		TopicSubscribeInfoTable:sync.NewMap(),
 		SubscriptionInner:sync.NewMap()}
 }
 
-func (ext RebalanceImplExt)doRebalance() {
+func (ext *RebalanceImplExt)doRebalance() {
 	for ite := ext.SubscriptionInner.Iterator(); ite.HasNext(); {
 		k, _, _ := ite.Next()
 		topic := k.(string)
@@ -53,7 +53,7 @@ func (ext RebalanceImplExt)doRebalance() {
 	}
 
 }
-func (ext RebalanceImplExt)RemoveProcessQueue(mq message.MessageQueue) {
+func (ext *RebalanceImplExt)RemoveProcessQueue(mq message.MessageQueue) {
 	prev,_:=ext.ProcessQueueTable.Remove(mq)
 	if prev!=nil{
 		pq:=prev.(consumer.ProcessQueue)
@@ -63,7 +63,7 @@ func (ext RebalanceImplExt)RemoveProcessQueue(mq message.MessageQueue) {
 
 }
 
-func (ext RebalanceImplExt)rebalanceByTopic(topic string) {
+func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 	switch ext.MessageModel {
 	case heartbeat.BROADCASTING://todo 广播消费后续添加
 	case heartbeat.CLUSTERING:

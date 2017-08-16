@@ -57,6 +57,24 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 }
 
 func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
+	topicWithProjectGroup := topic
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
+	}
+	requestHeader:=header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
+	request:=protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC,&requestHeader)
+	logger.Info(request.RemotingVersionKey)
+	//todo 调用远程生成
+	reponse:=protocol.CreateResponseCommand()
+	switch reponse.Code {
+	case cprotocol.TOPIC_NOT_EXIST:
+		logger.Warn("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
+	case cprotocol.SUCCESS:
+		body:=reponse.Body
+		if len(body)>0{
+			//todo
+		}
+	}
 	return &route.TopicRouteData{}
 }
 
