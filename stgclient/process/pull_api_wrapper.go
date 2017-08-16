@@ -99,7 +99,7 @@ func (api *PullAPIWrapper) updatePullFromWhichNode(mq message.MessageQueue,broke
 func (api *PullAPIWrapper) processPullResult(mq message.MessageQueue,pullResult *consumer.PullResult,subscriptionData heartbeat.SubscriptionData) *consumer.PullResult {
 	projectGroupPrefix:=api.mQClientFactory.MQClientAPIImpl.ProjectGroupPrefix
 	var pullResultExt =PullResultExt{PullResult:pullResult}
-     api.updatePullFromWhichNode(mq,pullResultExt.suggestWhichBrokerId)
+     api.updatePullFromWhichNode(mq,int(pullResultExt.suggestWhichBrokerId))
 	// todo 有消息编解码操作
 	if consumer.FOUND==pullResult.PullStatus{
 
