@@ -413,7 +413,7 @@ func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 		}
 
 	}
-	if len(updatedTable) > 0 {
+	if updatedTable.Size() > 0 {
 		for ite := updatedTable.Iterator(); ite.HasNext(); {
 			key, value, _ := ite.Next()
 			mqClientInstance.BrokerAddrTable.Put(key, value)

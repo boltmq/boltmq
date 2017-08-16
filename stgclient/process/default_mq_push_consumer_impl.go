@@ -13,6 +13,7 @@ import (
 	set "github.com/deckarep/golang-set"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"strings"
+	"math"
 )
 // DefaultMQPushConsumerImpl: push消费的实现
 // Author: yintongqiang
@@ -41,7 +42,7 @@ func NewDefaultMQPushConsumerImpl(defaultMQPushConsumer *DefaultMQPushConsumer) 
 	return impl
 }
 // pullMessage消息放到阻塞队列中
-func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest consumer.PullRequest) {
+func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullRequest) {
 	processQueue := pullRequest.ProcessQueue
 	if processQueue.Dropped {
 		logger.Info("the pull request is droped.")
@@ -72,7 +73,7 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest consumer.PullReques
 		return
 	}
 	var pullCallBack consumer.PullCallback = &PullCallBackImpl{PullRequest:pullRequest, DefaultMQPushConsumerImpl:impl,
-		SubscriptionData:subData.(heartbeat.SubscriptionData),beginTimestamp:time.Now().Unix()*1000}
+		SubscriptionData:subData.(heartbeat.SubscriptionData), beginTimestamp:time.Now().Unix() * 1000}
 	commitOffsetEnable := false
 	var commitOffsetValue int64 = 0
 	if impl.defaultMQPushConsumer.messageModel == heartbeat.CLUSTERING {
@@ -105,28 +106,64 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest consumer.PullReques
 type PullCallBackImpl struct {
 	beginTimestamp int64
 	heartbeat.SubscriptionData
-	consumer.PullRequest
+	*consumer.PullRequest
 	*DefaultMQPushConsumerImpl
 }
 
-func (backImpl PullCallBackImpl) OnSuccess(pullResult consumer.PullResult) {
+func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
 	pullResult = backImpl.pullAPIWrapper.processPullResult(backImpl.MessageQueue, pullResult, backImpl.SubscriptionData)
 	switch pullResult.PullStatus {
 	case consumer.FOUND:
-		//prevRequestOffset := backImpl.NextOffset
-		backImpl.PullRequest.NextOffset=pullResult.NextBeginOffset
+		prevRequestOffset := backImpl.NextOffset
+		backImpl.PullRequest.NextOffset = pullResult.NextBeginOffset
 		//pullRT:=time.Now().Unix()*1000-backImpl.beginTimestamp
-		if len(pullResult.MsgFoundList)==0{
+		var firstMsgOffset int64 = math.MaxInt64
+		if len(pullResult.MsgFoundList) == 0 {
 			backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
-		}else{
-			dispathToConsume:=backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
-			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList,backImpl.ProcessQueue,backImpl.PullRequest.MessageQueue,dispathToConsume)
-
+		} else {
+			dispathToConsume := backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
+			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList, backImpl.ProcessQueue, backImpl.PullRequest.MessageQueue, dispathToConsume)
+			if backImpl.DefaultMQPushConsumerImpl.defaultMQPushConsumer.pullInterval > 0 {
+				backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestLater(backImpl.PullRequest, int(backImpl.DefaultMQPushConsumerImpl.defaultMQPushConsumer.pullInterval))
+			} else {
+				backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
+			}
 		}
+		if pullResult.NextBeginOffset < prevRequestOffset || firstMsgOffset < prevRequestOffset {
+			logger.Warn(
+				"[BUG] pull message result maybe data wrong, nextBeginOffset: %v firstMsgOffset: %v prevRequestOffset: %v", //
+				pullResult.NextBeginOffset, //
+				firstMsgOffset, //
+				prevRequestOffset);
+		}
+	case consumer.NO_NEW_MSG:
+		backImpl.NextOffset = pullResult.NextBeginOffset
+		backImpl.DefaultMQPushConsumerImpl.correctTagsOffset(backImpl.PullRequest)
+		backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
+	case consumer.NO_MATCHED_MSG:
+		backImpl.NextOffset = pullResult.NextBeginOffset
+		backImpl.DefaultMQPushConsumerImpl.correctTagsOffset(backImpl.PullRequest)
+		backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
+	case consumer.OFFSET_ILLEGAL:
+		backImpl.NextOffset = pullResult.NextBeginOffset
+		backImpl.ProcessQueue.Dropped = true
+		go func() {
+			time.Sleep(time.Second * 10)
+			backImpl.DefaultMQPushConsumerImpl.OffsetStore.UpdateOffset(backImpl.MessageQueue, backImpl.PullRequest.NextOffset, false)
+			backImpl.DefaultMQPushConsumerImpl.OffsetStore.Persist(backImpl.MessageQueue)
+			backImpl.DefaultMQPushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.RemoveProcessQueue(backImpl.MessageQueue)
+		}()
 
 	}
 
 }
+
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) correctTagsOffset(pullRequest *consumer.PullRequest) {
+	if pullRequest.ProcessQueue.MsgCount == 0 {
+		pushConsumerImpl.OffsetStore.UpdateOffset(pullRequest.MessageQueue, pullRequest.NextOffset, true)
+	}
+}
+
 
 // 订阅topic和tag
 func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression string) {
@@ -142,6 +179,7 @@ func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression str
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) registerMessageListener(messageListener listener.MessageListener) {
 	pushConsumerImpl.messageListenerInner = messageListener
 }
+
 // 启动消费服务器
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 	switch pushConsumerImpl.serviceState {
@@ -207,17 +245,49 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 
 // 检查配置
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)checkConfig() {
-
+	CheckGroup(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+	if strings.EqualFold("", pushConsumerImpl.defaultMQPushConsumer.consumerGroup) {
+		panic("consumerGroup is null")
+	}
+	if strings.EqualFold(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, stgcommon.DEFAULT_CONSUMER_GROUP) {
+		panic("consumerGroup can not equal" + stgcommon.DEFAULT_CONSUMER_GROUP + ", please specify another one.")
+	}
+	if pushConsumerImpl.defaultMQPushConsumer.messageListener == nil {
+		panic("messageListener is null")
+	}
 }
 
 // 复制订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
+	sub := pushConsumerImpl.defaultMQPushConsumer.subscription
+	if len(sub) > 0 {
+		for topic, subString := range sub {
+			subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, topic, subString)
+			pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
+		}
+	}
+	if pushConsumerImpl.messageListenerInner == nil {
+		pushConsumerImpl.messageListenerInner = pushConsumerImpl.defaultMQPushConsumer.messageListener
+	}
+	switch pushConsumerImpl.defaultMQPushConsumer.messageModel {
+	case heartbeat.BROADCASTING:
+	case heartbeat.CLUSTERING:
+		retryTopic := stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+		subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, retryTopic, "*")
+		pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(retryTopic, subscriptionData)
+	}
 
 }
 
 // 当订阅信息改变时，更新订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSubscriptionChanged() {
-
+	subTable := pushConsumerImpl.rebalanceImpl.(RebalancePushImpl).rebalanceImplExt.SubscriptionInner
+	if subTable != nil {
+		for ite := subTable.Iterator(); ite.HasNext(); {
+			topic, _, _ := ite.Next()
+			pushConsumerImpl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(topic.(string))
+		}
+	}
 }
 
 
@@ -263,10 +333,10 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsUnitMode() bool {
 	return pushConsumerImpl.defaultMQPushConsumer.unitMode
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestImmediately(pullRequest consumer.PullRequest) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestImmediately(pullRequest)
 }
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestLater(pullRequest consumer.PullRequest, timeDelay int) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestLater(pullRequest, timeDelay)
 }
 

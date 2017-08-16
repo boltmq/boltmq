@@ -4,5 +4,5 @@ package consumer
 // Since:  2017/8/14
 
 type PullCallback interface {
-	OnSuccess(pullResult PullResult)
+	OnSuccess(pullResult *PullResult)
 }
