@@ -77,7 +77,7 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
 	// 默认send采用v2版本
-	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(requestHeader)
+	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(&requestHeader)
 	request := protocol.CreateRequestCommand(cprotocol.SEND_MESSAGE_V2, requestHeaderV2)
 	switch (communicationMode) {
 	case ONEWAY:
