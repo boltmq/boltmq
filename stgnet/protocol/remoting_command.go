@@ -20,6 +20,7 @@ type RemotingCommand struct {
 	// 修改字段类型 2017/8/16 Add by yintongqiang
 	CustomHeader       stgnet.CommandCustomHeader
 	Body               []byte
+	Remark             string
 	// TODO
 }
 

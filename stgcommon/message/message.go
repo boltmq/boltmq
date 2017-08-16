@@ -25,3 +25,11 @@ func NewMessage(topic string, tags string, body[]byte) Message {
 func (msg *Message)clearProperty(name string) {
 	delete(msg.Properties, name)
 }
+
+func(self *Message)  putProperty(name string ,value string)  {
+	if self.Properties!= nil {
+		self.Properties=make( map[string]string)
+	}
+
+	self.Properties[name]=value
+}
