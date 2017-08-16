@@ -1,7 +1,5 @@
 package header
 
-import "github.com/pquerna/ffjson/fflib/v1"
-
 // SendMessageRequestHeaderV2: 为减少网络传输数量准备
 // Author: yintongqiang
 // Since:  2017/8/10
