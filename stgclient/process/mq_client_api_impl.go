@@ -34,6 +34,11 @@ func (impl *MQClientAPIImpl)Start() {
 	//impl.ProjectGroupPrefix
 
 }
+// 关闭romoting
+func (impl *MQClientAPIImpl)Shutdwon() {
+	//todo 关闭远程
+
+}
 // 发送心跳到broker
 func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
 	if strings.EqualFold(impl.ProjectGroupPrefix, "") {
@@ -197,8 +202,42 @@ func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
 	//todo 设置remotingclient的nameserver
 }
 
-func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback consumer.PullCallback) {
+func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string,msg message.MessageExt,consumerGroup string,delayLevel int,timeoutMillis int) {
+	consumerGroupWithProjectGroup := consumerGroup
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
+		msg.Topic=stgclient.BuildWithProjectGroup(msg.Topic,impl.ProjectGroupPrefix)
+	}
+	requestHeader:=header.ConsumerSendMsgBackRequestHeader{
+    Group:consumerGroupWithProjectGroup,
+		OriginTopic:msg.Topic,
+		Offset:msg.CommitLogOffset,
+		DelayLevel:delayLevel,
+		OriginMsgId:msg.MsgId,
+	}
+	request:=protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK,requestHeader)
+	logger.Info(request.RemotingVersionKey)
+	//todo remotingclient invokeSync
 }
+
+
+func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback consumer.PullCallback) {
+  //todo
+}
+
+func (impl *MQClientAPIImpl)unRegisterClient(addr,clientID,producerGroup,consumerGroup string, timeoutMillis int) {
+	 producerGroupWithProjectGroup:= producerGroup
+	 consumerGroupWithProjectGroup:= consumerGroup
+	if !strings.EqualFold("",impl.ProjectGroupPrefix){
+		producerGroupWithProjectGroup=stgclient.BuildWithProjectGroup(producerGroup,impl.ProjectGroupPrefix)
+		consumerGroupWithProjectGroup=stgclient.BuildWithProjectGroup(consumerGroup,impl.ProjectGroupPrefix)
+	}
+	requestHeader:=header.UnregisterClientRequestHeader{ClientID:clientID,ProducerGroup:producerGroupWithProjectGroup,ConsumerGroup:consumerGroupWithProjectGroup}
+    request:=protocol.CreateRequestCommand(cprotocol.UNREGISTER_CLIENT,&requestHeader)
+	logger.Info(request.RemotingVersionKey)
+	//todo invokeSync
+}
+
 
 func (impl *MQClientAPIImpl)processPullResponse(response protocol.RemotingCommand) *PullResultExt {
 	pullStatus := consumer.NO_NEW_MSG

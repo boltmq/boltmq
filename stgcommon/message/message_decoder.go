@@ -2,7 +2,6 @@ package message
 
 import (
 	"bytes"
-	"golang.org/x/tools/go/gcimporter15/testdata"
 	"strings"
 )
 

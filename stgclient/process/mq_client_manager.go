@@ -17,6 +17,7 @@ var (
 
 
 type MQClientManager struct {
+	// clientId MQClientInstance
 	FactoryTable          *syncMap.Map
 	FactoryIndexGenerator int32
 }
@@ -49,4 +50,9 @@ func (mQClientManager *MQClientManager) GetAndCreateMQClientInstance(clientConfi
 		}
 	}
 	return instance.(*MQClientInstance)
+}
+
+// 删除客户端
+func (mQClientManager *MQClientManager) RemoveClientFactory(clientId string)  {
+	mQClientManager.FactoryTable.Remove(clientId)
 }

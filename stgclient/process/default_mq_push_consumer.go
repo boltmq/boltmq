@@ -85,7 +85,13 @@ func (pushConsumer *DefaultMQPushConsumer) RegisterMessageListener(messageListen
 	pushConsumer.messageListener=messageListener
 	pushConsumer.defaultMQPushConsumerImpl.registerMessageListener(messageListener)
 }
+
 // 启动消费服务
 func (pushConsumer *DefaultMQPushConsumer) Start() {
 	pushConsumer.defaultMQPushConsumerImpl.Start()
+}
+
+// 启动消费服务
+func (pushConsumer *DefaultMQPushConsumer) Shutdown() {
+	pushConsumer.defaultMQPushConsumerImpl.Shutdown()
 }

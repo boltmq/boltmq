@@ -14,6 +14,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"strings"
 	"math"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 // DefaultMQPushConsumerImpl: push消费的实现
 // Author: yintongqiang
@@ -168,7 +169,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) correctTagsOffset(pullRequest
 // 订阅topic和tag
 func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression string) {
 	subscriptionData := filter.BuildSubscriptionData(impl.defaultMQPushConsumer.consumerGroup, topic, subExpression)
-	var pushImpl *RebalancePushImpl =impl.rebalanceImpl.(*RebalancePushImpl)
+	var pushImpl *RebalancePushImpl = impl.rebalanceImpl.(*RebalancePushImpl)
 	pushImpl.rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
 	if impl.mQClientFactory != nil {
 		impl.mQClientFactory.SendHeartbeatToAllBrokerWithLock()
@@ -243,6 +244,23 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 	pushConsumerImpl.mQClientFactory.rebalanceImmediately()
 }
 
+// 关闭
+func (pushConsumerImpl *DefaultMQPushConsumerImpl)Shutdown() {
+	switch pushConsumerImpl.serviceState {
+	case stgcommon.CREATE_JUST:
+	case stgcommon.RUNNING:
+		pushConsumerImpl.consumeMessageService.Shutdown()
+		pushConsumerImpl.PersistConsumerOffset()
+		pushConsumerImpl.mQClientFactory.UnregisterConsumer(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+		pushConsumerImpl.mQClientFactory.Shutdown()
+		logger.Info("the consumer [%v] shutdown OK", pushConsumerImpl.defaultMQPushConsumer.consumerGroup);
+		pushConsumerImpl.serviceState = stgcommon.SHUTDOWN_ALREADY
+		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.destroy()
+	case stgcommon.SHUTDOWN_ALREADY:
+	default:
+	}
+}
+
 // 检查配置
 func (pushConsumerImpl *DefaultMQPushConsumerImpl)checkConfig() {
 	CheckGroup(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
@@ -255,6 +273,24 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)checkConfig() {
 	if pushConsumerImpl.defaultMQPushConsumer.messageListener == nil {
 		panic("messageListener is null")
 	}
+}
+
+// 消费不了从新发送到队列
+func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.MessageExt, delayLevel int, brokerName string) {
+	var brokerAddr string
+	if !strings.EqualFold(brokerName, "") {
+		brokerAddr = pushConsumerImpl.mQClientFactory.FindBrokerAddressInPublish(brokerAddr)
+	} else {
+		brokerAddr = msg.BornHost
+	}
+	pushConsumerImpl.mQClientFactory.MQClientAPIImpl.consumerSendMessageBack(brokerAddr, msg, pushConsumerImpl.defaultMQPushConsumer.consumerGroup, delayLevel, 5000)
+	defer func() {
+		if e := recover(); e != nil {
+			logger.Warn("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+			//newMsg := message.Message{Topic:
+			//stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
+		}
+	}()
 }
 
 // 复制订阅信息
@@ -363,11 +399,11 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsSubscribeTopicNeedUpdate(top
 	info := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable
 	//ok, _ := sbInner.ContainsKey(topic)
 	ok, _ := sbInner.Get(topic)
-	if ok==nil {
+	if ok == nil {
 		//flag, _ := info.ContainsKey(topic)
 		//return !flag
 		flag, _ := info.Get(topic)
-		return flag==nil
+		return flag == nil
 	}
 	return false
 }

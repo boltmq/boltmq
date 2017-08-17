@@ -4,8 +4,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"time"
-	//"sync/atomic"
-	"fmt"
 )
 
 func Task() {
@@ -18,16 +16,6 @@ func Task() {
 	}
 }
 func main() {
-	mapTest:=make(map[int]*message.MessageExt)
-	fmt.Println(mapTest[1])
-	var b int64=10
-	var a *int64=&b
-	fmt.Println(*a)
-	b=11
-	fmt.Println(*a)
-	*a=12
-	fmt.Println(*a)
-	fmt.Println(b)
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQProducer.Start()
@@ -35,6 +23,8 @@ func main() {
 		defaultMQProducer.Send(message.NewMessage("TestTopic", "tagA", []byte("I'm so diao!")))
 	}
 	go Task()
+	time.Sleep(time.Second*60)
+	defaultMQProducer.Shutdown()
 	select {
 
 	}
