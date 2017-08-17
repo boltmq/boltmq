@@ -16,7 +16,7 @@ const (
 	PUTMESSAGE_UNKNOWN_ERROR
 )
 
-func (status AppendMessageStatus) PutMessageString() string {
+func (status PutMessageStatus) PutMessageString() string {
 	switch status {
 	case PUTMESSAGE_PUT_OK:
 		return "PUT_OK"
