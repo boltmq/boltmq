@@ -13,8 +13,7 @@ type SubscriptionGroupManager struct {
 	SubscriptionGroupTable *sync.Map
 
 	BrokerController *BrokerController
-
-	// TODO  DataVersion dataVersion = new DataVersion();
+	dataVersion      stgcommon.DataVersion
 	// TODO  Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 }
 
@@ -50,9 +49,25 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 	}
 }
 
-
-
-func (self *SubscriptionGroupManager) Load() bool{
+func (self *SubscriptionGroupManager) Load() bool {
 
 	return true
+}
+
+// findSubscriptionGroupConfig 查找订阅关系
+// Author gaoyanlei
+// Since 2017/8/17
+func (self *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
+	subscriptionGroupConfig, _ := self.SubscriptionGroupTable.Get(group)
+	if value, ok := subscriptionGroupConfig.(*subscription.SubscriptionGroupConfig); ok {
+		if value == nil {
+			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
+			subscriptionGroupConfig.GroupName = group
+			self.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
+			self.dataVersion.NextVersion()
+			// TODO  this.persist();
+		}
+		return value
+	}
+	return nil
 }

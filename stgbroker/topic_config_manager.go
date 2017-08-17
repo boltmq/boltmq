@@ -214,7 +214,7 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
 // Author gaoyanlei
 // Since 2017/8/11
-func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm int,
+func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm,
 	clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	self.lockTopicConfigTable.Lock()
 	defer self.lockTopicConfigTable.Lock()
