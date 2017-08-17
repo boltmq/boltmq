@@ -69,3 +69,7 @@ func CompareAndIncreaseOnly(target *int64, value int64) bool {
 	}
 	return false
 }
+
+func GetDLQTopic(consumerGroup string) string {
+	return DLQ_GROUP_TOPIC_PREFIX + consumerGroup
+}

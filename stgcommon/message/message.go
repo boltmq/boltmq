@@ -47,5 +47,9 @@ func (self *Message) GetTags() string {
 }
 
 func (self *Message) SetWaitStoreMsgOK(waitStoreMsgOK bool) {
-	self.PutProperty(PROPERTY_WAIT_STORE_MSG_OK,strconv.FormatBool(waitStoreMsgOK))
+	self.PutProperty(PROPERTY_WAIT_STORE_MSG_OK, strconv.FormatBool(waitStoreMsgOK))
+}
+
+func (self *Message) SetDelayTimeLevel(level int) {
+	self.PutProperty(PROPERTY_DELAY_TIME_LEVEL, strconv.Itoa(level))
 }
