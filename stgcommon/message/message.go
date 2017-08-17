@@ -1,5 +1,7 @@
 package message
 
+import "strconv"
+
 // Message: 消息结构体
 // Author: yintongqiang
 // Since:  2017/8/9
@@ -45,5 +47,5 @@ func (self *Message) GetTags() string {
 }
 
 func (self *Message) SetWaitStoreMsgOK(waitStoreMsgOK bool) {
-	self.PutProperty(PROPERTY_WAIT_STORE_MSG_OK, string(waitStoreMsgOK))
+	self.PutProperty(PROPERTY_WAIT_STORE_MSG_OK,strconv.FormatBool(waitStoreMsgOK))
 }
