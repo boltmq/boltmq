@@ -287,8 +287,16 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Warn("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
-			//newMsg := message.Message{Topic:
-			//stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
+			newMsg := &message.Message{Topic:
+			stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
+			originMsgId := message.GetOriginMessageId(msg)
+			if strings.EqualFold(originMsgId, "") {
+				message.SetOriginMessageId(newMsg, msg.MsgId)
+			} else {
+				message.SetOriginMessageId(newMsg, originMsgId)
+			}
+			newMsg.Flag=msg.Flag
+
 		}
 	}()
 }
