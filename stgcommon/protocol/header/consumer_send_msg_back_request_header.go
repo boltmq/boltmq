@@ -14,3 +14,12 @@ type ConsumerSendMsgBackRequestHeader struct {
 func (header*ConsumerSendMsgBackRequestHeader)CheckFields() {
 
 }
+
+// 初始化 ConsumerSendMsgBackRequestHeader
+// Author gaoyanlei
+// Since 2017/8/17
+func NewConsumerSendMsgBackRequestHeader() *ConsumerSendMsgBackRequestHeader {
+	return &ConsumerSendMsgBackRequestHeader{
+		UnitMode: false,
+	}
+}
