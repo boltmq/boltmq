@@ -59,11 +59,12 @@ func (service *ConsumeMessageConcurrentlyService)Start() {
 }
 
 func (service *ConsumeMessageConcurrentlyService)Shutdown() {
-
+	// 关闭通道
+	close(service.consumeExecutor)
 }
 
 func (service *ConsumeMessageConcurrentlyService)sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
-	service.defaultMQPushConsumerImpl.sendMessageBack(msg,context.DelayLevelWhenNextConsume,context.MessageQueue.BrokerName)
+	service.defaultMQPushConsumerImpl.sendMessageBack(msg, context.DelayLevelWhenNextConsume, context.MessageQueue.BrokerName)
 	return true
 }
 func (service *ConsumeMessageConcurrentlyService)processConsumeResult(status listener.ConsumeConcurrentlyStatus,
@@ -123,7 +124,7 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 func (service *ConsumeMessageConcurrentlyService)submitConsumeRequestLater(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue) {
 	go func() {
 		time.Sleep(time.Second * 5)
-		service.SubmitConsumeRequest(msgs, processQueue, messageQueue,true)
+		service.SubmitConsumeRequest(msgs, processQueue, messageQueue, true)
 	}()
 }
 
