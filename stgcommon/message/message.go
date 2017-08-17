@@ -21,11 +21,11 @@ func NewMessage(topic string, tags string, body []byte) Message {
 	return Message{Topic: topic, Properties: properties, Body: body}
 }
 
-func (msg *Message) clearProperty(name string) {
+func (msg *Message) ClearProperty(name string) {
 	delete(msg.Properties, name)
 }
 
-func (self *Message) putProperty(name string, value string) {
+func (self *Message) PutProperty(name string, value string) {
 	if self.Properties != nil {
 		self.Properties = make(map[string]string)
 	}
@@ -42,4 +42,8 @@ func (self *Message) GetProperty(name string) string {
 
 func (self *Message) GetTags() string {
 	return self.GetProperty(PROPERTY_TAGS)
+}
+
+func (self *Message) SetWaitStoreMsgOK(waitStoreMsgOK bool) {
+	self.PutProperty(PROPERTY_WAIT_STORE_MSG_OK, string(waitStoreMsgOK))
 }
