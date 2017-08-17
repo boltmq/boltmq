@@ -9,16 +9,17 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"strings"
 	"math/rand"
+	"strings"
 )
 
+const DLQ_NUMS_PER_GROUP  = 1
 // AbstractSendMessageProcessor 发送处理类
 // Author gaoyanlei
 // Since 2017/8/14
 type AbstractSendMessageProcessor struct {
 	BrokerController *BrokerController
-	Rand                  *rand.Rand
+	Rand             *rand.Rand
 	StoreHost        string
 }
 
@@ -60,7 +61,7 @@ func (self *AbstractSendMessageProcessor) buildMsgContext( // TODO ChannelHandle
 // Author gaoyanlei
 // Since 2017/8/16
 func (self *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContext ctx
-	requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) (*protocol.RemotingCommand) {
+	requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if constant.IsWriteable(self.BrokerController.BrokerConfig.BrokerPermission) &&
 		self.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
@@ -120,4 +121,11 @@ func (self *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContex
 		return response
 	}
 	return response
+}
+
+func DoResponse( //TODO ChannelHandlerContext ctx,
+	request protocol.RemotingCommand, response *protocol.RemotingCommand) {
+	if !request.IsOnewayRPC() {
+		// TODO ctx.writeAndFlush(response);
+	}
 }
