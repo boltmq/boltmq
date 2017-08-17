@@ -215,7 +215,7 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string,msg message.Mess
 		DelayLevel:delayLevel,
 		OriginMsgId:msg.MsgId,
 	}
-	request:=protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK,requestHeader)
+	request:=protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK,&requestHeader)
 	logger.Info(request.RemotingVersionKey)
 	//todo remotingclient invokeSync
 }

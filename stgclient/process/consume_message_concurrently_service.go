@@ -7,7 +7,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	set "github.com/deckarep/golang-set"
-	"fmt"
 	"time"
 )
 // ConsumeMessageConcurrentlyService: 普通消费服务

@@ -288,19 +288,19 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Warn("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
-			newMsg := &message.Message{Topic:
+			newMsg := message.Message{Topic:
 			stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
-			originMsgId := message.GetOriginMessageId(msg)
+			originMsgId := message.GetOriginMessageId(msg.Message)
 			if strings.EqualFold(originMsgId, "") {
-				message.SetOriginMessageId(newMsg, msg.MsgId)
+				message.SetOriginMessageId(&newMsg, msg.MsgId)
 			} else {
-				message.SetOriginMessageId(newMsg, originMsgId)
+				message.SetOriginMessageId(&newMsg, originMsgId)
 			}
 			newMsg.Flag=msg.Flag
-            message.SetPropertiesMap(newMsg,msg.Properties)
-			message.PutProperty(newMsg,message.PROPERTY_RETRY_TOPIC,msg.Topic)
+            message.SetPropertiesMap(&newMsg,msg.Properties)
+			message.PutProperty(&newMsg,message.PROPERTY_RETRY_TOPIC,msg.Topic)
 			reTimes:=msg.ReconsumeTimes+1
-			message.SetReconsumeTime(newMsg,strconv.Itoa(reTimes))
+			message.SetReconsumeTime(&newMsg,strconv.Itoa(reTimes))
 			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL,strconv.Itoa(3 + reTimes))
 			pushConsumerImpl.mQClientFactory.DefaultMQProducer.Send(newMsg)
 		}
