@@ -86,9 +86,9 @@ func (mqClientInstance *MQClientInstance) Start() {
 		//Start various schedule tasks
 		mqClientInstance.StartScheduledTask()
 		//Start pull service
-		go mqClientInstance.PullMessageService.Start()
+		mqClientInstance.PullMessageService.Start()
 		//Start rebalance service
-		go mqClientInstance.RebalanceService.Start()
+		mqClientInstance.RebalanceService.Start()
 		//Start push service
 		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.StartFlag(false)
 		mqClientInstance.ServiceState = stgcommon.RUNNING
@@ -138,7 +138,7 @@ func (mqClientInstance *MQClientInstance) RegisterProducer(group string, produce
 // 注销消费者
 func (mqClientInstance *MQClientInstance) UnregisterConsumer(group string) {
 	mqClientInstance.ConsumerTable.Remove(group)
-	mqClientInstance.unregisterClientWithLock("",group)
+	mqClientInstance.unregisterClientWithLock("", group)
 }
 
 // 注销生产者
@@ -252,24 +252,31 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	}
 
 	// 定时从nameserver更新topic route信息
-	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
-	go updateRouteTicker.Do(func(tm time.Time) {
-		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
-	})
-	mqClientInstance.TimerTask.Add(updateRouteTicker)
+	go func() {
+		updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
+		mqClientInstance.TimerTask.Add(updateRouteTicker)
+		updateRouteTicker.Do(func(tm time.Time) {
+			mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+		})
+	}()
+
 	// 定时清理离线的broker并发送心跳数据
-	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
-	go cleanAndHBTicker.Do(func(tm time.Time) {
-		mqClientInstance.cleanOfflineBroker()
-		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
-	})
-	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
+	go func() {
+		cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
+		mqClientInstance.TimerTask.Add(cleanAndHBTicker)
+		cleanAndHBTicker.Do(func(tm time.Time) {
+			mqClientInstance.cleanOfflineBroker()
+			mqClientInstance.SendHeartbeatToAllBrokerWithLock()
+		})
+	}()
 	// 定时持久化consumer的offset
-	go persistOffsetTicker.Do(func(tm time.Time) {
-		mqClientInstance.persistAllConsumerOffset()
-	})
-	mqClientInstance.TimerTask.Add(persistOffsetTicker)
+	go func() {
+		persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
+		mqClientInstance.TimerTask.Add(persistOffsetTicker)
+		persistOffsetTicker.Do(func(tm time.Time) {
+			mqClientInstance.persistAllConsumerOffset()
+		})
+	}()
 	//todo 定时调整线程池的数量
 }
 
