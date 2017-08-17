@@ -31,3 +31,7 @@ func GetOriginMessageId(msg Message) string {
 func SetOriginMessageId(msg *Message, originMessageId string) {
 	PutProperty(msg, PROPERTY_ORIGIN_MESSAGE_ID, originMessageId)
 }
+
+func SetReconsumeTime(msg *Message, reconsumeTimes string) {
+	PutProperty(msg, PROPERTY_RECONSUME_TIME, reconsumeTimes)
+}
