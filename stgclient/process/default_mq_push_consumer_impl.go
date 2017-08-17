@@ -301,7 +301,8 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 			message.PutProperty(newMsg,message.PROPERTY_RETRY_TOPIC,msg.Topic)
 			reTimes:=msg.ReconsumeTimes+1
 			message.SetReconsumeTime(newMsg,strconv.Itoa(reTimes))
-			//newMsg.PutProperty()
+			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL,strconv.Itoa(3 + reTimes))
+			pushConsumerImpl.mQClientFactory.DefaultMQProducer.Send(newMsg)
 		}
 	}()
 }
