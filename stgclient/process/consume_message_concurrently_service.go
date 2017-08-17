@@ -63,6 +63,7 @@ func (service *ConsumeMessageConcurrentlyService)Shutdown() {
 }
 
 func (service *ConsumeMessageConcurrentlyService)sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
+	service.defaultMQPushConsumerImpl.sendMessageBack(msg,context.DelayLevelWhenNextConsume,context.MessageQueue.BrokerName)
 	return true
 }
 func (service *ConsumeMessageConcurrentlyService)processConsumeResult(status listener.ConsumeConcurrentlyStatus,
