@@ -17,10 +17,13 @@ func NewRebalanceService(mqClientFactory *MQClientInstance) *RebalanceService {
 }
 
 func (service *RebalanceService) Start() {
-	for !service.isStoped {
-		time.Sleep(time.Second * time.Duration(service.WaitInterval))
-		service.MQClientFactory.doRebalance()
-	}
+	go func() {
+		for !service.isStoped {
+			time.Sleep(time.Second * time.Duration(service.WaitInterval))
+			service.MQClientFactory.doRebalance()
+		}
+	}()
+
 }
 func (service *RebalanceService) Shutdown() {
 	service.isStoped = true
