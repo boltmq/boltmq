@@ -12,14 +12,22 @@ func ClearProperty(msg *Message, name string) {
 	msg.clearProperty(name)
 }
 
-func PutProperty(msg Message, name string, value string) {
+func PutProperty(msg *Message, name string, value string) {
 	msg.putProperty(name, value)
 }
 
-func SetProperties(msg Message, name string, value string) {
+func SetProperties(msg *Message, name string, value string) {
 	msg.putProperty(name, value)
 }
 
-func SetPropertiesMap(msg Message, properties map[string]string) {
+func SetPropertiesMap(msg *Message, properties map[string]string) {
 	msg.Properties = properties
+}
+
+func GetOriginMessageId(msg Message) string {
+	return msg.Properties[PROPERTY_ORIGIN_MESSAGE_ID]
+}
+
+func SetOriginMessageId(msg *Message, originMessageId string) {
+	PutProperty(msg, PROPERTY_ORIGIN_MESSAGE_ID, originMessageId)
 }
