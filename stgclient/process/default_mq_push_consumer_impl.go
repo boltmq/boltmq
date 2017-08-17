@@ -15,6 +15,7 @@ import (
 	"strings"
 	"math"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"strconv"
 )
 // DefaultMQPushConsumerImpl: push消费的实现
 // Author: yintongqiang
@@ -296,7 +297,11 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 				message.SetOriginMessageId(newMsg, originMsgId)
 			}
 			newMsg.Flag=msg.Flag
-
+            message.SetPropertiesMap(newMsg,msg.Properties)
+			message.PutProperty(newMsg,message.PROPERTY_RETRY_TOPIC,msg.Topic)
+			reTimes:=msg.ReconsumeTimes+1
+			message.SetReconsumeTime(newMsg,strconv.Itoa(reTimes))
+			//newMsg.
 		}
 	}()
 }
