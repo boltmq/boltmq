@@ -79,15 +79,29 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) ShutdownFlag(shutdownFactory
 	switch defaultMQProducerImpl.ServiceState {
 	case stgcommon.CREATE_JUST:
 	case stgcommon.RUNNING:
-		defaultMQProducerImpl.ServiceState=stgcommon.SHUTDOWN_ALREADY
+		defaultMQProducerImpl.ServiceState = stgcommon.SHUTDOWN_ALREADY
 		defaultMQProducerImpl.MQClientFactory.UnregisterProducer(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup)
-		if shutdownFactory{
+		if shutdownFactory {
 			defaultMQProducerImpl.MQClientFactory.Shutdown()
 		}
 	case stgcommon.SHUTDOWN_ALREADY:
 	default:
 
 	}
+}
+
+// 对外提供创建topic方法
+func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopic(key, newTopic string, queueNum int) {
+	defaultMQProducerImpl.CreateTopicByFlag(key, newTopic, queueNum, 0)
+}
+
+// 对外提供创建topic方法
+func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopicByFlag(key, newTopic string, queueNum, topicSysFlag int) {
+	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
+		panic(errors.New("The producer service state not OK"))
+	}
+	CheckTopic(newTopic)
+	defaultMQProducerImpl.MQClientFactory.MQAdminImpl.CreateTopic(key, newTopic, queueNum, topicSysFlag)
 }
 
 // 对外提供消息发送方法

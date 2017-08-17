@@ -11,6 +11,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -255,4 +256,18 @@ func (impl *MQClientAPIImpl)processPullResponse(response protocol.RemotingComman
 	reponseHeader := &header.PullMessageResponseHeader{}
 	return NewPullResultExt(pullStatus, reponseHeader.NextBeginOffset,
 		reponseHeader.MaxOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
+}
+// 创建topic
+func (impl *MQClientAPIImpl)CreateTopic(addr,defaultTopic string,topicConfig stgcommon.TopicConfig,timeoutMillis int){
+	topicWithProjectGroup:=topicConfig.TopicName
+	if !strings.EqualFold("",impl.ProjectGroupPrefix){
+		topicWithProjectGroup=stgclient.BuildWithProjectGroup(topicConfig.TopicName,impl.ProjectGroupPrefix)
+	}
+	requestHeader:=header.CreateTopicRequestHeader{Topic:topicWithProjectGroup,
+	DefaultTopic:defaultTopic,ReadQueueNums:topicConfig.ReadQueueNums,WriteQueueNums:topicConfig.WriteQueueNums,
+		TopicFilterType:topicConfig.TopicFilterType.String(),TopicSysFlag:topicConfig.TopicSysFlag,Order:topicConfig.Order,
+	    Perm:topicConfig.Perm}
+	request:=protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC,&requestHeader)
+	logger.Info(request.RemotingVersionKey)
+	//todo remoting invoke
 }
