@@ -72,6 +72,22 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 }
 
 func (defaultMQProducerImpl *DefaultMQProducerImpl) Shutdown() {
+	defaultMQProducerImpl.ShutdownFlag(true)
+}
+
+func (defaultMQProducerImpl *DefaultMQProducerImpl) ShutdownFlag(shutdownFactory bool) {
+	switch defaultMQProducerImpl.ServiceState {
+	case stgcommon.CREATE_JUST:
+	case stgcommon.RUNNING:
+		defaultMQProducerImpl.ServiceState=stgcommon.SHUTDOWN_ALREADY
+		defaultMQProducerImpl.MQClientFactory.UnregisterProducer(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup)
+		if shutdownFactory{
+			defaultMQProducerImpl.MQClientFactory.Shutdown()
+		}
+	case stgcommon.SHUTDOWN_ALREADY:
+	default:
+
+	}
 }
 
 // 对外提供消息发送方法
@@ -112,7 +128,7 @@ sendCallback SendCallback, timeout int64) SendResult {
 				case ASYNC:
 				case ONEWAY:
 				case SYNC:
-					if sendResult.SendStatus != SEND_OK&& defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
+					if sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
 						continue
 					}
 					return sendResult

@@ -35,8 +35,8 @@ func (t *Ticker) Do(dofn func(time.Time)) {
 }
 
 // Stop 停止ticker定时器
-func (t *Ticker) Stop() {
-	t.timer.Stop()
+func (t *Ticker) Stop() bool {
+	return t.timer.Stop()
 }
 
 // ChannelTicker channel定时器

@@ -18,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"fmt"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -47,6 +48,7 @@ type MQClientInstance struct {
 	RebalanceService        *RebalanceService
 	DefaultMQProducer       *DefaultMQProducer
 	ServiceState            stgcommon.ServiceState
+	TimerTask               set.Set
 }
 
 func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int32, clientId string) *MQClientInstance {
@@ -58,6 +60,7 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 		ConsumerTable:   sync.NewMap(),
 		TopicRouteTable: sync.NewMap(),
 		BrokerAddrTable: sync.NewMap(),
+		TimerTask:       set.NewSet(),
 	}
 	mqClientInstance.ClientRemotingProcessor = NewClientRemotingProcessor(mqClientInstance)
 	mqClientInstance.MQClientAPIImpl = NewMQClientAPIImpl(mqClientInstance.ClientRemotingProcessor)
@@ -99,6 +102,31 @@ func (mqClientInstance *MQClientInstance) Start() {
 	}
 
 }
+
+func (mqClientInstance *MQClientInstance) Shutdown() {
+	if mqClientInstance.ConsumerTable.Size() > 0 {
+		return
+	}
+	if mqClientInstance.ProducerTable.Size() > 1 {
+		return
+	}
+	switch mqClientInstance.ServiceState {
+	case stgcommon.CREATE_JUST:
+	case stgcommon.RUNNING:
+		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.ShutdownFlag(false)
+		mqClientInstance.ServiceState = stgcommon.SHUTDOWN_ALREADY
+		mqClientInstance.PullMessageService.Shutdown()
+		for timer := range mqClientInstance.TimerTask.Iterator().C {
+			fmt.Println(timer.(*utils.Ticker).Stop())
+		}
+		mqClientInstance.MQClientAPIImpl.Shutdwon()
+		mqClientInstance.RebalanceService.Shutdown()
+		GetInstance().RemoveClientFactory(mqClientInstance.ClientId)
+	case stgcommon.SHUTDOWN_ALREADY:
+	default:
+
+	}
+}
 // 将生产者group和发送类保存到内存中
 func (mqClientInstance *MQClientInstance) RegisterProducer(group string, producer *DefaultMQProducerImpl) bool {
 	prev, _ := mqClientInstance.ProducerTable.Get(group)
@@ -108,6 +136,43 @@ func (mqClientInstance *MQClientInstance) RegisterProducer(group string, produce
 	return true
 }
 
+// 注销消费者
+func (mqClientInstance *MQClientInstance) UnregisterConsumer(group string) {
+	mqClientInstance.ConsumerTable.Remove(group)
+	mqClientInstance.unregisterClientWithLock("",group)
+}
+
+// 注销生产者
+func (mqClientInstance *MQClientInstance) UnregisterProducer(group string) {
+	mqClientInstance.ProducerTable.Remove(group)
+	mqClientInstance.unregisterClientWithLock(group, "")
+}
+
+// 注销客户端
+func (mqClientInstance *MQClientInstance) unregisterClientWithLock(producerGroup, consumerGroup string) {
+	mqClientInstance.LockHeartbeat.Lock()
+	defer mqClientInstance.LockHeartbeat.Unlock()
+	mqClientInstance.unregisterClient(producerGroup, consumerGroup)
+
+}
+
+// 注销客户端
+func (mqClientInstance *MQClientInstance) unregisterClient(producerGroup, consumerGroup string) {
+	for ite := mqClientInstance.BrokerAddrTable.Iterator(); ite.HasNext(); {
+		bName, table, _ := ite.Next()
+		if bName != nil && table != nil {
+			brokerName := bName.(string)
+			oneTable := table.(map[int]string)
+			for brokerId, addr := range oneTable {
+				if !strings.EqualFold(addr, "") {
+					mqClientInstance.MQClientAPIImpl.unRegisterClient(addr, mqClientInstance.ClientId, producerGroup, consumerGroup, 3000)
+					logger.Info(
+						"unregister client[producer: %v Consumer: %v] from broker[%v %v %v] success", producerGroup, consumerGroup, brokerName, brokerId, addr);
+				}
+			}
+		}
+	}
+}
 // 将生产者group和发送类保存到内存中
 func (mqClientInstance *MQClientInstance) RegisterConsumer(group string, consumer consumer.MQConsumerInner) bool {
 	prev, _ := mqClientInstance.ConsumerTable.PutIfAbsent(group, consumer)
@@ -192,17 +257,20 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	go updateRouteTicker.Do(func(tm time.Time) {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 	})
+	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
 	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
 	go cleanAndHBTicker.Do(func(tm time.Time) {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
 	})
+	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
 	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
 	// 定时持久化consumer的offset
 	go persistOffsetTicker.Do(func(tm time.Time) {
 		mqClientInstance.persistAllConsumerOffset()
 	})
+	mqClientInstance.TimerTask.Add(persistOffsetTicker)
 	//todo 定时调整线程池的数量
 }
 

@@ -13,6 +13,7 @@ import (
 type PullMessageService struct {
 	MQClientFactory  *MQClientInstance
 	PullRequestQueue chan *consumer.PullRequest
+	isStoped bool
 }
 
 func NewPullMessageService(mqClientFactory *MQClientInstance) *PullMessageService {
@@ -21,6 +22,9 @@ func NewPullMessageService(mqClientFactory *MQClientInstance) *PullMessageServic
 
 func (service *PullMessageService) Start() {
 	service.run()
+}
+func (service *PullMessageService) Shutdown() {
+	service.isStoped=true
 }
 
 func (service *PullMessageService) ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
@@ -36,7 +40,7 @@ func (service *PullMessageService) ExecutePullRequestLater(pullRequest *consumer
 
 func (service *PullMessageService) run() {
 	logger.Info(" service started")
-	for {
+	for !service.isStoped {
 		request := <-service.PullRequestQueue
 		service.pullMessage(request)
 

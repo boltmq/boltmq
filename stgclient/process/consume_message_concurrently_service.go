@@ -6,6 +6,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	set "github.com/deckarep/golang-set"
+	"fmt"
+	"time"
 )
 // ConsumeMessageConcurrentlyService: 普通消费服务
 // Author: yintongqiang
@@ -56,6 +59,13 @@ func (service *ConsumeMessageConcurrentlyService)Start() {
 
 }
 
+func (service *ConsumeMessageConcurrentlyService)Shutdown() {
+
+}
+
+func (service *ConsumeMessageConcurrentlyService)sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
+	return true
+}
 func (service *ConsumeMessageConcurrentlyService)processConsumeResult(status listener.ConsumeConcurrentlyStatus,
 context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	ackIndex := context.AckIndex
@@ -80,14 +90,41 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	//todo 广播后续添加
 	case heartbeat.BROADCASTING:
 	case heartbeat.CLUSTERING:
-	//todo 批量消费失败处理
+		msgBackFailed := []message.MessageExt{}
+		msgList := []message.MessageExt{}
+		msgSet := set.NewSet()
+		for _, msg := range consumeRequest.msgs {
+			msgSet.Add(msg)
+		}
+		for i := ackIndex + 1; i < len(consumeRequest.msgs); i++ {
+			msg := consumeRequest.msgs[i]
+			if !service.sendMessageBack(msg, context) {
+				msg.ReconsumeTimes = msg.ReconsumeTimes + 1
+				msgBackFailed = append(msgBackFailed, msg)
+				msgSet.Remove(msg)
+			}
+		}
 
+		if len(msgBackFailed) > 0 {
+			for val := range msgSet.Iterator().C {
+				msgList = append(msgList, val.(message.MessageExt))
+			}
+			consumeRequest.msgs = msgList
+			service.submitConsumeRequestLater(msgBackFailed, consumeRequest.processQueue, consumeRequest.messageQueue)
+		}
 	}
-	offset:=consumeRequest.processQueue.RemoveMessage(consumeRequest.msgs)
-	if offset>=0{
-		service.defaultMQPushConsumerImpl.OffsetStore.UpdateOffset(consumeRequest.messageQueue,int64(offset),true)
+	offset := consumeRequest.processQueue.RemoveMessage(consumeRequest.msgs)
+	if offset >= 0 {
+		service.defaultMQPushConsumerImpl.OffsetStore.UpdateOffset(consumeRequest.messageQueue, int64(offset), true)
 	}
 
+}
+
+func (service *ConsumeMessageConcurrentlyService)submitConsumeRequestLater(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue) {
+	go func() {
+		time.Sleep(time.Second * 5)
+		service.SubmitConsumeRequest(msgs, processQueue, messageQueue,true)
+	}()
 }
 
 func (service *ConsumeMessageConcurrentlyService)SubmitConsumeRequest(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue, dispathToConsume bool) {

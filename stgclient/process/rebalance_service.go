@@ -9,6 +9,7 @@ import "time"
 type RebalanceService struct {
 	MQClientFactory *MQClientInstance
 	WaitInterval    int //单位秒
+	isStoped        bool
 }
 
 func NewRebalanceService(mqClientFactory *MQClientInstance) *RebalanceService {
@@ -16,8 +17,11 @@ func NewRebalanceService(mqClientFactory *MQClientInstance) *RebalanceService {
 }
 
 func (service *RebalanceService) Start() {
-	for {
+	for !service.isStoped {
 		time.Sleep(time.Second * time.Duration(service.WaitInterval))
 		service.MQClientFactory.doRebalance()
 	}
+}
+func (service *RebalanceService) Shutdown() {
+	service.isStoped = true
 }
