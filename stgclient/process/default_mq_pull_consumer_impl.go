@@ -12,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"strings"
 )
 // DefaultMQPullConsumerImpl: 拉取下线实现
 // Author: yintongqiang
@@ -92,11 +93,17 @@ func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 }
 
 func (pullImpl*DefaultMQPullConsumerImpl)checkConfig() {
-
+	CheckGroup(pullImpl.defaultMQPullConsumer.consumerGroup)
+	if strings.EqualFold("", pullImpl.defaultMQPullConsumer.consumerGroup) {
+		panic("consumerGroup is null")
+	}
+	if strings.EqualFold(pullImpl.defaultMQPullConsumer.consumerGroup, stgcommon.DEFAULT_CONSUMER_GROUP) {
+		panic("consumerGroup can not equal" + stgcommon.DEFAULT_CONSUMER_GROUP + ", please specify another one.")
+	}
 }
 
 func (pullImpl*DefaultMQPullConsumerImpl)copySubscription() {
-
+//todo registerTopics 一直为空
 }
 
 func (pullImpl *DefaultMQPullConsumerImpl)ConsumeFromWhere() heartbeat.ConsumeFromWhere {
