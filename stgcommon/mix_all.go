@@ -73,3 +73,11 @@ func CompareAndIncreaseOnly(target *int64, value int64) bool {
 func GetDLQTopic(consumerGroup string) string {
 	return DLQ_GROUP_TOPIC_PREFIX + consumerGroup
 }
+
+func HashCode(s string) int64 {
+	var h int64
+	for i := 0; i < len(s); i++ {
+		h = 31*h + int64(s[i])
+	}
+	return h
+}
