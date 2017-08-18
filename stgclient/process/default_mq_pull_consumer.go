@@ -6,6 +6,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/rebalance"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 )
 // DefaultMQPullConsumer: 手动拉取消息
 // Author: yintongqiang
@@ -42,6 +44,7 @@ func NewDefaultMQPullConsumer(consumerGroup string) *DefaultMQPullConsumer {
 	pullConsumer.consumerPullTimeoutMillis = 1000 * 10
 	pullConsumer.consumerGroup = consumerGroup
 	pullConsumer.messageModel = heartbeat.CLUSTERING
+	pullConsumer.registerTopics=set.NewSet()
 	pullConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
 	pullConsumer.defaultMQPullConsumerImpl = NewDefaultMQPullConsumerImpl(pullConsumer)
 	return pullConsumer
@@ -54,4 +57,12 @@ func (pullConsumer *DefaultMQPullConsumer) SetNamesrvAddr(namesrvAddr string) {
 
 func (pullConsumer*DefaultMQPullConsumer)Start() {
 	pullConsumer.defaultMQPullConsumerImpl.Start()
+}
+
+func (pullConsumer*DefaultMQPullConsumer)FetchSubscribeMessageQueues(topic string) []message.MessageQueue {
+	return pullConsumer.defaultMQPullConsumerImpl.fetchSubscribeMessageQueues(topic)
+}
+
+func (pullConsumer*DefaultMQPullConsumer)Pull(mq message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+	return pullConsumer.defaultMQPullConsumerImpl.pull(mq,subExpression,offset,maxNums)
 }

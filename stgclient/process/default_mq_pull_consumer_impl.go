@@ -9,6 +9,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"errors"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 )
 // DefaultMQPullConsumerImpl: 拉取下线实现
 // Author: yintongqiang
@@ -70,15 +73,15 @@ func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 				break
 
 			}
-			// 本地存储，load才有用
-			pullImpl.OffsetStore.Load()
-			// 注册consumer
-			pullImpl.mQClientFactory.RegisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup, pullImpl)
-			// 启动核心
-			pullImpl.mQClientFactory.Start()
-			logger.Info("the consumer [%v] start OK", pullImpl.defaultMQPullConsumer.consumerGroup);
-			pullImpl.serviceState = stgcommon.RUNNING
 		}
+		// 本地存储，load才有用
+		pullImpl.OffsetStore.Load()
+		// 注册consumer
+		pullImpl.mQClientFactory.RegisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup, pullImpl)
+		// 启动核心
+		pullImpl.mQClientFactory.Start()
+		logger.Info("the consumer [%v] start OK", pullImpl.defaultMQPullConsumer.consumerGroup);
+		pullImpl.serviceState = stgcommon.RUNNING
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:
 		panic("The PullConsumer service state not OK, maybe started once")
@@ -167,4 +170,43 @@ func (pullImpl *DefaultMQPullConsumerImpl)PersistConsumerOffset() {
 
 func (pullImpl *DefaultMQPullConsumerImpl)DoRebalance() {
 	pullImpl.RebalanceImpl.(*RebalancePullImpl).doRebalance()
+}
+
+func (pullImpl *DefaultMQPullConsumerImpl)fetchSubscribeMessageQueues(topic string) []message.MessageQueue {
+	pullImpl.makeSureStateOK()
+	return pullImpl.mQClientFactory.MQAdminImpl.FetchSubscribeMessageQueues(topic)
+}
+
+func (pullImpl*DefaultMQPullConsumerImpl)pull(mq message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+	return pullImpl.pullSyncImpl(mq, subExpression, offset, maxNums, false, pullImpl.defaultMQPullConsumer.consumerPullTimeoutMillis)
+}
+
+func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) *consumer.PullResult {
+	pullImpl.makeSureStateOK()
+	if offset < 0 {
+		panic("offset < 0")
+	}
+	if maxNums <= 0 {
+		panic("maxNums <= 0")
+	}
+	pullImpl.subscriptionAutomatically(mq.Topic)
+	sysFlag := sysflag.BuildSysFlag(false, block, true, false)
+	subData := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, mq.Topic, subExpression)
+	var timeoutMillis int
+	if block {
+		timeoutMillis = pullImpl.defaultMQPullConsumer.consumerTimeoutMillisWhenSuspend
+	} else {
+		timeoutMillis = timeout
+	}
+	pullResult := pullImpl.pullAPIWrapper.PullKernelImpl(mq, subData.SubString, 0, offset, maxNums, sysFlag, 0,
+		pullImpl.defaultMQPullConsumer.brokerSuspendMaxTimeMillis, timeoutMillis, SYNC, nil)
+	return pullImpl.pullAPIWrapper.processPullResult(mq, &pullResult, subData)
+}
+
+func (pullImpl*DefaultMQPullConsumerImpl)subscriptionAutomatically(topic string) {
+	tv, _ := pullImpl.RebalanceImpl.(*RebalancePullImpl).SubscriptionInner.Get(topic)
+	if tv != nil {
+		subData := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, topic, "*")
+		pullImpl.RebalanceImpl.(*RebalancePullImpl).SubscriptionInner.PutIfAbsent(topic, subData)
+	}
 }
