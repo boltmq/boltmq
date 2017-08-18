@@ -251,32 +251,55 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 		//todo namesrv地址为空通过http获取
 	}
 
+	//// 定时从nameserver更新topic route信息
+	//go func() {
+	//	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
+	//	mqClientInstance.TimerTask.Add(updateRouteTicker)
+	//	updateRouteTicker.Do(func(tm time.Time) {
+	//		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+	//	})
+	//}()
+	//
+	//// 定时清理离线的broker并发送心跳数据
+	//go func() {
+	//	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
+	//	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
+	//	cleanAndHBTicker.Do(func(tm time.Time) {
+	//		mqClientInstance.cleanOfflineBroker()
+	//		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
+	//	})
+	//}()
+	//// 定时持久化consumer的offset
+	//go func() {
+	//	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
+	//	mqClientInstance.TimerTask.Add(persistOffsetTicker)
+	//	persistOffsetTicker.Do(func(tm time.Time) {
+	//		mqClientInstance.persistAllConsumerOffset()
+	//	})
+	//}()
 	// 定时从nameserver更新topic route信息
 	go func() {
-		updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
-		mqClientInstance.TimerTask.Add(updateRouteTicker)
-		updateRouteTicker.Do(func(tm time.Time) {
-			mqClientInstance.UpdateTopicRouteInfoFromNameServer()
-		})
+		time.Sleep(time.Millisecond * 10)
+		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 	}()
-
+	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
+	go updateRouteTicker.Do(func(tm time.Time) {
+		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+	})
+	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
-	go func() {
-		cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
-		mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-		cleanAndHBTicker.Do(func(tm time.Time) {
-			mqClientInstance.cleanOfflineBroker()
-			mqClientInstance.SendHeartbeatToAllBrokerWithLock()
-		})
-	}()
+	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
+	go cleanAndHBTicker.Do(func(tm time.Time) {
+		mqClientInstance.cleanOfflineBroker()
+		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
+	})
+	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
+	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
 	// 定时持久化consumer的offset
-	go func() {
-		persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
-		mqClientInstance.TimerTask.Add(persistOffsetTicker)
-		persistOffsetTicker.Do(func(tm time.Time) {
-			mqClientInstance.persistAllConsumerOffset()
-		})
-	}()
+	go persistOffsetTicker.Do(func(tm time.Time) {
+		mqClientInstance.persistAllConsumerOffset()
+	})
+	mqClientInstance.TimerTask.Add(persistOffsetTicker)
 	//todo 定时调整线程池的数量
 }
 
@@ -610,18 +633,20 @@ func (mqClientInstance *MQClientInstance) findBrokerAddressInSubscribe(brokerNam
 	var slave bool
 	var found bool
 	getBrokerMap, _ := mqClientInstance.BrokerAddrTable.Get(brokerName)
-	brokerMap := getBrokerMap.(map[int]string)
-	if len(brokerMap) > 0 {
-		brokerAddr = brokerMap[brokerId]
-		slave = (brokerId != stgcommon.MASTER_ID)
-		found = !strings.EqualFold(brokerAddr, "")
-		if !found && !onlyThisBroker {
-			for brokerId, addr := range brokerMap {
-				brokerAddr = addr
-				if !strings.EqualFold(brokerAddr, "") {
-					slave = (brokerId != stgcommon.MASTER_ID)
-					found = true
-					break
+	if getBrokerMap != nil {
+		brokerMap := getBrokerMap.(map[int]string)
+		if len(brokerMap) > 0 {
+			brokerAddr = brokerMap[brokerId]
+			slave = (brokerId != stgcommon.MASTER_ID)
+			found = !strings.EqualFold(brokerAddr, "")
+			if !found && !onlyThisBroker {
+				for brokerId, addr := range brokerMap {
+					brokerAddr = addr
+					if !strings.EqualFold(brokerAddr, "") {
+						slave = (brokerId != stgcommon.MASTER_ID)
+						found = true
+						break
+					}
 				}
 			}
 		}
