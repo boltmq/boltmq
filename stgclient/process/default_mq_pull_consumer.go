@@ -34,3 +34,24 @@ type DefaultMQPullConsumer struct {
 	unitMode                         bool
 	clientConfig                     *stgclient.ClientConfig
 }
+
+func NewDefaultMQPullConsumer(consumerGroup string) *DefaultMQPullConsumer {
+	pullConsumer := &DefaultMQPullConsumer{clientConfig:stgclient.NewClientConfig("")}
+	pullConsumer.brokerSuspendMaxTimeMillis = 1000 * 20
+	pullConsumer.consumerTimeoutMillisWhenSuspend = 1000 * 30
+	pullConsumer.consumerPullTimeoutMillis = 1000 * 10
+	pullConsumer.consumerGroup = consumerGroup
+	pullConsumer.messageModel = heartbeat.CLUSTERING
+	pullConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
+	pullConsumer.defaultMQPullConsumerImpl = NewDefaultMQPullConsumerImpl(pullConsumer)
+	return pullConsumer
+}
+
+// 设置namesrvaddr
+func (pullConsumer *DefaultMQPullConsumer) SetNamesrvAddr(namesrvAddr string) {
+	pullConsumer.clientConfig.NamesrvAddr = namesrvAddr
+}
+
+func (pullConsumer*DefaultMQPullConsumer)Start() {
+	pullConsumer.defaultMQPullConsumerImpl.Start()
+}
