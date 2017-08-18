@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 )
@@ -23,4 +24,17 @@ func NewConsumerManager(consumerIdsChangeListener rebalance.ConsumerIdsChangeLis
 	consumerManager.ConsumerIdsChangeListener = consumerIdsChangeListener
 	consumerManager.ChannelExpiredTimeout = 1000 * 120
 	return consumerManager
+}
+
+func (self *ConsumerManager) getConsumerGroupInfo(group string) *client.ConsumerGroupInfo {
+	value, err := self.consumerTable.Get(group)
+	if err != nil {
+		return nil
+	}
+
+	if consumerGroupInfo, ok := value.(*client.ConsumerGroupInfo); ok {
+		return consumerGroupInfo
+	}
+
+	return nil
 }

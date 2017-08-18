@@ -59,7 +59,7 @@ type BrokerConfig struct {
 	// Consumer订阅消息时，Broker是否开启长轮询
 	LongPollingEnable bool
 	// 如果是短轮询，服务器挂起时间
-	ShortPollingTimeMills int64
+	ShortPollingTimeMills int
 	// notify consumerId changed 开关
 	NotifyConsumerIdsChangedEnable bool
 	// slave 是否需要纠正位点
