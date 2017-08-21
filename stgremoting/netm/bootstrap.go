@@ -90,10 +90,11 @@ func (bootstrap *Bootstrap) Sync() {
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
+		remoteAddr := conn.RemoteAddr().String()
 		bootstrap.connTableMu.Lock()
-		bootstrap.connTable[addr] = conn
+		bootstrap.connTable[remoteAddr] = conn
 		bootstrap.connTableMu.Unlock()
-		bootstrap.Debugf("Client connection created %s", conn.RemoteAddr().String())
+		bootstrap.Debugf("Client connection created %s", remoteAddr)
 	}
 
 	bootstrap.Noticef("Bootstrap Exiting..")
