@@ -4,7 +4,7 @@ package message
 // Author: yintongqiang
 // Since:  2017/8/16
 
-func GetReconsumeTime(msg Message) string {
+func GetReconsumeTime(msg *Message) string {
 	return msg.Properties[PROPERTY_RECONSUME_TIME]
 }
 

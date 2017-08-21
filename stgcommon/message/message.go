@@ -17,10 +17,10 @@ type Message struct {
 	Body []byte
 }
 
-func NewMessage(topic string, tags string, body []byte) Message {
+func NewMessage(topic string, tags string, body []byte) *Message {
 	properties := make(map[string]string)
 	properties[PROPERTY_TAGS] = tags
-	return Message{Topic: topic, Properties: properties, Body: body}
+	return &Message{Topic: topic, Properties: properties, Body: body}
 }
 
 func (msg *Message) ClearProperty(name string) {

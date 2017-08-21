@@ -52,6 +52,6 @@ func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 	defaultMQProducer.DefaultMQProducerImpl.Shutdown()
 }
 
-func (defaultMQProducer *DefaultMQProducer) Send(msg message.Message) (SendResult, error) {
+func (defaultMQProducer *DefaultMQProducer) Send(msg *message.Message) (SendResult, error) {
 	return defaultMQProducer.DefaultMQProducerImpl.Send(msg)
 }
