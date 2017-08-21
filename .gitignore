@@ -21,6 +21,7 @@ _testmain.go
 
 *.exe
 
+*.swp
 *.iml
 .idea/
 .idea/vcs.xml
@@ -34,3 +35,7 @@ unit_test_*/*
 docs/.DS_Store
 docs/static/.DS_Store
 /stgstorelog/unit_test_store/
+
+example/stgnet/netm/client/client
+example/stgnet/netm/serve/serve
+stgcommon/logger/test.log
