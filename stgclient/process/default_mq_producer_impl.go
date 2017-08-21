@@ -104,16 +104,16 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopicByFlag(key, newTo
 }
 
 // 对外提供消息发送方法
-func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg message.Message) (SendResult,error) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg *message.Message) (SendResult,error) {
 	return defaultMQProducerImpl.SendByTimeout(msg, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
 }
 // 带timeout的发送消息
-func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg message.Message, timeout int64) (SendResult,error) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.Message, timeout int64) (SendResult,error) {
 	return defaultMQProducerImpl.sendDefaultImpl(msg, SYNC, nil, timeout)
 }
 
 // 选择需要发送的queue
-func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg message.Message, communicationMode CommunicationMode,
+func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message.Message, communicationMode CommunicationMode,
 sendCallback SendCallback, timeout int64) (SendResult,error)  {
 	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
 		panic(errors.New("The producer service state not OK"))
@@ -155,7 +155,7 @@ sendCallback SendCallback, timeout int64) (SendResult,error)  {
 }
 
 // 指定发送到某个queue
-func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg message.Message, mq *message.MessageQueue,
+func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.Message, mq *message.MessageQueue,
 communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult,error) {
 	sendResult := SendResult{}
 	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
@@ -166,7 +166,7 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 	if !strings.EqualFold(brokerAddr, "") {
 		prevBody := msg.Body
 		sysFlag := 0
-		if defaultMQProducerImpl.tryToCompressMessage(&msg) {
+		if defaultMQProducerImpl.tryToCompressMessage(msg) {
 			sysFlag |= sysflag.CompressedFlag
 		}
 		//todo 事务消息处理
@@ -191,7 +191,7 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 			if !strings.EqualFold(reconsumeTimes, "") {
 				times, _ := strconv.Atoi(reconsumeTimes)
 				requestHeader.ReconsumeTimes = times
-				message.ClearProperty(&msg, message.PROPERTY_RECONSUME_TIME)
+				message.ClearProperty(msg, message.PROPERTY_RECONSUME_TIME)
 			}
 		}
 		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)

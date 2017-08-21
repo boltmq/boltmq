@@ -28,7 +28,7 @@ type RebalanceImpl interface {
 
 type RebalanceImplExt  struct {
 	RebalanceImpl                RebalanceImpl
-	ProcessQueueTable            *sync.Map //MessageQueue, ProcessQueue
+	ProcessQueueTable            *sync.Map //*MessageQueue, *ProcessQueue
 	TopicSubscribeInfoTable      *sync.Map
 	SubscriptionInner            *sync.Map //topic, SubscriptionData
 	ConsumerGroup                string

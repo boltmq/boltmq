@@ -94,7 +94,7 @@ func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeou
 	return routeData
 }
 
-func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
+func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 		requestHeader.ProducerGroup = stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
@@ -115,14 +115,14 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg mess
 	return SendResult{}
 }
 
-func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg message.Message, timeoutMillis int64, request *protocol.RemotingCommand) SendResult {
+func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) SendResult {
 	//todo 调用远程生成response
 	response := protocol.CreateResponseCommand()
 	return impl.processSendResponse(brokerName, msg, response)
 }
 
 // 处理发送消息响应
-func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg message.Message, response *protocol.RemotingCommand) SendResult {
+func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) SendResult {
 	switch response.Code {
 	case cprotocol.FLUSH_DISK_TIMEOUT:
 	case cprotocol.FLUSH_SLAVE_TIMEOUT:

@@ -24,7 +24,7 @@ func CheckGroup(group string) error {
 	return nil
 }
 
-func CheckMessage(msg message.Message, defaultMQProducer DefaultMQProducer) {
+func CheckMessage(msg *message.Message, defaultMQProducer DefaultMQProducer) {
 	if len(msg.Body) == 0 {
 		panic("the message body length is zero")
 	}
