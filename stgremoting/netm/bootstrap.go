@@ -1,6 +1,7 @@
 package netm
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -15,6 +16,7 @@ type Bootstrap struct {
 	connTableMu sync.RWMutex
 	opts        *Options
 	optsMu      sync.RWMutex
+	handlers    []Handler
 	running     bool
 	grRunning   bool
 }
@@ -92,13 +94,13 @@ func (bootstrap *Bootstrap) Sync() {
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
-		bootstrap.startGoRoutine(func() {
-			remoteAddr := conn.RemoteAddr().String()
-			bootstrap.connTableMu.Lock()
-			bootstrap.connTable[remoteAddr] = conn
-			bootstrap.connTableMu.Unlock()
-			bootstrap.Debugf("Client connection created %s", remoteAddr)
+		remoteAddr := conn.RemoteAddr().String()
+		bootstrap.connTableMu.Lock()
+		bootstrap.connTable[remoteAddr] = conn
+		bootstrap.connTableMu.Unlock()
+		bootstrap.Debugf("Client connection created %s", remoteAddr)
 
+		bootstrap.startGoRoutine(func() {
 			bootstrap.handleConn(remoteAddr, conn)
 		})
 	}
@@ -120,12 +122,13 @@ func (bootstrap *Bootstrap) Connect(host string, port int) error {
 			return e
 		}
 
-		bootstrap.startGoRoutine(func() {
-			bootstrap.connTableMu.Lock()
-			bootstrap.connTable[addr] = conn
-			bootstrap.connTableMu.Unlock()
-			bootstrap.Noticef("connect on port: %s", addr)
+		bootstrap.connTableMu.Lock()
+		bootstrap.connTable[addr] = conn
+		bootstrap.connTableMu.Unlock()
+		bootstrap.Noticef("Connect listening on port: %s", addr)
+		bootstrap.Noticef("client connections on %s", conn.LocalAddr().String())
 
+		bootstrap.startGoRoutine(func() {
 			bootstrap.handleConn(addr, conn)
 		})
 	}
@@ -142,7 +145,81 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	return conn, nil
 }
 
+// Disconnect 关闭指定连接
+func (bootstrap *Bootstrap) Disconnect(addr string) {
+	bootstrap.connTableMu.RLock()
+	conn, ok := bootstrap.connTable[addr]
+	bootstrap.connTableMu.RUnlock()
+	if ok {
+		bootstrap.disconnect(addr, conn)
+	}
+}
+
+func (bootstrap *Bootstrap) disconnect(addr string, conn net.Conn) {
+	conn.Close()
+	bootstrap.connTableMu.Lock()
+	delete(bootstrap.connTable, addr)
+	bootstrap.connTableMu.Unlock()
+}
+
+// Shutdown 关闭bootstrap
+func (bootstrap *Bootstrap) Shutdown() {
+	bootstrap.mu.Lock()
+	bootstrap.running = false
+	bootstrap.mu.Unlock()
+
+	// 关闭所有连接
+	bootstrap.connTableMu.Lock()
+	for addr, conn := range bootstrap.connTable {
+		conn.Close()
+		delete(bootstrap.connTable, addr)
+	}
+	bootstrap.connTableMu.Unlock()
+}
+
+// Write 发送消息
+func (bootstrap *Bootstrap) Write(addr string, buffer []byte) (n int, err error) {
+	bootstrap.connTableMu.RLock()
+	conn, ok := bootstrap.connTable[addr]
+	bootstrap.connTableMu.RUnlock()
+	if !ok {
+		bootstrap.Fatalf("not found connect: %s", addr)
+		err = fmt.Errorf("not found connect %s", addr)
+		return
+	}
+
+	return bootstrap.write(addr, conn, buffer)
+}
+
+func (bootstrap *Bootstrap) write(addr string, conn net.Conn, buffer []byte) (n int, err error) {
+	n, err = conn.Write(buffer)
+	if err != nil {
+		bootstrap.disconnect(addr, conn)
+	}
+
+	return
+}
+
+// RegisterHandler 注册连接接收数据时回调执行函数
+func (bootstrap *Bootstrap) RegisterHandler(fns ...Handler) *Bootstrap {
+	bootstrap.handlers = append(bootstrap.handlers, fns...)
+	return bootstrap
+}
+
 func (bootstrap *Bootstrap) handleConn(addr string, conn net.Conn) {
+	b := make([]byte, 1024)
+	for {
+		n, err := conn.Read(b)
+		if err != nil {
+			bootstrap.disconnect(addr, conn)
+			bootstrap.Fatalf("failed handle connect: %s %s", addr, err)
+			return
+		}
+
+		for _, fn := range bootstrap.handlers {
+			fn(b[:n], addr, conn)
+		}
+	}
 }
 
 func (bootstrap *Bootstrap) startGoRoutine(fn func()) {
