@@ -17,7 +17,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -92,12 +92,10 @@ func (mqClientInstance *MQClientInstance) Start() {
 		//Start push service
 		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.StartFlag(false)
 		mqClientInstance.ServiceState = stgcommon.RUNNING
-		break
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:
 	case stgcommon.START_FAILED:
 	default:
-		break
 	}
 
 }
@@ -116,7 +114,7 @@ func (mqClientInstance *MQClientInstance) Shutdown() {
 		mqClientInstance.ServiceState = stgcommon.SHUTDOWN_ALREADY
 		mqClientInstance.PullMessageService.Shutdown()
 		for timer := range mqClientInstance.TimerTask.Iterator().C {
-			timer.(*utils.Ticker).Stop()
+			timer.(*timeutil.Ticker).Stop()
 		}
 		mqClientInstance.MQClientAPIImpl.Shutdwon()
 		mqClientInstance.RebalanceService.Shutdown()
@@ -250,51 +248,21 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	if strings.EqualFold(mqClientInstance.ClientConfig.NamesrvAddr, "") {
 		//todo namesrv地址为空通过http获取
 	}
-
-	//// 定时从nameserver更新topic route信息
-	//go func() {
-	//	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
-	//	mqClientInstance.TimerTask.Add(updateRouteTicker)
-	//	updateRouteTicker.Do(func(tm time.Time) {
-	//		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
-	//	})
-	//}()
-	//
-	//// 定时清理离线的broker并发送心跳数据
-	//go func() {
-	//	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
-	//	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-	//	cleanAndHBTicker.Do(func(tm time.Time) {
-	//		mqClientInstance.cleanOfflineBroker()
-	//		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
-	//	})
-	//}()
-	//// 定时持久化consumer的offset
-	//go func() {
-	//	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
-	//	mqClientInstance.TimerTask.Add(persistOffsetTicker)
-	//	persistOffsetTicker.Do(func(tm time.Time) {
-	//		mqClientInstance.persistAllConsumerOffset()
-	//	})
-	//}()
 	// 定时从nameserver更新topic route信息
-	go func() {
-		time.Sleep(time.Millisecond * 10)
-		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
-	}()
-	updateRouteTicker := utils.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval / 1000, 1)
+	updateRouteTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval, 10)
 	go updateRouteTicker.Do(func(tm time.Time) {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
+		logger.Info("updateTopicRouteInfoFromNameServer every [ %v ] sencond",mqClientInstance.ClientConfig.PollNameServerInterval/1000)
 	})
 	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
-	cleanAndHBTicker := utils.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval / 1000, 1)
+	cleanAndHBTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval, 1000)
 	go cleanAndHBTicker.Do(func(tm time.Time) {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
 	})
 	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-	persistOffsetTicker := utils.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval / 1000, 10)
+	persistOffsetTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval, 1000*10)
 	// 定时持久化consumer的offset
 	go persistOffsetTicker.Do(func(tm time.Time) {
 		mqClientInstance.persistAllConsumerOffset()
@@ -391,6 +359,7 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 					}
 				}
 			}
+			logger.Info("topic[%v] topicRouteTable.put TopicRouteData",topic)
 			mqClientInstance.TopicRouteTable.Put(topic, cloneTopicRouteData)
 		}
 	}
@@ -477,7 +446,7 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicSubscribeInfo(topi
 	for _, qd := range topicRouteData.QueueDatas {
 		if constant.IsReadable(qd.Perm) {
 			for i := 0; i < qd.ReadQueueNums; i++ {
-				mq := message.MessageQueue{Topic:topic, BrokerName:qd.BrokerName, QueueId:i}
+				mq := &message.MessageQueue{Topic:topic, BrokerName:qd.BrokerName, QueueId:i}
 				mqList.Add(mq)
 			}
 		}
@@ -497,7 +466,7 @@ func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 			cloneAddrTable[brokerId] = addr
 		}
 		for cBId, cAddr := range cloneAddrTable {
-			if mqClientInstance.isBrokerAddrExistInTopicRouteTable(cAddr) {
+			if !mqClientInstance.isBrokerAddrExistInTopicRouteTable(cAddr) {
 				delete(cloneAddrTable, cBId)
 				logger.Info("the broker addr[%v %v] is offline, remove it", brokerName, cAddr)
 			}

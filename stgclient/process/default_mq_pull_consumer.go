@@ -59,10 +59,14 @@ func (pullConsumer*DefaultMQPullConsumer)Start() {
 	pullConsumer.defaultMQPullConsumerImpl.Start()
 }
 
-func (pullConsumer*DefaultMQPullConsumer)FetchSubscribeMessageQueues(topic string) []message.MessageQueue {
+func (pullConsumer*DefaultMQPullConsumer)Shutdown() {
+	pullConsumer.defaultMQPullConsumerImpl.shutdown()
+}
+
+func (pullConsumer*DefaultMQPullConsumer)FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	return pullConsumer.defaultMQPullConsumerImpl.fetchSubscribeMessageQueues(topic)
 }
 
-func (pullConsumer*DefaultMQPullConsumer)Pull(mq message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+func (pullConsumer*DefaultMQPullConsumer)Pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
 	return pullConsumer.defaultMQPullConsumerImpl.pull(mq,subExpression,offset,maxNums)
 }

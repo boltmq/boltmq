@@ -11,5 +11,5 @@ import (
 type ConsumeMessageService interface {
 	Start()
 	Shutdown()
-	SubmitConsumeRequest(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue, dispathToConsume bool)
+	SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool)
 }

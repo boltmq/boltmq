@@ -15,7 +15,7 @@ type AllocateMessageQueueAveragely struct {
 
 }
 
-func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, currentCID string, mqAll [] message.MessageQueue, cidAll [] string) [] message.MessageQueue {
+func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, currentCID string, mqAll [] *message.MessageQueue, cidAll [] string) [] *message.MessageQueue {
 	if strings.EqualFold(currentCID, "") {
 		panic("currentCID is empty")
 	}
@@ -34,7 +34,7 @@ func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, cur
 			break
 		}
 	}
-	result := []message.MessageQueue{}
+	result := []*message.MessageQueue{}
 	if !contains {
 		logger.Warn("[BUG] ConsumerGroup: %v The consumerId: %v not in cidAll: %v", consumerGroup, currentCID, cidAll)
 		return result

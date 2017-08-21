@@ -41,6 +41,21 @@ func (pullImpl*DefaultMQPullConsumerImpl)makeSureStateOK() {
 	}
 }
 
+func (pullImpl*DefaultMQPullConsumerImpl)shutdown() {
+	switch pullImpl.serviceState {
+	case stgcommon.CREATE_JUST:
+	case stgcommon.RUNNING:
+		pullImpl.PersistConsumerOffset()
+		pullImpl.mQClientFactory.UnregisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup)
+		pullImpl.mQClientFactory.Shutdown()
+		logger.Info("the consumer [%v] shutdown OK", pullImpl.defaultMQPullConsumer.consumerGroup)
+		pullImpl.serviceState=stgcommon.SHUTDOWN_ALREADY
+	case stgcommon.SHUTDOWN_ALREADY:
+	default:
+
+	}
+}
+
 func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 	switch pullImpl.serviceState {
 	case stgcommon.CREATE_JUST:
@@ -71,7 +86,6 @@ func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 			case heartbeat.CLUSTERING:
 				pullImpl.OffsetStore = NewRemoteBrokerOffsetStore(pullImpl.mQClientFactory, pullImpl.defaultMQPullConsumer.consumerGroup)
 			default:
-				break
 
 			}
 		}
@@ -87,7 +101,7 @@ func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 	case stgcommon.SHUTDOWN_ALREADY:
 		panic("The PullConsumer service state not OK, maybe started once")
 	case stgcommon.START_FAILED:
-	default:break
+	default:
 	}
 
 }
@@ -103,7 +117,7 @@ func (pullImpl*DefaultMQPullConsumerImpl)checkConfig() {
 }
 
 func (pullImpl*DefaultMQPullConsumerImpl)copySubscription() {
-//todo registerTopics 一直为空
+	//todo registerTopics 一直为空
 }
 
 func (pullImpl *DefaultMQPullConsumerImpl)ConsumeFromWhere() heartbeat.ConsumeFromWhere {
@@ -179,16 +193,16 @@ func (pullImpl *DefaultMQPullConsumerImpl)DoRebalance() {
 	pullImpl.RebalanceImpl.(*RebalancePullImpl).doRebalance()
 }
 
-func (pullImpl *DefaultMQPullConsumerImpl)fetchSubscribeMessageQueues(topic string) []message.MessageQueue {
+func (pullImpl *DefaultMQPullConsumerImpl)fetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	pullImpl.makeSureStateOK()
 	return pullImpl.mQClientFactory.MQAdminImpl.FetchSubscribeMessageQueues(topic)
 }
 
-func (pullImpl*DefaultMQPullConsumerImpl)pull(mq message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+func (pullImpl*DefaultMQPullConsumerImpl)pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
 	return pullImpl.pullSyncImpl(mq, subExpression, offset, maxNums, false, pullImpl.defaultMQPullConsumer.consumerPullTimeoutMillis)
 }
 
-func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) *consumer.PullResult {
+func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) *consumer.PullResult {
 	pullImpl.makeSureStateOK()
 	if offset < 0 {
 		panic("offset < 0")

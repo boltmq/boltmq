@@ -18,9 +18,9 @@ import (
 type RebalanceImpl interface {
 	ConsumeType() heartbeat.ConsumeType
 	MessageQueueChanged(topic string, mqAll set.Set, mqDivided set.Set)
-	RemoveUnnecessaryMessageQueue(mq message.MessageQueue, pq consumer.ProcessQueue) bool
+	RemoveUnnecessaryMessageQueue(mq *message.MessageQueue, pq *consumer.ProcessQueue) bool
 	DispatchPullRequest(pullRequestList []*consumer.PullRequest)
-	ComputePullFromWhere(mq message.MessageQueue) int64
+	ComputePullFromWhere(mq *message.MessageQueue) int64
 }
 // RebalanceImplExt: 接口基础属性
 // Author: yintongqiang
@@ -53,10 +53,10 @@ func (ext *RebalanceImplExt)doRebalance() {
 	}
 
 }
-func (ext *RebalanceImplExt)RemoveProcessQueue(mq message.MessageQueue) {
+func (ext *RebalanceImplExt)RemoveProcessQueue(mq *message.MessageQueue) {
 	prev, _ := ext.ProcessQueueTable.Remove(mq)
 	if prev != nil {
-		pq := prev.(consumer.ProcessQueue)
+		pq := prev.(*consumer.ProcessQueue)
 		pq.Dropped = true
 		ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq)
 	}
@@ -70,9 +70,9 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
 		cidAll := ext.MQClientFactory.findConsumerIdList(topic, ext.ConsumerGroup)
 		if mqSet != nil&& len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
-			mqAll := []message.MessageQueue{}
+			mqAll := []*message.MessageQueue{}
 			for val := range mqSet.(set.Set).Iterator().C {
-				mqAll = append(mqAll, val.(message.MessageQueue))
+				mqAll = append(mqAll, val.(*message.MessageQueue))
 			}
 			strategy := ext.AllocateMessageQueueStrategy
 			allocateResult := strategy.Allocate(ext.ConsumerGroup, ext.MQClientFactory.ClientId, mqAll, cidAll)
@@ -86,7 +86,11 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 					"rebalanced allocate source. allocateMessageQueueStrategyName, group, topic, mqAllSize, cidAllSize, mqAll, cidAll")
 				logger.Info(
 					"rebalanced result changed. allocateMessageQueueStrategyName, group, topic, ConsumerId, rebalanceSize, rebalanceMqSet")
-				ext.RebalanceImpl.MessageQueueChanged(topic, set.NewSet(mqAll), allocateResultSet)
+				mqSet := set.NewSet()
+				for _, mq := range mqAll {
+					mqSet.Add(mq)
+				}
+				ext.RebalanceImpl.MessageQueueChanged(topic, mqSet, allocateResultSet)
 			}
 		}
 	}
@@ -98,8 +102,8 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		msgQ, pQ, _ := ite.Next()
-		mq := msgQ.(message.MessageQueue)
-		pq := pQ.(consumer.ProcessQueue)
+		mq := msgQ.(*message.MessageQueue)
+		pq := pQ.(*consumer.ProcessQueue)
 		if strings.EqualFold(mq.Topic, topic) {
 			if !mqSet.Contains(mq) {
 				pq.Dropped = true
@@ -128,19 +132,19 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 	}
 	pullRequestList := []*consumer.PullRequest{}
 	for mq := range mqSet.Iterator().C {
-		ok, _ := ext.ProcessQueueTable.ContainsKey(mq)
-		if !ok {
+		pq, _ := ext.ProcessQueueTable.Get(mq)
+		if pq == nil {
 			pullRequest := &consumer.PullRequest{
 				ConsumerGroup:ext.ConsumerGroup,
-				MessageQueue:mq.(message.MessageQueue),
+				MessageQueue:mq.(*message.MessageQueue),
 				ProcessQueue:consumer.NewProcessQueue(),
 			}
-			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(message.MessageQueue))
+			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
 			if nextOffset >= 0 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
-				ext.ProcessQueueTable.Put(mq, &pullRequest.ProcessQueue)
+				ext.ProcessQueueTable.Put(mq, pullRequest.ProcessQueue)
 				logger.Info("doRebalance, add a new mq")
 			} else {
 				logger.Warn("doRebalance, add new mq failed")

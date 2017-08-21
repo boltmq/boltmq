@@ -60,11 +60,10 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool)
 			defaultMQProducerImpl.MQClientFactory.Start()
 		}
 		defaultMQProducerImpl.ServiceState = stgcommon.RUNNING
-		break
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:
 	case stgcommon.START_FAILED:
-	default:break
+	default:
 	}
 	// 向所有broker发送心跳
 	defaultMQProducerImpl.MQClientFactory.SendHeartbeatToAllBrokerWithLock()
@@ -105,17 +104,17 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopicByFlag(key, newTo
 }
 
 // 对外提供消息发送方法
-func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg message.Message) SendResult {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg message.Message) (SendResult,error) {
 	return defaultMQProducerImpl.SendByTimeout(msg, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
 }
 // 带timeout的发送消息
-func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg message.Message, timeout int64) SendResult {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg message.Message, timeout int64) (SendResult,error) {
 	return defaultMQProducerImpl.sendDefaultImpl(msg, SYNC, nil, timeout)
 }
 
 // 选择需要发送的queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg message.Message, communicationMode CommunicationMode,
-sendCallback SendCallback, timeout int64) SendResult {
+sendCallback SendCallback, timeout int64) (SendResult,error)  {
 	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
 		panic(errors.New("The producer service state not OK"))
 	}
@@ -136,7 +135,7 @@ sendCallback SendCallback, timeout int64) SendResult {
 			tmpMQ := topicPublishInfo.SelectOneMessageQueue(lastBrokerName)
 			if tmpMQ != nil {
 				mq = tmpMQ
-				sendResult := defaultMQProducerImpl.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout)
+				sendResult,err := defaultMQProducerImpl.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout)
 				endTimestamp = time.Now().Unix() * 1000
 				switch communicationMode {
 				case ASYNC:
@@ -145,19 +144,19 @@ sendCallback SendCallback, timeout int64) SendResult {
 					if sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
 						continue
 					}
-					return sendResult
+					return sendResult,err
 				}
 			} else {
 				break
 			}
 		}
 	}
-	return SendResult{}
+	return SendResult{},errors.New("systme error")
 }
 
 // 指定发送到某个queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg message.Message, mq *message.MessageQueue,
-communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) SendResult {
+communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult,error) {
 	sendResult := SendResult{}
 	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
@@ -200,7 +199,7 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) S
 	} else {
 		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
 	}
-	return sendResult
+	return sendResult,errors.New("The broker[" + mq.BrokerName + "] not exist")
 }
 // 检查配置文件
 func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
