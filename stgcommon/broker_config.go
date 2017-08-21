@@ -10,7 +10,7 @@ import (
 // Since 2017/8/8
 type BrokerConfig struct {
 	// mqHome
-	RocketmqHome string
+	SmartGoHome string
 	// namsrv地址
 	NamesrvAddr string
 	// 本机ip地址
@@ -71,7 +71,7 @@ type BrokerConfig struct {
 // Since 2017/8/9
 func NewBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
-		RocketmqHome: os.Getenv(CLOUDMQ_HOME_ENV),
+		SmartGoHome: os.Getenv(SMARTGO_HOME_ENV),
 		NamesrvAddr:  os.Getenv(NAMESRV_ADDR_ENV),
 		//TODO 获取getLocalAddress
 		//BrokerIP1=

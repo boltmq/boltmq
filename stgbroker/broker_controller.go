@@ -84,7 +84,28 @@ func (self *BrokerController) start() {
 	}
 }
 
-func (self *BrokerController) GetBrokerAddr()string {
+func (self *BrokerController) GetBrokerAddr() string {
 	// TODO return self.BrokerConfig.BrokerIP1+":"+self.n
 	return ""
+}
+
+func (self *BrokerController) Initialize() bool {
+	result := true
+	result = result && self.TopicConfigManager.Load()
+	result = result && self.SubscriptionGroupManager.Load()
+	result = result && self.ConsumerOffsetManager.Load()
+
+	if result {
+		// TODO messageStore
+	}
+	return result
+
+}
+
+func (self *BrokerController) Shutdown() {
+
+}
+
+func (self *BrokerController) Start() {
+
 }
