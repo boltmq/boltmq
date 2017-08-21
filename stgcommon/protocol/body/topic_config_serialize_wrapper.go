@@ -9,8 +9,8 @@ import (
 // @author gaoyanlei
 // @since 2017/8/11
 type TopicConfigSerializeWrapper struct {
-	TopicConfigTable *sync.Map
-	DataVersion      *stgcommon.DataVersion
+	TopicConfigTable    *sync.Map     `json:"topicConfigTable"`
+	DataVersion         *stgcommon.DataVersion `json:"dataVersion"`
 }
 
 // 初始化 TopicConfigSerializeWrapper

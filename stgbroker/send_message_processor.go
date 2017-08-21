@@ -76,7 +76,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	// 如果重试队列数目为0，则直接丢弃消息
 	if subscriptionGroupConfig.RetryQueueNums <= 0 {
 		response.Code = commonprotocol.SUCCESS
-		response.Remark = nil
+		response.Remark = ""
 		return response
 	}
 
@@ -199,7 +199,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 			// TODO self.BrokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
 			response.Code = commonprotocol.SUCCESS
-			response.Remark = nil
+			response.Remark = ""
 
 			return response
 		default:
@@ -317,7 +317,7 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 			//TODO this.brokerController.getBrokerStatsManager().incTopicPutSize(msgInner.getTopic(),
 			//TODO 	putMessageResult.getAppendMessageResult().getWroteBytes());
 			//TODO this.brokerController.getBrokerStatsManager().incBrokerPutNums();
-			response.Remark = nil
+			response.Remark = ""
 			responseHeader.MsgId = putMessageResult.AppendMessageResult.MsgId
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
