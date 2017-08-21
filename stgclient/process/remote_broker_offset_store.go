@@ -33,14 +33,27 @@ func (store *RemoteBrokerOffsetStore)Load() {
 }
 
 func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
+	defer func() {
+		atomic.AddInt64(&store.storeTimesTotal, 1)
+	}()
 	if len(mqs.ToSlice()) == 0 {
 		return
 	}
 	unusedMQ := set.NewSet()
-	times := atomic.AddInt64(&store.storeTimesTotal, 1)
+	times := store.storeTimesTotal
 	for ite := store.offsetTable.Iterator(); ite.HasNext(); {
 		mq, v, _ := ite.Next()
-		if mqs.Contains(mq) {
+		containsFlag := false
+		for mqs := range mqs.Iterator().C {
+			ms := mqs.(*message.MessageQueue)
+			if strings.EqualFold(ms.Topic, mq.(*message.MessageQueue).Topic)&&strings.EqualFold(ms.BrokerName, mq.(*message.MessageQueue).BrokerName) && ms.QueueId == mq.(*message.MessageQueue).QueueId {
+				containsFlag = true
+				break
+			}
+		}
+		//todo set 不支持指针
+		if containsFlag {
+			//if mqs.Contains(mq) {
 			store.updateConsumeOffsetToBroker(mq.(*message.MessageQueue), v.(int64))
 			if times % 12 == 0 {
 				logger.Info("Group: %v ClientId: %v updateConsumeOffsetToBroker %v", //
@@ -110,10 +123,10 @@ func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq *message.MessageQueue, rType
 func (store *RemoteBrokerOffsetStore)UpdateOffset(mq *message.MessageQueue, offset int64, increaseOnly bool) {
 	offsetOld, _ := store.offsetTable.Get(mq)
 	if offsetOld == nil {
-		offsetOld, _ = store.offsetTable.PutIfAbsent(mq, offsetOld)
+		offsetOld, _ = store.offsetTable.PutIfAbsent(mq, offset)
 	} else {
 		if increaseOnly {
-			var offsetV int64=offsetOld.(int64)
+			var offsetV int64 = offsetOld.(int64)
 			ok := stgcommon.CompareAndIncreaseOnly(&offsetV, offset)
 			if ok {
 				store.offsetTable.Put(mq, offset)

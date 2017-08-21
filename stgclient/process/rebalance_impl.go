@@ -29,7 +29,7 @@ type RebalanceImpl interface {
 type RebalanceImplExt  struct {
 	RebalanceImpl                RebalanceImpl
 	ProcessQueueTable            *sync.Map //*MessageQueue, *ProcessQueue
-	TopicSubscribeInfoTable      *sync.Map
+	TopicSubscribeInfoTable      *sync.Map // topic  Set<*MessageQueue>
 	SubscriptionInner            *sync.Map //topic, SubscriptionData
 	ConsumerGroup                string
 	MessageModel                 heartbeat.MessageModel
@@ -99,13 +99,22 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 
 func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqSet set.Set) bool {
 	changed := false
-
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		msgQ, pQ, _ := ite.Next()
 		mq := msgQ.(*message.MessageQueue)
 		pq := pQ.(*consumer.ProcessQueue)
 		if strings.EqualFold(mq.Topic, topic) {
-			if !mqSet.Contains(mq) {
+			containsFlag:=false
+			for mqs := range mqSet.Iterator().C {
+				ms := mqs.(*message.MessageQueue)
+				if strings.EqualFold(ms.Topic,mq.Topic)&&strings.EqualFold(ms.BrokerName,mq.BrokerName) && ms.QueueId==mq.QueueId{
+					containsFlag=true
+					break
+				}
+			}
+			//todo contains不支持指针
+			//if !mqSet.Contains(mq) {
+			if !containsFlag {
 				pq.Dropped = true
 				if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {
 					ite.Remove()
