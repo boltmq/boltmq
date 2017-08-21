@@ -15,13 +15,13 @@ type OffsetStore interface {
 	PersistAll(mqs set.Set)
 
 	// Persist the offset,may be in local storage or remote name server
-	Persist(mq message.MessageQueue)
+	Persist(mq *message.MessageQueue)
 
 	// Remove offset
-	RemoveOffset(mq message.MessageQueue)
+	RemoveOffset(mq *message.MessageQueue)
 
 	// Get offset from local storage
-	ReadOffset(mq message.MessageQueue,rType ReadOffsetType) int64
+	ReadOffset(mq *message.MessageQueue,rType ReadOffsetType) int64
 	// Update the offset,store it in memory
-	UpdateOffset(mq message.MessageQueue, offset int64, increaseOnly bool)
+	UpdateOffset(mq *message.MessageQueue, offset int64, increaseOnly bool)
 }

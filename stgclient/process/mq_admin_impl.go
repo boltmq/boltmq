@@ -18,7 +18,7 @@ func NewMQAdminImpl(mQClientFactory *MQClientInstance) *MQAdminImpl {
 		mQClientFactory:mQClientFactory    }
 }
 
-func (adminImpl *MQAdminImpl)MaxOffset(mq message.MessageQueue) int64 {
+func (adminImpl *MQAdminImpl)MaxOffset(mq *message.MessageQueue) int64 {
 	brokerAddr := adminImpl.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		adminImpl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
@@ -46,14 +46,14 @@ func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSy
 	}
 }
 
-func (adminImpl *MQAdminImpl)FetchSubscribeMessageQueues(topic string)[]message.MessageQueue {
-	mqList:=[]message.MessageQueue{}
+func (adminImpl *MQAdminImpl)FetchSubscribeMessageQueues(topic string)[]*message.MessageQueue {
+	mqList:=[]*message.MessageQueue{}
 	routeData:=adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic,1000*3)
     if routeData!=nil{
     mqSet:=adminImpl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic,routeData)
 		if mqSet!=nil{
 			for mq := range mqSet.Iterator().C {
-				mqList=append(mqList,mq.(message.MessageQueue))
+				mqList=append(mqList,mq.(*message.MessageQueue))
 			}
 		}
 

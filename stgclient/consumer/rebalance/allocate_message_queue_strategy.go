@@ -17,8 +17,8 @@ type AllocateMessageQueueStrategy interface {
 	Allocate(
 	consumerGroup  string,
 	currentCID string,
-	mqAll [] message.MessageQueue,
-	cidAll [] string)[]message.MessageQueue
+	mqAll [] *message.MessageQueue,
+	cidAll [] string)[]*message.MessageQueue
 	// Algorithm name
 	GetName() string
 }

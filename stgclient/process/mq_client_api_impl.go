@@ -177,7 +177,7 @@ func (impl *MQClientAPIImpl)GetMaxOffset(addr string, topic string, queueId int,
 	}
 	logger.Info(topicWithProjectGroup)
 	// todo 创建request
-	return -1
+	return 10
 }
 
 func (impl *MQClientAPIImpl)PullMessage(addr string, requestHeader header.PullMessageRequestHeader,

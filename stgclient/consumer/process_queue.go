@@ -64,8 +64,8 @@ func (treeMap *TreeMap)remove(offset int) *message.MessageExt {
 	return msg
 }
 
-func NewProcessQueue() ProcessQueue {
-	return ProcessQueue{
+func NewProcessQueue() *ProcessQueue {
+	return &ProcessQueue{
 		PullMaxIdleTime:120000,
 		MsgTreeMap:NewTreeMap(),
 	}

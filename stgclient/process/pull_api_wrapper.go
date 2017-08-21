@@ -33,7 +33,7 @@ func NewPullAPIWrapper(mQClientFactory *MQClientInstance, consumerGroup string, 
 		defaultBrokerId:stgcommon.MASTER_ID }
 }
 
-func (api *PullAPIWrapper) PullKernelImpl(mq message.MessageQueue,
+func (api *PullAPIWrapper) PullKernelImpl(mq *message.MessageQueue,
 subExpression string,
 subVersion int,
 offset int64,
@@ -76,7 +76,7 @@ pullCallback consumer.PullCallback) consumer.PullResult {
 	return consumer.PullResult{}
 }
 
-func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq message.MessageQueue) int {
+func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq *message.MessageQueue) int {
 	//todo FiltersrvController
 	suggest, _ := api.pullFromWhichNodeTable.Get(mq)
 	if suggest != nil {
@@ -85,7 +85,7 @@ func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq message.MessageQueue)
 	return stgcommon.MASTER_ID
 }
 
-func (api *PullAPIWrapper) updatePullFromWhichNode(mq message.MessageQueue,brokerId int) {
+func (api *PullAPIWrapper) updatePullFromWhichNode(mq *message.MessageQueue,brokerId int) {
 	suggest, _ := api.pullFromWhichNodeTable.Get(mq)
 	if suggest == nil {
 		api.pullFromWhichNodeTable.Put(mq,brokerId)
@@ -96,7 +96,7 @@ func (api *PullAPIWrapper) updatePullFromWhichNode(mq message.MessageQueue,broke
 	}
 }
 
-func (api *PullAPIWrapper) processPullResult(mq message.MessageQueue,pullResult *consumer.PullResult,subscriptionData heartbeat.SubscriptionData) *consumer.PullResult {
+func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue,pullResult *consumer.PullResult,subscriptionData heartbeat.SubscriptionData) *consumer.PullResult {
 	projectGroupPrefix:=api.mQClientFactory.MQClientAPIImpl.ProjectGroupPrefix
 	var pullResultExt =PullResultExt{PullResult:pullResult}
      api.updatePullFromWhichNode(mq,int(pullResultExt.suggestWhichBrokerId))

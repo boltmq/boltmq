@@ -24,8 +24,8 @@ type ConsumeMessageConcurrentlyService struct {
 
 type consumeRequest struct {
 	msgs         []message.MessageExt
-	processQueue consumer.ProcessQueue
-	messageQueue message.MessageQueue
+	processQueue *consumer.ProcessQueue
+	messageQueue *message.MessageQueue
 	*ConsumeMessageConcurrentlyService
 }
 
@@ -121,14 +121,14 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 
 }
 
-func (service *ConsumeMessageConcurrentlyService)submitConsumeRequestLater(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue) {
+func (service *ConsumeMessageConcurrentlyService)submitConsumeRequestLater(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue) {
 	go func() {
 		time.Sleep(time.Second * 5)
 		service.SubmitConsumeRequest(msgs, processQueue, messageQueue, true)
 	}()
 }
 
-func (service *ConsumeMessageConcurrentlyService)SubmitConsumeRequest(msgs []message.MessageExt, processQueue consumer.ProcessQueue, messageQueue message.MessageQueue, dispathToConsume bool) {
+func (service *ConsumeMessageConcurrentlyService)SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool) {
 	consumeBatchSize := service.defaultMQPushConsumer.consumeMessageBatchMaxSize
 	if len(msgs) <= consumeBatchSize {
 		consumeRequest := &consumeRequest{msgs:msgs, processQueue:processQueue, messageQueue:messageQueue, ConsumeMessageConcurrentlyService:service}

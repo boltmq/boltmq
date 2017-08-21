@@ -7,7 +7,7 @@ import "git.oschina.net/cloudzone/smartgo/stgcommon/message"
 
 type PullRequest struct {
 	ConsumerGroup string
-	MessageQueue  message.MessageQueue
-	ProcessQueue  ProcessQueue
+	MessageQueue  *message.MessageQueue
+	ProcessQueue  *ProcessQueue
 	NextOffset    int64
 }

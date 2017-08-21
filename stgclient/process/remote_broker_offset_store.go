@@ -41,7 +41,7 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 	for ite := store.offsetTable.Iterator(); ite.HasNext(); {
 		mq, v, _ := ite.Next()
 		if mqs.Contains(mq) {
-			store.updateConsumeOffsetToBroker(mq.(message.MessageQueue), v.(int64))
+			store.updateConsumeOffsetToBroker(mq.(*message.MessageQueue), v.(int64))
 			if times % 12 == 0 {
 				logger.Info("Group: %v ClientId: %v updateConsumeOffsetToBroker %v", //
 					store.groupName, //
@@ -60,7 +60,7 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 	}
 }
 
-func (store *RemoteBrokerOffsetStore)Persist(mq message.MessageQueue) {
+func (store *RemoteBrokerOffsetStore)Persist(mq *message.MessageQueue) {
 	offset, _ := store.offsetTable.Get(mq)
 	if offset != nil {
 		store.updateConsumeOffsetToBroker(mq, offset.(int64))
@@ -68,7 +68,7 @@ func (store *RemoteBrokerOffsetStore)Persist(mq message.MessageQueue) {
 
 }
 
-func (store *RemoteBrokerOffsetStore)updateConsumeOffsetToBroker(mq message.MessageQueue, offset int64) {
+func (store *RemoteBrokerOffsetStore)updateConsumeOffsetToBroker(mq *message.MessageQueue, offset int64) {
 	findBrokerResult := store.mQClientFactory.findBrokerAddressInAdmin(mq.BrokerName)
 	if strings.EqualFold(findBrokerResult.brokerAddr, "") {
 		store.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
@@ -86,11 +86,11 @@ func (store *RemoteBrokerOffsetStore)updateConsumeOffsetToBroker(mq message.Mess
 	}
 }
 
-func (store *RemoteBrokerOffsetStore)RemoveOffset(mq message.MessageQueue) {
+func (store *RemoteBrokerOffsetStore)RemoveOffset(mq *message.MessageQueue) {
 	store.offsetTable.Remove(mq)
 	logger.Info("remove unnecessary messageQueue offset. mq, offsetTableSize")
 }
-func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq message.MessageQueue, rType store.ReadOffsetType) int64 {
+func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq *message.MessageQueue, rType store.ReadOffsetType) int64 {
 	switch rType {
 	case store.MEMORY_FIRST_THEN_STORE:
 	case store.READ_FROM_MEMORY:
@@ -107,7 +107,7 @@ func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq message.MessageQueue, rType 
 	return -1
 }
 
-func (store *RemoteBrokerOffsetStore)UpdateOffset(mq message.MessageQueue, offset int64, increaseOnly bool) {
+func (store *RemoteBrokerOffsetStore)UpdateOffset(mq *message.MessageQueue, offset int64, increaseOnly bool) {
 	offsetOld, _ := store.offsetTable.Get(mq)
 	if offsetOld == nil {
 		offsetOld, _ = store.offsetTable.PutIfAbsent(mq, offsetOld)
@@ -127,6 +127,6 @@ func (store *RemoteBrokerOffsetStore)UpdateOffset(mq message.MessageQueue, offse
 	return
 }
 
-func (store *RemoteBrokerOffsetStore)fetchConsumeOffsetFromBroker(mq message.MessageQueue) int64 {
+func (store *RemoteBrokerOffsetStore)fetchConsumeOffsetFromBroker(mq *message.MessageQueue) int64 {
 	return -1
 }

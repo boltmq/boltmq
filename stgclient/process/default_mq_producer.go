@@ -53,5 +53,5 @@ func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 }
 
 func (defaultMQProducer *DefaultMQProducer) Send(msg message.Message) (SendResult, error) {
-	return defaultMQProducer.DefaultMQProducerImpl.Send(msg), nil
+	return defaultMQProducer.DefaultMQProducerImpl.Send(msg)
 }

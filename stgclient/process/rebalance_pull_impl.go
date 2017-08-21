@@ -33,13 +33,12 @@ func (pullImpl *RebalancePullImpl)MessageQueueChanged(topic string, mqAll set.Se
 	//todo MessageQueueListener
 }
 
-func (pullImpl *RebalancePullImpl)RemoveUnnecessaryMessageQueue(mq message.MessageQueue, pq consumer.ProcessQueue) bool {
+func (pullImpl *RebalancePullImpl)RemoveUnnecessaryMessageQueue(mq *message.MessageQueue, pq *consumer.ProcessQueue) bool {
 	pullImpl.defaultMQPullConsumerImpl.OffsetStore.Persist(mq)
 	pullImpl.defaultMQPullConsumerImpl.OffsetStore.RemoveOffset(mq)
 	return true
 }
 
-func (pullImpl *RebalancePullImpl)ComputePullFromWhere(mq message.MessageQueue) int64 {
-
+func (pullImpl *RebalancePullImpl)ComputePullFromWhere(mq *message.MessageQueue) int64 {
 	return 0
 }
