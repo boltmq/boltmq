@@ -2,6 +2,7 @@ package remoting
 
 import "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 
+// ResponseFuture response future
 type ResponseFuture struct {
 	responseCommand *protocol.RemotingCommand
 	sendRequestOK   bool
