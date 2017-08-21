@@ -1,4 +1,4 @@
-package stgnet
+package protocol
 
 // CommandCustomHeader:头信息接口
 // Author: yintongqiang
