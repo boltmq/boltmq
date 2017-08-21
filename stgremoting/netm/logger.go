@@ -16,3 +16,8 @@ func (bootstrap *Bootstrap) Debugf(format string, v ...interface{}) {
 func (bootstrap *Bootstrap) Noticef(format string, v ...interface{}) {
 	logger.Infof(format, v...)
 }
+
+// LogFlush logs flush
+func (bootstrap *Bootstrap) LogFlush() {
+	logger.Flush()
+}
