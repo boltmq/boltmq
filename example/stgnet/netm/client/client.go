@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"git.oschina.net/cloudzone/smartgo/stgremoting/netm"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 func main() {
