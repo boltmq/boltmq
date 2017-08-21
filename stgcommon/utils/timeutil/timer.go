@@ -1,4 +1,4 @@
-package utils
+package timeutil
 
 import "time"
 
@@ -11,25 +11,29 @@ type Ticker struct {
 
 // NewTicker 创建ticker定时器
 func NewTicker(interval, delay int) *Ticker {
-	return &Ticker{
+	ticker := &Ticker{
 		delay:    delay,
 		interval: interval,
-		timer:    time.NewTimer(time.Duration(interval) * time.Second),
 	}
+
+	if delay > 0 {
+		ticker.timer = time.NewTimer(time.Duration(delay) * time.Millisecond)
+	} else {
+		ticker.timer = time.NewTimer(time.Duration(interval) * time.Millisecond)
+	}
+
+	return ticker
 }
 
 // Do ticker定时器，delay：延迟执行时间，interval：时间间隔，dofn：定时执行函数
 // 此方法时间间隔interval + dofn执行时间
 func (t *Ticker) Do(dofn func(time.Time)) {
-	if t.delay > 0 {
-		time.Sleep(time.Duration(t.delay) * time.Second)
-	}
 
 	for {
 		select {
 		case tc := <-t.timer.C:
 			dofn(tc)
-			t.timer.Reset(time.Duration(t.interval) * time.Second)
+			t.timer.Reset(time.Duration(t.interval) * time.Millisecond)
 		}
 	}
 }
@@ -60,7 +64,7 @@ func NewChannelTicker(interval, delay int) *ChannelTicker {
 // 此方法时间间隔interval时间
 func (ct *ChannelTicker) Do(dofn func(time.Time)) {
 	if ct.delay > 0 {
-		time.Sleep(time.Duration(ct.delay) * time.Second)
+		time.Sleep(time.Duration(ct.delay) * time.Millisecond)
 	}
 
 	t := time.Now()
@@ -77,7 +81,7 @@ func (ct *ChannelTicker) Do(dofn func(time.Time)) {
 		select {
 		case st := <-ct.ch:
 			now := time.Now()
-			t = st.Add(time.Duration(ct.interval) * time.Second)
+			t = st.Add(time.Duration(ct.interval) * time.Millisecond)
 			d := t.Sub(now)
 			time.Sleep(d)
 			//time.Sleep(time.Duration(ct.interval) * time.Second)
