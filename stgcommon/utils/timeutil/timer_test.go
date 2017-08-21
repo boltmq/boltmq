@@ -1,4 +1,4 @@
-package utils
+package timeutil
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewTicker(t *testing.T) {
-	ticker := NewTicker(1, 1)
+	ticker := NewTicker(1000, 1000)
 	if ticker == nil {
 		t.Error("NewTicker is faild")
 		return
@@ -17,7 +17,7 @@ func TestNewTicker(t *testing.T) {
 
 func TestTickerDo(t *testing.T) {
 	var (
-		ticker = NewTicker(1, 1)
+		ticker = NewTicker(1000, 1000)
 		i      int
 	)
 
@@ -34,7 +34,7 @@ func TestTickerDo(t *testing.T) {
 }
 
 func TestNewChannelTicker(t *testing.T) {
-	ticker := NewChannelTicker(1, 1)
+	ticker := NewChannelTicker(1000, 1000)
 	if ticker == nil {
 		t.Error("NewChannelTicker is faild")
 		return
@@ -45,7 +45,7 @@ func TestNewChannelTicker(t *testing.T) {
 
 func TestChannelTickerDo(t *testing.T) {
 	var (
-		ticker = NewChannelTicker(1, 1)
+		ticker = NewChannelTicker(1000, 1000)
 		i      int
 	)
 
