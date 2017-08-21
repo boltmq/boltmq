@@ -16,12 +16,14 @@ type Bootstrap struct {
 	opts        *Options
 	optsMu      sync.RWMutex
 	running     bool
+	grRunning   bool
 }
 
 // NewBootstrap 创建启动器
 func NewBootstrap() *Bootstrap {
 	b := &Bootstrap{
-		opts: &Options{},
+		opts:      &Options{},
+		grRunning: true,
 	}
 	b.connTable = make(map[string]net.Conn)
 	return b
@@ -90,11 +92,15 @@ func (bootstrap *Bootstrap) Sync() {
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
-		remoteAddr := conn.RemoteAddr().String()
-		bootstrap.connTableMu.Lock()
-		bootstrap.connTable[remoteAddr] = conn
-		bootstrap.connTableMu.Unlock()
-		bootstrap.Debugf("Client connection created %s", remoteAddr)
+		bootstrap.startGoRoutine(func() {
+			remoteAddr := conn.RemoteAddr().String()
+			bootstrap.connTableMu.Lock()
+			bootstrap.connTable[remoteAddr] = conn
+			bootstrap.connTableMu.Unlock()
+			bootstrap.Debugf("Client connection created %s", remoteAddr)
+
+			bootstrap.handleConn(remoteAddr, conn)
+		})
 	}
 
 	bootstrap.Noticef("Bootstrap Exiting..")
@@ -114,10 +120,14 @@ func (bootstrap *Bootstrap) Connect(host string, port int) error {
 			return e
 		}
 
-		bootstrap.connTableMu.Lock()
-		bootstrap.connTable[addr] = conn
-		bootstrap.connTableMu.Unlock()
-		bootstrap.Noticef("connect on port: %s", addr)
+		bootstrap.startGoRoutine(func() {
+			bootstrap.connTableMu.Lock()
+			bootstrap.connTable[addr] = conn
+			bootstrap.connTableMu.Unlock()
+			bootstrap.Noticef("connect on port: %s", addr)
+
+			bootstrap.handleConn(addr, conn)
+		})
 	}
 
 	return nil
@@ -130,6 +140,15 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func (bootstrap *Bootstrap) handleConn(addr string, conn net.Conn) {
+}
+
+func (bootstrap *Bootstrap) startGoRoutine(fn func()) {
+	if bootstrap.grRunning {
+		go fn()
+	}
 }
 
 func (bootstrap *Bootstrap) isRunning() bool {

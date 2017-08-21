@@ -21,6 +21,7 @@ _testmain.go
 
 *.exe
 
+*.swp
 *.iml
 .idea/
 .idea/vcs.xml
@@ -35,6 +36,6 @@ docs/.DS_Store
 docs/static/.DS_Store
 /stgstorelog/unit_test_store/
 
-example/remoting/netm/client
-example/remoting/netm/serve
+example/remoting/netm/client/client
+example/remoting/netm/serve/serve
 stgcommon/logger/test.log
