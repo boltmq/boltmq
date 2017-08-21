@@ -71,11 +71,11 @@ func NewProcessQueue() *ProcessQueue {
 	}
 }
 
-func (pq ProcessQueue) IsPullExpired() bool {
+func (pq *ProcessQueue) IsPullExpired() bool {
 	return (time.Now().Unix() * 1000 - pq.LastPullTimestamp) > pq.PullMaxIdleTime
 }
 
-func (pq ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
+func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	pq.Lock()
 	defer pq.Unlock()
 	dispatchToConsume := false
@@ -107,7 +107,7 @@ func (pq ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	return dispatchToConsume
 }
 
-func (pq ProcessQueue) RemoveMessage(msgs []message.MessageExt) int {
+func (pq *ProcessQueue) RemoveMessage(msgs []message.MessageExt) int {
 	result:=-1
 	pq.Lock()
 	defer pq.Unlock()
