@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -83,7 +84,7 @@ func (rc *DefalutRemotingClient) handlerResponse(buffer []byte, addr string, con
 	responseFuture, ok := rc.responseTable[response.Opaque]
 	rc.responseTableLock.RUnlock()
 	if !ok {
-		if response.Code == protocol.NOTIFY_CONSUMER_IDS_CHANGED {
+		if response.Code == cmprotocol.NOTIFY_CONSUMER_IDS_CHANGED {
 			// TODO:
 		} else {
 			rc.bootstrap.Fatalf("handlerResponse not found responseFuture: %d %v", response.Opaque, response)
