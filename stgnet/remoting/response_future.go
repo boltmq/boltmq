@@ -23,7 +23,6 @@ func newResponseFuture(opaque int32, timeoutMillis int64) *ResponseFuture {
 		sendRequestOK:  false,
 		opaque:         opaque,
 		timeoutMillis:  timeoutMillis,
-		beginTimestamp: time.Now().Unix(),
-		done:           make(chan bool),
+		beginTimestamp: time.Now().Unix() * 1000,
 	}
 }

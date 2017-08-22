@@ -42,6 +42,16 @@ func (rc *DefalutRemotingClient) Start() {
 	rc.bootstrap.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
 		fmt.Println("rece:", string(buffer))
 	})
+
+	// 定时扫描响应
+	go func() {
+		timeoutTimer := time.NewTimer(3 * time.Second)
+		for {
+			<-timeoutTimer.C
+			rc.scanResponseTable()
+			timeoutTimer.Reset(time.Second)
+		}
+	}()
 }
 
 // Shutdown shutdown client
@@ -103,6 +113,7 @@ func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.Remot
 
 func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
 	response := newResponseFuture(request.Opaque, timeoutMillis)
+	response.done = make(chan bool)
 	header := request.EncodeHeader()
 
 	rc.responseTableLock.Lock()
@@ -119,7 +130,7 @@ func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.Remot
 	select {
 	case <-response.done:
 		return response.responseCommand, nil
-	case <-time.After(3 * time.Second):
+	case <-time.After(time.Duration(timeoutMillis) * time.Millisecond):
 		return nil, errors.New("invoke sync timeout")
 	}
 }
@@ -183,6 +194,22 @@ func (rc *DefalutRemotingClient) invokeOneway(addr string, request *protocol.Rem
 	}
 
 	return nil
+}
+
+// 扫描发送请求响应报文是否超时
+func (rc *DefalutRemotingClient) scanResponseTable() {
+	rc.responseTableLock.Lock()
+	for seq, response := range rc.responseTable {
+		if (response.beginTimestamp + response.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
+			delete(rc.responseTable, seq)
+
+			if response.invokeCallback != nil {
+				response.invokeCallback(nil)
+				rc.bootstrap.Fatalf("remove time out request %v", response)
+			}
+		}
+	}
+	rc.responseTableLock.Unlock()
 }
 
 func (rc *DefalutRemotingClient) createConnectByAddr(addr string) error {
