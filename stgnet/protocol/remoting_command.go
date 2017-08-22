@@ -118,45 +118,45 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 
 	// step 1 读取报文长度
 	if buf.Len() < 4 {
-		return nil, fmt.Errorf("response length %d < 4", buf.Len())
+		return nil, fmt.Errorf("buffer length %d < 4", buf.Len())
 	}
 
 	err := binary.Read(buf, binary.BigEndian, &length)
 	if err != nil {
-		return nil, fmt.Errorf("read response length failed: %v", err)
+		return nil, fmt.Errorf("read buffer length failed: %v", err)
 	}
 
 	// step 2 读取报文头长度
 	if buf.Len() < 4 {
-		return nil, fmt.Errorf("response length %d < 4", buf.Len())
+		return nil, fmt.Errorf("buffer header length %d < 4", buf.Len())
 	}
 
 	err = binary.Read(buf, binary.BigEndian, &headerLength)
 	if err != nil {
-		return nil, fmt.Errorf("read response header length failed: %v", err)
+		return nil, fmt.Errorf("read buffer header length failed: %v", err)
 	}
 
 	// step 3 读取报文头数据
 	if buf.Len() == 0 || buf.Len() < int(headerLength) {
-		return nil, fmt.Errorf("response header data invalid, header data length: %d", buf.Len())
+		return nil, fmt.Errorf("header data invalid, length: %d", buf.Len())
 	}
 
 	header := make([]byte, headerLength)
 	_, err = buf.Read(header)
 	if err != nil {
-		return nil, fmt.Errorf("read response header data failed: %v", err)
+		return nil, fmt.Errorf("read header data failed: %v", err)
 	}
 
 	// step 4 读取报文Body
 	bodyLength = length - 4 - headerLength
 	if buf.Len() < int(bodyLength) {
-		return nil, fmt.Errorf("response body length %d < %d", bodyLength, buf.Len())
+		return nil, fmt.Errorf("body length %d < %d", bodyLength, buf.Len())
 	}
 
 	body := make([]byte, bodyLength)
 	_, err = buf.Read(body)
 	if err != nil {
-		return nil, fmt.Errorf("read response body data failed: %v", err)
+		return nil, fmt.Errorf("read body data failed: %v", err)
 	}
 
 	return decodeRemotingCommand(header, body)
