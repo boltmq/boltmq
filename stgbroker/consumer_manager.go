@@ -4,6 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 )
 
 // ConsumerManager 消费者管理
@@ -36,5 +37,13 @@ func (self *ConsumerManager) getConsumerGroupInfo(group string) *client.Consumer
 		return consumerGroupInfo
 	}
 
+	return nil
+}
+
+func (self *ConsumerManager)  FindSubscriptionData(group,topic string)*heartbeat.SubscriptionData   {
+	consumerGroupInfo:=self.getConsumerGroupInfo(group)
+	if consumerGroupInfo!= nil {
+		return consumerGroupInfo.FindSubscriptionData(topic)
+	}
 	return nil
 }
