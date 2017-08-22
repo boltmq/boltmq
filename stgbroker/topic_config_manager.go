@@ -343,6 +343,12 @@ func (self *TopicConfigManager) Load() bool {
 }
 
 func (self *TopicConfigManager) Encode(prettyFormat bool) string {
+	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
+	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
+	topicConfigSerializeWrapper.DataVersion = self.DataVersion
+	if b, err := json.Marshal(topicConfigSerializeWrapper); err == nil {
+		return string(b)
+	}
 	return ""
 }
 
@@ -350,10 +356,11 @@ func (self *TopicConfigManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
 		topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
 		json.Unmarshal(jsonString, topicConfigSerializeWrapper)
-
-		var ps []stgcommon.TopicConfig
-		json.Unmarshal(jsonString, &ps)
-		fmt.Println(len(topicConfigSerializeWrapper.TopicConfigTable123))
+		for _, v := range topicConfigSerializeWrapper.TopicConfigs {
+			if b, err := json.Marshal(v); err == nil {
+				self.TopicConfigTable.Put(v.TopicName, b)
+			}
+		}
 	}
 }
 

@@ -5,6 +5,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/out"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"time"
 )
 
 type BrokerController struct {
@@ -56,32 +59,15 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	brokerController.SubscriptionGroupManager = NewSubscriptionGroupManager(brokerController)
 	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI()
 	// TODO filterServerManager
-	// TODO  if (this.brokerConfig.getNamesrvAddr() != null) {
-	// TODO this.brokerOuterAPI.updateNameServerAddressList(this.brokerConfig.getNamesrvAddr());
-	// TODO log.info("user specfied name server address: {}", this.brokerConfig.getNamesrvAddr());
+	if brokerController.BrokerConfig.NamesrvAddr != "" {
+		brokerController.BrokerOuterAPI.UpdateNameServerAddressList(brokerController.BrokerConfig.NamesrvAddr)
+		logger.Info("user specfied name server address: {}", brokerController.BrokerConfig.NamesrvAddr)
+	}
 	brokerController.SlaveSynchronize = NewSlaveSynchronize(brokerController)
 	// TODO  this.sendThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getSendThreadPoolQueueCapacity());
 	// TODO   this.pullThreadPoolQueue = new LinkedBlockingQueue<Runnable>(this.brokerConfig.getPullThreadPoolQueueCapacity());
 
 	return brokerController
-}
-
-func (self *BrokerController) start() {
-	result := true
-	result = result && self.TopicConfigManager.Load()
-	result = result && self.ConsumerOffsetManager.Load()
-	result = result && self.SubscriptionGroupManager.Load()
-
-	if result {
-		// TODO  this.messageStore = new DefaultMessageStore(this.messageStoreConfig, this.defaultTransactionCheckExecuter,this.brokerStatsManager);
-	}
-
-	// TODO result = result && self.messageStore.Load()
-
-	if result {
-		// TODO this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
-
-	}
 }
 
 func (self *BrokerController) GetBrokerAddr() string {
@@ -98,6 +84,34 @@ func (self *BrokerController) Initialize() bool {
 	if result {
 		// TODO messageStore
 	}
+	// TODO 统计
+
+	// 定时写入ConsumerOffset文件
+	consumerOffsetPersistTicker := timeutil.NewTicker(self.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
+	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
+		self.ConsumerOffsetManager.configManagerExt.Persist()
+	})
+
+	// 扫描数据被删除了的topic，offset记录也对应删除
+	scanUnsubscribedTopicTicker := timeutil.NewTicker(60*1000, 1000*10)
+	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
+		self.ConsumerOffsetManager.ScanUnsubscribedTopic()
+	})
+
+	// 如果namesrv不为空则更新namesrv地址
+	if self.BrokerConfig.NamesrvAddr != "" {
+		self.BrokerOuterAPI.UpdateNameServerAddressList(self.BrokerConfig.NamesrvAddr)
+	} else {
+		// 更新
+		if self.BrokerConfig.FetchNamesrvAddrByAddressServer {
+			scanUnsubscribedTopicTicker := timeutil.NewTicker(60*1000*2, 1000*10)
+			go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
+				self.BrokerOuterAPI.FetchNameServerAddr()
+			})
+		}
+	}
+
+	// TODO messageStoreConfig
 	return result
 
 }

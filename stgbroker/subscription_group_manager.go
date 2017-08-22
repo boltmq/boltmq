@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"encoding/json"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
@@ -15,9 +16,11 @@ type SubscriptionGroupManager struct {
 
 	BrokerController *BrokerController
 
-	dataVersion      stgcommon.DataVersion
+	SubscriptionGroupConfigs []subscription.SubscriptionGroupConfig `json:"subscriptionGroupTable"`
 
-	configManagerExt     *ConfigManagerExt
+	DataVersion stgcommon.DataVersion `json:"dataVersion"`
+
+	configManagerExt *ConfigManagerExt
 	// TODO  Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 }
 
@@ -54,7 +57,6 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 	}
 }
 
-
 // findSubscriptionGroupConfig 查找订阅关系
 // Author gaoyanlei
 // Since 2017/8/17
@@ -65,7 +67,7 @@ func (self *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) 
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
 			subscriptionGroupConfig.GroupName = group
 			self.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
-			self.dataVersion.NextVersion()
+			self.DataVersion.NextVersion()
 			// TODO  this.persist();
 		}
 		return value
@@ -73,7 +75,7 @@ func (self *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) 
 	return nil
 }
 
-func (self *SubscriptionGroupManager) Load() bool{
+func (self *SubscriptionGroupManager) Load() bool {
 
 	return self.configManagerExt.Load()
 }
@@ -84,11 +86,17 @@ func (self *SubscriptionGroupManager) Encode(prettyFormat bool) string {
 
 func (self *SubscriptionGroupManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
-
+		subscriptionGroupManagernew := new(SubscriptionGroupManager)
+		json.Unmarshal(jsonString, subscriptionGroupManagernew)
+		for _, v := range subscriptionGroupManagernew.SubscriptionGroupConfigs {
+			if b, err := json.Marshal(v); err == nil {
+				self.SubscriptionGroupTable.Put(v.GroupName, string(b))
+			}
+		}
 	}
 }
 
 func (self *SubscriptionGroupManager) ConfigFilePath() string {
 	user, _ := user.Current()
-	return GetTopicConfigPath(user.HomeDir)
+	return GetSubscriptionGroupPath(user.HomeDir)
 }
