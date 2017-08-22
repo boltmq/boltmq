@@ -93,7 +93,7 @@ func (rc *RemotingCommand) EncodeHeader() []byte {
 
 	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.BigEndian, length)
-	binary.Write(buf, binary.BigEndian, len(rc.Body))
+	binary.Write(buf, binary.BigEndian, len(headerData))
 	buf.Write(headerData)
 
 	return buf.Bytes()
@@ -105,4 +105,16 @@ func (rc *RemotingCommand) buildHeader() []byte {
 		return nil
 	}
 	return buf
+}
+
+// DecodeRemotingCommand 解析返回RemotingCommand
+func DecodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
+	remotingCommand := &RemotingCommand{}
+	remotingCommand.ExtFields = make(map[string]string)
+	err := ffjson.Unmarshal(header, remotingCommand)
+	if err != nil {
+		return nil, err
+	}
+	remotingCommand.Body = body
+	return remotingCommand, nil
 }

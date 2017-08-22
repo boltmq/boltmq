@@ -26,3 +26,12 @@ func newResponseFuture(opaque int32, timeoutMillis int64) *ResponseFuture {
 		beginTimestamp: time.Now().Unix() * 1000,
 	}
 }
+
+func (responseFuture *ResponseFuture) isTimeout() bool {
+	currentTimeMillis := time.Now().Unix() * 1000
+	return currentTimeMillis-responseFuture.beginTimestamp > responseFuture.timeoutMillis
+}
+
+func (responseFuture *ResponseFuture) isSendRequestOK() bool {
+	return responseFuture.sendRequestOK
+}

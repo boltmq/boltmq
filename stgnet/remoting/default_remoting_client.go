@@ -24,7 +24,7 @@ type DefalutRemotingClient struct {
 	namesrvAddrListLock sync.RWMutex
 	namesrvAddrChoosed  string
 	namesrvIndex        uint32
-	isClosed            bool
+	isRunning           bool
 }
 
 // NewDefalutRemotingClient return new default remoting client
@@ -40,7 +40,10 @@ func NewDefalutRemotingClient() *DefalutRemotingClient {
 // Start start client
 func (rc *DefalutRemotingClient) Start() {
 	rc.bootstrap.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-		fmt.Println("rece:", string(buffer))
+		// 开启gorouting处理响应
+		rc.startGoRoutine(func() {
+			rc.handlerResponse(buffer, addr, conn)
+		})
 	})
 
 	// 定时扫描响应
@@ -52,6 +55,107 @@ func (rc *DefalutRemotingClient) Start() {
 			timeoutTimer.Reset(time.Second)
 		}
 	}()
+
+	rc.isRunning = true
+}
+
+func (rc *DefalutRemotingClient) handlerResponse(buffer []byte, addr string, conn net.Conn) {
+	var (
+		buf = bytes.NewBuffer([]byte{})
+	)
+
+	// copy buffer
+	_, err := buf.Write(buffer)
+	if err != nil {
+		rc.bootstrap.Fatalf("handlerResponse write buffer failed: %v", err)
+		return
+	}
+
+	// 解析报文
+	response, err := rc.decodeResponse(buf)
+	if err != nil {
+		rc.bootstrap.Fatalf("handlerResponse deconde failed: %v", err)
+		return
+	}
+
+	// 获取响应
+	rc.responseTableLock.RLock()
+	responseFuture, ok := rc.responseTable[response.Opaque]
+	rc.responseTableLock.RUnlock()
+	if !ok {
+		rc.bootstrap.Fatalf("handlerResponse not found responseFuture: %d %v", response.Opaque, response)
+		return
+	}
+
+	rc.responseTableLock.Lock()
+	delete(rc.responseTable, response.Opaque)
+	rc.responseTableLock.Unlock()
+
+	responseFuture.responseCommand = response
+	if responseFuture.invokeCallback != nil {
+		responseFuture.invokeCallback(responseFuture)
+	}
+
+	if responseFuture.done != nil {
+		responseFuture.done <- true
+	}
+}
+
+func (rc *DefalutRemotingClient) decodeResponse(buf *bytes.Buffer) (*protocol.RemotingCommand, error) {
+	var (
+		length       int32
+		headerLength int32
+		bodyLength   int32
+	)
+
+	// step 1 读取报文长度
+	if buf.Len() < 4 {
+		return nil, fmt.Errorf("response length %d < 4", buf.Len())
+	}
+
+	err := binary.Read(buf, binary.BigEndian, &length)
+	if err != nil {
+		rc.bootstrap.Fatalf("read response length failed: %v", err)
+		return nil, err
+	}
+
+	// step 2 读取报文头长度
+	if buf.Len() < 4 {
+		return nil, fmt.Errorf("response length %d < 4", buf.Len())
+	}
+
+	err = binary.Read(buf, binary.BigEndian, &headerLength)
+	if err != nil {
+		rc.bootstrap.Fatalf("read response header length failed: %v", err)
+		return nil, err
+	}
+
+	// step 3 读取报文头数据
+	if buf.Len() == 0 || buf.Len() < int(headerLength) {
+		return nil, fmt.Errorf("response header data invalid, header data length: %d", buf.Len())
+	}
+
+	header := make([]byte, headerLength)
+	_, err = buf.Read(header)
+	if err != nil {
+		rc.bootstrap.Fatalf("read response header data failed: %v", err)
+		return nil, err
+	}
+
+	// step 4 读取报文Body
+	bodyLength = length - 4 - headerLength
+	if buf.Len() < int(bodyLength) {
+		return nil, fmt.Errorf("response body length %d < %d", bodyLength, buf.Len())
+	}
+
+	body := make([]byte, bodyLength)
+	_, err = buf.Read(body)
+	if err != nil {
+		rc.bootstrap.Fatalf("read response body data failed: %v", err)
+		return nil, err
+	}
+
+	return protocol.DecodeRemotingCommand(header, body)
 }
 
 // Shutdown shutdown client
@@ -204,7 +308,7 @@ func (rc *DefalutRemotingClient) scanResponseTable() {
 			delete(rc.responseTable, seq)
 
 			if responseFuture.invokeCallback != nil {
-				responseFuture.invokeCallback(nil)
+				responseFuture.invokeCallback(responseFuture)
 				rc.bootstrap.Fatalf("remove time out request %v", responseFuture)
 			}
 		}
@@ -288,4 +392,10 @@ func (rc *DefalutRemotingClient) sendRequest(header, body []byte, addr string) e
 // RegisterRPCHook 注册rpc hook
 func (rc *DefalutRemotingClient) RegisterRPCHook(rpcHook RPCHook) {
 	rc.rpcHook = rpcHook
+}
+
+func (rc *DefalutRemotingClient) startGoRoutine(fn func()) {
+	if rc.isRunning {
+		go fn()
+	}
 }
