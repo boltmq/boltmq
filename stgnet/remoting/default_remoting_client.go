@@ -153,7 +153,7 @@ func (rc *DefalutRemotingClient) invokeOneway(addr string, request *protocol.Rem
 
 	err := rc.sendRequest(header, request.Body, addr)
 	if err != nil {
-		rc.bootstrap.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
+		rc.bootstrap.Fatalf("invokeOneway->sendRequest failed: %s %v", addr, err)
 		return err
 	}
 
