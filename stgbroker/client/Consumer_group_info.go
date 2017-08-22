@@ -5,7 +5,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 )
 
-
 // ConsumerGroupInfo 整个Consumer Group信息
 // Author gaoyanlei
 // Since 2017/8/17
@@ -32,7 +31,7 @@ func NewConsumerGroupInfo(groupName string, consumeType heartbeat.ConsumeType, m
 	return ConsumerGroupInfo
 }
 
-func(self *ConsumerGroupInfo) FindSubscriptionData(topic string )*heartbeat.SubscriptionData  {
+func (self *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.SubscriptionData {
 	value, err := self.SubscriptionTable.Get(topic)
 	if err != nil {
 		return nil
@@ -44,3 +43,4 @@ func(self *ConsumerGroupInfo) FindSubscriptionData(topic string )*heartbeat.Subs
 
 	return nil
 }
+

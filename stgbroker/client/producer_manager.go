@@ -27,3 +27,7 @@ func NewProducerManager() *ProducerManager {
 func (producerManager *ProducerManager) generateRandmonNum() int {
 	return producerManager.Rand.Int()
 }
+
+func (producerManager *ProducerManager)registerProducer ()  {
+
+}
