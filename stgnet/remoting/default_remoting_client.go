@@ -24,6 +24,7 @@ type DefalutRemotingClient struct {
 	namesrvAddrListLock sync.RWMutex
 	namesrvAddrChoosed  string
 	namesrvIndex        uint32
+	timeoutTimer        *time.Timer
 	isRunning           bool
 }
 
@@ -48,11 +49,11 @@ func (rc *DefalutRemotingClient) Start() {
 
 	// 定时扫描响应
 	go func() {
-		timeoutTimer := time.NewTimer(3 * time.Second)
+		rc.timeoutTimer = time.NewTimer(3 * time.Second)
 		for {
-			<-timeoutTimer.C
+			<-rc.timeoutTimer.C
 			rc.scanResponseTable()
-			timeoutTimer.Reset(time.Second)
+			rc.timeoutTimer.Reset(time.Second)
 		}
 	}()
 
@@ -164,7 +165,9 @@ func (rc *DefalutRemotingClient) decodeResponse(buf *bytes.Buffer) (*protocol.Re
 
 // Shutdown shutdown client
 func (rc *DefalutRemotingClient) Shutdown() {
+	rc.timeoutTimer.Stop()
 	rc.bootstrap.Shutdown()
+	rc.isRunning = false
 }
 
 // GetNameServerAddressList return nameserver addr list
