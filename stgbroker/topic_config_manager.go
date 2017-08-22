@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -8,6 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"github.com/deckarep/golang-set"
+	"os/user"
 	lock "sync"
 )
 
@@ -19,9 +21,10 @@ type TopicConfigManager struct {
 	TopicConfigTable     *sync.Map
 	DataVersion          *stgcommon.DataVersion
 	SystemTopicList      mapset.Set
+	configManagerExt     *ConfigManagerExt
 }
 
-// NewTopicConfigManager 初始化SubscriptionGroupManager
+// NewTopicConfigManager 初始化TopicConfigManager
 // Author gaoyanlei
 // Since 2017/8/9
 func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManager {
@@ -30,6 +33,7 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	topicConfigManager.DataVersion = stgcommon.NewDataVersion()
 	topicConfigManager.TopicConfigTable = sync.NewMap()
 	topicConfigManager.init()
+	topicConfigManager.configManagerExt = NewConfigManagerExt(topicConfigManager)
 	return topicConfigManager
 }
 
@@ -334,7 +338,26 @@ func (self *TopicConfigManager) buildTopicConfigSerializeWrapper() {
 	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
 }
 
-func (self *TopicConfigManager) Load() bool{
+func (self *TopicConfigManager) Load() bool {
+	return self.configManagerExt.Load()
+}
 
-	return true
+func (self *TopicConfigManager) Encode(prettyFormat bool) string {
+	return ""
+}
+
+func (self *TopicConfigManager) Decode(jsonString []byte) {
+	if len(jsonString) > 0 {
+		topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
+		json.Unmarshal(jsonString, topicConfigSerializeWrapper)
+
+		var ps []stgcommon.TopicConfig
+		json.Unmarshal(jsonString, &ps)
+		fmt.Println(len(topicConfigSerializeWrapper.TopicConfigTable123))
+	}
+}
+
+func (self *TopicConfigManager) ConfigFilePath() string {
+	user, _ := user.Current()
+	return GetTopicConfigPath(user.HomeDir)
 }

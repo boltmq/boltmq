@@ -6,23 +6,23 @@ import (
 )
 
 type DataVersion struct {
-	timestatmp int64
-	counter    int64
+	Timestatmp int64 `json:"Timestatmp"`
+	Counter    int64 `json:"Counter"`
 }
 
 func NewDataVersion() *DataVersion {
 	var dataVersion = new(DataVersion)
-	dataVersion.timestatmp = time.Now().UnixNano()
-	dataVersion.counter = atomic.AddInt64(&dataVersion.counter, 0)
+	dataVersion.Timestatmp = time.Now().UnixNano()
+	dataVersion.Counter = atomic.AddInt64(&dataVersion.Counter, 0)
 	return dataVersion
 }
 
 func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
-	self.timestatmp = dataVersion.timestatmp
-	self.counter = dataVersion.counter
+	self.Timestatmp = dataVersion.Timestatmp
+	self.Counter = dataVersion.Counter
 }
 
 func (self *DataVersion) NextVersion() {
-	self.timestatmp = time.Now().UnixNano()
-	self.counter = atomic.AddInt64(&self.counter, 1)
+	self.Timestatmp = time.Now().UnixNano()
+	self.Counter = atomic.AddInt64(&self.Counter, 1)
 }

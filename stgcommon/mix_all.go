@@ -11,7 +11,7 @@ import (
 // Since:  2017/8/10
 
 const (
-	CLOUDMQ_HOME_ENV = "CLOUDMQ_HOME"
+	SMARTGO_HOME_ENV = "SMARTGO_HOME"
 	CLOUDMQ_HOME_PROPERTY = "cloudmq.home.dir"
 	NAMESRV_ADDR_ENV = "NAMESRV_ADDR"
 	NAMESRV_ADDR_PROPERTY = "cloudmq.namesrv.addr"

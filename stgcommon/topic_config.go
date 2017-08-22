@@ -8,13 +8,13 @@ const (
 
 type TopicConfig struct {
 	SEPARATOR       string
-	TopicName       string
-	ReadQueueNums   int
-	WriteQueueNums  int
-	Perm            int
-	TopicFilterType TopicFilterType
-	TopicSysFlag    int
-	Order           bool
+	TopicName       string          `json:"topicName"`
+	ReadQueueNums   int             `json:"readQueueNums"`
+	WriteQueueNums  int             `json:"writeQueueNums"`
+	Perm            int             `json:"perm"`
+	TopicFilterType TopicFilterType `json:"topicFilterType"`
+	TopicSysFlag    int             `json:"topicSysFlag"`
+	Order           bool            `json:"order"`
 }
 
 func NewTopicConfig() *TopicConfig {
