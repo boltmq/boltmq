@@ -112,12 +112,12 @@ func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.Remot
 }
 
 func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
-	response := newResponseFuture(request.Opaque, timeoutMillis)
-	response.done = make(chan bool)
+	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
+	responseFuture.done = make(chan bool)
 	header := request.EncodeHeader()
 
 	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = response
+	rc.responseTable[request.Opaque] = responseFuture
 	rc.responseTableLock.Unlock()
 
 	err := rc.sendRequest(header, request.Body, addr)
@@ -125,11 +125,11 @@ func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.Remot
 		rc.bootstrap.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
 		return nil, err
 	}
-	response.sendRequestOK = true
+	responseFuture.sendRequestOK = true
 
 	select {
-	case <-response.done:
-		return response.responseCommand, nil
+	case <-responseFuture.done:
+		return responseFuture.responseCommand, nil
 	case <-time.After(time.Duration(timeoutMillis) * time.Millisecond):
 		return nil, errors.New("invoke sync timeout")
 	}
@@ -151,12 +151,12 @@ func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.Remo
 }
 
 func (rc *DefalutRemotingClient) invokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
-	response := newResponseFuture(request.Opaque, timeoutMillis)
-	response.invokeCallback = invokeCallback
+	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
+	responseFuture.invokeCallback = invokeCallback
 	header := request.EncodeHeader()
 
 	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = response
+	rc.responseTable[request.Opaque] = responseFuture
 	rc.responseTableLock.Unlock()
 
 	err := rc.sendRequest(header, request.Body, addr)
@@ -164,7 +164,7 @@ func (rc *DefalutRemotingClient) invokeAsync(addr string, request *protocol.Remo
 		rc.bootstrap.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
 		return err
 	}
-	response.sendRequestOK = true
+	responseFuture.sendRequestOK = true
 
 	return nil
 }
@@ -199,13 +199,13 @@ func (rc *DefalutRemotingClient) invokeOneway(addr string, request *protocol.Rem
 // 扫描发送请求响应报文是否超时
 func (rc *DefalutRemotingClient) scanResponseTable() {
 	rc.responseTableLock.Lock()
-	for seq, response := range rc.responseTable {
-		if (response.beginTimestamp + response.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
+	for seq, responseFuture := range rc.responseTable {
+		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
 			delete(rc.responseTable, seq)
 
-			if response.invokeCallback != nil {
-				response.invokeCallback(nil)
-				rc.bootstrap.Fatalf("remove time out request %v", response)
+			if responseFuture.invokeCallback != nil {
+				responseFuture.invokeCallback(nil)
+				rc.bootstrap.Fatalf("remove time out request %v", responseFuture)
 			}
 		}
 	}
