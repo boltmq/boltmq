@@ -2,6 +2,7 @@ package stgbroker
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"os/user"
 )
 
 const TOPIC_GROUP_SEPARATOR = "@"
@@ -15,6 +16,8 @@ type ConsumerOffsetManager struct {
 	offsetTable *sync.Map
 
 	BrokerController *BrokerController
+
+	configManagerExt     *ConfigManagerExt
 }
 
 // NewConsumerOffsetManager 初始化ConsumerOffsetManager
@@ -25,11 +28,27 @@ func NewConsumerOffsetManager(brokerController *BrokerController) *ConsumerOffse
 	consumerOffsetManager.offsetTable = sync.NewMap()
 	consumerOffsetManager.TOPIC_GROUP_SEPARATOR = TOPIC_GROUP_SEPARATOR
 	consumerOffsetManager.BrokerController = brokerController
+	consumerOffsetManager.configManagerExt = NewConfigManagerExt(consumerOffsetManager)
 	return consumerOffsetManager
 }
 
 
 func (self *ConsumerOffsetManager) Load() bool{
 
-	return true
+	return self.configManagerExt.Load()
+}
+
+func (self *ConsumerOffsetManager) Encode(prettyFormat bool) string {
+	return ""
+}
+
+func (self *ConsumerOffsetManager) Decode(jsonString []byte) {
+	if len(jsonString) > 0 {
+
+	}
+}
+
+func (self *ConsumerOffsetManager) ConfigFilePath() string {
+	user, _ := user.Current()
+	return GetTopicConfigPath(user.HomeDir)
 }
