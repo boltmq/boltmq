@@ -1,6 +1,10 @@
 package remoting
 
-import "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+import (
+	"time"
+
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+)
 
 // ResponseFuture response future
 type ResponseFuture struct {
@@ -12,4 +16,14 @@ type ResponseFuture struct {
 	invokeCallback  InvokeCallback
 	beginTimestamp  int64
 	done            chan bool
+}
+
+func newResponseFuture(opaque int32, timeoutMillis int64) *ResponseFuture {
+	return &ResponseFuture{
+		sendRequestOK:  false,
+		opaque:         opaque,
+		timeoutMillis:  timeoutMillis,
+		beginTimestamp: time.Now().Unix(),
+		done:           make(chan bool),
+	}
 }

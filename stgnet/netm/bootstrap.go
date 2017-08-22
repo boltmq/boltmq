@@ -112,6 +112,12 @@ func (bootstrap *Bootstrap) Sync() {
 func (bootstrap *Bootstrap) Connect(host string, port int) error {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
+	return bootstrap.ConnectJoinAddr(addr)
+}
+
+// Connect 使用指定地址、端口的连接字符串连接
+func (bootstrap *Bootstrap) ConnectJoinAddr(addr string) error {
+
 	bootstrap.connTableMu.RLock()
 	_, ok := bootstrap.connTable[addr]
 	bootstrap.connTableMu.RUnlock()
@@ -143,6 +149,18 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+// HasConnect find connect by addr, return bool
+func (bootstrap *Bootstrap) HasConnect(addr string) bool {
+	bootstrap.connTableMu.RLock()
+	_, ok := bootstrap.connTable[addr]
+	bootstrap.connTableMu.RUnlock()
+	if !ok {
+		return false
+	}
+
+	return true
 }
 
 // Disconnect 关闭指定连接
