@@ -34,3 +34,12 @@ func (self *ConfigManagerExt) Load() bool {
 	self.ConfigManager.Decode(bytes)
 	return true
 }
+
+func (self *ConfigManagerExt) Persist() {
+	jsonString := self.ConfigManager.Encode(true)
+	if jsonString == "" {
+		fileName := self.ConfigManager.ConfigFilePath()
+		fmt.Println(jsonString,fileName)
+		// TODO 写入文件
+	}
+}
