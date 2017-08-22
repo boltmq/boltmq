@@ -9,6 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"sort"
 )
 // RebalanceImpl: rebalance接口
 // Author: yintongqiang
@@ -74,6 +75,9 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 			for val := range mqSet.(set.Set).Iterator().C {
 				mqAll = append(mqAll, val.(*message.MessageQueue))
 			}
+			var mqs message.MessageQueues = mqAll
+			sort.Sort(mqs)
+			sort.Strings(cidAll)
 			strategy := ext.AllocateMessageQueueStrategy
 			allocateResult := strategy.Allocate(ext.ConsumerGroup, ext.MQClientFactory.ClientId, mqAll, cidAll)
 			allocateResultSet := set.NewSet()
@@ -104,11 +108,11 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 		mq := msgQ.(*message.MessageQueue)
 		pq := pQ.(*consumer.ProcessQueue)
 		if strings.EqualFold(mq.Topic, topic) {
-			containsFlag:=false
+			containsFlag := false
 			for mqs := range mqSet.Iterator().C {
 				ms := mqs.(*message.MessageQueue)
-				if strings.EqualFold(ms.Topic,mq.Topic)&&strings.EqualFold(ms.BrokerName,mq.BrokerName) && ms.QueueId==mq.QueueId{
-					containsFlag=true
+				if strings.EqualFold(ms.Topic, mq.Topic)&&strings.EqualFold(ms.BrokerName, mq.BrokerName) && ms.QueueId == mq.QueueId {
+					containsFlag = true
 					break
 				}
 			}

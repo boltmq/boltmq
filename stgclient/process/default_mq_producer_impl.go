@@ -5,13 +5,13 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	set "github.com/deckarep/golang-set"
 	"strings"
-	"sync/atomic"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"github.com/kataras/go-errors"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"strconv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 
@@ -104,17 +104,17 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopicByFlag(key, newTo
 }
 
 // 对外提供消息发送方法
-func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg *message.Message) (SendResult,error) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg *message.Message) (SendResult, error) {
 	return defaultMQProducerImpl.SendByTimeout(msg, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
 }
 // 带timeout的发送消息
-func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.Message, timeout int64) (SendResult,error) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.Message, timeout int64) (SendResult, error) {
 	return defaultMQProducerImpl.sendDefaultImpl(msg, SYNC, nil, timeout)
 }
 
 // 选择需要发送的queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message.Message, communicationMode CommunicationMode,
-sendCallback SendCallback, timeout int64) (SendResult,error)  {
+sendCallback SendCallback, timeout int64) (SendResult, error) {
 	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
 		panic(errors.New("The producer service state not OK"))
 	}
@@ -135,7 +135,7 @@ sendCallback SendCallback, timeout int64) (SendResult,error)  {
 			tmpMQ := topicPublishInfo.SelectOneMessageQueue(lastBrokerName)
 			if tmpMQ != nil {
 				mq = tmpMQ
-				sendResult,err := defaultMQProducerImpl.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout)
+				sendResult, err := defaultMQProducerImpl.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout)
 				endTimestamp = time.Now().Unix() * 1000
 				switch communicationMode {
 				case ASYNC:
@@ -144,21 +144,21 @@ sendCallback SendCallback, timeout int64) (SendResult,error)  {
 					if sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
 						continue
 					}
-					return sendResult,err
+					return sendResult, err
 				}
 			} else {
 				break
 			}
 		}
 	}
-	return SendResult{},errors.New("sendDefaultImpl error")
+	return SendResult{}, errors.New("sendDefaultImpl error")
 }
 
 // 指定发送到某个queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.Message, mq *message.MessageQueue,
-communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult,error) {
+communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult, error) {
 	sendResult := SendResult{}
-	var err error=nil
+	var err error = nil
 	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		defaultMQProducerImpl.tryToFindTopicPublishInfo(mq.Topic)
@@ -196,13 +196,13 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 			}
 		}
 
-		sendResult,err = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
+		sendResult, err = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
 		msg.Body = prevBody
-		return sendResult,err
+		return sendResult, err
 	} else {
 		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
 	}
-	return sendResult,errors.New("The broker[" + mq.BrokerName + "] not exist")
+	return sendResult, errors.New("The broker[" + mq.BrokerName + "] not exist")
 }
 // 检查配置文件
 func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
@@ -241,7 +241,9 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)UpdateTopicPublishInfo(topic 
 	if !strings.EqualFold(topic, "") && info != nil {
 		prev, _ := defaultMQProducerImpl.TopicPublishInfoTable.Put(topic, info)
 		if prev != nil {
-			atomic.AddInt64(&info.SendWhichQueue, prev.(*TopicPublishInfo).SendWhichQueue)
+			//atomic.AddInt64(&info.SendWhichQueue, prev.(*TopicPublishInfo).SendWhichQueue)
+			info.SendWhichQueue = prev.(*TopicPublishInfo).SendWhichQueue
+			logger.Info("updateTopicPublishInfo prev is not null")
 		}
 	}
 }

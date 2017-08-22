@@ -116,7 +116,7 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	}
 	offset := consumeRequest.processQueue.RemoveMessage(consumeRequest.msgs)
 	if offset >= 0 {
-		service.defaultMQPushConsumerImpl.OffsetStore.UpdateOffset(consumeRequest.messageQueue, int64(offset), true)
+		service.defaultMQPushConsumerImpl.OffsetStore.UpdateOffset(consumeRequest.messageQueue, offset, true)
 	}
 
 }

@@ -363,6 +363,8 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 			logger.Infof("topic[%v] topicRouteTable.put TopicRouteData", topic)
 			mqClientInstance.TopicRouteTable.Put(topic, cloneTopicRouteData)
 		}
+	} else {
+		logger.Warnf("updateTopicRouteInfoFromNameServer, getTopicRouteInfoFromNameServer return null, Topic: %v", topic)
 	}
 	return true
 }
@@ -424,7 +426,8 @@ func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic 
 		}
 		info.OrderTopic = true
 	} else {
-		qds := topicRouteData.QueueDatas
+		var qds route.QueueDatas = topicRouteData.QueueDatas
+		sort.Sort(qds)
 		for _, queueData := range qds {
 
 			if constant.IsWriteable(queueData.Perm) {
