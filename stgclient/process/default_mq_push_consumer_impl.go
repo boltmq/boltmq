@@ -123,6 +123,7 @@ func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
 		if len(pullResult.MsgFoundList) == 0 {
 			backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
 		} else {
+			firstMsgOffset=pullResult.MsgFoundList[0].QueueOffset
 			dispathToConsume := backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
 			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList, backImpl.ProcessQueue, backImpl.PullRequest.MessageQueue, dispathToConsume)
 			if backImpl.DefaultMQPushConsumerImpl.defaultMQPushConsumer.pullInterval > 0 {

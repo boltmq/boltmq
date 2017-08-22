@@ -4,6 +4,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
+	"sort"
 )
 // MQAdminImpl: 运维方法
 // Author: yintongqiang
@@ -36,6 +38,8 @@ func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSy
 	topicRouteData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000 * 3)
 	brokerDataList := topicRouteData.BrokerDatas
 	if brokerDataList != nil && len(brokerDataList) > 0 {
+		var brokers route.BrokerDatas = brokerDataList
+		sort.Sort(brokers)
 		for _, brokerData := range brokerDataList {
 			addr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 			if !strings.EqualFold(addr, "") {
@@ -46,14 +50,14 @@ func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSy
 	}
 }
 
-func (adminImpl *MQAdminImpl)FetchSubscribeMessageQueues(topic string)[]*message.MessageQueue {
-	mqList:=[]*message.MessageQueue{}
-	routeData:=adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic,1000*3)
-    if routeData!=nil{
-    mqSet:=adminImpl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic,routeData)
-		if mqSet!=nil{
+func (adminImpl *MQAdminImpl)FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
+	mqList := []*message.MessageQueue{}
+	routeData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000 * 3)
+	if routeData != nil {
+		mqSet := adminImpl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic, routeData)
+		if mqSet != nil {
 			for mq := range mqSet.Iterator().C {
-				mqList=append(mqList,mq.(*message.MessageQueue))
+				mqList = append(mqList, mq.(*message.MessageQueue))
 			}
 		}
 

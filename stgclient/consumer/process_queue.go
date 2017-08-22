@@ -20,9 +20,9 @@ type ProcessQueue struct {
 	PullMaxIdleTime   int64
 	MsgCount          int64
 	MsgTreeMap        *TreeMap
-	QueueOffsetMax    int
+	QueueOffsetMax    int64
 	Consuming         bool
-	MsgAccCnt         int
+	MsgAccCnt         int64
 }
 type TreeMap struct {
 	keys     []int
@@ -49,18 +49,17 @@ func (treeMap *TreeMap)firstKey() int {
 	return treeMap.keys[0]
 }
 
-
 func (treeMap *TreeMap)remove(offset int) *message.MessageExt {
-	msg:=treeMap.innerMap[offset]
-	newKeys:=[]int{}
-	for _,key:=range treeMap.keys{
-		if key!=offset{
-			newKeys=append(newKeys,key)
+	msg := treeMap.innerMap[offset]
+	newKeys := []int{}
+	for _, key := range treeMap.keys {
+		if key != offset {
+			newKeys = append(newKeys, key)
 		}
 	}
 	sort.Ints(newKeys)
-	treeMap.keys=newKeys
-	delete(treeMap.innerMap,offset)
+	treeMap.keys = newKeys
+	delete(treeMap.innerMap, offset)
 	return msg
 }
 
@@ -97,7 +96,7 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 		messageExt := msgs[len(msgs) - 1]
 		property := messageExt.Properties[message.PROPERTY_MAX_OFFSET]
 		if !strings.EqualFold(property, "") {
-			maxOffset, _ := strconv.Atoi(property)
+			maxOffset, _ := strconv.ParseInt(property, 10, 64)
 			accTotal := maxOffset - messageExt.QueueOffset
 			if accTotal > 0 {
 				pq.MsgAccCnt = accTotal
@@ -107,22 +106,22 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	return dispatchToConsume
 }
 
-func (pq *ProcessQueue) RemoveMessage(msgs []message.MessageExt) int {
-	result:=-1
+func (pq *ProcessQueue) RemoveMessage(msgs []message.MessageExt) int64 {
+	var result int64= -1
 	pq.Lock()
 	defer pq.Unlock()
 	if len(pq.MsgTreeMap.innerMap) > 0 {
 		result = pq.QueueOffsetMax + 1
-		var removedCnt int64= 0
-		for _,msg := range msgs {
-         prev:=pq.MsgTreeMap.remove(msg.QueueOffset)
-			if prev!=nil{
+		var removedCnt int64 = 0
+		for _, msg := range msgs {
+			prev := pq.MsgTreeMap.remove(int(msg.QueueOffset))
+			if prev != nil {
 				removedCnt--
 			}
 		}
-		atomic.AddInt64(&pq.MsgCount,removedCnt)
-		if len(pq.MsgTreeMap.innerMap)>0{
-			result=pq.MsgTreeMap.firstKey()
+		atomic.AddInt64(&pq.MsgCount, removedCnt)
+		if len(pq.MsgTreeMap.innerMap) > 0 {
+			result = int64(pq.MsgTreeMap.firstKey())
 		}
 	}
 

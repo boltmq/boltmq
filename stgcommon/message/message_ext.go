@@ -18,7 +18,7 @@ type MessageExt struct {
 	// 存储记录大小
 	StoreSize                 int
 	// 队列偏移量
-	QueueOffset               int
+	QueueOffset               int64
 	// 消息标志位 <PUT>
 	SysFlag                   int
 	// 消息在客户端创建时间戳 <PUT>
