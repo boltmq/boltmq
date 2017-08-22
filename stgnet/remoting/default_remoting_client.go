@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -73,7 +72,7 @@ func (rc *DefalutRemotingClient) handlerResponse(buffer []byte, addr string, con
 	}
 
 	// 解析报文
-	response, err := rc.decodeResponse(buf)
+	response, err := protocol.DecodeRemotingCommand(buf)
 	if err != nil {
 		rc.bootstrap.Fatalf("handlerResponse deconde failed: %v", err)
 		return
@@ -104,63 +103,6 @@ func (rc *DefalutRemotingClient) handlerResponse(buffer []byte, addr string, con
 	if responseFuture.done != nil {
 		responseFuture.done <- true
 	}
-}
-
-func (rc *DefalutRemotingClient) decodeResponse(buf *bytes.Buffer) (*protocol.RemotingCommand, error) {
-	var (
-		length       int32
-		headerLength int32
-		bodyLength   int32
-	)
-
-	// step 1 读取报文长度
-	if buf.Len() < 4 {
-		return nil, fmt.Errorf("response length %d < 4", buf.Len())
-	}
-
-	err := binary.Read(buf, binary.BigEndian, &length)
-	if err != nil {
-		rc.bootstrap.Fatalf("read response length failed: %v", err)
-		return nil, err
-	}
-
-	// step 2 读取报文头长度
-	if buf.Len() < 4 {
-		return nil, fmt.Errorf("response length %d < 4", buf.Len())
-	}
-
-	err = binary.Read(buf, binary.BigEndian, &headerLength)
-	if err != nil {
-		rc.bootstrap.Fatalf("read response header length failed: %v", err)
-		return nil, err
-	}
-
-	// step 3 读取报文头数据
-	if buf.Len() == 0 || buf.Len() < int(headerLength) {
-		return nil, fmt.Errorf("response header data invalid, header data length: %d", buf.Len())
-	}
-
-	header := make([]byte, headerLength)
-	_, err = buf.Read(header)
-	if err != nil {
-		rc.bootstrap.Fatalf("read response header data failed: %v", err)
-		return nil, err
-	}
-
-	// step 4 读取报文Body
-	bodyLength = length - 4 - headerLength
-	if buf.Len() < int(bodyLength) {
-		return nil, fmt.Errorf("response body length %d < %d", bodyLength, buf.Len())
-	}
-
-	body := make([]byte, bodyLength)
-	_, err = buf.Read(body)
-	if err != nil {
-		rc.bootstrap.Fatalf("read response body data failed: %v", err)
-		return nil, err
-	}
-
-	return protocol.DecodeRemotingCommand(header, body)
 }
 
 // Shutdown shutdown client
