@@ -47,7 +47,7 @@ func NewDefaultMQPushConsumerImpl(defaultMQPushConsumer *DefaultMQPushConsumer) 
 func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullRequest) {
 	processQueue := pullRequest.ProcessQueue
 	if processQueue.Dropped {
-		logger.Info("the pull request is droped.")
+		logger.Infof("the pull request is droped.")
 		return
 	}
 	pullRequest.ProcessQueue.LastPullTimestamp = time.Now().Unix() * 1000
@@ -132,7 +132,7 @@ func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
 			}
 		}
 		if pullResult.NextBeginOffset < prevRequestOffset || firstMsgOffset < prevRequestOffset {
-			logger.Warn(
+			logger.Warnf(
 				"[BUG] pull message result maybe data wrong, nextBeginOffset: %v firstMsgOffset: %v prevRequestOffset: %v", //
 				pullResult.NextBeginOffset, //
 				firstMsgOffset, //
@@ -254,7 +254,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Shutdown() {
 		pushConsumerImpl.PersistConsumerOffset()
 		pushConsumerImpl.mQClientFactory.UnregisterConsumer(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 		pushConsumerImpl.mQClientFactory.Shutdown()
-		logger.Info("the consumer [%v] shutdown OK", pushConsumerImpl.defaultMQPushConsumer.consumerGroup);
+		logger.Infof("the consumer [%v] shutdown OK", pushConsumerImpl.defaultMQPushConsumer.consumerGroup);
 		pushConsumerImpl.serviceState = stgcommon.SHUTDOWN_ALREADY
 		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.destroy()
 	case stgcommon.SHUTDOWN_ALREADY:
@@ -287,7 +287,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 	pushConsumerImpl.mQClientFactory.MQClientAPIImpl.consumerSendMessageBack(brokerAddr, msg, pushConsumerImpl.defaultMQPushConsumer.consumerGroup, delayLevel, 5000)
 	defer func() {
 		if e := recover(); e != nil {
-			logger.Warn("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+			logger.Warnf("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			newMsg := &message.Message{Topic:
 			stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
 			originMsgId := message.GetOriginMessageId(msg.Message)

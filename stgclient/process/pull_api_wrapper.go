@@ -104,6 +104,6 @@ func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue,pullResult
 	if consumer.FOUND==pullResult.PullStatus{
 
 	}
-	logger.Info(projectGroupPrefix)
+	logger.Infof(projectGroupPrefix)
 	return pullResult
 }

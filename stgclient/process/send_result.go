@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"strconv"
 )
 
 type SendResult struct {
@@ -26,4 +27,7 @@ func NewSendResult(sendStatus SendStatus, msgId string, messageQueue message.Mes
 		MsgId:msgId,
 		MessageQueue:messageQueue,
 		QueueOffset:queueOffset}
+}
+func (sendResult SendResult)ToString() string {
+	return "SendResult [sendStatus=" + sendResult.SendStatus.String() + ", msgId=" + sendResult.MsgId + ", messageQueue=" + sendResult.MessageQueue.ToString() + ", queueOffset=" + strconv.Itoa(int(sendResult.QueueOffset)) + "]"
 }

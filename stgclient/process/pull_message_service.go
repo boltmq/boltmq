@@ -41,7 +41,7 @@ func (service *PullMessageService) ExecutePullRequestLater(pullRequest *consumer
 }
 
 func (service *PullMessageService) run() {
-	logger.Info(" service started")
+	logger.Infof(" service started")
 	for !service.isStoped {
 		request := <-service.PullRequestQueue
 		service.pullMessage(request)

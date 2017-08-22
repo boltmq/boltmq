@@ -48,3 +48,7 @@ func (mq MessageQueue) hashCode() int {
 	}
 	return result
 }
+
+func (mq MessageQueue)ToString() string {
+	return "MessageQueue [topic=" + mq.Topic + ", brokerName=" + mq.BrokerName + ", queueId=" + strconv.Itoa(mq.QueueId) + "]"
+}

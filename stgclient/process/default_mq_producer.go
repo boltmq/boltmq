@@ -44,7 +44,7 @@ func (defaultMQProducer *DefaultMQProducer) SetNamesrvAddr(namesrvAddr string) {
 }
 
 func (defaultMQProducer *DefaultMQProducer) Start() {
-	defaultMQProducer.DefaultMQProducerImpl.Start()
+	defaultMQProducer.DefaultMQProducerImpl.start()
 
 }
 

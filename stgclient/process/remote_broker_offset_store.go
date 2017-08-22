@@ -56,7 +56,7 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 			//if mqs.Contains(mq) {
 			store.updateConsumeOffsetToBroker(mq.(*message.MessageQueue), v.(int64))
 			if times % 12 == 0 {
-				logger.Info("Group: %v ClientId: %v updateConsumeOffsetToBroker %v", //
+				logger.Infof("Group: %v ClientId: %v updateConsumeOffsetToBroker %v", //
 					store.groupName, //
 					store.mQClientFactory.ClientId, //
 					v.(int64))
@@ -68,7 +68,7 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 	if len(unusedMQ.ToSlice()) > 0 {
 		for mq := range unusedMQ.Iterator().C {
 			store.offsetTable.Remove(mq)
-			logger.Info("remove unused mq")
+			logger.Infof("remove unused mq")
 		}
 	}
 }
@@ -101,7 +101,7 @@ func (store *RemoteBrokerOffsetStore)updateConsumeOffsetToBroker(mq *message.Mes
 
 func (store *RemoteBrokerOffsetStore)RemoveOffset(mq *message.MessageQueue) {
 	store.offsetTable.Remove(mq)
-	logger.Info("remove unnecessary messageQueue offset. mq, offsetTableSize")
+	logger.Infof("remove unnecessary messageQueue offset. mq, offsetTableSize")
 }
 func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq *message.MessageQueue, rType store.ReadOffsetType) int64 {
 	switch rType {

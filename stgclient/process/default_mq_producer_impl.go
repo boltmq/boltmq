@@ -35,7 +35,7 @@ func NewDefaultMQProducerImpl(defaultMQProducer *DefaultMQProducer) *DefaultMQPr
 		ServiceState:stgcommon.CREATE_JUST}
 }
 
-func (defaultMQProducerImpl *DefaultMQProducerImpl) Start() error {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
 	defaultMQProducerImpl.StartFlag(true)
 	return nil
 }
@@ -151,13 +151,14 @@ sendCallback SendCallback, timeout int64) (SendResult,error)  {
 			}
 		}
 	}
-	return SendResult{},errors.New("systme error")
+	return SendResult{},errors.New("sendDefaultImpl error")
 }
 
 // 指定发送到某个queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.Message, mq *message.MessageQueue,
 communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult,error) {
 	sendResult := SendResult{}
+	var err error=nil
 	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		defaultMQProducerImpl.tryToFindTopicPublishInfo(mq.Topic)
@@ -194,8 +195,10 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 				message.ClearProperty(msg, message.PROPERTY_RECONSUME_TIME)
 			}
 		}
-		sendResult = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
+
+		sendResult,err = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
 		msg.Body = prevBody
+		return sendResult,err
 	} else {
 		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
 	}
