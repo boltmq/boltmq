@@ -18,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"sort"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -65,7 +66,7 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 	mqClientInstance.MQClientAPIImpl = NewMQClientAPIImpl(mqClientInstance.ClientRemotingProcessor)
 	if !strings.EqualFold(mqClientInstance.ClientConfig.NamesrvAddr, "") {
 		mqClientInstance.MQClientAPIImpl.UpdateNameServerAddressList(mqClientInstance.ClientConfig.NamesrvAddr)
-		logger.Info("user specified name server address: %v", mqClientInstance.ClientConfig.NamesrvAddr)
+		logger.Infof("user specified name server address: %v", mqClientInstance.ClientConfig.NamesrvAddr)
 	}
 	mqClientInstance.MQAdminImpl = NewMQAdminImpl(mqClientInstance)
 	mqClientInstance.PullMessageService = NewPullMessageService(mqClientInstance)
@@ -163,7 +164,7 @@ func (mqClientInstance *MQClientInstance) unregisterClient(producerGroup, consum
 			for brokerId, addr := range oneTable {
 				if !strings.EqualFold(addr, "") {
 					mqClientInstance.MQClientAPIImpl.unRegisterClient(addr, mqClientInstance.ClientId, producerGroup, consumerGroup, 3000)
-					logger.Info(
+					logger.Infof(
 						"unregister client[producer: %v Consumer: %v] from broker[%v %v %v] success", producerGroup, consumerGroup, brokerName, brokerId, addr);
 				}
 			}
@@ -191,7 +192,7 @@ func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
 func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 	heartbeatData := mqClientInstance.prepareHeartbeatData()
 	if len(heartbeatData.ProducerDataSet.ToSlice()) == 0  && len(heartbeatData.ConsumerDataSet.ToSlice()) == 0 {
-		logger.Warn("sending hearbeat, but no consumer and no producer");
+		logger.Warnf("sending hearbeat, but no consumer and no producer");
 		return
 	}
 	for mapIterator := mqClientInstance.BrokerAddrTable.Iterator(); mapIterator.HasNext(); {
@@ -204,7 +205,7 @@ func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 					continue
 				}
 				mqClientInstance.MQClientAPIImpl.sendHeartbeat(address, heartbeatData, 3000)
-				logger.Info("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
+				logger.Infof("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
 			}
 		}
 
@@ -252,7 +253,7 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	updateRouteTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval, 10)
 	go updateRouteTicker.Do(func(tm time.Time) {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
-		logger.Info("updateTopicRouteInfoFromNameServer every [ %v ] sencond",mqClientInstance.ClientConfig.PollNameServerInterval/1000)
+		logger.Infof("updateTopicRouteInfoFromNameServer every [ %v ] sencond", mqClientInstance.ClientConfig.PollNameServerInterval / 1000)
 	})
 	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
@@ -262,7 +263,7 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
 	})
 	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-	persistOffsetTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval, 1000*10)
+	persistOffsetTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval, 1000 * 10)
 	// 定时持久化consumer的offset
 	go persistOffsetTicker.Do(func(tm time.Time) {
 		mqClientInstance.persistAllConsumerOffset()
@@ -359,7 +360,7 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 					}
 				}
 			}
-			logger.Info("topic[%v] topicRouteTable.put TopicRouteData",topic)
+			logger.Infof("topic[%v] topicRouteTable.put TopicRouteData", topic)
 			mqClientInstance.TopicRouteTable.Put(topic, cloneTopicRouteData)
 		}
 	}
@@ -367,8 +368,21 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 }
 
 // topic路由信息是否改变
-func (mqClientInstance *MQClientInstance) topicRouteDataIsChange(oldData *route.TopicRouteData, newData *route.TopicRouteData) bool {
-	return true
+func (mqClientInstance *MQClientInstance) topicRouteDataIsChange(oldData *route.TopicRouteData, nowData *route.TopicRouteData) bool {
+	if oldData == nil || nowData == nil {
+		return true
+	}
+	old := oldData.CloneTopicRouteData()
+	now := nowData.CloneTopicRouteData()
+	var oldBDatas route.BrokerDatas = old.BrokerDatas
+	var nowBDatas route.BrokerDatas = now.BrokerDatas
+	var oldQDatas route.QueueDatas = old.QueueDatas
+	var nowQDatas route.QueueDatas = now.QueueDatas
+	sort.Sort(oldBDatas)
+	sort.Sort(nowBDatas)
+	sort.Sort(oldQDatas)
+	sort.Sort(nowQDatas)
+	return !old.Equals(now)
 }
 
 // 是否需要更新topic路由信息
@@ -468,12 +482,12 @@ func (mqClientInstance *MQClientInstance) cleanOfflineBroker() {
 		for cBId, cAddr := range cloneAddrTable {
 			if !mqClientInstance.isBrokerAddrExistInTopicRouteTable(cAddr) {
 				delete(cloneAddrTable, cBId)
-				logger.Info("the broker addr[%v %v] is offline, remove it", brokerName, cAddr)
+				logger.Infof("the broker addr[%v %v] is offline, remove it", brokerName, cAddr)
 			}
 		}
 		if len(cloneAddrTable) == 0 {
 			ite.Remove()
-			logger.Info("the broker[%v] name's host is offline, remove it", brokerName)
+			logger.Infof("the broker[%v] name's host is offline, remove it", brokerName)
 		} else {
 			updatedTable.Put(brokerName, cloneAddrTable)
 		}

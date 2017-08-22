@@ -82,9 +82,9 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 			}
 			changed := ext.updateProcessQueueTableInRebalance(topic, allocateResultSet)
 			if changed {
-				logger.Info(
+				logger.Infof(
 					"rebalanced allocate source. allocateMessageQueueStrategyName, group, topic, mqAllSize, cidAllSize, mqAll, cidAll")
-				logger.Info(
+				logger.Infof(
 					"rebalanced result changed. allocateMessageQueueStrategyName, group, topic, ConsumerId, rebalanceSize, rebalanceMqSet")
 				mqSet := set.NewSet()
 				for _, mq := range mqAll {
@@ -119,7 +119,7 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 				if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {
 					ite.Remove()
 					changed = true
-					logger.Info("doRebalance, remove unnecessary")
+					logger.Infof("doRebalance, remove unnecessary")
 				}
 			} else if pq.IsPullExpired() {
 				switch ext.RebalanceImpl.ConsumeType() {
@@ -154,9 +154,9 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
 				ext.ProcessQueueTable.Put(mq, pullRequest.ProcessQueue)
-				logger.Info("doRebalance, add a new mq")
+				logger.Infof("doRebalance, add a new mq")
 			} else {
-				logger.Warn("doRebalance, add new mq failed")
+				logger.Warnf("doRebalance, add new mq failed")
 			}
 		}
 	}

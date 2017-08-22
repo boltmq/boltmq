@@ -7,7 +7,7 @@ import (
 )
 
 
-// 平均负载
+// AllocateMessageQueueAveragely：平均负载
 // Author: yintongqiang
 // Since:  2017/8/8
 
@@ -36,7 +36,7 @@ func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, cur
 	}
 	result := []*message.MessageQueue{}
 	if !contains {
-		logger.Warn("[BUG] ConsumerGroup: %v The consumerId: %v not in cidAll: %v", consumerGroup, currentCID, cidAll)
+		logger.Warnf("[BUG] ConsumerGroup: %v The consumerId: %v not in cidAll: %v", consumerGroup, currentCID, cidAll)
 		return result
 	}
 	mod := len(mqAll) % len(cidAll)
@@ -51,7 +51,7 @@ func (strategy AllocateMessageQueueAveragely) Allocate(consumerGroup string, cur
 		}
 	}
 	var startIndex int
-	if mod > 0&& index < mod {
+	if mod > 0 && index < mod {
 		startIndex = index * averageSize
 	} else {
 		startIndex = index * averageSize + mod

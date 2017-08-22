@@ -48,7 +48,7 @@ func (pullImpl*DefaultMQPullConsumerImpl)shutdown() {
 		pullImpl.PersistConsumerOffset()
 		pullImpl.mQClientFactory.UnregisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup)
 		pullImpl.mQClientFactory.Shutdown()
-		logger.Info("the consumer [%v] shutdown OK", pullImpl.defaultMQPullConsumer.consumerGroup)
+		logger.Infof("the consumer [%v] shutdown OK", pullImpl.defaultMQPullConsumer.consumerGroup)
 		pullImpl.serviceState=stgcommon.SHUTDOWN_ALREADY
 	case stgcommon.SHUTDOWN_ALREADY:
 	default:
@@ -95,7 +95,7 @@ func (pullImpl*DefaultMQPullConsumerImpl)Start() {
 		pullImpl.mQClientFactory.RegisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup, pullImpl)
 		// 启动核心
 		pullImpl.mQClientFactory.Start()
-		logger.Info("the consumer [%v] start OK", pullImpl.defaultMQPullConsumer.consumerGroup);
+		logger.Infof("the consumer [%v] start OK", pullImpl.defaultMQPullConsumer.consumerGroup);
 		pullImpl.serviceState = stgcommon.RUNNING
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:

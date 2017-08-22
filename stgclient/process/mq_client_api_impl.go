@@ -12,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"errors"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -69,12 +70,12 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 	}
 	requestHeader:=header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
 	request:=protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC,&requestHeader)
-	logger.Info(request.RemotingVersionKey)
+	logger.Infof(request.RemotingVersionKey)
 	//todo 调用远程生成
 	reponse:=protocol.CreateResponseCommand()
 	switch reponse.Code {
 	case cprotocol.TOPIC_NOT_EXIST:
-		logger.Warn("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
+		logger.Warnf("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
 	case cprotocol.SUCCESS:
 		body:=reponse.Body
 		if len(body)>0{
@@ -85,6 +86,15 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 }
 
 func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
+
+	topicWithProjectGroup:=topic
+	if !strings.EqualFold(impl.ProjectGroupPrefix,""){
+		topicWithProjectGroup=stgclient.BuildWithProjectGroup(topic,impl.ProjectGroupPrefix)
+	}
+	requestHeader:=&header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
+	request:=protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC,requestHeader)
+	logger.Info(request.RemotingVersionKey)
+    //todo response处理
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName:"broker-master2", ReadQueueNums:8, WriteQueueNums:8, Perm:6, TopicSynFlag:0})
 	mapBrokerAddrs := make(map[int]string)
@@ -94,7 +104,8 @@ func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeou
 	return routeData
 }
 
-func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader, timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) SendResult {
+func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,
+timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) (SendResult,error) {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 		requestHeader.ProducerGroup = stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
@@ -112,22 +123,22 @@ func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg *mes
 		break
 	}
 
-	return SendResult{}
+	return SendResult{},errors.New("SendMessage error")
 }
 
-func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) SendResult {
+func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (SendResult,error) {
 	//todo 调用远程生成response
 	response := protocol.CreateResponseCommand()
 	return impl.processSendResponse(brokerName, msg, response)
 }
 
 // 处理发送消息响应
-func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) SendResult {
+func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (SendResult,error) {
 	switch response.Code {
 	case cprotocol.FLUSH_DISK_TIMEOUT:
 	case cprotocol.FLUSH_SLAVE_TIMEOUT:
 	case cprotocol.SLAVE_NOT_AVAILABLE:
-		logger.Warn("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
+		logger.Warnf("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
 	case cprotocol.SUCCESS:
 		sendStatus := SEND_OK
 		switch response.Code {
@@ -146,9 +157,9 @@ func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.
 		messageQueue := message.MessageQueue{Topic:msg.Topic, BrokerName:brokerName, QueueId:responseHeader.QueueId}
 		sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
 		sendResult.TransactionId = responseHeader.TransactionId
-		return sendResult
+		return sendResult,nil
 	}
-	return SendResult{}
+	return SendResult{},errors.New("processSendResponse error")
 }
 
 func (impl *MQClientAPIImpl)UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {
@@ -165,7 +176,7 @@ func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup 
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
 	requestHeader := header.GetConsumerListByGroupRequestHeader{ConsumerGroup:consumerGroupWithProjectGroup}
-	logger.Info(requestHeader.ConsumerGroup)
+	logger.Infof(requestHeader.ConsumerGroup)
 	// todo 创建request
 	return []string{}
 }
@@ -175,7 +186,7 @@ func (impl *MQClientAPIImpl)GetMaxOffset(addr string, topic string, queueId int,
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	logger.Info(topicWithProjectGroup)
+	logger.Infof(topicWithProjectGroup)
 	// todo 创建request
 	return 10
 }
@@ -217,7 +228,7 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string,msg message.Mess
 		OriginMsgId:msg.MsgId,
 	}
 	request:=protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK,&requestHeader)
-	logger.Info(request.RemotingVersionKey)
+	logger.Infof(request.RemotingVersionKey)
 	//todo remotingclient invokeSync
 }
 
@@ -235,7 +246,7 @@ func (impl *MQClientAPIImpl)unRegisterClient(addr,clientID,producerGroup,consume
 	}
 	requestHeader:=header.UnregisterClientRequestHeader{ClientID:clientID,ProducerGroup:producerGroupWithProjectGroup,ConsumerGroup:consumerGroupWithProjectGroup}
     request:=protocol.CreateRequestCommand(cprotocol.UNREGISTER_CLIENT,&requestHeader)
-	logger.Info(request.RemotingVersionKey)
+	logger.Infof(request.RemotingVersionKey)
 	//todo invokeSync
 }
 
@@ -268,6 +279,6 @@ func (impl *MQClientAPIImpl)CreateTopic(addr,defaultTopic string,topicConfig stg
 		TopicFilterType:topicConfig.TopicFilterType.String(),TopicSysFlag:topicConfig.TopicSysFlag,Order:topicConfig.Order,
 	    Perm:topicConfig.Perm}
 	request:=protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC,&requestHeader)
-	logger.Info(request.RemotingVersionKey)
+	logger.Infof(request.RemotingVersionKey)
 	//todo remoting invoke
 }

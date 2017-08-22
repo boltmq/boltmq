@@ -34,7 +34,7 @@ func (consume *consumeRequest)run() {
 		<-consume.consumeExecutor
 	}()
 	if consume.processQueue.Dropped {
-		logger.Info("the message queue not be able to consume, because it's dropped")
+		logger.Infof("the message queue not be able to consume, because it's dropped")
 		return
 	}
 	var listener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
