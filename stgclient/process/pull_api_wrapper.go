@@ -17,7 +17,7 @@ import (
 // Since:  2017/8/11
 
 type PullAPIWrapper struct {
-	pullFromWhichNodeTable *sync.Map
+	pullFromWhichNodeTable *sync.Map // *MessageQueue, int/* brokerId */
 	mQClientFactory        *MQClientInstance
 	consumerGroup          string
 	unitMode               bool
@@ -92,7 +92,8 @@ func (api *PullAPIWrapper) updatePullFromWhichNode(mq *message.MessageQueue, bro
 		api.pullFromWhichNodeTable.Put(mq, brokerId)
 
 	} else {
-		api.pullFromWhichNodeTable.Put(mq, brokerId)
+		suggest=brokerId
+		api.pullFromWhichNodeTable.Put(mq, suggest)
 	}
 }
 
