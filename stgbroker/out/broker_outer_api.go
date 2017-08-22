@@ -21,3 +21,11 @@ func NewBrokerOuterAPI( /** NettyClientConfig nettyClientConfig */ ) *BrokerOute
 	// TODO brokerController.remotingClient=
 	return brokerController
 }
+
+func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
+
+}
+
+func (self *BrokerOuterAPI) FetchNameServerAddr() {
+
+}
