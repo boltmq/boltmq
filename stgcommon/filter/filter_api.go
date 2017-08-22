@@ -14,22 +14,24 @@ type FilterAPI struct {
 
 }
 
-func BuildSubscriptionData(consumerGroup string, topic string, subString string) heartbeat.SubscriptionData {
-	subscriptionData := heartbeat.SubscriptionData{Topic:topic, SubString:subString,TagsSet:set.NewSet(),CodeSet:set.NewSet()}
-	if strings.EqualFold(subString,"")|| strings.EqualFold(subString,"*"){
-		subscriptionData.SubString="*"
-	}else{
-      tags:=strings.Split(subString,"||")
-		for _,tag:=range tags{
-			trimTag:=strings.TrimSpace(tag)
-			if !strings.EqualFold(trimTag,""){
-              subscriptionData.TagsSet.Add(trimTag)
-			 //todo 处理string hashcode问题
-              subscriptionData.CodeSet.Add(trimTag)
+func BuildSubscriptionData(consumerGroup string, topic string, subString string) (*heartbeat.SubscriptionData, error) {
+	subscriptionData := &heartbeat.SubscriptionData{Topic:topic, SubString:subString, TagsSet:set.NewSet(), CodeSet:set.NewSet()}
+	if strings.EqualFold(subString, "") || strings.EqualFold(subString, "*") {
+		subscriptionData.SubString = "*"
+	} else {
+		tags := strings.Split(subString, "||")
+		for _, tag := range tags {
+			trimTag := strings.TrimSpace(tag)
+			if !strings.EqualFold(trimTag, "") {
+				subscriptionData.TagsSet.Add(trimTag)
+				//todo 处理string hashcode问题
+				subscriptionData.CodeSet.Add(trimTag)
+			} else {
+				return subscriptionData, errors.New("subString split error")
 			}
 		}
 	}
-	return subscriptionData
+	return subscriptionData, nil
 }
 
 func BuildSubscriptionData4Ponit(consumerGroup string, topic string, subString string) (subscription *heartbeat.SubscriptionData, err error) {

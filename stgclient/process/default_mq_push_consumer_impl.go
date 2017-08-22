@@ -74,8 +74,8 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenException)
 		return
 	}
-	var pullCallBack consumer.PullCallback = &PullCallBackImpl{PullRequest:pullRequest, DefaultMQPushConsumerImpl:impl,
-		SubscriptionData:subData.(heartbeat.SubscriptionData), beginTimestamp:time.Now().Unix() * 1000}
+	var pullCallBack PullCallback = &PullCallBackImpl{PullRequest:pullRequest, DefaultMQPushConsumerImpl:impl,
+		SubscriptionData:subData.(*heartbeat.SubscriptionData), beginTimestamp:time.Now().Unix() * 1000}
 	commitOffsetEnable := false
 	var commitOffsetValue int64 = 0
 	if impl.defaultMQPushConsumer.messageModel == heartbeat.CLUSTERING {
@@ -94,7 +94,7 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 	sysFlag := sysflag.BuildSysFlag(commitOffsetEnable, true, !strings.EqualFold(subExpression, ""), classFilter)
 	impl.pullAPIWrapper.PullKernelImpl(pullRequest.MessageQueue,
 		subExpression,
-		subData.(heartbeat.SubscriptionData).SubVersion,
+		subData.(*heartbeat.SubscriptionData).SubVersion,
 		pullRequest.NextOffset,
 		impl.defaultMQPushConsumer.pullBatchSize,
 		sysFlag,
@@ -107,13 +107,14 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 
 type PullCallBackImpl struct {
 	beginTimestamp int64
-	heartbeat.SubscriptionData
+	*heartbeat.SubscriptionData
 	*consumer.PullRequest
 	*DefaultMQPushConsumerImpl
 }
 
-func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
-	pullResult = backImpl.pullAPIWrapper.processPullResult(backImpl.MessageQueue, pullResult, backImpl.SubscriptionData)
+func (backImpl PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
+	backImpl.pullAPIWrapper.processPullResult(backImpl.MessageQueue, pullResultExt, backImpl.SubscriptionData)
+	pullResult := pullResultExt.PullResult
 	switch pullResult.PullStatus {
 	case consumer.FOUND:
 		prevRequestOffset := backImpl.NextOffset
@@ -123,7 +124,7 @@ func (backImpl PullCallBackImpl) OnSuccess(pullResult *consumer.PullResult) {
 		if len(pullResult.MsgFoundList) == 0 {
 			backImpl.DefaultMQPushConsumerImpl.ExecutePullRequestImmediately(backImpl.PullRequest)
 		} else {
-			firstMsgOffset=pullResult.MsgFoundList[0].QueueOffset
+			firstMsgOffset = pullResult.MsgFoundList[0].QueueOffset
 			dispathToConsume := backImpl.ProcessQueue.PutMessage(pullResult.MsgFoundList)
 			backImpl.consumeMessageService.SubmitConsumeRequest(pullResult.MsgFoundList, backImpl.ProcessQueue, backImpl.PullRequest.MessageQueue, dispathToConsume)
 			if backImpl.DefaultMQPushConsumerImpl.defaultMQPushConsumer.pullInterval > 0 {
@@ -170,7 +171,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) correctTagsOffset(pullRequest
 
 // 订阅topic和tag
 func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression string) {
-	subscriptionData := filter.BuildSubscriptionData(impl.defaultMQPushConsumer.consumerGroup, topic, subExpression)
+	subscriptionData, _ := filter.BuildSubscriptionData(impl.defaultMQPushConsumer.consumerGroup, topic, subExpression)
 	var pushImpl *RebalancePushImpl = impl.rebalanceImpl.(*RebalancePushImpl)
 	pushImpl.rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
 	if impl.mQClientFactory != nil {
@@ -297,12 +298,12 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 			} else {
 				message.SetOriginMessageId(newMsg, originMsgId)
 			}
-			newMsg.Flag=msg.Flag
-            message.SetPropertiesMap(newMsg,msg.Properties)
-			message.PutProperty(newMsg,message.PROPERTY_RETRY_TOPIC,msg.Topic)
-			reTimes:=msg.ReconsumeTimes+1
-			message.SetReconsumeTime(newMsg,strconv.Itoa(reTimes))
-			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL,strconv.Itoa(3 + reTimes))
+			newMsg.Flag = msg.Flag
+			message.SetPropertiesMap(newMsg, msg.Properties)
+			message.PutProperty(newMsg, message.PROPERTY_RETRY_TOPIC, msg.Topic)
+			reTimes := msg.ReconsumeTimes + 1
+			message.SetReconsumeTime(newMsg, strconv.Itoa(reTimes))
+			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL, strconv.Itoa(3 + reTimes))
 			pushConsumerImpl.mQClientFactory.DefaultMQProducer.Send(newMsg)
 		}
 	}()
@@ -313,7 +314,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
 	sub := pushConsumerImpl.defaultMQPushConsumer.subscription
 	if len(sub) > 0 {
 		for topic, subString := range sub {
-			subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, topic, subString)
+			subscriptionData, _ := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, topic, subString)
 			pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(topic, subscriptionData)
 		}
 	}
@@ -324,7 +325,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
 	case heartbeat.BROADCASTING:
 	case heartbeat.CLUSTERING:
 		retryTopic := stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
-		subscriptionData := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, retryTopic, "*")
+		subscriptionData, _ := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, retryTopic, "*")
 		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(retryTopic, subscriptionData)
 	}
 

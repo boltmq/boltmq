@@ -9,7 +9,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"strconv"
 )
 // PullAPIWrapper: pull包装类
 // Author: yintongqiang
@@ -43,7 +44,7 @@ commitOffset int64,
 brokerSuspendMaxTimeMillis int,
 timeoutMillis int,
 communicationMode CommunicationMode,
-pullCallback consumer.PullCallback) consumer.PullResult {
+pullCallback PullCallback) *PullResultExt {
 	findBrokerResult := api.mQClientFactory.findBrokerAddressInSubscribe(mq.BrokerName, api.recalculatePullFromWhichNode(mq), false)
 	if strings.EqualFold(findBrokerResult.brokerAddr, "") {
 		api.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
@@ -67,13 +68,13 @@ pullCallback consumer.PullCallback) consumer.PullResult {
 			SubVersion:subVersion}
 		brokerAddr := findBrokerResult.brokerAddr
 		//todo filter处理
-		pullResult := api.mQClientFactory.MQClientAPIImpl.PullMessage(brokerAddr, requestHeader, timeoutMillis, communicationMode, pullCallback)
-		return pullResult
+		pullResultExt := api.mQClientFactory.MQClientAPIImpl.PullMessage(brokerAddr, requestHeader, timeoutMillis, communicationMode, pullCallback)
+		return pullResultExt
 
 	} else {
 		panic("The broker[" + mq.BrokerName + "] not exist")
 	}
-	return consumer.PullResult{}
+	return nil
 }
 
 func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq *message.MessageQueue) int {
@@ -85,25 +86,41 @@ func (api *PullAPIWrapper) recalculatePullFromWhichNode(mq *message.MessageQueue
 	return stgcommon.MASTER_ID
 }
 
-func (api *PullAPIWrapper) updatePullFromWhichNode(mq *message.MessageQueue,brokerId int) {
+func (api *PullAPIWrapper) updatePullFromWhichNode(mq *message.MessageQueue, brokerId int) {
 	suggest, _ := api.pullFromWhichNodeTable.Get(mq)
 	if suggest == nil {
-		api.pullFromWhichNodeTable.Put(mq,brokerId)
+		api.pullFromWhichNodeTable.Put(mq, brokerId)
 
-	}else{
-		//todo 考虑value是否应该为指针类型
-		api.pullFromWhichNodeTable.Put(mq,brokerId)
+	} else {
+		api.pullFromWhichNodeTable.Put(mq, brokerId)
 	}
 }
 
-func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue,pullResult *consumer.PullResult,subscriptionData heartbeat.SubscriptionData) *consumer.PullResult {
-	projectGroupPrefix:=api.mQClientFactory.MQClientAPIImpl.ProjectGroupPrefix
-	var pullResultExt =PullResultExt{PullResult:pullResult}
-     api.updatePullFromWhichNode(mq,int(pullResultExt.suggestWhichBrokerId))
-	// todo 有消息编解码操作
-	if consumer.FOUND==pullResult.PullStatus{
-
+func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue, pullResultExt *PullResultExt, subscriptionData *heartbeat.SubscriptionData) *PullResultExt {
+	projectGroupPrefix := api.mQClientFactory.MQClientAPIImpl.ProjectGroupPrefix
+	pullResult := pullResultExt.PullResult
+	api.updatePullFromWhichNode(mq, int(pullResultExt.suggestWhichBrokerId))
+	if consumer.FOUND == pullResult.PullStatus {
+		// todo 有消息编解码操作
+		var msgListFilterAgain []message.MessageExt
+		// todo 类过滤默认都不执行
+		if len(subscriptionData.TagsSet.ToSlice())!=0 && !subscriptionData.ClassFilterMode{
+		}
+        if !strings.EqualFold(projectGroupPrefix,""){
+			subscriptionData.Topic=stgclient.ClearProjectGroup(subscriptionData.Topic,projectGroupPrefix)
+			mq.Topic=stgclient.ClearProjectGroup(mq.Topic,projectGroupPrefix)
+		  for _,msgExt:=range msgListFilterAgain{
+			  msgExt.Topic=stgclient.ClearProjectGroup(msgExt.Topic,projectGroupPrefix)
+		      message.PutProperty(&msgExt.Message,message.PROPERTY_MIN_OFFSET,strconv.FormatInt(pullResult.MinOffset,10))
+		      message.PutProperty(&msgExt.Message,message.PROPERTY_MAX_OFFSET,strconv.FormatInt(pullResult.MaxOffset,10))
+		  }
+		}else{
+			for _,msgExt:=range msgListFilterAgain{
+				message.PutProperty(&msgExt.Message,message.PROPERTY_MIN_OFFSET,strconv.FormatInt(pullResult.MinOffset,10))
+				message.PutProperty(&msgExt.Message,message.PROPERTY_MAX_OFFSET,strconv.FormatInt(pullResult.MaxOffset,10))
+			}
+		}
+		pullResultExt.MsgFoundList=msgListFilterAgain
 	}
-	logger.Infof(projectGroupPrefix)
-	return pullResult
+	return pullResultExt
 }
