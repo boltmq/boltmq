@@ -87,6 +87,7 @@ func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.Remot
 		rc.bootstrap.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
 		return nil, err
 	}
+	response.sendRequestOK = true
 
 	select {
 	case <-response.done:
@@ -96,13 +97,70 @@ func (rc *DefalutRemotingClient) invokeSync(addr string, request *protocol.Remot
 	}
 }
 
-/*
+// InvokeAsync 异步调用
 func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
+	// 创建连接，如果连接存在，则不会创建。
+	err := rc.bootstrap.ConnectJoinAddr(addr)
+	if err != nil {
+		return err
+	}
+
+	// rpc hook before
+	if rc.rpcHook != nil {
+		rc.rpcHook.DoBeforeRequest(addr, request)
+	}
+
+	return rc.invokeAsync(addr, request, timeoutMillis, invokeCallback)
 }
 
+func (rc *DefalutRemotingClient) invokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
+	response := newResponseFuture(request.Opaque, timeoutMillis)
+	response.invokeCallback = invokeCallback
+	header := request.EncodeHeader()
+
+	rc.responseTableLock.Lock()
+	rc.responseTable[request.Opaque] = response
+	rc.responseTableLock.Unlock()
+
+	err := rc.sendRequest(header, request.Body, addr)
+	if err != nil {
+		rc.bootstrap.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
+		return err
+	}
+	response.sendRequestOK = true
+
+	return nil
+}
+
+// InvokeSync 单向发送消息
 func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.RemotingCommand, timeoutMillis int64) error {
+	// 创建连接，如果连接存在，则不会创建。
+	err := rc.bootstrap.ConnectJoinAddr(addr)
+	if err != nil {
+		return err
+	}
+
+	// rpc hook before
+	if rc.rpcHook != nil {
+		rc.rpcHook.DoBeforeRequest(addr, request)
+	}
+
+	return rc.invokeOneway(addr, request, timeoutMillis)
 }
 
+func (rc *DefalutRemotingClient) invokeOneway(addr string, request *protocol.RemotingCommand, timeoutMillis int64) error {
+	header := request.EncodeHeader()
+
+	err := rc.sendRequest(header, request.Body, addr)
+	if err != nil {
+		rc.bootstrap.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
+		return err
+	}
+
+	return nil
+}
+
+/*
 func (rc *DefalutRemotingClient) RegisterProcessor(requestCode int, processor RequestProcessor) {}
 
 */
