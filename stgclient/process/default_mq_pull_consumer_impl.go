@@ -49,7 +49,7 @@ func (pullImpl*DefaultMQPullConsumerImpl)shutdown() {
 		pullImpl.mQClientFactory.UnregisterConsumer(pullImpl.defaultMQPullConsumer.consumerGroup)
 		pullImpl.mQClientFactory.Shutdown()
 		logger.Infof("the consumer [%v] shutdown OK", pullImpl.defaultMQPullConsumer.consumerGroup)
-		pullImpl.serviceState=stgcommon.SHUTDOWN_ALREADY
+		pullImpl.serviceState = stgcommon.SHUTDOWN_ALREADY
 	case stgcommon.SHUTDOWN_ALREADY:
 	default:
 
@@ -129,7 +129,7 @@ func (pullImpl *DefaultMQPullConsumerImpl)Subscriptions() set.Set {
 	subSet := set.NewSet()
 	for topic := range pullImpl.defaultMQPullConsumer.registerTopics.Iterator().C {
 		if topic != nil {
-			subData := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, topic.(string), "*")
+			subData, _ := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, topic.(string), "*")
 			subSet.Add(subData)
 		}
 	}
@@ -212,22 +212,22 @@ func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, 
 	}
 	pullImpl.subscriptionAutomatically(mq.Topic)
 	sysFlag := sysflag.BuildSysFlag(false, block, true, false)
-	subData := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, mq.Topic, subExpression)
+	subData, _ := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, mq.Topic, subExpression)
 	var timeoutMillis int
 	if block {
 		timeoutMillis = pullImpl.defaultMQPullConsumer.consumerTimeoutMillisWhenSuspend
 	} else {
 		timeoutMillis = timeout
 	}
-	pullResult := pullImpl.pullAPIWrapper.PullKernelImpl(mq, subData.SubString, 0, offset, maxNums, sysFlag, 0,
+	pullResultExt := pullImpl.pullAPIWrapper.PullKernelImpl(mq, subData.SubString, 0, offset, maxNums, sysFlag, 0,
 		pullImpl.defaultMQPullConsumer.brokerSuspendMaxTimeMillis, timeoutMillis, SYNC, nil)
-	return pullImpl.pullAPIWrapper.processPullResult(mq, &pullResult, subData)
+	return pullImpl.pullAPIWrapper.processPullResult(mq, pullResultExt, subData).PullResult
 }
 
 func (pullImpl*DefaultMQPullConsumerImpl)subscriptionAutomatically(topic string) {
 	tv, _ := pullImpl.RebalanceImpl.(*RebalancePullImpl).SubscriptionInner.Get(topic)
 	if tv != nil {
-		subData := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, topic, "*")
+		subData, _ := filter.BuildSubscriptionData(pullImpl.defaultMQPullConsumer.consumerGroup, topic, "*")
 		pullImpl.RebalanceImpl.(*RebalancePullImpl).SubscriptionInner.PutIfAbsent(topic, subData)
 	}
 }

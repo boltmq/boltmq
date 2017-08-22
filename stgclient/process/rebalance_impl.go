@@ -31,7 +31,7 @@ type RebalanceImplExt  struct {
 	RebalanceImpl                RebalanceImpl
 	ProcessQueueTable            *sync.Map //*MessageQueue, *ProcessQueue
 	TopicSubscribeInfoTable      *sync.Map // topic  Set<*MessageQueue>
-	SubscriptionInner            *sync.Map //topic, SubscriptionData
+	SubscriptionInner            *sync.Map //topic, *SubscriptionData
 	ConsumerGroup                string
 	MessageModel                 heartbeat.MessageModel
 	AllocateMessageQueueStrategy rebalance.AllocateMessageQueueStrategy

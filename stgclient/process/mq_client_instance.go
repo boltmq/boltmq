@@ -282,7 +282,7 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServer() {
 			_, v, _ := ite.Next()
 			subscriptions := v.(consumer.MQConsumerInner).Subscriptions()
 			for data := range subscriptions.Iterator().C {
-				subscriptionData := data.(heartbeat.SubscriptionData)
+				subscriptionData := data.(*heartbeat.SubscriptionData)
 				mqClientInstance.UpdateTopicRouteInfoFromNameServerByTopic(subscriptionData.Topic)
 			}
 
