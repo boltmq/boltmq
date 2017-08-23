@@ -3,9 +3,11 @@ package remoting
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -19,6 +21,7 @@ type BaseRemotingClient struct {
 	defaultRequestProcessor RequestProcessor
 	processorTable          map[int]RequestProcessor // 注册的处理器
 	processorTableLock      sync.RWMutex
+	isRunning               bool
 }
 
 // RegisterProcessor register porcessor
@@ -38,13 +41,20 @@ func (rc *BaseRemotingClient) processReceived(buffer []byte, addr string, conn n
 		buf = bytes.NewBuffer([]byte{})
 	)
 
-	// copy buffer
+	// 安全考虑进行拷贝数据，之后使用队列缓存
 	_, err := buf.Write(buffer)
 	if err != nil {
 		logger.Fatalf("processReceived write buffer failed: %v", err)
 		return
 	}
 
+	// 开启gorouting处理响应
+	rc.startGoRoutine(func() {
+		rc.processMessageReceived(addr, conn, buf)
+	})
+}
+
+func (rc *BaseRemotingClient) processMessageReceived(addr string, conn net.Conn, buf *bytes.Buffer) {
 	// 解析报文
 	remotingCommand, err := protocol.DecodeRemotingCommand(buf)
 	if err != nil {
@@ -52,10 +62,6 @@ func (rc *BaseRemotingClient) processReceived(buffer []byte, addr string, conn n
 		return
 	}
 
-	rc.processMessageReceived(addr, conn, remotingCommand)
-}
-
-func (rc *BaseRemotingClient) processMessageReceived(addr string, conn net.Conn, remotingCommand *protocol.RemotingCommand) {
 	if remotingCommand == nil {
 		return
 	}
@@ -129,7 +135,7 @@ func (rc *BaseRemotingClient) processResponseCommand(addr string, conn net.Conn,
 		if response.Code == cmprotocol.NOTIFY_CONSUMER_IDS_CHANGED {
 			// TODO:
 		} else {
-			logger.Fatalf("processReceived not found responseFuture: %d %v", response.Opaque, response)
+			logger.Fatalf("processResponseCommand not found responseFuture: %d %v", response.Opaque, response)
 		}
 		return
 	}
@@ -145,6 +151,16 @@ func (rc *BaseRemotingClient) processResponseCommand(addr string, conn net.Conn,
 
 	if responseFuture.done != nil {
 		responseFuture.done <- true
+	}
+}
+
+func (rc *BaseRemotingClient) sendRequest(request *protocol.RemotingCommand, addr string, conn net.Conn) error {
+	return rc.send(request, addr, conn)
+}
+
+func (rc *BaseRemotingClient) startGoRoutine(fn func()) {
+	if rc.isRunning {
+		go fn()
 	}
 }
 
@@ -181,4 +197,71 @@ func (rc *BaseRemotingClient) send(remotingCommand *protocol.RemotingCommand, ad
 	}
 
 	return nil
+}
+
+func (rc *BaseRemotingClient) invokeSync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
+	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
+	responseFuture.done = make(chan bool)
+
+	rc.responseTableLock.Lock()
+	rc.responseTable[request.Opaque] = responseFuture
+	rc.responseTableLock.Unlock()
+
+	err := rc.sendRequest(request, addr, conn)
+	if err != nil {
+		logger.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
+		return nil, err
+	}
+	responseFuture.sendRequestOK = true
+
+	select {
+	case <-responseFuture.done:
+		return responseFuture.responseCommand, nil
+	case <-time.After(time.Duration(timeoutMillis) * time.Millisecond):
+		return nil, errors.New("invoke sync timeout")
+	}
+}
+
+func (rc *BaseRemotingClient) invokeAsync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
+	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
+	responseFuture.invokeCallback = invokeCallback
+
+	rc.responseTableLock.Lock()
+	rc.responseTable[request.Opaque] = responseFuture
+	rc.responseTableLock.Unlock()
+
+	err := rc.sendRequest(request, addr, conn)
+	if err != nil {
+		logger.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
+		return err
+	}
+	responseFuture.sendRequestOK = true
+
+	return nil
+}
+
+func (rc *BaseRemotingClient) invokeOneway(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
+	err := rc.sendRequest(request, addr, conn)
+	if err != nil {
+		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", addr, err)
+		return err
+	}
+
+	return nil
+}
+
+// 扫描发送请求响应报文是否超时
+func (rc *BaseRemotingClient) scanResponseTable() {
+	rc.responseTableLock.Lock()
+	for seq, responseFuture := range rc.responseTable {
+		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
+			delete(rc.responseTable, seq)
+
+			if responseFuture.invokeCallback != nil {
+				responseFuture.invokeCallback(responseFuture)
+				logger.Fatalf("remove time out request %v", responseFuture)
+			}
+		}
+	}
+	rc.responseTableLock.Unlock()
 }
