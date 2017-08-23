@@ -67,6 +67,6 @@ func (pullConsumer*DefaultMQPullConsumer)FetchSubscribeMessageQueues(topic strin
 	return pullConsumer.defaultMQPullConsumerImpl.fetchSubscribeMessageQueues(topic)
 }
 
-func (pullConsumer*DefaultMQPullConsumer)Pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+func (pullConsumer*DefaultMQPullConsumer)Pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) (*consumer.PullResult,error) {
 	return pullConsumer.defaultMQPullConsumerImpl.pull(mq,subExpression,offset,maxNums)
 }

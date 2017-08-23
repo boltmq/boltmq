@@ -262,7 +262,10 @@ func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.Remot
 	if err != nil {
 		logger.Errorf("pullMessageSync error=%v", err.Error())
 	}
-	return impl.processPullResponse(response)
+	if response!=nil {
+		return impl.processPullResponse(response)
+	}
+	return nil
 }
 
 func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
