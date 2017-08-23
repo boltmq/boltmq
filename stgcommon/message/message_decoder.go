@@ -56,10 +56,27 @@ func DecodeMessageId(msgId string) (*MessageId, error) {
 	return messageId, nil
 }
 
-// DecodeMessageExt 解析消息体，返回MessageExt
-func DecodeMessageExt(buffer []byte, isReadBody, isCompressBody bool) (*MessageExt, error) {
+// DecodesMessageExt 解析消息体，返回多个消息
+func DecodesMessageExt(buffer []byte, isReadBody bool) ([]*MessageExt, error) {
 	var (
-		buf              = bytes.NewBuffer(buffer)
+		buf     = bytes.NewBuffer(buffer)
+		msgExts []*MessageExt
+	)
+
+	for buf.Len() > 0 {
+		msgExt, err := DecodeMessageExt(buf, isReadBody, true)
+		if err != nil {
+			return nil, err
+		}
+		msgExts = append(msgExts, msgExt)
+	}
+
+	return msgExts, nil
+}
+
+// DecodeMessageExt 解析消息体，返回MessageExt
+func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*MessageExt, error) {
+	var (
 		bornHost         = make([]byte, 4)
 		bornPort         int32
 		storeHost        = make([]byte, 4)
