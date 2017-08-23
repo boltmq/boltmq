@@ -5,10 +5,10 @@ import set "github.com/deckarep/golang-set"
 // Author: yintongqiang
 // Since:  2017/8/8
 type ConsumerData struct {
-	GroupName           string
-	ConsumeType         ConsumeType
-	MessageModel        MessageModel
-	ConsumeFromWhere    ConsumeFromWhere
-	SubscriptionDataSet set.Set
-	UnitMode            bool
+	GroupName           string           `json:"groupName"`
+	ConsumeType         ConsumeType      `json:"consumeType"`
+	MessageModel        MessageModel     `json:"messageModel"`
+	ConsumeFromWhere    ConsumeFromWhere `json:"consumeFromWhere"`
+	SubscriptionDataSet set.Set          `json:"subscriptionDataSet"`
+	UnitMode            bool             `json:"unitMode"`
 }

@@ -4,5 +4,5 @@ package heartbeat
 // Since:  2017/8/9
 
 type ProducerData struct {
-	GroupName string
+	GroupName string `json:"groupName"`
 }
