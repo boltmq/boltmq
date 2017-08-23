@@ -6,4 +6,8 @@ import (
 
 func TestNewClientConfig(t *testing.T) {
 	start()
+	select {
+
+	}
+
 }

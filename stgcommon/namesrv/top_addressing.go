@@ -18,3 +18,12 @@ func NewTopAddressing(wsAddr string) *TopAddressing {
 		wsAddr: wsAddr,
 	}
 }
+
+func (self *TopAddressing) FetchNSAddr() string {
+	return fetchNSAddr(true, 3000)
+}
+
+func fetchNSAddr(verbose bool, timeoutMills int64) string {
+
+	return ""
+}

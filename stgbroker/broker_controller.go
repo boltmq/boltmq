@@ -93,7 +93,7 @@ func (self *BrokerController) Initialize() bool {
 	})
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
-	scanUnsubscribedTopicTicker := timeutil.NewTicker(60*1000, 1000*10)
+	scanUnsubscribedTopicTicker := timeutil.NewTicker(5*1000, 1000*10)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
 		self.ConsumerOffsetManager.ScanUnsubscribedTopic()
 	})
@@ -104,8 +104,8 @@ func (self *BrokerController) Initialize() bool {
 	} else {
 		// 更新
 		if self.BrokerConfig.FetchNamesrvAddrByAddressServer {
-			scanUnsubscribedTopicTicker := timeutil.NewTicker(60*1000*2, 1000*10)
-			go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
+			FetchNameServerAddrTicker := timeutil.NewTicker(60*1000*2, 1000*10)
+			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
 				self.BrokerOuterAPI.FetchNameServerAddr()
 			})
 		}

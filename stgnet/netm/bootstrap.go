@@ -117,29 +117,36 @@ func (bootstrap *Bootstrap) Connect(host string, port int) error {
 
 // Connect 使用指定地址、端口的连接字符串连接
 func (bootstrap *Bootstrap) ConnectJoinAddr(addr string) error {
+	_, err := bootstrap.ConnectJoinAddrAndReturn(addr)
+	return err
+}
 
+// Connect 使用指定地址、端口的连接字符串进行连接并返回连接
+func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (net.Conn, error) {
 	bootstrap.connTableMu.RLock()
-	_, ok := bootstrap.connTable[addr]
+	conn, ok := bootstrap.connTable[addr]
 	bootstrap.connTableMu.RUnlock()
-	if !ok {
-		conn, e := bootstrap.connect(addr)
-		if e != nil {
-			bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
-			return e
-		}
-
-		bootstrap.connTableMu.Lock()
-		bootstrap.connTable[addr] = conn
-		bootstrap.connTableMu.Unlock()
-		bootstrap.Noticef("Connect listening on port: %s", addr)
-		bootstrap.Noticef("client connections on %s", conn.LocalAddr().String())
-
-		bootstrap.startGoRoutine(func() {
-			bootstrap.handleConn(addr, conn)
-		})
+	if ok {
+		return conn, nil
 	}
 
-	return nil
+	nconn, e := bootstrap.connect(addr)
+	if e != nil {
+		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
+		return nil, e
+	}
+
+	bootstrap.connTableMu.Lock()
+	bootstrap.connTable[addr] = nconn
+	bootstrap.connTableMu.Unlock()
+	bootstrap.Noticef("Connect listening on port: %s", addr)
+	bootstrap.Noticef("client connections on %s", nconn.LocalAddr().String())
+
+	bootstrap.startGoRoutine(func() {
+		bootstrap.handleConn(addr, nconn)
+	})
+
+	return nconn, nil
 }
 
 func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {

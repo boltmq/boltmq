@@ -12,6 +12,7 @@ type RemotingClient interface {
 	RegisterProcessor(requestCode int, processor RequestProcessor)
 	RegisterRPCHook(rpcHook RPCHook)
 	GetNameServerAddressList() []string
+	UpdateNameServerAddressList(addrs []string)
 	Start()
 	Shutdown()
 }
