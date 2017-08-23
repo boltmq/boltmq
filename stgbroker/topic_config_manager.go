@@ -37,30 +37,30 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	return topicConfigManager
 }
 
-func (self *TopicConfigManager) init() {
+func (tcm *TopicConfigManager) init() {
 
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.SELF_TEST_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
-		self.SystemTopicList.Add(topicConfig)
+		tcm.SystemTopicList = mapset.NewSet()
+		tcm.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	// DEFAULT_TOPIC
 	{
-		if self.BrokerController.BrokerConfig.AutoCreateTopicEnable {
+		if tcm.BrokerController.BrokerConfig.AutoCreateTopicEnable {
 			topicName := stgcommon.DEFAULT_TOPIC
 			topicConfig := stgcommon.NewTopicConfigByName(topicName)
-			self.SystemTopicList = mapset.NewSet()
-			self.SystemTopicList.Add(topicConfig)
-			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
+			tcm.SystemTopicList = mapset.NewSet()
+			tcm.SystemTopicList.Add(topicConfig)
+			topicConfig.ReadQueueNums = tcm.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.WriteQueueNums = 1
 			topicConfig.Perm = constant.PERM_INHERIT | constant.PERM_READ | constant.PERM_WRITE
-			self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+			tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 		}
 
 	}
@@ -69,61 +69,61 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.BENCHMARK_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
-		self.SystemTopicList.Add(topicConfig)
+		tcm.SystemTopicList = mapset.NewSet()
+		tcm.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
-		self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	//集群名字
 	{
-		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
+		topicName := tcm.BrokerController.BrokerConfig.BrokerClusterName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
-		self.SystemTopicList.Add(topicConfig)
+		tcm.SystemTopicList = mapset.NewSet()
+		tcm.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
-		if self.BrokerController.BrokerConfig.ClusterTopicEnable {
+		if tcm.BrokerController.BrokerConfig.ClusterTopicEnable {
 			perm |= constant.PERM_READ | constant.PERM_WRITE
 		}
 		topicConfig.Perm = perm
-		self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	// 服务器名字
 	{
-		topicName := self.BrokerController.BrokerConfig.BrokerName
+		topicName := tcm.BrokerController.BrokerConfig.BrokerName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
-		self.SystemTopicList.Add(topicConfig)
+		tcm.SystemTopicList = mapset.NewSet()
+		tcm.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
-		if self.BrokerController.BrokerConfig.BrokerTopicEnable {
+		if tcm.BrokerController.BrokerConfig.BrokerTopicEnable {
 			perm |= constant.PERM_READ | constant.PERM_WRITE
 		}
 		topicConfig.Perm = perm
 		topicConfig.WriteQueueNums = 1
 		topicConfig.ReadQueueNums = 1
-		self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.OFFSET_MOVED_EVENT
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
-		self.SystemTopicList.Add(topicConfig)
+		tcm.SystemTopicList = mapset.NewSet()
+		tcm.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 }
 
-func (self *TopicConfigManager) isSystemTopic(topic string) bool {
-	return self.SystemTopicList.Contains(topic)
+func (tcm *TopicConfigManager) isSystemTopic(topic string) bool {
+	return tcm.SystemTopicList.Contains(topic)
 }
 
-func (self *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
-	if topic == stgcommon.DEFAULT_TOPIC || topic == self.BrokerController.BrokerConfig.BrokerClusterName {
+func (tcm *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
+	if topic == stgcommon.DEFAULT_TOPIC || topic == tcm.BrokerController.BrokerConfig.BrokerClusterName {
 		return false
 	}
 	return true
@@ -132,9 +132,9 @@ func (self *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
 // selectTopicConfig 根据topic查找
 // Author gaoyanlei
 // Since 2017/8/11
-func (self *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicConfig {
+func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicConfig {
 
-	topicConfig, err := self.TopicConfigTable.Get(topic)
+	topicConfig, err := tcm.TopicConfigTable.Get(topic)
 	if err != nil {
 		return nil
 	}
@@ -149,11 +149,11 @@ func (self *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.Topic
 // createTopicInSendMessageMethod 创建topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
+func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
 	remoteAddress string, clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
-	self.lockTopicConfigTable.Lock()
-	defer self.lockTopicConfigTable.Lock()
-	tc, err := self.TopicConfigTable.Get(topic)
+	tcm.lockTopicConfigTable.Lock()
+	defer tcm.lockTopicConfigTable.Lock()
+	tc, err := tcm.TopicConfigTable.Get(topic)
 	// 是否新创建topic
 	createNew := false
 
@@ -164,7 +164,7 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 		}
 
 	}
-	autoCreateTopicEnable := self.BrokerController.BrokerConfig.AutoCreateTopicEnable
+	autoCreateTopicEnable := tcm.BrokerController.BrokerConfig.AutoCreateTopicEnable
 
 	// 如果通过topic获取不到topic或者服务器不允许自动创建 则直接返回
 	if tc == nil && !autoCreateTopicEnable {
@@ -172,7 +172,7 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 	}
 
 	// 如果没有获取到topic，服务允许自动创建
-	value, err := self.TopicConfigTable.Get(defaultTopic)
+	value, err := tcm.TopicConfigTable.Get(defaultTopic)
 	if value != nil && err == nil {
 		if defaultTopicConfig, ok := value.(*stgcommon.TopicConfig); ok {
 			if constant.IsInherited(defaultTopicConfig.Perm) {
@@ -202,8 +202,8 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 	}
 
 	if topicConfig != nil {
-		self.TopicConfigTable.Put(topic, topicConfig)
-		self.DataVersion.NextVersion()
+		tcm.TopicConfigTable.Put(topic, topicConfig)
+		tcm.DataVersion.NextVersion()
 		createNew = true
 		// TODO this.persist();
 	}
@@ -218,11 +218,11 @@ func (self *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTop
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
 // Author gaoyanlei
 // Since 2017/8/11
-func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm,
+func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm,
 	clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
-	self.lockTopicConfigTable.Lock()
-	defer self.lockTopicConfigTable.Lock()
-	tc, err := self.TopicConfigTable.Get(topic)
+	tcm.lockTopicConfigTable.Lock()
+	defer tcm.lockTopicConfigTable.Lock()
+	tc, err := tcm.TopicConfigTable.Get(topic)
 	// 是否新创建topic
 	createNew := false
 
@@ -238,10 +238,10 @@ func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 	topicConfig.TopicSysFlag = topicSysFlag
 	topicConfig.Perm = perm
 
-	self.TopicConfigTable.Put(topic, topicConfig)
-	self.DataVersion.NextVersion()
+	tcm.TopicConfigTable.Put(topic, topicConfig)
+	tcm.DataVersion.NextVersion()
 	createNew = true
-	// TODO this.persist();
+	tcm.configManagerExt.Persist()
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
@@ -253,20 +253,20 @@ func (self *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 // updateTopicConfig 更新topic信息
 // Author gaoyanlei
 // Since 2017/8/10
-func (self *TopicConfigManager) updateTopicConfig(topicConfig *stgcommon.TopicConfig, err error) {
-	value, err := self.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+func (tcm *TopicConfigManager) updateTopicConfig(topicConfig *stgcommon.TopicConfig, err error) {
+	value, err := tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if value != nil && err == nil {
 		fmt.Sprint("update topic config, old:%s,new:%s", value, topicConfig)
 	}
 	fmt.Sprint("create new topic :%s", topicConfig)
-	self.DataVersion.NextVersion()
+	tcm.DataVersion.NextVersion()
 	// TODO this.persist();
 }
 
 // updateOrderTopicConfig 更新顺序topic
 // Author gaoyanlei
 // Since 2017/8/11
-func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.KVTable) {
+func (tcm *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.KVTable) {
 	if orderKVTableFromNs.Table != nil {
 		isChange := false
 		orderTopics := mapset.NewSet()
@@ -275,17 +275,17 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.K
 		}
 		// set遍历
 		for val := range orderTopics.Iter() {
-			value, _ := self.TopicConfigTable.Get(val)
+			value, _ := tcm.TopicConfigTable.Get(val)
 			if topicConfig, ok := value.(*stgcommon.TopicConfig); ok {
 				topicConfig.Order = true
 				isChange = true
 			}
 		}
 
-		for it := self.TopicConfigTable.Iterator(); it.HasNext(); {
+		for it := tcm.TopicConfigTable.Iterator(); it.HasNext(); {
 			topic, _, _ := it.Next()
 			if !orderTopics.Contains(topic) {
-				value, _ := self.TopicConfigTable.Get(topic)
+				value, _ := tcm.TopicConfigTable.Get(topic)
 				if topicConfig, ok := value.(*stgcommon.TopicConfig); ok {
 					topicConfig.Order = true
 					isChange = true
@@ -294,7 +294,7 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.K
 		}
 
 		if isChange {
-			self.DataVersion.NextVersion()
+			tcm.DataVersion.NextVersion()
 			// TODO  this.persist();
 		}
 	}
@@ -303,8 +303,8 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.K
 // isOrderTopic 判断是否是顺序topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (self *TopicConfigManager) IsOrderTopic(topic string) bool {
-	value, err := self.TopicConfigTable.Get(topic)
+func (tcm *TopicConfigManager) IsOrderTopic(topic string) bool {
+	value, err := tcm.TopicConfigTable.Get(topic)
 	if value == nil && err != nil {
 		return false
 	} else {
@@ -318,11 +318,11 @@ func (self *TopicConfigManager) IsOrderTopic(topic string) bool {
 // deleteTopicConfig 删除topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (self *TopicConfigManager) deleteTopicConfig(topic string) {
-	value, err := self.TopicConfigTable.Remove(topic)
+func (tcm *TopicConfigManager) deleteTopicConfig(topic string) {
+	value, err := tcm.TopicConfigTable.Remove(topic)
 	if value != nil && err == nil {
 		fmt.Sprintf("delete topic config OK")
-		self.DataVersion.NextVersion()
+		tcm.DataVersion.NextVersion()
 		// TODO 	this.persist()
 	} else {
 		fmt.Sprintf("delete topic config failed, topic: %s not exist", topic)
@@ -332,39 +332,39 @@ func (self *TopicConfigManager) deleteTopicConfig(topic string) {
 // buildTopicConfigSerializeWrapper 创建TopicConfigSerializeWrapper
 // Author gaoyanlei
 // Since 2017/8/11
-func (self *TopicConfigManager) buildTopicConfigSerializeWrapper() {
+func (tcm *TopicConfigManager) buildTopicConfigSerializeWrapper() {
 	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
-	topicConfigSerializeWrapper.DataVersion = self.DataVersion
-	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
+	topicConfigSerializeWrapper.DataVersion = tcm.DataVersion
+	topicConfigSerializeWrapper.TopicConfigTable = tcm.TopicConfigTable
 }
 
-func (self *TopicConfigManager) Load() bool {
-	return self.configManagerExt.Load()
+func (tcm *TopicConfigManager) Load() bool {
+	return tcm.configManagerExt.Load()
 }
 
-func (self *TopicConfigManager) Encode(prettyFormat bool) string {
+func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
 	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
-	topicConfigSerializeWrapper.TopicConfigTable = self.TopicConfigTable
-	topicConfigSerializeWrapper.DataVersion = self.DataVersion
+	topicConfigSerializeWrapper.TopicConfigTable = tcm.TopicConfigTable
+	topicConfigSerializeWrapper.DataVersion = tcm.DataVersion
 	if b, err := json.Marshal(topicConfigSerializeWrapper); err == nil {
 		return string(b)
 	}
 	return ""
 }
 
-func (self *TopicConfigManager) Decode(jsonString []byte) {
+func (tcm *TopicConfigManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
 		topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
 		json.Unmarshal(jsonString, topicConfigSerializeWrapper)
 		for _, v := range topicConfigSerializeWrapper.TopicConfigs {
 			if b, err := json.Marshal(v); err == nil {
-				self.TopicConfigTable.Put(v.TopicName, b)
+				tcm.TopicConfigTable.Put(v.TopicName, b)
 			}
 		}
 	}
 }
 
-func (self *TopicConfigManager) ConfigFilePath() string {
+func (tcm *TopicConfigManager) ConfigFilePath() string {
 	user, _ := user.Current()
 	return GetTopicConfigPath(user.HomeDir)
 }

@@ -10,10 +10,12 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"math/rand"
+	"net"
 	"strings"
 )
 
-const DLQ_NUMS_PER_GROUP  = 1
+const DLQ_NUMS_PER_GROUP = 1
+
 // AbstractSendMessageProcessor 发送处理类
 // Author gaoyanlei
 // Since 2017/8/14
@@ -32,7 +34,7 @@ func NewAbstractSendMessageProcessor(brokerController *BrokerController) *Abstra
 	}
 }
 
-func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request protocol.RemotingCommand) *header.SendMessageRequestHeader {
+func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *header.SendMessageRequestHeader {
 	var requestHeaderV2 *header.SendMessageRequestHeaderV2
 	var requestHeader *header.SendMessageRequestHeader
 	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
@@ -60,8 +62,7 @@ func (asmp *AbstractSendMessageProcessor) buildMsgContext( // TODO ChannelHandle
 // msgCheck 校验msg
 // Author gaoyanlei
 // Since 2017/8/16
-func (asmp *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContext ctx
-	requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
+func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if constant.IsWriteable(asmp.BrokerController.BrokerConfig.BrokerPermission) &&
 		asmp.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
@@ -104,7 +105,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContex
 	}
 
 	queueIdInt := requestHeader.QueueId
-	idValid := 0
+	var idValid int32
 	if topicConfig.WriteQueueNums > topicConfig.ReadQueueNums {
 		idValid = topicConfig.WriteQueueNums
 	} else {
@@ -115,7 +116,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContex
 		errorInfo := fmt.Sprintf("request queueId[%d] is illagal, %s producer: %s", //
 			queueIdInt,             //
 			topicConfig.ToString()) //
-		// TODO RemotingHelper.parseChannelRemoteAddr(ctx.channel())
+		conn.LocalAddr().String()
 		response.Remark = errorInfo
 		response.Code = commonprotocol.SYSTEM_ERROR
 		return response
@@ -124,7 +125,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck( // TODO ChannelHandlerContex
 }
 
 func DoResponse( //TODO ChannelHandlerContext ctx,
-	request protocol.RemotingCommand, response *protocol.RemotingCommand) {
+	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
 		// TODO ctx.writeAndFlush(response);
 	}
