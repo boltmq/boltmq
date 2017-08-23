@@ -16,6 +16,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	namesrvUtil"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	"strconv"
+	"fmt"
+	"time"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -85,7 +88,7 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
 	logger.Infof(request.Remark)
 	//todo 调用远程生成
-	reponse := protocol.CreateResponseCommand()
+	reponse := protocol.CreateResponseCommand(1, "")
 	switch reponse.Code {
 	case cprotocol.TOPIC_NOT_EXIST:
 		logger.Warnf("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
@@ -141,7 +144,7 @@ timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallb
 
 func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (SendResult, error) {
 	//todo 调用远程生成response
-	response := protocol.CreateResponseCommand()
+	response := protocol.CreateResponseCommand(1, "")
 	return impl.processSendResponse(brokerName, msg, response)
 }
 
@@ -225,7 +228,7 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallbac
 
 func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.RemotingCommand, timeoutMillis int) *PullResultExt {
 	// todo invokeSync
-	response := protocol.CreateResponseCommand()
+	response := protocol.CreateResponseCommand(1, "")
 	return impl.processPullResponse(response)
 }
 
@@ -252,7 +255,10 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.Mes
 }
 
 func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback PullCallback) {
-	//todo
+	invokeCallback := func(responseFuture *remoting.ResponseFuture) {
+    response:=responseFuture.
+	}
+	impl.DefalutRemotingClient.InvokeAsync(addr, request, int64(timeoutMillis), invokeCallback)
 }
 
 func (impl *MQClientAPIImpl)unRegisterClient(addr, clientID, producerGroup, consumerGroup string, timeoutMillis int) {
