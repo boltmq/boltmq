@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -11,7 +12,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
-	"fmt"
 )
 
 type SendMessageProcessor struct {
@@ -19,20 +19,20 @@ type SendMessageProcessor struct {
 	BrokerController *BrokerController
 }
 
-func (self *SendMessageProcessor) ProcessRequest(request protocol.RemotingCommand, // TODO ChannelHandlerContext ctx
+func (smp *SendMessageProcessor) ProcessRequest(request protocol.RemotingCommand, // TODO ChannelHandlerContext ctx
 ) *protocol.RemotingCommand {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return self.consumerSendMsgBack(request)
+		return smp.consumerSendMsgBack(request)
 	}
 
-	requestHeader := self.parseRequestHeader(request)
+	requestHeader := smp.parseRequestHeader(request)
 	if requestHeader == nil {
 		return nil
 	}
-	mqtraceContext := self.buildMsgContext(requestHeader)
+	mqtraceContext := smp.buildMsgContext(requestHeader)
 	// TODO  this.executeSendMessageHookBefore(ctx, request, mqtraceContext)
-	response := self.sendMessage(request, mqtraceContext, requestHeader)
+	response := smp.sendMessage(request, mqtraceContext, requestHeader)
 	// TODO this.executeSendMessageHookAfter(response, mqtraceContext);
 	return response
 }
@@ -40,7 +40,7 @@ func (self *SendMessageProcessor) ProcessRequest(request protocol.RemotingComman
 // consumerSendMsgBack 客户端返回未消费消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerContext ctx
+func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerContext ctx
 	request protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
@@ -60,16 +60,16 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	}
 
 	// 确保订阅组存在
-	subscriptionGroupConfig := self.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(requestHeader.Group)
+	subscriptionGroupConfig := smp.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(requestHeader.Group)
 	if subscriptionGroupConfig == nil {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist"
 	}
 
 	// 检查Broker权限
-	if constant.IsWriteable(self.BrokerController.BrokerConfig.BrokerPermission) {
+	if constant.IsWriteable(smp.BrokerController.BrokerConfig.BrokerPermission) {
 		response.Code = commonprotocol.NO_PERMISSION
-		response.Remark = "the broker[" + self.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
+		response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
 		return response
 	}
 
@@ -83,7 +83,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	newTopic := stgcommon.GetRetryTopic(requestHeader.Group)
 	queueIdInt := 0
 	if queueIdInt < 0 {
-		num := (self.Rand.Int() % 99999999) % subscriptionGroupConfig.RetryQueueNums
+		num := (smp.Rand.Int() % 99999999) % subscriptionGroupConfig.RetryQueueNums
 		if num > 0 {
 			queueIdInt = num
 		} else {
@@ -98,7 +98,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	}
 
 	// 检查topic是否存在
-	topicConfig, err := self.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
+	topicConfig, err := smp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
 		constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
 	if topicConfig == nil || err != nil {
 		response.Code = commonprotocol.SYSTEM_ERROR
@@ -115,7 +115,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 
 	// 查询消息，这里如果堆积消息过多，会访问磁盘
 	// 另外如果频繁调用，是否会引起gc问题，需要关注
-	// TODO  msgExt :=self.BrokerController.getMessageStore().lookMessageByOffset(requestHeader.getOffset());
+	// TODO  msgExt :=smp.BrokerController.getMessageStore().lookMessageByOffset(requestHeader.getOffset());
 	msgExt := new(message.MessageExt)
 	if nil == msgExt {
 		response.Code = commonprotocol.SYSTEM_ERROR
@@ -137,7 +137,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	if msgExt.ReconsumeTimes >= subscriptionGroupConfig.RetryMaxTimes || delayLevel < 0 {
 		newTopic = stgcommon.GetDLQTopic(requestHeader.Group)
 		if queueIdInt < 0 {
-			num := (self.Rand.Int() % 99999999) % DLQ_NUMS_PER_GROUP
+			num := (smp.Rand.Int() % 99999999) % DLQ_NUMS_PER_GROUP
 			if num > 0 {
 				queueIdInt = num
 			} else {
@@ -146,7 +146,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 		}
 
 		topicConfig, err =
-			self.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(
+			smp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(
 				newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
 		if nil == topicConfig {
 			response.Code = commonprotocol.SYSTEM_ERROR
@@ -158,13 +158,13 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 			delayLevel = 3 + msgExt.ReconsumeTimes
 		}
 
-		msgExt.SetDelayTimeLevel(delayLevel)
+		msgExt.SetDelayTimeLevel(int(delayLevel))
 	}
 
 	msgInner := new(stgstorelog.MessageExtBrokerInner)
 	msgInner.Topic = newTopic
 	msgInner.Body = msgExt.Body
-	msgInner.Flag = (msgExt.Flag)
+	msgInner.Flag = msgExt.Flag
 	message.SetPropertiesMap(&msgInner.Message, msgExt.Properties)
 	// TODO msgInner.PropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
 	// TODO msgInner.TagsCode(MessageExtBrokerInner.tagsString2tagsCode(null, msgExt.getTags()));
@@ -173,7 +173,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	msgInner.SysFlag = msgExt.SysFlag
 	msgInner.BornTimestamp = msgExt.BornTimestamp
 	msgInner.BornHost = msgExt.BornHost
-	msgInner.StoreHost = self.StoreHost
+	msgInner.StoreHost = smp.StoreHost
 	msgInner.ReconsumeTimes = msgExt.ReconsumeTimes + 1
 
 	// 保存源生消息的 msgId
@@ -196,7 +196,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 				backTopic = correctTopic
 			}
 			fmt.Println(backTopic)
-			// TODO self.BrokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
+			// TODO smp.BrokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
 
 			response.Code = commonprotocol.SUCCESS
 			response.Remark = ""
@@ -217,13 +217,13 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContext ctx,
+func (smp *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContext ctx,
 	request protocol.RemotingCommand, mqtraceContext mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	response := &protocol.RemotingCommand{}
 	responseHeader := new(header.SendMessageResponseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
-	self.msgCheck(requestHeader, response)
+	smp.msgCheck(requestHeader, response)
 	if response.Code != -1 {
 		return response
 	}
@@ -232,10 +232,10 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 
 	queueIdInt := requestHeader.QueueId
 
-	topicConfig := self.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
+	topicConfig := smp.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
 
 	if queueIdInt < 0 {
-		num := (self.Rand.Int() % 99999999) % topicConfig.WriteQueueNums
+		num := (smp.Rand.Int() % 99999999) % topicConfig.WriteQueueNums
 		if num > 0 {
 			queueIdInt = int32(num)
 		} else {
@@ -258,18 +258,18 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
 	// TODO 	msgInner.BornHost =requestHeader.BornTimestamp
-	msgInner.StoreHost = self.StoreHost
+	msgInner.StoreHost = smp.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
 	} else {
 		msgInner.ReconsumeTimes = requestHeader.ReconsumeTimes
 	}
 
-	if self.BrokerController.BrokerConfig.RejectTransactionMessage {
+	if smp.BrokerController.BrokerConfig.RejectTransactionMessage {
 		traFlag := msgInner.GetProperty(message.PROPERTY_TRANSACTION_PREPARED)
 		if len(traFlag) > 0 {
 			response.Code = commonprotocol.NO_PERMISSION
-			response.Remark = "the broker[" + self.BrokerController.BrokerConfig.BrokerIP1 + "] sending transaction message is forbidden"
+			response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending transaction message is forbidden"
 			return response
 		}
 	}
@@ -303,7 +303,7 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 			break
 		case stgstorelog.SERVICE_NOT_AVAILABLE:
 			response.Code = commonprotocol.SERVICE_NOT_AVAILABLE
-			response.Remark = "service not available now, maybe disk full, " + self.diskUtil() + ", maybe your broker machine memory too small."
+			response.Remark = "service not available now, maybe disk full, " + smp.diskUtil() + ", maybe your broker machine memory too small."
 		case stgstorelog.PUTMESSAGE_UNKNOWN_ERROR:
 			response.Code = commonprotocol.SYSTEM_ERROR
 			response.Remark = "UNKNOWN_ERROR"
@@ -324,7 +324,7 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 
 			DoResponse( // TODO  ctx
 				request, response)
-			if self.BrokerController.BrokerConfig.LongPollingEnable {
+			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				// TODO 	  this.brokerController.getPullRequestHoldService().notifyMessageArriving(
 				// TODO requestHeader.getTopic(), queueIdInt,
 				// TODO 	putMessageResult.getAppendMessageResult().getLogicsOffset() + 1);
@@ -340,7 +340,7 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 	return response
 }
 
-func (self *SendMessageProcessor) diskUtil() string {
+func (smp *SendMessageProcessor) diskUtil() string {
 	// TODO
 	return ""
 }
