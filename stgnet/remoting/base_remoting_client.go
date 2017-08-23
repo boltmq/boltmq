@@ -32,6 +32,11 @@ func (rc *BaseRemotingClient) RegisterProcessor(requestCode int, processor Reque
 	rc.processorTableLock.Unlock()
 }
 
+// RegisterDefaultProcessor register default porcessor
+func (rc *BaseRemotingClient) RegisterDefaultProcessor(processor RequestProcessor) {
+	rc.defaultRequestProcessor = processor
+}
+
 // RegisterRPCHook 注册rpc hook
 func (rc *BaseRemotingClient) RegisterRPCHook(rpcHook RPCHook) {
 	rc.rpcHook = rpcHook
