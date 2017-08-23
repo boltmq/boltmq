@@ -21,6 +21,7 @@ type BaseRemotingClient struct {
 	defaultRequestProcessor RequestProcessor
 	processorTable          map[int]RequestProcessor // 注册的处理器
 	processorTableLock      sync.RWMutex
+	timeoutTimer            *time.Timer
 	isRunning               bool
 }
 
@@ -29,6 +30,11 @@ func (rc *BaseRemotingClient) RegisterProcessor(requestCode int, processor Reque
 	rc.processorTableLock.Lock()
 	rc.processorTable[requestCode] = processor
 	rc.processorTableLock.Unlock()
+}
+
+// RegisterDefaultProcessor register default porcessor
+func (rc *BaseRemotingClient) RegisterDefaultProcessor(processor RequestProcessor) {
+	rc.defaultRequestProcessor = processor
 }
 
 // RegisterRPCHook 注册rpc hook
@@ -264,4 +270,16 @@ func (rc *BaseRemotingClient) scanResponseTable() {
 		}
 	}
 	rc.responseTableLock.Unlock()
+}
+
+// 定时扫描响应
+func (rc *BaseRemotingClient) startScheduledTask() {
+	rc.startGoRoutine(func() {
+		rc.timeoutTimer = time.NewTimer(3 * time.Second)
+		for {
+			<-rc.timeoutTimer.C
+			rc.scanResponseTable()
+			rc.timeoutTimer.Reset(time.Second)
+		}
+	})
 }
