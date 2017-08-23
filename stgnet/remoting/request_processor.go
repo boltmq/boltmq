@@ -1,8 +1,12 @@
 package remoting
 
-import "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+import (
+	"net"
+
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+)
 
 // RequestProcessor request processor
 type RequestProcessor interface {
-	ProcessRequest(request *protocol.RemotingCommand) (*protocol.RemotingCommand, error)
+	ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error)
 }
