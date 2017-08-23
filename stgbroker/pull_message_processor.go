@@ -44,7 +44,7 @@ func (self *PullMessageProcessor) ProcessRequest(request protocol.RemotingComman
 
 func (self *PullMessageProcessor) processRequest(request protocol.RemotingCommand, // TODO ChannelHandlerContext ctx
 	brokerAllowSuspend bool) *protocol.RemotingCommand {
-	response := protocol.CreateResponseCommand()
+	response := &protocol.RemotingCommand{}
 	responseHeader := &header.PullMessageResponseHeader{}
 	requestHeader := &header.PullMessageRequestHeader{}
 	response.Opaque = (request.Opaque)

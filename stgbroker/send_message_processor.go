@@ -42,7 +42,7 @@ func (self *SendMessageProcessor) ProcessRequest(request protocol.RemotingComman
 // Since 2017/8/17
 func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerContext ctx
 	request protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
-	response := protocol.CreateResponseCommand()
+	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
 
 	// 消息轨迹：记录消费失败的消息
@@ -219,7 +219,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 // Since 2017/8/17
 func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContext ctx,
 	request protocol.RemotingCommand, mqtraceContext mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
-	response := protocol.CreateResponseCommand()
+	response := &protocol.RemotingCommand{}
 	responseHeader := new(header.SendMessageResponseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
