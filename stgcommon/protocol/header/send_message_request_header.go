@@ -7,11 +7,11 @@ type SendMessageRequestHeader struct {
 	ProducerGroup         string
 	Topic                 string
 	DefaultTopic          string
-	DefaultTopicQueueNums int
+	DefaultTopicQueueNums int32
 	QueueId               int32
 	SysFlag               int32
 	BornTimestamp         int64
-	Flag                  int
+	Flag                  int32
 	Properties            string
 	ReconsumeTimes        int32
 	UnitMode              bool

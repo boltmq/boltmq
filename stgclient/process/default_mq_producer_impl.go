@@ -177,11 +177,11 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 			ProducerGroup:defaultMQProducerImpl.DefaultMQProducer.ProducerGroup,
 			Topic:msg.Topic,
 			DefaultTopic:defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey,
-			DefaultTopicQueueNums:defaultMQProducerImpl.DefaultMQProducer.DefaultTopicQueueNums,
-			QueueId:mq.QueueId,
-			SysFlag:sysFlag,
+			DefaultTopicQueueNums:int32(defaultMQProducerImpl.DefaultMQProducer.DefaultTopicQueueNums),
+			QueueId:int32(mq.QueueId),
+			SysFlag:int32(sysFlag),
 			BornTimestamp:time.Now().Unix() * 1000,
-			Flag:msg.Flag,
+			Flag:int32(msg.Flag),
 			Properties:message.MessageProperties2String(msg.Properties),
 			ReconsumeTimes:0,
 			UnitMode:defaultMQProducerImpl.DefaultMQProducer.UnitMode,
@@ -191,7 +191,7 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 			reconsumeTimes := message.GetReconsumeTime(msg)
 			if !strings.EqualFold(reconsumeTimes, "") {
 				times, _ := strconv.Atoi(reconsumeTimes)
-				requestHeader.ReconsumeTimes = times
+				requestHeader.ReconsumeTimes = int32(times)
 				message.ClearProperty(msg, message.PROPERTY_RECONSUME_TIME)
 			}
 		}
