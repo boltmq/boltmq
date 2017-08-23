@@ -1,13 +1,11 @@
 package remoting
 
 import (
-	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -113,29 +111,6 @@ func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.Remot
 	return response, err
 }
 
-func (rc *DefalutRemotingClient) invokeSync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
-	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
-	responseFuture.done = make(chan bool)
-
-	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = responseFuture
-	rc.responseTableLock.Unlock()
-
-	err := rc.sendRequest(request, addr, conn)
-	if err != nil {
-		logger.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
-		return nil, err
-	}
-	responseFuture.sendRequestOK = true
-
-	select {
-	case <-responseFuture.done:
-		return responseFuture.responseCommand, nil
-	case <-time.After(time.Duration(timeoutMillis) * time.Millisecond):
-		return nil, errors.New("invoke sync timeout")
-	}
-}
-
 // InvokeAsync 异步调用
 func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
 	conn, err := rc.createConnectByAddr(addr)
@@ -151,24 +126,6 @@ func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.Remo
 	return rc.invokeAsync(addr, conn, request, timeoutMillis, invokeCallback)
 }
 
-func (rc *DefalutRemotingClient) invokeAsync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
-	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
-	responseFuture.invokeCallback = invokeCallback
-
-	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = responseFuture
-	rc.responseTableLock.Unlock()
-
-	err := rc.sendRequest(request, addr, conn)
-	if err != nil {
-		logger.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
-		return err
-	}
-	responseFuture.sendRequestOK = true
-
-	return nil
-}
-
 // InvokeSync 单向发送消息
 func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.RemotingCommand, timeoutMillis int64) error {
 	conn, err := rc.createConnectByAddr(addr)
@@ -182,32 +139,6 @@ func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.Rem
 	}
 
 	return rc.invokeOneway(addr, conn, request, timeoutMillis)
-}
-
-func (rc *DefalutRemotingClient) invokeOneway(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
-	err := rc.sendRequest(request, addr, conn)
-	if err != nil {
-		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", addr, err)
-		return err
-	}
-
-	return nil
-}
-
-// 扫描发送请求响应报文是否超时
-func (rc *DefalutRemotingClient) scanResponseTable() {
-	rc.responseTableLock.Lock()
-	for seq, responseFuture := range rc.responseTable {
-		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
-			delete(rc.responseTable, seq)
-
-			if responseFuture.invokeCallback != nil {
-				responseFuture.invokeCallback(responseFuture)
-				logger.Fatalf("remove time out request %v", responseFuture)
-			}
-		}
-	}
-	rc.responseTableLock.Unlock()
 }
 
 func (rc *DefalutRemotingClient) createConnectByAddr(addr string) (net.Conn, error) {
@@ -261,11 +192,4 @@ func (rc *DefalutRemotingClient) startGoRoutine(fn func()) {
 	if rc.isRunning {
 		go fn()
 	}
-}
-
-// RegisterProcessor register porcessor
-func (rc *DefalutRemotingClient) RegisterProcessor(requestCode int, processor RequestProcessor) {
-	rc.processorTableLock.Lock()
-	rc.processorTable[requestCode] = processor
-	rc.processorTableLock.Unlock()
 }
