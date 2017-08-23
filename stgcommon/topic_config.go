@@ -9,8 +9,8 @@ const (
 type TopicConfig struct {
 	SEPARATOR       string
 	TopicName       string          `json:"topicName"`
-	ReadQueueNums   int             `json:"readQueueNums"`
-	WriteQueueNums  int             `json:"writeQueueNums"`
+	ReadQueueNums   int32           `json:"readQueueNums"`
+	WriteQueueNums  int32           `json:"writeQueueNums"`
 	Perm            int             `json:"perm"`
 	TopicFilterType TopicFilterType `json:"topicFilterType"`
 	TopicSysFlag    int             `json:"topicSysFlag"`
@@ -31,7 +31,7 @@ func NewTopicConfigByName(topicName string) *TopicConfig {
 	return topicConfig
 }
 
-func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int, perm int) *TopicConfig {
+func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int32, perm int) *TopicConfig {
 	topicConfig := NewTopicConfigByName(topicName)
 	topicConfig.ReadQueueNums = readQueueNums
 	topicConfig.WriteQueueNums = writeQueueNums
@@ -40,6 +40,6 @@ func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums i
 
 }
 
-func (self *TopicConfig) ToString() string {
+func (tc *TopicConfig) ToString() string {
 	return ""
 }

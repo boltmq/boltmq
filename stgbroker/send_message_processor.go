@@ -12,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"net"
 )
 
 type SendMessageProcessor struct {
@@ -19,8 +20,7 @@ type SendMessageProcessor struct {
 	BrokerController *BrokerController
 }
 
-func (smp *SendMessageProcessor) ProcessRequest(request protocol.RemotingCommand, // TODO ChannelHandlerContext ctx
-) *protocol.RemotingCommand {
+func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) *protocol.RemotingCommand {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
 		return smp.consumerSendMsgBack(request)
@@ -32,7 +32,7 @@ func (smp *SendMessageProcessor) ProcessRequest(request protocol.RemotingCommand
 	}
 	mqtraceContext := smp.buildMsgContext(requestHeader)
 	// TODO  this.executeSendMessageHookBefore(ctx, request, mqtraceContext)
-	response := smp.sendMessage(request, mqtraceContext, requestHeader)
+	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
 	// TODO this.executeSendMessageHookAfter(response, mqtraceContext);
 	return response
 }
@@ -41,7 +41,7 @@ func (smp *SendMessageProcessor) ProcessRequest(request protocol.RemotingCommand
 // Author gaoyanlei
 // Since 2017/8/17
 func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerContext ctx
-	request protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
+	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
 
@@ -217,13 +217,12 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContext ctx,
-	request protocol.RemotingCommand, mqtraceContext mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
+func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand, mqtraceContext mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	response := &protocol.RemotingCommand{}
 	responseHeader := new(header.SendMessageResponseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
-	smp.msgCheck(requestHeader, response)
+	smp.msgCheck(conn, requestHeader, response)
 	if response.Code != -1 {
 		return response
 	}
@@ -235,7 +234,7 @@ func (smp *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContex
 	topicConfig := smp.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
 
 	if queueIdInt < 0 {
-		num := (smp.Rand.Int() % 99999999) % topicConfig.WriteQueueNums
+		num := (smp.Rand.Int31() % 99999999) % topicConfig.WriteQueueNums
 		if num > 0 {
 			queueIdInt = int32(num)
 		} else {
@@ -257,7 +256,7 @@ func (smp *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerContex
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
-	// TODO 	msgInner.BornHost =requestHeader.BornTimestamp
+	msgInner.BornHost = conn.LocalAddr().String()
 	msgInner.StoreHost = smp.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
