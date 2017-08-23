@@ -1,7 +1,6 @@
 package stgbroker
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/user"
 	"strings"
@@ -51,7 +50,10 @@ func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
 
 func (com *ConsumerOffsetManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
-		json.Unmarshal(jsonString, com)
+		fmt.Println(string(jsonString))
+		ConsumerOffsetManager:=NewConsumerOffsetManager(nil)
+		ffjson.Unmarshal([]byte(jsonString), ConsumerOffsetManager.Offsets)
+		fmt.Println(ConsumerOffsetManager.Offsets)
 		/*
 				for k, v := range cc.Offsets {
 					m := sync.NewMap()

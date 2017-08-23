@@ -3,6 +3,7 @@ package stgbroker
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 type ConfigManager interface {
@@ -26,12 +27,12 @@ func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
 
 func (self *ConfigManagerExt) Load() bool {
 	fileName := self.ConfigManager.ConfigFilePath()
-	fmt.Println(fileName)
 	bytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		fmt.Println("ReadFile: ", err.Error())
 	}
-	self.ConfigManager.Decode(bytes)
+
+	self.ConfigManager.Decode([]byte(strings.TrimSpace(string(bytes))))
 	return true
 }
 
