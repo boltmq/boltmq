@@ -23,7 +23,7 @@ import (
 
 type DefaultMQProducerImpl struct {
 	DefaultMQProducer     *DefaultMQProducer
-	// topic TopicPublishInfo
+	// topic *TopicPublishInfo
 	TopicPublishInfoTable *sync.Map
 	ServiceState          stgcommon.ServiceState
 	MQClientFactory       *MQClientInstance

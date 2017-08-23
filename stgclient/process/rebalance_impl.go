@@ -128,7 +128,6 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 			} else if pq.IsPullExpired() {
 				switch ext.RebalanceImpl.ConsumeType() {
 				case heartbeat.CONSUME_ACTIVELY:
-					break
 				case heartbeat.CONSUME_PASSIVELY:
 					pq.Dropped = true
 					if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {

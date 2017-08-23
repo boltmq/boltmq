@@ -13,6 +13,9 @@ import (
 	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"errors"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	namesrvUtil"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -20,6 +23,7 @@ import (
 // Since:  2017/8/8
 
 type MQClientAPIImpl struct {
+	DefalutRemotingClient   *remoting.DefalutRemotingClient
 	ClientRemotingProcessor *ClientRemotingProcessor
 	ProjectGroupPrefix      string
 }
@@ -27,19 +31,28 @@ type MQClientAPIImpl struct {
 func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQClientAPIImpl {
 
 	return &MQClientAPIImpl{
+		DefalutRemotingClient:remoting.NewDefalutRemotingClient(),
 		ClientRemotingProcessor:clientRemotingProcessor,
 	}
 }
+
 // 调用romoting的start
 func (impl *MQClientAPIImpl)Start() {
-	//todo 初始化远程
-	//impl.ProjectGroupPrefix
+	defer func() {
+		if e := recover(); e != nil {
+		}
+	}()
+	impl.DefalutRemotingClient.Start()
+	value, err := impl.getProjectGroupByIp(stgclient.GetLocalAddress(), 3000)
+	if err != nil && !strings.EqualFold(value, "") {
+		impl.ProjectGroupPrefix = value
+	}
 
 }
+
 // 关闭romoting
 func (impl *MQClientAPIImpl)Shutdwon() {
-	//todo 关闭远程
-
+	impl.DefalutRemotingClient.Shutdown()
 }
 // 发送心跳到broker
 func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
@@ -70,7 +83,7 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 	}
 	requestHeader := header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
-	logger.Infof(request.RemotingVersionKey)
+	logger.Infof(request.Remark)
 	//todo 调用远程生成
 	reponse := protocol.CreateResponseCommand()
 	switch reponse.Code {
@@ -93,7 +106,7 @@ func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeou
 	}
 	requestHeader := &header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, requestHeader)
-	logger.Info(request.RemotingVersionKey)
+	logger.Info(request.Remark)
 	//todo response处理
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName:"broker-master2", ReadQueueNums:8, WriteQueueNums:8, Perm:6, TopicSynFlag:0})
@@ -217,8 +230,7 @@ func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.Remot
 }
 
 func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
-	strings.Split(addrs, ";")
-	//todo 设置remotingclient的nameserver
+	impl.DefalutRemotingClient.UpdateNameServerAddressList(strings.Split(addrs, ";"))
 }
 
 func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.MessageExt, consumerGroup string, delayLevel int, timeoutMillis int) {
@@ -235,7 +247,7 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.Mes
 		OriginMsgId:msg.MsgId,
 	}
 	request := protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK, &requestHeader)
-	logger.Infof(request.RemotingVersionKey)
+	logger.Infof(request.Remark)
 	//todo remotingclient invokeSync
 }
 
@@ -252,7 +264,7 @@ func (impl *MQClientAPIImpl)unRegisterClient(addr, clientID, producerGroup, cons
 	}
 	requestHeader := header.UnregisterClientRequestHeader{ClientID:clientID, ProducerGroup:producerGroupWithProjectGroup, ConsumerGroup:consumerGroupWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.UNREGISTER_CLIENT, &requestHeader)
-	logger.Infof(request.RemotingVersionKey)
+	logger.Infof(request.Remark)
 	//todo invokeSync
 }
 
@@ -284,6 +296,31 @@ func (impl *MQClientAPIImpl)CreateTopic(addr, defaultTopic string, topicConfig s
 		TopicFilterType:topicConfig.TopicFilterType.String(), TopicSysFlag:topicConfig.TopicSysFlag, Order:topicConfig.Order,
 		Perm:topicConfig.Perm}
 	request := protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC, &requestHeader)
-	logger.Infof(request.RemotingVersionKey)
+	logger.Infof(request.Remark)
 	//todo remoting invoke
+}
+
+
+// 从namesrv查询客户端IP信息
+func (impl *MQClientAPIImpl)getProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
+	return impl.getKVConfigValue(namesrvUtil.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
+}
+
+
+// 获取配置信息
+func (impl *MQClientAPIImpl)getKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
+	requestHeader := &namesrv.GetKVConfigRequestHeader{Namespace:namespace, Key:key}
+	request := protocol.CreateRequestCommand(cprotocol.GET_KV_CONFIG, requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
+	if response != nil && err == nil {
+		switch response.Code {
+		case cprotocol.SUCCESS:
+			responseHeader := namesrv.GetKVConfigResponseHeader{}
+			//todo decode response
+			return responseHeader.Value, err
+		default:
+
+		}
+	}
+	return "", errors.New("invokesync error=" + response.Remark)
 }

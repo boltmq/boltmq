@@ -29,25 +29,32 @@ func NewClientConfig(namesrvAddr string) *ClientConfig {
 	}
 	return &ClientConfig{NamesrvAddr:namesrvAddr,
 		InstanceName: instanceName,
-		ClientIP:getLocalAddress(),
+		ClientIP:GetLocalAddress(),
 		ClientCallbackExecutorThreads:runtime.NumCPU(),
 		PollNameServerInterval:1000 * 30,
 		HeartbeatBrokerInterval:1000 * 30,
 		PersistConsumerOffsetInterval:1000 * 5}
 }
 
-func getLocalAddress() string {
+func GetLocalAddress() string {
 	adds, _ := net.InterfaceAddrs()
 	for _, address := range adds {
 		// 检查ip地址判断是否回环地址
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
+			if ipnet.IP.To4() != nil && !isIntranetIpv4(ipnet.IP.String()) {
 				return ipnet.IP.String()
 			}
 
 		}
 	}
 	return ""
+}
+
+func isIntranetIpv4(ip string) bool {
+	if strings.HasPrefix(ip, "192.168.") || strings.HasPrefix(ip, "169.254.") {
+		return true
+	}
+	return false
 }
 
 func (client *ClientConfig) BuildMQClientId() string {

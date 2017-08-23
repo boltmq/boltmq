@@ -27,7 +27,7 @@ func main() {
 		}
 	}
 	go Task()
-	time.Sleep(time.Second * 6000)
+	time.Sleep(time.Second * 60)
 	defaultMQProducer.Shutdown()
 	select {
 
