@@ -8,13 +8,13 @@ type SendMessageRequestHeaderV2 struct {
 	a string
 	b string
 	c string
-	d int
-	e int
-	f int
+	d int32
+	e int32
+	f int32
 	g int64
-	h int
+	h int32
 	i string
-	j int
+	j int32
 	k bool
 }
 

@@ -179,7 +179,7 @@ func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.
 		}
 		//todo 需从responde中解析出responseHeader
 		responseHeader := header.SendMessageResponseHeader{}
-		messageQueue := message.MessageQueue{Topic:msg.Topic, BrokerName:brokerName, QueueId:responseHeader.QueueId}
+		messageQueue := message.MessageQueue{Topic:msg.Topic, BrokerName:brokerName, QueueId:int(responseHeader.QueueId)}
 		sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
 		sendResult.TransactionId = responseHeader.TransactionId
 		return sendResult, nil
@@ -282,7 +282,7 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.Mes
 		Group:consumerGroupWithProjectGroup,
 		OriginTopic:msg.Topic,
 		Offset:msg.CommitLogOffset,
-		DelayLevel:delayLevel,
+		DelayLevel:int32(delayLevel),
 		OriginMsgId:msg.MsgId,
 	}
 	request := protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK, &requestHeader)
