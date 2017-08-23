@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 )
 
 type BrokerController struct {
@@ -33,7 +34,7 @@ type BrokerController struct {
 	// ScheduledExecutorService
 	SlaveSynchronize *SlaveSynchronize
 	// MessageStore
-	// RemotingServer
+	 RemotingServer *remoting.RemotingServer
 	TopicConfigManager *TopicConfigManager
 	// ExecutorService
 }
