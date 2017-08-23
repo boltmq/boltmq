@@ -91,7 +91,7 @@ func (pushConsumer *DefaultMQPushConsumer) Start() {
 	pushConsumer.defaultMQPushConsumerImpl.Start()
 }
 
-// 启动消费服务
+// 关闭消费服务
 func (pushConsumer *DefaultMQPushConsumer) Shutdown() {
 	pushConsumer.defaultMQPushConsumerImpl.Shutdown()
 }
