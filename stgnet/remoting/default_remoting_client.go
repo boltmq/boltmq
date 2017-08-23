@@ -4,7 +4,6 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
@@ -17,7 +16,6 @@ type DefalutRemotingClient struct {
 	namesrvAddrListLock sync.RWMutex
 	namesrvAddrChoosed  string
 	namesrvIndex        uint32
-	timeoutTimer        *time.Timer
 	BaseRemotingClient
 }
 
@@ -35,17 +33,9 @@ func (rc *DefalutRemotingClient) Start() {
 		rc.processReceived(buffer, addr, conn)
 	})
 
-	// 定时扫描响应
-	go func() {
-		rc.timeoutTimer = time.NewTimer(3 * time.Second)
-		for {
-			<-rc.timeoutTimer.C
-			rc.scanResponseTable()
-			rc.timeoutTimer.Reset(time.Second)
-		}
-	}()
-
 	rc.isRunning = true
+	// 定时扫描响应
+	rc.startScheduledTask()
 }
 
 // Shutdown shutdown client
@@ -87,7 +77,7 @@ func (rc *DefalutRemotingClient) UpdateNameServerAddressList(addrs []string) {
 
 // InvokeSync 同步调用并返回响应, addr为空字符串，则在namesrvAddrList中选择地址
 func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
-	conn, err := rc.createConnectByAddr(addr)
+	conn, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +99,7 @@ func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.Remot
 
 // InvokeAsync 异步调用
 func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
-	conn, err := rc.createConnectByAddr(addr)
+	conn, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return err
 	}
@@ -124,7 +114,7 @@ func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.Remo
 
 // InvokeSync 单向发送消息
 func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.RemotingCommand, timeoutMillis int64) error {
-	conn, err := rc.createConnectByAddr(addr)
+	conn, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return err
 	}
@@ -137,13 +127,13 @@ func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.Rem
 	return rc.invokeOneway(addr, conn, request, timeoutMillis)
 }
 
-func (rc *DefalutRemotingClient) createConnectByAddr(addr string) (net.Conn, error) {
-	if addr == "" {
-		addr = rc.chooseNameseverAddr()
+func (rc *DefalutRemotingClient) createConnectByAddr(addrPtr *string) (net.Conn, error) {
+	if *addrPtr == "" {
+		*addrPtr = rc.chooseNameseverAddr()
 	}
 
 	// 创建连接，如果连接存在，则不会创建。
-	return rc.bootstrap.ConnectJoinAddrAndReturn(addr)
+	return rc.bootstrap.ConnectJoinAddrAndReturn(*addrPtr)
 }
 
 func (rc *DefalutRemotingClient) chooseNameseverAddr() string {
