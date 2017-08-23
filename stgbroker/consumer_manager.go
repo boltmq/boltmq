@@ -3,8 +3,10 @@ package stgbroker
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	set "github.com/deckarep/golang-set"
+	"net"
 )
 
 // ConsumerManager 消费者管理
@@ -27,8 +29,8 @@ func NewConsumerManager(consumerIdsChangeListener rebalance.ConsumerIdsChangeLis
 	return consumerManager
 }
 
-func (self *ConsumerManager) getConsumerGroupInfo(group string) *client.ConsumerGroupInfo {
-	value, err := self.consumerTable.Get(group)
+func (cm *ConsumerManager) getConsumerGroupInfo(group string) *client.ConsumerGroupInfo {
+	value, err := cm.consumerTable.Get(group)
 	if err != nil {
 		return nil
 	}
@@ -40,10 +42,29 @@ func (self *ConsumerManager) getConsumerGroupInfo(group string) *client.Consumer
 	return nil
 }
 
-func (self *ConsumerManager)  FindSubscriptionData(group,topic string)*heartbeat.SubscriptionData   {
-	consumerGroupInfo:=self.getConsumerGroupInfo(group)
-	if consumerGroupInfo!= nil {
+func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.SubscriptionData {
+	consumerGroupInfo := cm.getConsumerGroupInfo(group)
+	if consumerGroupInfo != nil {
 		return consumerGroupInfo.FindSubscriptionData(topic)
 	}
 	return nil
+}
+
+func (cm *ConsumerManager) registerConsumer(group string, conn net.Conn, consumeType heartbeat.ConsumeType,
+	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
+	consumerGroupInfo := cm.getConsumerGroupInfo(group)
+	if nil == consumerGroupInfo {
+		tmp := client.NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
+		prev, err := cm.consumerTable.Put(group, tmp)
+		if err != nil || prev == nil {
+			consumerGroupInfo = tmp
+		} else {
+			if consumerGroupInfo, ok := prev.(*client.ConsumerGroupInfo); ok {
+				consumerGroupInfo = consumerGroupInfo
+			}
+		}
+	}
+	r1 := consumerGroupInfo.UpdateChannel(conn, consumeType, messageModel, consumeFromWhere)
+	// TODO
+	return r1
 }

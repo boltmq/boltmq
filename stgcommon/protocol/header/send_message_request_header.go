@@ -8,12 +8,12 @@ type SendMessageRequestHeader struct {
 	Topic                 string
 	DefaultTopic          string
 	DefaultTopicQueueNums int
-	QueueId               int
-	SysFlag               int
+	QueueId               int32
+	SysFlag               int32
 	BornTimestamp         int64
 	Flag                  int
 	Properties            string
-	ReconsumeTimes        int
+	ReconsumeTimes        int32
 	UnitMode              bool
 }
 

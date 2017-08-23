@@ -9,5 +9,5 @@ func TestNewClientConfig(t *testing.T) {
 	select {
 
 	}
-
 }
+
