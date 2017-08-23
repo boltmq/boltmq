@@ -5,5 +5,5 @@ package process
 // Since:  2017/8/14
 
 type PullCallback interface {
-	OnSuccess(pullResult *PullResultExt)
+	OnSuccess(pullResultExt *PullResultExt)
 }
