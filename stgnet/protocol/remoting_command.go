@@ -41,8 +41,11 @@ type RemotingCommand struct {
 }
 
 // CreateResponseCommand
-func CreateResponseCommand() *RemotingCommand {
-	return new(RemotingCommand)
+func CreateResponseCommand(code int, remark string) *RemotingCommand {
+	return &RemotingCommand{
+		Code:   code,
+		Remark: remark,
+	}
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang
@@ -82,6 +85,18 @@ func (rc *RemotingCommand) IsOnewayRPC() bool {
 	return (rc.Flag & bits) == bits
 }
 
+// MarkResponseType mark response type
+func (rc *RemotingCommand) MarkResponseType() {
+	bits := 1 << rpcType
+	rc.Flag |= bits
+}
+
+// IsResponseType is response type, return bool
+func (rc *RemotingCommand) IsResponseType() bool {
+	bits := 1 << rpcType
+	return (rc.Flag & bits) == bits
+}
+
 // EncodeHeader 编码头部
 func (rc *RemotingCommand) EncodeHeader() []byte {
 	length := 4
@@ -106,6 +121,15 @@ func (rc *RemotingCommand) buildHeader() []byte {
 		return nil
 	}
 	return buf
+}
+
+// Type return remoting command type
+func (rc *RemotingCommand) Type() RemotingCommandType {
+	if rc.IsResponseType() {
+		return RESPONSE_COMMAND
+	}
+
+	return REQUEST_COMMAND
 }
 
 // DecodeRemotingCommand 解析返回RemotingCommand

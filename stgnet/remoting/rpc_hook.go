@@ -1,9 +1,13 @@
 package remoting
 
-import "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+import (
+	"net"
+
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+)
 
 // RPCHook rpc hook, use send msg
 type RPCHook interface {
-	DoBeforeRequest(remoteAddr string, request *protocol.RemotingCommand)
-	DoAfterResponse(remoteAddr string, request *protocol.RemotingCommand, response *protocol.RemotingCommand)
+	DoBeforeRequest(remoteAddr string, conn net.Conn, request *protocol.RemotingCommand)
+	DoAfterResponse(remoteAddr string, conn net.Conn, request *protocol.RemotingCommand, response *protocol.RemotingCommand)
 }
