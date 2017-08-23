@@ -80,7 +80,7 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	dispatchToConsume := false
 	var validMsgCnt int32 = 0
 	for _, msg := range msgs {
-		old := pq.MsgTreeMap.put(msg.QueueId, &msg)
+		old := pq.MsgTreeMap.put(int(msg.QueueId), &msg)
 		if old == nil {
 			validMsgCnt++
 			pq.QueueOffsetMax = msg.QueueOffset

@@ -198,11 +198,11 @@ func (pullImpl *DefaultMQPullConsumerImpl)fetchSubscribeMessageQueues(topic stri
 	return pullImpl.mQClientFactory.MQAdminImpl.FetchSubscribeMessageQueues(topic)
 }
 
-func (pullImpl*DefaultMQPullConsumerImpl)pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) *consumer.PullResult {
+func (pullImpl*DefaultMQPullConsumerImpl)pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) (*consumer.PullResult,error) {
 	return pullImpl.pullSyncImpl(mq, subExpression, offset, maxNums, false, pullImpl.defaultMQPullConsumer.consumerPullTimeoutMillis)
 }
 
-func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) *consumer.PullResult {
+func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) (*consumer.PullResult,error) {
 	pullImpl.makeSureStateOK()
 	if offset < 0 {
 		panic("offset < 0")
@@ -221,7 +221,10 @@ func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, 
 	}
 	pullResultExt := pullImpl.pullAPIWrapper.PullKernelImpl(mq, subData.SubString, 0, offset, maxNums, sysFlag, 0,
 		pullImpl.defaultMQPullConsumer.brokerSuspendMaxTimeMillis, timeoutMillis, SYNC, nil)
-	return pullImpl.pullAPIWrapper.processPullResult(mq, pullResultExt, subData).PullResult
+	if pullResultExt!=nil {
+		return pullImpl.pullAPIWrapper.processPullResult(mq, pullResultExt, subData).PullResult,nil
+	}
+	return nil,errors.New("pullResult is nil")
 }
 
 func (pullImpl*DefaultMQPullConsumerImpl)subscriptionAutomatically(topic string) {
