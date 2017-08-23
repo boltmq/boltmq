@@ -169,7 +169,7 @@ func (self *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCon
 	// TODO msgInner.PropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
 	// TODO msgInner.TagsCode(MessageExtBrokerInner.tagsString2tagsCode(null, msgExt.getTags()));
 
-	msgInner.QueueId = queueIdInt
+	msgInner.QueueId = int32(queueIdInt)
 	msgInner.SysFlag = msgExt.SysFlag
 	msgInner.BornTimestamp = msgExt.BornTimestamp
 	msgInner.BornHost = msgExt.BornHost
@@ -237,9 +237,9 @@ func (self *SendMessageProcessor) sendMessage( // TODO final ChannelHandlerConte
 	if queueIdInt < 0 {
 		num := (self.Rand.Int() % 99999999) % topicConfig.WriteQueueNums
 		if num > 0 {
-			queueIdInt = num
+			queueIdInt = int32(num)
 		} else {
-			queueIdInt = -num
+			queueIdInt = -int32(num)
 		}
 
 	}

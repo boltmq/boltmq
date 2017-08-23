@@ -22,7 +22,7 @@ type SubscriptionGroupConfig struct {
 	RetryQueueNums int `json:"retryQueueNums"`
 
 	// 重试消费最大次数，超过则投递到死信队列，不再投递，并报警
-	RetryMaxTimes int `json:"retryMaxTimes"`
+	RetryMaxTimes int32 `json:"retryMaxTimes"`
 
 	// 从哪个Broker开始消费
 	BrokerId int64 `json:"brokerId"`
