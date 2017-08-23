@@ -37,7 +37,7 @@ func (self *ConfigManagerExt) Load() bool {
 
 func (self *ConfigManagerExt) Persist() {
 	jsonString := self.ConfigManager.Encode(true)
-	if jsonString == "" {
+	if jsonString != "" {
 		fileName := self.ConfigManager.ConfigFilePath()
 		fmt.Println(jsonString,fileName)
 		// TODO 写入文件
