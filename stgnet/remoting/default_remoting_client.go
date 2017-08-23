@@ -18,7 +18,6 @@ type DefalutRemotingClient struct {
 	namesrvAddrChoosed  string
 	namesrvIndex        uint32
 	timeoutTimer        *time.Timer
-	isRunning           bool
 	BaseRemotingClient
 }
 
@@ -33,10 +32,7 @@ func NewDefalutRemotingClient() *DefalutRemotingClient {
 // Start start client
 func (rc *DefalutRemotingClient) Start() {
 	rc.bootstrap.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-		// 开启gorouting处理响应
-		rc.startGoRoutine(func() {
-			rc.processReceived(buffer, addr, conn)
-		})
+		rc.processReceived(buffer, addr, conn)
 	})
 
 	// 定时扫描响应
@@ -182,14 +178,4 @@ func (rc *DefalutRemotingClient) chooseNameseverAddr() string {
 	rc.namesrvAddrListLock.RUnlock()
 
 	return caddr
-}
-
-func (rc *DefalutRemotingClient) sendRequest(request *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	return rc.send(request, addr, conn)
-}
-
-func (rc *DefalutRemotingClient) startGoRoutine(fn func()) {
-	if rc.isRunning {
-		go fn()
-	}
 }
