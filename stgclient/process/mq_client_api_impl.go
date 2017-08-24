@@ -73,9 +73,9 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 			producerData.GroupName = stgclient.BuildWithProjectGroup(producerData.GroupName, impl.ProjectGroupPrefix)
 		}
 	}
-	request:=protocol.CreateRequestCommand(cprotocol.HEART_BEAT,nil)
+	request := protocol.CreateRequestCommand(cprotocol.HEART_BEAT, nil)
 	//todo  request.setBody(heartbeatData.encode());
-    response,err:=impl.DefalutRemotingClient.InvokeSync(addr,request,timeoutMillis)
+	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.SUCCESS:
@@ -86,15 +86,11 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 }
 
 func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
-	topicWithProjectGroup := topic
-	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
-		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
-	}
-	requestHeader := header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
+	requestHeader := header.GetRouteInfoRequestHeader{Topic:topic}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
 	logger.Infof(request.Remark)
-	response,err := impl.DefalutRemotingClient.InvokeSync("",request,timeoutMillis)
-	if response!=nil && err==nil {
+	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
+	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.TOPIC_NOT_EXIST:
 			logger.Warnf("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
@@ -109,7 +105,6 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 }
 
 func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
-
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
@@ -257,23 +252,25 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallbac
 	return nil
 }
 
-
 func (impl *MQClientAPIImpl)queryConsumerOffset(addr string, requestHeader header.QueryConsumerOffsetRequestHeader, timeoutMillis int64) int64 {
-	if !strings.EqualFold(impl.ProjectGroupPrefix,""){
-		requestHeader.ConsumerGroup=stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup,impl.ProjectGroupPrefix)
-		requestHeader.Topic=stgclient.BuildWithProjectGroup(requestHeader.Topic,impl.ProjectGroupPrefix)
+	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
+		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
+		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
-	request:=protocol.CreateRequestCommand(cprotocol.QUERY_CONSUMER_OFFSET,&requestHeader)
-	response,err:=impl.DefalutRemotingClient.InvokeSync(addr,request,timeoutMillis)
-	if response!=nil && err==nil{
+	request := protocol.CreateRequestCommand(cprotocol.QUERY_CONSUMER_OFFSET, &requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
+	if err != nil {
+		logger.Errorf("queryConsumerOffset error=%v", err.Error())
+	}
+	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.SUCCESS:
 			//todo decode
-			responseHeader:=header.QueryConsumerOffsetResponseHeader{}
+			responseHeader := header.QueryConsumerOffsetResponseHeader{}
 			return responseHeader.Offset
 		}
 	}
-	return 0
+	return -1
 }
 
 func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.RemotingCommand, timeoutMillis int) *PullResultExt {
@@ -281,7 +278,7 @@ func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.Remot
 	if err != nil {
 		logger.Errorf("pullMessageSync error=%v", err.Error())
 	}
-	if response!=nil {
+	if response != nil {
 		return impl.processPullResponse(response)
 	}
 	return nil

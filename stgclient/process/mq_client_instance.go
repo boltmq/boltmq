@@ -565,11 +565,11 @@ func (mqClientInstance *MQClientInstance) findConsumerIdList(topic string, group
 		brokerAddr = mqClientInstance.findBrokerAddrByTopic(topic)
 	}
 	if !strings.EqualFold(brokerAddr, "") {
-
-		//return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
 		// todo 测试
 		if strings.EqualFold(topic, "TestTopic") {
 			return []string{mqClientInstance.ClientId}
+		} else {
+			return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
 		}
 	}
 	return []string{}

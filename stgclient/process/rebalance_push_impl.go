@@ -40,7 +40,7 @@ func (pushImpl *RebalancePushImpl)MessageQueueChanged(topic string, mqAll set.Se
 func (pushImpl *RebalancePushImpl)RemoveUnnecessaryMessageQueue(mq *message.MessageQueue, pq *consumer.ProcessQueue) bool {
 	pushImpl.defaultMQPushConsumerImpl.OffsetStore.Persist(mq)
 	pushImpl.defaultMQPushConsumerImpl.OffsetStore.RemoveOffset(mq)
-	//todo 各种lock
+	//todo 顺序队列各种lock
 	return true
 }
 
