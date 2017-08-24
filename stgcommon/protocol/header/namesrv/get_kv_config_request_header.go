@@ -8,6 +8,6 @@ type GetKVConfigRequestHeader struct {
 	Key       string
 }
 
-func (header*GetKVConfigRequestHeader)CheckFields() {
-
+func (header*GetKVConfigRequestHeader)CheckFields()error {
+	return nil
 }
