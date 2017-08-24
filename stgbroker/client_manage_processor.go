@@ -31,7 +31,7 @@ func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, req
 	case protocol2.HEART_BEAT:
 		return cmp.heartBeat(addr, conn, request)
 	case protocol2.UNREGISTER_CLIENT:
-		return cmp.heartBeat(addr, conn, request)
+		return cmp.unregisterClient(addr, conn, request)
 	case protocol2.QUERY_CONSUMER_OFFSET:
 		return cmp.queryConsumerOffset(addr, conn, request)
 	}
@@ -43,8 +43,8 @@ func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, req
 // Since 2017/8/23
 func (cmp *ClientManageProcessor) heartBeat(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
-	// TODO HeartbeatData heartbeatData = HeartbeatData.decode(request.getBody(), HeartbeatData.class);
 	heartbeatData := &heartbeat.HeartbeatData{}
+	heartbeatData.Decode(request.Body)
 	consumerDataSet := heartbeatData.ConsumerDataSet
 	channelInfo := client.NewClientChannelInfo(conn, heartbeatData.ClientID, request.Language, conn.LocalAddr().String(), request.Version)
 
@@ -70,9 +70,9 @@ func (cmp *ClientManageProcessor) heartBeat(addr string, conn net.Conn, request 
 			}
 
 			// 注册Producer
-			for value := range  heartbeatData.ProducerDataSet.Iterator().C {
+			for value := range heartbeatData.ProducerDataSet.Iterator().C {
 				if producerData, ok := value.(*heartbeat.ProducerData); ok {
-					cmp.BrokerController.ProducerManager.RegisterProducer(producerData.GroupName,channelInfo)
+					cmp.BrokerController.ProducerManager.RegisterProducer(producerData.GroupName, channelInfo)
 				}
 			}
 		}

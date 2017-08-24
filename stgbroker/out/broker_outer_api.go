@@ -82,7 +82,7 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
-	haServerAddr string, brokerId int, topicConfigWrapper body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{}
 	requestHeader.BrokerAddr = brokerAddr
@@ -127,7 +127,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-	haServerAddr string, brokerId int, topicConfigWrapper body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	registerBrokerResult := &namesrv.RegisterBrokerResult{}
 
