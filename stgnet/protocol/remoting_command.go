@@ -134,6 +134,18 @@ func (rc *RemotingCommand) Type() RemotingCommandType {
 	return REQUEST_COMMAND
 }
 
+func (rc *RemotingCommand) DecodeCommandCustomHeader() error {
+	if rc.ExtFields == nil {
+		return nil
+	}
+
+	if rc.CustomHeader == nil {
+		return nil
+	}
+
+	return DecodeCommandCustomHeader(rc.ExtFields, rc.CustomHeader)
+}
+
 // DecodeRemotingCommand 解析返回RemotingCommand
 func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 	var (

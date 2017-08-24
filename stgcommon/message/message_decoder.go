@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-errors/errors"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 )
 
@@ -42,12 +44,12 @@ var (
 func DecodeMessageId(msgId string) (*MessageId, error) {
 
 	if len(msgId) != 32 {
-		return nil, fmt.Errorf("msgid length[%d] invalid.", len(msgId))
+		return nil, errors.Errorf("msgid length[%d] invalid.", len(msgId))
 	}
 
 	buf, err := hex.DecodeString(msgId)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, 0)
 	}
 
 	messageId := &MessageId{}
@@ -96,85 +98,85 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 	// 1 TOTALSIZE
 	e = binary.Read(buf, binary.BigEndian, &msgExt.StoreSize)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 2 MAGICCODE
 	e = binary.Read(buf, binary.BigEndian, &magicCode)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 3 BODYCRC
 	e = binary.Read(buf, binary.BigEndian, &msgExt.BodyCRC)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 4 QUEUEID
 	e = binary.Read(buf, binary.BigEndian, &msgExt.QueueId)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 5 FLAG
 	e = binary.Read(buf, binary.BigEndian, &msgExt.Flag)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 6 QUEUEOFFSET
 	e = binary.Read(buf, binary.BigEndian, &msgExt.QueueOffset)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 7 PHYSICALOFFSET
 	e = binary.Read(buf, binary.BigEndian, &physicOffset)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 8 SYSFLAG
 	e = binary.Read(buf, binary.BigEndian, &msgExt.SysFlag)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 9 BORNTIMESTAMP
 	e = binary.Read(buf, binary.BigEndian, &msgExt.BornTimestamp)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 10 BORNHOST
 	e = binary.Read(buf, binary.BigEndian, &bornHost)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	e = binary.Read(buf, binary.BigEndian, &bornPort)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 11 STORETIMESTAMP
 	e = binary.Read(buf, binary.BigEndian, &msgExt.StoreTimestamp)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 12 STOREHOST
 	e = binary.Read(buf, binary.BigEndian, &storeHost)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	e = binary.Read(buf, binary.BigEndian, &storePort)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 13 RECONSUMETIMES
 	e = binary.Read(buf, binary.BigEndian, &msgExt.ReconsumeTimes)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 14 Prepared Transaction Offset
 	e = binary.Read(buf, binary.BigEndian, &msgExt.PreparedTransactionOffset)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// 15 BODY
 	e = binary.Read(buf, binary.BigEndian, &bodyLength)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	if bodyLength > 0 {
@@ -182,7 +184,7 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 			body := make([]byte, bodyLength)
 			e = binary.Read(buf, binary.BigEndian, body)
 			if e != nil {
-				return nil, e
+				return nil, errors.Wrap(e, 0)
 			}
 
 			// 解压缩
@@ -203,19 +205,19 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 	// 16 TOPIC
 	e = binary.Read(buf, binary.BigEndian, &topicLength)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	topic := make([]byte, topicLength)
 	e = binary.Read(buf, binary.BigEndian, &topic)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	msgExt.Topic = string(topic)
 
 	// 17 properties
 	e = binary.Read(buf, binary.BigEndian, &propertiesLength)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	if propertiesLength > 0 {
@@ -232,7 +234,10 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 	msgExt.StoreHost = JoinHostPort(storeHost, storePort)
 	msgExt.CommitLogOffset = physicOffset
 	// 组装消息ID字段
-	msgExt.MsgId = CreateMessageId(storeHost, storePort, physicOffset)
+	msgExt.MsgId, e = createMessageId(storeHost, storePort, physicOffset)
+	if e != nil {
+		return nil, e
+	}
 
 	return msgExt, nil
 }
@@ -265,21 +270,40 @@ func String2messageProperties(properties string) map[string]string {
 	return m
 }
 
-// CreateMessageId 解析消息msgId字段(ip + port + commitOffset，其中ip、port长度分别是4位，offset占用8位长度)
-func CreateMessageId(storeHost []byte, storePort int32, offset int64) string {
-	buffMsgId := make([]byte, MSG_ID_LENGTH)
-	input := bytes.NewBuffer(buffMsgId)
-	input.Reset()
-	input.Grow(MSG_ID_LENGTH)
-	input.Write(storeHost)
+// CreateMessageId 解析消息msgId字段addr是host:port
+func CreateMessageId(addr string, offset int64) (string, error) {
+	host, port, e := SplitHostPort(addr)
+	if e != nil {
+		return "", e
+	}
 
-	storePortBytes := int32ToBytes(storePort)
-	input.Write(storePortBytes)
+	return createMessageId(ipv4StringToBytes(host), port, offset)
+}
 
-	offsetBytes := int64ToBytes(offset)
-	input.Write(offsetBytes)
+// 解析消息msgId字段(ip + port + commitOffset，其中ip、port长度分别是4位，offset占用8位长度)
+func createMessageId(storeHost []byte, storePort int32, offset int64) (string, error) {
+	var (
+		buf = bytes.NewBuffer([]byte{})
+		e   error
+	)
 
-	return bytesToHexString(input.Bytes())
+	buf.Grow(MSG_ID_LENGTH)
+	_, e = buf.Write(storeHost)
+	if e != nil {
+		return "", errors.Wrap(e, 0)
+	}
+
+	e = binary.Write(buf, binary.BigEndian, &storePort)
+	if e != nil {
+		return "", errors.Wrap(e, 0)
+	}
+
+	e = binary.Write(buf, binary.BigEndian, &offset)
+	if e != nil {
+		return "", errors.Wrap(e, 0)
+	}
+
+	return bytesToHexString(buf.Bytes()), nil
 }
 
 // JoinHostPort 连接host:port
@@ -296,12 +320,12 @@ func SplitHostPort(addr string) (string, int32, error) {
 
 	host, portStr, e := net.SplitHostPort(addr)
 	if e != nil {
-		return "", 0, e
+		return "", 0, errors.Wrap(e, 0)
 	}
 
 	port, e := strconv.ParseInt(portStr, 10, 32)
 	if e != nil {
-		return host, 0, e
+		return host, 0, errors.Wrap(e, 0)
 	}
 
 	return host, int32(port), nil
@@ -349,7 +373,7 @@ func zip(buffer []byte) ([]byte, error) {
 	_, e := w.Write(buffer)
 	if e != nil {
 		w.Close()
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 	// don't use defer, because b.Bytes() after w.Close()
 	w.Close()
@@ -366,12 +390,12 @@ func unzip(buffer []byte) ([]byte, error) {
 	z, e := zlib.NewReader(b)
 	defer z.Close()
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	unzipBytes, e := ioutil.ReadAll(z)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	return unzipBytes, nil
