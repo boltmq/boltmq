@@ -5,6 +5,7 @@ import (
 	set "github.com/deckarep/golang-set"
 	"strings"
 	"errors"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 // FilterAPI: filter api
 // Author: yintongqiang
@@ -24,8 +25,7 @@ func BuildSubscriptionData(consumerGroup string, topic string, subString string)
 			trimTag := strings.TrimSpace(tag)
 			if !strings.EqualFold(trimTag, "") {
 				subscriptionData.TagsSet.Add(trimTag)
-				//todo 处理string hashcode问题
-				subscriptionData.CodeSet.Add(trimTag)
+				subscriptionData.CodeSet.Add(stgcommon.HashCode(trimTag))
 			} else {
 				return subscriptionData, errors.New("subString split error")
 			}
@@ -44,8 +44,7 @@ func BuildSubscriptionData4Ponit(consumerGroup string, topic string, subString s
 			trimTag := strings.TrimSpace(tag)
 			if !strings.EqualFold(trimTag, "") {
 				subscriptionData.TagsSet.Add(trimTag)
-				//todo 处理string hashcode问题
-				subscriptionData.CodeSet.Add(trimTag)
+				subscriptionData.CodeSet.Add(stgcommon.HashCode(trimTag))
 			} else {
 				return subscriptionData, errors.New("subString split error")
 			}

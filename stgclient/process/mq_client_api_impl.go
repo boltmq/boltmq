@@ -1,21 +1,21 @@
 package process
 
 import (
+	"errors"
+	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	namesrvUtil "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
-	"strings"
-	"git.oschina.net/cloudzone/smartgo/stgclient"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"errors"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
-	namesrvUtil"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	"strings"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -31,13 +31,13 @@ type MQClientAPIImpl struct {
 func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQClientAPIImpl {
 
 	return &MQClientAPIImpl{
-		DefalutRemotingClient:remoting.NewDefalutRemotingClient(),
-		ClientRemotingProcessor:clientRemotingProcessor,
+		DefalutRemotingClient:   remoting.NewDefalutRemotingClient(),
+		ClientRemotingProcessor: clientRemotingProcessor,
 	}
 }
 
 // 调用romoting的start
-func (impl *MQClientAPIImpl)Start() {
+func (impl *MQClientAPIImpl) Start() {
 	defer func() {
 		if e := recover(); e != nil {
 		}
@@ -51,11 +51,12 @@ func (impl *MQClientAPIImpl)Start() {
 }
 
 // 关闭romoting
-func (impl *MQClientAPIImpl)Shutdwon() {
+func (impl *MQClientAPIImpl) Shutdwon() {
 	impl.DefalutRemotingClient.Shutdown()
 }
+
 // 发送心跳到broker
-func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
+func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerDatas := heartbeatData.ConsumerDataSet
 		for data := range consumerDatas.Iterator().C {
@@ -74,7 +75,7 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 		}
 	}
 	request := protocol.CreateRequestCommand(cprotocol.HEART_BEAT, nil)
-	//todo  request.setBody(heartbeatData.encode());
+	request.Body=heartbeatData.Encode()
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
@@ -85,8 +86,8 @@ func (impl *MQClientAPIImpl)sendHeartbeat(addr string, heartbeatData *heartbeat.
 	}
 }
 
-func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
-	requestHeader := header.GetRouteInfoRequestHeader{Topic:topic}
+func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
+	requestHeader := header.GetRouteInfoRequestHeader{Topic: topic}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
 	logger.Infof(request.Remark)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
@@ -104,26 +105,26 @@ func (impl *MQClientAPIImpl)GetDefaultTopicRouteInfoFromNameServer(topic string,
 	return nil
 }
 
-func (impl *MQClientAPIImpl)GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
+func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	requestHeader := &header.GetRouteInfoRequestHeader{Topic:topicWithProjectGroup}
+	requestHeader := &header.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, requestHeader)
 	logger.Info(request.Remark)
 	//todo response处理
 	routeData := &route.TopicRouteData{}
-	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName:"broker-master2", ReadQueueNums:8, WriteQueueNums:8, Perm:6, TopicSynFlag:0})
+	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
 	mapBrokerAddrs[0] = "10.122.1.210:10911"
 	//mapBrokerAddrs[1] = "10.128.31.125:10911"
-	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName:"broker-master2", BrokerAddrs:mapBrokerAddrs})
+	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
 	return routeData
 }
 
-func (impl *MQClientAPIImpl)SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,
-timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) (SendResult, error) {
+func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,
+	timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) (SendResult, error) {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 		requestHeader.ProducerGroup = stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
@@ -132,7 +133,7 @@ timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallb
 	// 默认send采用v2版本
 	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(&requestHeader)
 	request := protocol.CreateRequestCommand(cprotocol.SEND_MESSAGE_V2, requestHeaderV2)
-	switch (communicationMode) {
+	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
 	case SYNC:
@@ -144,7 +145,7 @@ timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallb
 	return SendResult{}, errors.New("SendMessage error")
 }
 
-func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (SendResult, error) {
+func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (SendResult, error) {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
 		logger.Errorf("sendMessageSync error=%v", err.Error())
@@ -153,36 +154,40 @@ func (impl *MQClientAPIImpl)sendMessageSync(addr string, brokerName string, msg 
 }
 
 // 处理发送消息响应
-func (impl *MQClientAPIImpl)processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (SendResult, error) {
-	switch response.Code {
-	case cprotocol.FLUSH_DISK_TIMEOUT:
-	case cprotocol.FLUSH_SLAVE_TIMEOUT:
-	case cprotocol.SLAVE_NOT_AVAILABLE:
-		logger.Warnf("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
-	case cprotocol.SUCCESS:
-		sendStatus := SEND_OK
+func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (SendResult, error) {
+	if response != nil {
 		switch response.Code {
 		case cprotocol.FLUSH_DISK_TIMEOUT:
-			sendStatus = FLUSH_DISK_TIMEOUT
 		case cprotocol.FLUSH_SLAVE_TIMEOUT:
-			sendStatus = FLUSH_SLAVE_TIMEOUT
 		case cprotocol.SLAVE_NOT_AVAILABLE:
-			sendStatus = SLAVE_NOT_AVAILABLE
+			logger.Warnf("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
 		case cprotocol.SUCCESS:
-			sendStatus = SEND_OK
-		default:
+			sendStatus := SEND_OK
+			switch response.Code {
+			case cprotocol.FLUSH_DISK_TIMEOUT:
+				sendStatus = FLUSH_DISK_TIMEOUT
+			case cprotocol.FLUSH_SLAVE_TIMEOUT:
+				sendStatus = FLUSH_SLAVE_TIMEOUT
+			case cprotocol.SLAVE_NOT_AVAILABLE:
+				sendStatus = SLAVE_NOT_AVAILABLE
+			case cprotocol.SUCCESS:
+				sendStatus = SEND_OK
+			default:
+			}
+			//todo 需从responde中解析出responseHeader
+			responseHeader := header.SendMessageResponseHeader{}
+			messageQueue := message.MessageQueue{Topic: msg.Topic, BrokerName: brokerName, QueueId: int(responseHeader.QueueId)}
+			sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
+			sendResult.TransactionId = responseHeader.TransactionId
+			return sendResult, nil
 		}
-		//todo 需从responde中解析出responseHeader
-		responseHeader := header.SendMessageResponseHeader{}
-		messageQueue := message.MessageQueue{Topic:msg.Topic, BrokerName:brokerName, QueueId:int(responseHeader.QueueId)}
-		sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
-		sendResult.TransactionId = responseHeader.TransactionId
-		return sendResult, nil
+	} else {
+		return SendResult{}, errors.New("processSendResponse error response is nil")
 	}
 	return SendResult{}, errors.New("processSendResponse error")
 }
 
-func (impl *MQClientAPIImpl)UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {
+func (impl *MQClientAPIImpl) UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
@@ -191,12 +196,12 @@ func (impl *MQClientAPIImpl)UpdateConsumerOffsetOneway(addr string, requestHeade
 	impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
 }
 
-func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup string, timeoutMillis int64) []string {
+func (impl *MQClientAPIImpl) GetConsumerIdListByGroup(addr string, consumerGroup string, timeoutMillis int64) []string {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.GetConsumerListByGroupRequestHeader{ConsumerGroup:consumerGroupWithProjectGroup}
+	requestHeader := header.GetConsumerListByGroupRequestHeader{ConsumerGroup: consumerGroupWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_CONSUMER_LIST_BY_GROUP, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
@@ -212,12 +217,12 @@ func (impl *MQClientAPIImpl)GetConsumerIdListByGroup(addr string, consumerGroup 
 	return []string{}
 }
 
-func (impl *MQClientAPIImpl)GetMaxOffset(addr string, topic string, queueId int, timeoutMillis int64) int64 {
+func (impl *MQClientAPIImpl) GetMaxOffset(addr string, topic string, queueId int, timeoutMillis int64) int64 {
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.GetMaxOffsetRequestHeader{Topic:topicWithProjectGroup, QueueId:queueId}
+	requestHeader := header.GetMaxOffsetRequestHeader{Topic: topicWithProjectGroup, QueueId: queueId}
 	request := protocol.CreateRequestCommand(cprotocol.GET_MAX_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
@@ -233,8 +238,8 @@ func (impl *MQClientAPIImpl)GetMaxOffset(addr string, topic string, queueId int,
 	return -1
 }
 
-func (impl *MQClientAPIImpl)PullMessage(addr string, requestHeader header.PullMessageRequestHeader,
-timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallback) *PullResultExt {
+func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullMessageRequestHeader,
+	timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallback) *PullResultExt {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
@@ -252,7 +257,7 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallbac
 	return nil
 }
 
-func (impl *MQClientAPIImpl)queryConsumerOffset(addr string, requestHeader header.QueryConsumerOffsetRequestHeader, timeoutMillis int64) int64 {
+func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader header.QueryConsumerOffsetRequestHeader, timeoutMillis int64) int64 {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
@@ -273,7 +278,7 @@ func (impl *MQClientAPIImpl)queryConsumerOffset(addr string, requestHeader heade
 	return -1
 }
 
-func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.RemotingCommand, timeoutMillis int) *PullResultExt {
+func (impl *MQClientAPIImpl) pullMessageSync(addr string, request *protocol.RemotingCommand, timeoutMillis int) *PullResultExt {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if err != nil {
 		logger.Errorf("pullMessageSync error=%v", err.Error())
@@ -284,22 +289,22 @@ func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.Remot
 	return nil
 }
 
-func (impl *MQClientAPIImpl)UpdateNameServerAddressList(addrs string) {
+func (impl *MQClientAPIImpl) UpdateNameServerAddressList(addrs string) {
 	impl.DefalutRemotingClient.UpdateNameServerAddressList(strings.Split(addrs, ";"))
 }
 
-func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.MessageExt, consumerGroup string, delayLevel int, timeoutMillis int) {
+func (impl *MQClientAPIImpl) consumerSendMessageBack(addr string, msg message.MessageExt, consumerGroup string, delayLevel int, timeoutMillis int) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 	}
 	requestHeader := header.ConsumerSendMsgBackRequestHeader{
-		Group:consumerGroupWithProjectGroup,
-		OriginTopic:msg.Topic,
-		Offset:msg.CommitLogOffset,
-		DelayLevel:int32(delayLevel),
-		OriginMsgId:msg.MsgId,
+		Group:       consumerGroupWithProjectGroup,
+		OriginTopic: msg.Topic,
+		Offset:      msg.CommitLogOffset,
+		DelayLevel:  int32(delayLevel),
+		OriginMsgId: msg.MsgId,
 	}
 	request := protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
@@ -315,7 +320,7 @@ func (impl *MQClientAPIImpl)consumerSendMessageBack(addr string, msg message.Mes
 
 }
 
-func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback PullCallback) {
+func (impl *MQClientAPIImpl) pullMessageAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int, pullCallback PullCallback) {
 	invokeCallback := func(responseFuture *remoting.ResponseFuture) {
 		response := responseFuture.GetRemotingCommand()
 		if response != nil {
@@ -334,14 +339,14 @@ func (impl *MQClientAPIImpl)pullMessageAsync(addr string, request *protocol.Remo
 	impl.DefalutRemotingClient.InvokeAsync(addr, request, int64(timeoutMillis), invokeCallback)
 }
 
-func (impl *MQClientAPIImpl)unRegisterClient(addr, clientID, producerGroup, consumerGroup string, timeoutMillis int) {
+func (impl *MQClientAPIImpl) unRegisterClient(addr, clientID, producerGroup, consumerGroup string, timeoutMillis int) {
 	producerGroupWithProjectGroup := producerGroup
 	consumerGroupWithProjectGroup := consumerGroup
 	if !strings.EqualFold("", impl.ProjectGroupPrefix) {
 		producerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(producerGroup, impl.ProjectGroupPrefix)
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.UnregisterClientRequestHeader{ClientID:clientID, ProducerGroup:producerGroupWithProjectGroup, ConsumerGroup:consumerGroupWithProjectGroup}
+	requestHeader := header.UnregisterClientRequestHeader{ClientID: clientID, ProducerGroup: producerGroupWithProjectGroup, ConsumerGroup: consumerGroupWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.UNREGISTER_CLIENT, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if response != nil && err == nil {
@@ -354,7 +359,7 @@ func (impl *MQClientAPIImpl)unRegisterClient(addr, clientID, producerGroup, cons
 	}
 }
 
-func (impl *MQClientAPIImpl)processPullResponse(response *protocol.RemotingCommand) *PullResultExt {
+func (impl *MQClientAPIImpl) processPullResponse(response *protocol.RemotingCommand) *PullResultExt {
 	pullStatus := consumer.NO_NEW_MSG
 	switch response.Code {
 	case cprotocol.SUCCESS:
@@ -371,16 +376,17 @@ func (impl *MQClientAPIImpl)processPullResponse(response *protocol.RemotingComma
 	return NewPullResultExt(pullStatus, reponseHeader.NextBeginOffset,
 		reponseHeader.MaxOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
 }
+
 // 创建topic
-func (impl *MQClientAPIImpl)CreateTopic(addr, defaultTopic string, topicConfig stgcommon.TopicConfig, timeoutMillis int) {
+func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig stgcommon.TopicConfig, timeoutMillis int) {
 	topicWithProjectGroup := topicConfig.TopicName
 	if !strings.EqualFold("", impl.ProjectGroupPrefix) {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topicConfig.TopicName, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.CreateTopicRequestHeader{Topic:topicWithProjectGroup,
-		DefaultTopic:defaultTopic, ReadQueueNums:topicConfig.ReadQueueNums, WriteQueueNums:topicConfig.WriteQueueNums,
-		TopicFilterType:topicConfig.TopicFilterType.String(), TopicSysFlag:topicConfig.TopicSysFlag, Order:topicConfig.Order,
-		Perm:topicConfig.Perm}
+	requestHeader := header.CreateTopicRequestHeader{Topic: topicWithProjectGroup,
+		DefaultTopic: defaultTopic, ReadQueueNums: topicConfig.ReadQueueNums, WriteQueueNums: topicConfig.WriteQueueNums,
+		TopicFilterType: topicConfig.TopicFilterType.String(), TopicSysFlag: topicConfig.TopicSysFlag, Order: topicConfig.Order,
+		Perm: topicConfig.Perm}
 	request := protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if response != nil && err == nil {
@@ -394,16 +400,14 @@ func (impl *MQClientAPIImpl)CreateTopic(addr, defaultTopic string, topicConfig s
 
 }
 
-
 // 从namesrv查询客户端IP信息
-func (impl *MQClientAPIImpl)getProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
+func (impl *MQClientAPIImpl) getProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
 	return impl.getKVConfigValue(namesrvUtil.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
 }
 
-
 // 获取配置信息
-func (impl *MQClientAPIImpl)getKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
-	requestHeader := &namesrv.GetKVConfigRequestHeader{Namespace:namespace, Key:key}
+func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
+	requestHeader := &namesrv.GetKVConfigRequestHeader{Namespace: namespace, Key: key}
 	request := protocol.CreateRequestCommand(cprotocol.GET_KV_CONFIG, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil && err == nil {

@@ -112,7 +112,7 @@ type PullCallBackImpl struct {
 	*DefaultMQPushConsumerImpl
 }
 
-func (backImpl PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
+func (backImpl *PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
 	backImpl.pullAPIWrapper.processPullResult(backImpl.MessageQueue, pullResultExt, backImpl.SubscriptionData)
 	pullResult := pullResultExt.PullResult
 	switch pullResult.PullStatus {
