@@ -6,6 +6,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"os/user"
+	"github.com/pquerna/ffjson/ffjson"
+	"fmt"
 )
 
 // SubscriptionGroupManager  用来管理订阅组，包括订阅权限等
@@ -60,43 +62,48 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 // findSubscriptionGroupConfig 查找订阅关系
 // Author gaoyanlei
 // Since 2017/8/17
-func (self *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
-	subscriptionGroupConfig, _ := self.SubscriptionGroupTable.Get(group)
+func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
+	subscriptionGroupConfig, _ := sgm.SubscriptionGroupTable.Get(group)
 	if value, ok := subscriptionGroupConfig.(*subscription.SubscriptionGroupConfig); ok {
 		if value == nil {
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
 			subscriptionGroupConfig.GroupName = group
-			self.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
-			self.DataVersion.NextVersion()
-			// TODO  this.persist();
+			sgm.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
+			sgm.DataVersion.NextVersion()
+			sgm.configManagerExt.Persist()
 		}
 		return value
 	}
 	return nil
 }
 
-func (self *SubscriptionGroupManager) Load() bool {
+func (sgm *SubscriptionGroupManager) Load() bool {
 
-	return self.configManagerExt.Load()
+	return sgm.configManagerExt.Load()
 }
 
-func (self *SubscriptionGroupManager) Encode(prettyFormat bool) string {
+func (sgm *SubscriptionGroupManager) Encode(prettyFormat bool) string {
+	if b, err := ffjson.Marshal(sgm.SubscriptionGroupTable); err == nil {
+		fmt.Println("SubscriptionGroupManager"+string(b)+"leng"+string(sgm.SubscriptionGroupTable.Size()))
+		fmt.Println(sgm.SubscriptionGroupTable.Size())
+		return string(b)
+	}
 	return ""
 }
 
-func (self *SubscriptionGroupManager) Decode(jsonString []byte) {
+func (sgm *SubscriptionGroupManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
 		subscriptionGroupManagernew := new(SubscriptionGroupManager)
 		json.Unmarshal(jsonString, subscriptionGroupManagernew)
 		for _, v := range subscriptionGroupManagernew.SubscriptionGroupConfigs {
 			if b, err := json.Marshal(v); err == nil {
-				self.SubscriptionGroupTable.Put(v.GroupName, string(b))
+				sgm.SubscriptionGroupTable.Put(v.GroupName, string(b))
 			}
 		}
 	}
 }
 
-func (self *SubscriptionGroupManager) ConfigFilePath() string {
+func (sgm *SubscriptionGroupManager) ConfigFilePath() string {
 	user, _ := user.Current()
 	return GetSubscriptionGroupPath(user.HomeDir)
 }

@@ -102,7 +102,7 @@ func (self *PullMessageProcessor) processRequest(request protocol.RemotingComman
 
 	// 检查队列有效性
 	if requestHeader.QueueId < 0 || requestHeader.QueueId >= topicConfig.ReadQueueNums {
-		errorInfo := "queueId[" + strconv.Itoa(requestHeader.QueueId) + "] is illagal,Topic :" + requestHeader.Topic + " topicConfig.readQueueNums: " + strconv.Itoa(topicConfig.ReadQueueNums)
+		errorInfo := "queueId[" + strconv.Itoa(int(requestHeader.QueueId)) + "] is illagal,Topic :" + requestHeader.Topic + " topicConfig.readQueueNums: " + strconv.Itoa(int(topicConfig.ReadQueueNums))
 		// TODO log.warn(errorInfo);
 		response.Code = commonprotocol.SYSTEM_ERROR
 		response.Remark = errorInfo
@@ -266,7 +266,7 @@ func (self *PullMessageProcessor) processRequest(request protocol.RemotingComman
 
 				mq := message.MessageQueue{
 					Topic:      requestHeader.Topic,
-					QueueId:    requestHeader.QueueId,
+					QueueId:    int(requestHeader.QueueId),
 					BrokerName: self.BrokerController.BrokerConfig.BrokerName,
 				}
 
