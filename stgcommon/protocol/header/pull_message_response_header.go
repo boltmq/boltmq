@@ -10,6 +10,6 @@ type PullMessageResponseHeader struct {
 	MaxOffset            int64
 }
 
-func (header*PullMessageResponseHeader)CheckFields() {
-
+func (header*PullMessageResponseHeader)CheckFields()error {
+	return nil
 }

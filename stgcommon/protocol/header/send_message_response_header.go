@@ -10,7 +10,7 @@ type SendMessageResponseHeader struct {
 	TransactionId string
 }
 
-func (header *SendMessageResponseHeader) CheckFields() {
-
+func (header *SendMessageResponseHeader) CheckFields()error {
+	return nil
 }
 

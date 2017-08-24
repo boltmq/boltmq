@@ -10,6 +10,6 @@ type UpdateConsumerOffsetRequestHeader struct {
 	CommitOffset  int64
 }
 
-func (header*UpdateConsumerOffsetRequestHeader)CheckFields(){
-
+func (header*UpdateConsumerOffsetRequestHeader)CheckFields()error{
+	return nil
 }

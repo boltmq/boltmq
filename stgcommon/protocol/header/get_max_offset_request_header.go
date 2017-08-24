@@ -8,6 +8,6 @@ type GetMaxOffsetRequestHeader struct {
 	QueueId int
 }
 
-func (header*GetMaxOffsetRequestHeader)CheckFields() {
-
+func (header*GetMaxOffsetRequestHeader)CheckFields()error {
+	return nil
 }

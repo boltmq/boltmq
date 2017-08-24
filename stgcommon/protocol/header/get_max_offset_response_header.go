@@ -7,6 +7,6 @@ type GetMaxOffsetResponseHeader struct {
 	Offset int64
 }
 
-func (header*GetMaxOffsetResponseHeader)CheckFields() {
-
+func (header*GetMaxOffsetResponseHeader)CheckFields()error {
+	return nil
 }

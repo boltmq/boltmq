@@ -9,6 +9,6 @@ type QueryConsumerOffsetRequestHeader struct {
 }
 
 
-func (header*QueryConsumerOffsetRequestHeader)CheckFields(){
-
+func (header*QueryConsumerOffsetRequestHeader)CheckFields()error{
+	return nil
 }

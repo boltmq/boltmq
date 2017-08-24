@@ -18,8 +18,8 @@ type SendMessageRequestHeaderV2 struct {
 	k bool
 }
 
-func (header *SendMessageRequestHeaderV2) CheckFields() {
-
+func (header *SendMessageRequestHeaderV2) CheckFields()error {
+	return nil
 }
 
 func CreateSendMessageRequestHeaderV2(v1 *SendMessageRequestHeader) *SendMessageRequestHeaderV2 {
