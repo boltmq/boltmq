@@ -7,6 +7,6 @@ type QueryConsumerOffsetResponseHeader struct {
 	Offset int64 `json:"offset"`
 }
 
-func (header*QueryConsumerOffsetResponseHeader)CheckFields() {
-
+func (header*QueryConsumerOffsetResponseHeader)CheckFields()error {
+	return nil
 }

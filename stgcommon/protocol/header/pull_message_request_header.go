@@ -16,6 +16,6 @@ type PullMessageRequestHeader struct {
 	SubVersion           int
 }
 
-func (header*PullMessageRequestHeader)CheckFields() {
-
+func (header*PullMessageRequestHeader)CheckFields()error {
+	return nil
 }

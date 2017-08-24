@@ -7,6 +7,6 @@ type GetConsumerListByGroupRequestHeader struct {
 	ConsumerGroup string
 }
 
-func (header*GetConsumerListByGroupRequestHeader)CheckFields(){
-
+func (header*GetConsumerListByGroupRequestHeader)CheckFields()error{
+	return nil
 }

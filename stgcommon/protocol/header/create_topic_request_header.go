@@ -14,6 +14,6 @@ type CreateTopicRequestHeader struct {
 	Order           bool
 }
 
-func (header*CreateTopicRequestHeader)CheckFields() {
-
+func (header*CreateTopicRequestHeader)CheckFields()error {
+return nil
 }

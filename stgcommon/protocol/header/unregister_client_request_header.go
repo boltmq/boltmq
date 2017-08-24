@@ -10,6 +10,6 @@ type UnregisterClientRequestHeader struct {
 }
 
 
-func (header *UnregisterClientRequestHeader) CheckFields() {
-
+func (header *UnregisterClientRequestHeader) CheckFields()error {
+	return nil
 }

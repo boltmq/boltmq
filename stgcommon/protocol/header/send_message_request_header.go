@@ -17,6 +17,6 @@ type SendMessageRequestHeader struct {
 	UnitMode              bool
 }
 
-func (header*SendMessageRequestHeader)CheckFields(){
-
+func (header*SendMessageRequestHeader)CheckFields()error{
+	return nil
 }

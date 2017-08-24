@@ -1,4 +1,5 @@
 package header
+
 // ConsumerSendMsgBackRequestHeader: 消费消息头
 // Author: yintongqiang
 // Since:  2017/8/17
@@ -11,8 +12,8 @@ type ConsumerSendMsgBackRequestHeader struct {
 	UnitMode    bool
 }
 
-func (header*ConsumerSendMsgBackRequestHeader)CheckFields() {
-
+func (header *ConsumerSendMsgBackRequestHeader) CheckFields() error {
+	return nil
 }
 
 // 初始化 ConsumerSendMsgBackRequestHeader

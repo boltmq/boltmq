@@ -7,6 +7,6 @@ type GetConsumerListByGroupResponseBody struct {
 	ConsumerIdList []string
 }
 
-func (header*GetConsumerListByGroupResponseBody)CheckFields() {
-
+func (header*GetConsumerListByGroupResponseBody)CheckFields()error {
+	return nil
 }
