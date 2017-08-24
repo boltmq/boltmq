@@ -81,9 +81,9 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	}
 
 	newTopic := stgcommon.GetRetryTopic(requestHeader.Group)
-	queueIdInt := 0
+	var queueIdInt int32
 	if queueIdInt < 0 {
-		num := (smp.Rand.Int() % 99999999) % subscriptionGroupConfig.RetryQueueNums
+		num := (smp.Rand.Int31() % 99999999) % subscriptionGroupConfig.RetryQueueNums
 		if num > 0 {
 			queueIdInt = num
 		} else {
@@ -137,7 +137,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	if msgExt.ReconsumeTimes >= subscriptionGroupConfig.RetryMaxTimes || delayLevel < 0 {
 		newTopic = stgcommon.GetDLQTopic(requestHeader.Group)
 		if queueIdInt < 0 {
-			num := (smp.Rand.Int() % 99999999) % DLQ_NUMS_PER_GROUP
+			num := (smp.Rand.Int31() % 99999999) % DLQ_NUMS_PER_GROUP
 			if num > 0 {
 				queueIdInt = num
 			} else {

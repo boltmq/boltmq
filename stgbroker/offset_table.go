@@ -3,7 +3,7 @@ package stgbroker
 import "sync"
 
 type OffsetTable struct {
-	Offsets      map[string]map[int]int64 `json:"offsetTable"`
+	Offsets      map[string]map[int]int64 `json:"offsets"`
 	sync.RWMutex `json:"-"`
 }
 

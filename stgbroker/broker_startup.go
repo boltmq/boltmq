@@ -1,9 +1,8 @@
-package start
+package stgbroker
 
 import (
 	"flag"
 	"fmt"
-	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
@@ -20,8 +19,8 @@ type SmartgoBrokerConfig struct {
 	FlushDiskType     string
 }
 
-func start() *stgbroker.BrokerController {
-	controller := createBrokerController()
+func start() *BrokerController {
+	controller := CreateBrokerController()
 	controller.Start()
 	tip := "The broker[" + controller.BrokerConfig.BrokerName + ", " + controller.GetBrokerAddr() + "] boot success."
 
@@ -34,7 +33,7 @@ func start() *stgbroker.BrokerController {
 	return controller
 }
 
-func createBrokerController() *stgbroker.BrokerController {
+func CreateBrokerController() *BrokerController {
 	var smartgoBrokerConfig SmartgoBrokerConfig
 
 	// 加载配置文件
@@ -96,7 +95,7 @@ func createBrokerController() *stgbroker.BrokerController {
 	}
 
 	// 初始化日志
-	controller := stgbroker.NewBrokerController(*brokerConfig)
+	controller := NewBrokerController(*brokerConfig)
 
 	// 初始化controller
 	initResult := controller.Initialize()

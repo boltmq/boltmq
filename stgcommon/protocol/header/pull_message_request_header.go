@@ -6,7 +6,7 @@ package header
 type PullMessageRequestHeader struct {
 	ConsumerGroup        string
 	Topic                string
-	QueueId              int
+	QueueId              int32
 	QueueOffset          int64
 	MaxMsgNums           int
 	SysFlag              int

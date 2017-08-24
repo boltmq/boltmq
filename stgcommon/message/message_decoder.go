@@ -26,11 +26,14 @@ const (
 	MessageFlagPostion           = 16
 	MessagePhysicOffsetPostion   = 28
 	MessageStoreTimestampPostion = 56
-	MessageMagicCode             = 0xAABBCCDD ^ 1880681586 + 8
 	charset                      = "utf-8"
 	// 序列化消息属性
 	NAME_VALUE_SEPARATOR = 1
 	PROPERTY_SEPARATOR   = 2
+)
+
+var (
+	MessageMagicCode = 0xAABBCCDD ^ 1880681586 + 8
 )
 
 // DecodeMessageId 解析messageId
@@ -184,18 +187,14 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 
 			// 解压缩
 			if isCompressBody && (msgExt.SysFlag&sysflag.CompressedFlag) == sysflag.CompressedFlag {
-				b := bytes.NewReader(body)
-				z, e := zlib.NewReader(b)
+				unzipBytes, e := unzip(body)
 				if e != nil {
 					return nil, e
 				}
-				defer z.Close()
-				body, e = ioutil.ReadAll(z)
-				if e != nil {
-					return nil, e
-				}
+				msgExt.Body = unzipBytes
+			} else {
+				msgExt.Body = body
 			}
-			msgExt.Body = body
 		} else {
 			buf.Next(int(bodyLength))
 		}
@@ -284,13 +283,21 @@ func CreateMessageId(storeHost []byte, storePort int32, offset int64) string {
 }
 
 // JoinHostPort 连接host:port
-func JoinHostPort(host []byte, port int32) string {
-	return net.JoinHostPort(string(host), strconv.Itoa(int(port)))
+func JoinHostPort(hostBytes []byte, port int32) string {
+	host := bytesToIPv4String(hostBytes)
+	return net.JoinHostPort(host, strconv.Itoa(int(port)))
 }
 
-// IPv4 address a.b.c.d. src is BigEndian buffer
+// IPv4 address a.b.c.d src is BigEndian buffer
 func bytesToIPv4String(src []byte) string {
 	return net.IPv4(src[0], src[1], src[2], src[3]).String()
+}
+
+// IPv4 address string a.b.c.d return ip bytes
+func ipv4StringToBytes(host string) []byte {
+	ip := net.ParseIP(host)
+	ipBytes := []byte(ip)
+	return ipBytes[12:]
 }
 
 func int32ToBytes(value int32) []byte {
@@ -307,4 +314,42 @@ func int64ToBytes(value int64) []byte {
 
 func bytesToHexString(src []byte) string {
 	return strings.ToUpper(hex.EncodeToString(src))
+}
+
+// 压缩报文
+func zip(buffer []byte) ([]byte, error) {
+	var (
+		b bytes.Buffer
+	)
+
+	w := zlib.NewWriter(&b)
+	_, e := w.Write(buffer)
+	if e != nil {
+		w.Close()
+		return nil, e
+	}
+	// don't use defer, because b.Bytes() after w.Close()
+	w.Close()
+
+	return b.Bytes(), nil
+}
+
+// 解压报文
+func unzip(buffer []byte) ([]byte, error) {
+	var (
+		b = bytes.NewReader(buffer)
+	)
+
+	z, e := zlib.NewReader(b)
+	defer z.Close()
+	if e != nil {
+		return nil, e
+	}
+
+	unzipBytes, e := ioutil.ReadAll(z)
+	if e != nil {
+		return nil, e
+	}
+
+	return unzipBytes, nil
 }

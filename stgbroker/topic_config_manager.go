@@ -150,7 +150,7 @@ func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicC
 // Author gaoyanlei
 // Since 2017/8/10
 func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
-	remoteAddress string, clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Lock()
 	tc, err := tcm.TopicConfigTable.Get(topic)
@@ -177,7 +177,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 		if defaultTopicConfig, ok := value.(*stgcommon.TopicConfig); ok {
 			if constant.IsInherited(defaultTopicConfig.Perm) {
 				// 设置queueNums个数
-				var queueNums int
+				var queueNums int32
 				if clientDefaultTopicQueueNums > defaultTopicConfig.WriteQueueNums {
 					queueNums = defaultTopicConfig.WriteQueueNums
 				} else {
@@ -218,8 +218,8 @@ func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string, perm,
-	clientDefaultTopicQueueNums, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
+	clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Lock()
 	tc, err := tcm.TopicConfigTable.Get(topic)

@@ -25,7 +25,7 @@ type BrokerConfig struct {
 	// Broker权限
 	BrokerPermission int
 	// 默认topic队列数
-	DefaultTopicQueueNums int
+	DefaultTopicQueueNums int32
 	// 自动创建Topic功能是否开启（线上建议关闭）
 	AutoCreateTopicEnable bool
 	// 自动创建以集群名字命名的Topic功能是否开启
