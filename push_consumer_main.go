@@ -38,7 +38,7 @@ func main() {
 	var listener1 =listener.(consumer.MessageListenerConcurrently)
 	listener1.ConsumeMessage(nil,consumer.ConsumeConcurrentlyContext{})
 	defaultMQPushConsumer.Start()
-	time.Sleep(time.Second*60)
+	time.Sleep(time.Second*600)
 	defaultMQPushConsumer.Shutdown()
 	go taskC()
 	select {
