@@ -19,3 +19,7 @@ func (heartbeatData *HeartbeatData) Encode() []byte {
 	bytes, _ := ffjson.Marshal(heartbeatData)
 	return bytes
 }
+func (heartbeatData *HeartbeatData) Decode(byte []byte) *HeartbeatData {
+	ffjson.Unmarshal(byte, heartbeatData)
+	return heartbeatData
+}
