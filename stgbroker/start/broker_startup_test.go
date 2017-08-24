@@ -1,11 +1,10 @@
-package start
+package stgbroker
 
 import (
 	"testing"
 )
 
 func TestNewClientConfig(t *testing.T) {
-	start()
 	select {
 
 	}

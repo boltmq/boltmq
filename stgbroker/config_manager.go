@@ -3,7 +3,8 @@ package stgbroker
 import (
 	"fmt"
 	"io/ioutil"
-	"strings"
+	"io"
+	"os"
 )
 
 type ConfigManager interface {
@@ -32,7 +33,7 @@ func (self *ConfigManagerExt) Load() bool {
 		fmt.Println("ReadFile: ", err.Error())
 	}
 
-	self.ConfigManager.Decode([]byte(strings.TrimSpace(string(bytes))))
+	self.ConfigManager.Decode(bytes)
 	return true
 }
 
@@ -40,6 +41,8 @@ func (self *ConfigManagerExt) Persist() {
 	jsonString := self.ConfigManager.Encode(true)
 	if jsonString != "" {
 		fileName := self.ConfigManager.ConfigFilePath()
+		f, _:= os.OpenFile(fileName, os.O_APPEND, 0666)
+		io.WriteString(f, jsonString)
 		fmt.Println(jsonString,fileName)
 		// TODO 写入文件
 	}

@@ -41,7 +41,6 @@ func (com *ConsumerOffsetManager) Load() bool {
 }
 
 func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
-	fmt.Println(com.Offsets.size())
 	if b, err := ffjson.Marshal(com.Offsets); err == nil {
 		return string(b)
 	}
@@ -50,10 +49,7 @@ func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
 
 func (com *ConsumerOffsetManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
-		fmt.Println(string(jsonString))
-		ConsumerOffsetManager:=NewConsumerOffsetManager(nil)
-		ffjson.Unmarshal([]byte(jsonString), ConsumerOffsetManager.Offsets)
-		fmt.Println(ConsumerOffsetManager.Offsets)
+		ffjson.Unmarshal(jsonString, com.Offsets)
 		/*
 				for k, v := range cc.Offsets {
 					m := sync.NewMap()

@@ -3,7 +3,7 @@ package mqtrace
 type ConsumeMessageContext struct {
 	ConsumerGroup  string
 	Topic          string
-	QueueId        int
+	QueueId        int32
 	ClientHost     string
 	StoreHost      string
 	MessageIds     map[string]int64
