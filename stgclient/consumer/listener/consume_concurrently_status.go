@@ -1,4 +1,5 @@
 package listener
+
 // ConsumeConcurrentlyStatus: 普通消费状态回执
 // Author: yintongqiang
 // Since:  2017/8/10
@@ -22,4 +23,3 @@ func (cct ConsumeConcurrentlyStatus) String() string {
 		return "Unknow"
 	}
 }
-
