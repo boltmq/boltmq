@@ -10,11 +10,11 @@ type ChannelInfo struct {
 	ClientId            string
 	LanguageCode        string
 	Addr                string
-	Version             int
+	Version             int32
 	LastUpdateTimestamp int64
 }
 
-func NewClientChannelInfo(conn net.Conn, clientId string, languageCode, addr string, version int) *ChannelInfo {
+func NewClientChannelInfo(conn net.Conn, clientId string, languageCode, addr string, version int32) *ChannelInfo {
 	var channelInfo = new(ChannelInfo)
 	channelInfo.Conn = conn
 	channelInfo.ClientId = clientId

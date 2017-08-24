@@ -18,7 +18,7 @@ type RegisterBrokerRequestHeader struct {
 	HaServerAddr string
 
 	// brokerId
-	BrokerId int
+	BrokerId int64
 }
 
 func(self *RegisterBrokerRequestHeader) CheckFields() error {
