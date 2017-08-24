@@ -288,6 +288,25 @@ func JoinHostPort(hostBytes []byte, port int32) string {
 	return net.JoinHostPort(host, strconv.Itoa(int(port)))
 }
 
+// SplitHostPort 解析host:port
+func SplitHostPort(addr string) (string, int32, error) {
+	if addr == "" {
+		return "", 0, nil
+	}
+
+	host, portStr, e := net.SplitHostPort(addr)
+	if e != nil {
+		return "", 0, e
+	}
+
+	port, e := strconv.ParseInt(portStr, 10, 32)
+	if e != nil {
+		return host, 0, e
+	}
+
+	return host, int32(port), nil
+}
+
 // IPv4 address a.b.c.d src is BigEndian buffer
 func bytesToIPv4String(src []byte) string {
 	return net.IPv4(src[0], src[1], src[2], src[3]).String()
@@ -295,6 +314,10 @@ func bytesToIPv4String(src []byte) string {
 
 // IPv4 address string a.b.c.d return ip bytes
 func ipv4StringToBytes(host string) []byte {
+	if host == "" {
+		return []byte{0, 0, 0, 0}
+	}
+
 	ip := net.ParseIP(host)
 	ipBytes := []byte(ip)
 	return ipBytes[12:]
