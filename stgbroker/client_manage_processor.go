@@ -2,6 +2,8 @@ package stgbroker
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -114,6 +116,26 @@ func (cmp *ClientManageProcessor) unregisterClient(addr string, conn net.Conn, r
 
 func (cmp *ClientManageProcessor) queryConsumerOffset(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
+	requestHeader := &header.UpdateConsumerOffsetRequestHeader{}
+
+	context := &mqtrace.ConsumeMessageContext{}
+	context.ConsumerGroup = requestHeader.ConsumerGroup
+	context.Topic = requestHeader.Topic
+	context.ClientHost = conn.LocalAddr().String()
+	context.Success = true
+	context.Status = listener.CONSUME_SUCCESS.String()
+
+	//
+	//final SocketAddress storeHost =
+	//	new InetSocketAddress(brokerController.getBrokerConfig().getBrokerIP1(), brokerController
+	//.getNettyServerConfig().getListenPort());
+	// TODO preOffset :=cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic,requestHeader.QueueId)
+	// TODO messageIds :=cmp.BrokerController.getMessageStore().getMessageIds(requestHeader.getTopic(), requestHeader.getQueueId(), preOffset, requestHeader.getCommitOffset(), storeHost);
+	// TODO context.setMessageIds(messageIds);
+	// TODO this.executeConsumeMessageHookAfter(context);
+
+	cmp.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,
+		requestHeader.Topic, requestHeader.QueueId, requestHeader.CommitOffset)
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
