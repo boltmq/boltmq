@@ -19,14 +19,14 @@ type BaseRemotingClient struct {
 	responseTableLock       sync.RWMutex
 	rpcHook                 RPCHook
 	defaultRequestProcessor RequestProcessor
-	processorTable          map[int]RequestProcessor // 注册的处理器
+	processorTable          map[int32]RequestProcessor // 注册的处理器
 	processorTableLock      sync.RWMutex
 	timeoutTimer            *time.Timer
 	isRunning               bool
 }
 
 // RegisterProcessor register porcessor
-func (rc *BaseRemotingClient) RegisterProcessor(requestCode int, processor RequestProcessor) {
+func (rc *BaseRemotingClient) RegisterProcessor(requestCode int32, processor RequestProcessor) {
 	rc.processorTableLock.Lock()
 	rc.processorTable[requestCode] = processor
 	rc.processorTableLock.Unlock()
