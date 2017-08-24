@@ -143,7 +143,7 @@ func (rc *RemotingCommand) DecodeCommandCustomHeader() error {
 		return nil
 	}
 
-	return DecodeCommandCustomHeader(rc.ExtFields, rc.CustomHeader)
+	return decodeCommandCustomHeader(rc.ExtFields, rc.CustomHeader)
 }
 
 // DecodeRemotingCommand 解析返回RemotingCommand

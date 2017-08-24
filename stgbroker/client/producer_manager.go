@@ -1,16 +1,17 @@
 package client
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"math/rand"
+	"net"
 	"time"
 )
 
 type ProducerManager struct {
 	LockTimeoutMillis     int64
 	ChannelExpiredTimeout int64
-	groupChannelTable     *sync.Map
-	hashcodeChannelTable  *sync.Map
+	GroupChannelTable     *ProducerGroupConnTable
+	hashcodeChannelTable  map[int][]net.Conn
 	Rand                  *rand.Rand
 }
 
@@ -18,16 +19,45 @@ func NewProducerManager() *ProducerManager {
 	var brokerController = new(ProducerManager)
 	brokerController.LockTimeoutMillis = 3000
 	brokerController.ChannelExpiredTimeout = 1000 * 120
-	brokerController.groupChannelTable = sync.NewMap()
-	brokerController.hashcodeChannelTable = sync.NewMap()
+	brokerController.GroupChannelTable = NewProducerGroupConnTable()
+	brokerController.hashcodeChannelTable = make(map[int][]net.Conn)
 	brokerController.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	return brokerController
 }
 
-func (producerManager *ProducerManager) generateRandmonNum() int {
-	return producerManager.Rand.Int()
+func (pm *ProducerManager) generateRandmonNum() int {
+	return pm.Rand.Int()
 }
 
-func (producerManager *ProducerManager)registerProducer ()  {
+// registerProducer producer注册
+// Author gaoyanlei
+// Since 2017/8/24
+func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelInfo) {
+	connTable := pm.GroupChannelTable.get(group)
+	if nil == connTable {
+		channelTable := make(map[string]net.Conn)
+		pm.GroupChannelTable.put(group, channelTable)
+	}
 
+	value, ok := connTable[channelInfo.Addr]
+	if !ok || nil == value {
+		connTable[channelInfo.Addr] = channelInfo.Conn
+		logger.Info("new producer connected, group: %v channel: %v", group, channelInfo.Addr)
+	}
+
+}
+
+// UnregisterProducer 注销producer
+// Author gaoyanlei
+// Since 2017/8/24
+func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *ChannelInfo) {
+	connTable := pm.GroupChannelTable.get(group)
+	if nil != connTable {
+		delete(connTable, channelInfo.Addr)
+		logger.Info("unregister a producer %v from groupChannelTable %v", group,
+			channelInfo.Addr)
+	} else {
+		pm.GroupChannelTable.remove(group)
+		logger.Info("unregister a producer %v from groupChannelTable", group)
+	}
 }

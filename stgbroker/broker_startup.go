@@ -19,7 +19,7 @@ type SmartgoBrokerConfig struct {
 	FlushDiskType     string
 }
 
-func start() *BrokerController {
+func Start() *BrokerController {
 	controller := CreateBrokerController()
 	controller.Start()
 	tip := "The broker[" + controller.BrokerConfig.BrokerName + ", " + controller.GetBrokerAddr() + "] boot success."
@@ -44,14 +44,6 @@ func CreateBrokerController() *BrokerController {
 	// 初始化brokerConfig
 	brokerConfig := stgcommon.NewBrokerConfig()
 
-	// netty服务器端配置
-	// TODO final NettyServerConfig nettyServerConfig = new NettyServerConfig();
-	// netty客户端配置
-	// TODO final NettyClientConfig nettyClientConfig = new NettyClientConfig();
-	// 设置netty服务器端监听端口
-	// TODO nettyServerConfig.setListenPort(10911);
-	// 消息存储的相关配置
-	// TODO final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 	brokerConfig.BrokerName = smartgoBrokerConfig.BrokerName
 	brokerConfig.BrokerClusterName = smartgoBrokerConfig.BrokerClusterName
 
