@@ -58,7 +58,7 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 	if infoOld == nil || err != nil {
 		prev, err := cg.ConnTable.Put(infoNew.LocalAddr().String(), infoNew)
 		if prev == nil || err != nil {
-			logger.Info("new consumer connected, group: {} {} {} channel: {}", cg.GroupName, consumeType,
+			logger.Info("new consumer connected, group: %v %v %v channel: %v", cg.GroupName, consumeType,
 				messageModel, infoNew.LocalAddr().String())
 			updated = true
 		}
@@ -67,7 +67,7 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 		if infoold, ok := infoOld.(net.Conn); ok {
 			if !strings.EqualFold(infoNew.LocalAddr().String(), infoold.LocalAddr().String()) {
 				logger.Error(
-					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: {} OLD: {} NEW: {} ",
+					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %v OLD: %v NEW: %v ",
 					cg.GroupName,                 //
 					infoold.LocalAddr().String(), //
 					infoNew.LocalAddr().String())
