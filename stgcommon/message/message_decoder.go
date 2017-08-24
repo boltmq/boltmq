@@ -232,7 +232,10 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 	msgExt.StoreHost = JoinHostPort(storeHost, storePort)
 	msgExt.CommitLogOffset = physicOffset
 	// 组装消息ID字段
-	msgExt.MsgId = CreateMessageId(storeHost, storePort, physicOffset)
+	msgExt.MsgId, e = createMessageId(storeHost, storePort, physicOffset)
+	if e != nil {
+		return nil, e
+	}
 
 	return msgExt, nil
 }
@@ -265,21 +268,40 @@ func String2messageProperties(properties string) map[string]string {
 	return m
 }
 
-// CreateMessageId 解析消息msgId字段(ip + port + commitOffset，其中ip、port长度分别是4位，offset占用8位长度)
-func CreateMessageId(storeHost []byte, storePort int32, offset int64) string {
-	buffMsgId := make([]byte, MSG_ID_LENGTH)
-	input := bytes.NewBuffer(buffMsgId)
-	input.Reset()
-	input.Grow(MSG_ID_LENGTH)
-	input.Write(storeHost)
+// CreateMessageId 解析消息msgId字段addr是host:port
+func CreateMessageId(addr string, offset int64) (string, error) {
+	host, port, e := SplitHostPort(addr)
+	if e != nil {
+		return "", e
+	}
 
-	storePortBytes := int32ToBytes(storePort)
-	input.Write(storePortBytes)
+	return createMessageId(ipv4StringToBytes(host), port, offset)
+}
 
-	offsetBytes := int64ToBytes(offset)
-	input.Write(offsetBytes)
+// 解析消息msgId字段(ip + port + commitOffset，其中ip、port长度分别是4位，offset占用8位长度)
+func createMessageId(storeHost []byte, storePort int32, offset int64) (string, error) {
+	var (
+		buf = bytes.NewBuffer([]byte{})
+		e   error
+	)
 
-	return bytesToHexString(input.Bytes())
+	buf.Grow(MSG_ID_LENGTH)
+	_, e = buf.Write(storeHost)
+	if e != nil {
+		return "", e
+	}
+
+	e = binary.Write(buf, binary.BigEndian, &storePort)
+	if e != nil {
+		return "", e
+	}
+
+	e = binary.Write(buf, binary.BigEndian, &offset)
+	if e != nil {
+		return "", e
+	}
+
+	return bytesToHexString(buf.Bytes()), nil
 }
 
 // JoinHostPort 连接host:port
