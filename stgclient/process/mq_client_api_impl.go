@@ -56,7 +56,7 @@ func (impl *MQClientAPIImpl) Shutdwon() {
 }
 
 // 发送心跳到broker
-func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) {
+func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64)error {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerDatas := heartbeatData.ConsumerDataSet
 		for data := range consumerDatas.Iterator().C {
@@ -84,6 +84,7 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 	} else {
 		logger.Errorf("sendHeartbeat error")
 	}
+	return err
 }
 
 func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
@@ -117,7 +118,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
-	mapBrokerAddrs[0] = "10.122.1.210:10911"
+	mapBrokerAddrs[0] = "10.122.1.200:10911"
 	//mapBrokerAddrs[1] = "10.128.31.125:10911"
 	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
 	return routeData
