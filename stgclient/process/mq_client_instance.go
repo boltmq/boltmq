@@ -115,7 +115,8 @@ func (mqClientInstance *MQClientInstance) Shutdown() {
 		mqClientInstance.ServiceState = stgcommon.SHUTDOWN_ALREADY
 		mqClientInstance.PullMessageService.Shutdown()
 		for timer := range mqClientInstance.TimerTask.Iterator().C {
-			timer.(*timeutil.Ticker).Stop()
+			status := timer.(*timeutil.Ticker).Stop()
+			logger.Infof("shutdown ticker %v", status)
 		}
 		mqClientInstance.MQClientAPIImpl.Shutdwon()
 		mqClientInstance.RebalanceService.Shutdown()
