@@ -19,7 +19,7 @@ func NewClientRemotingProcessor(mqClientFactory *MQClientInstance) *ClientRemoti
 	return &ClientRemotingProcessor{
 		MQClientFactory:mqClientFactory    }
 }
-
+// 处理request
 func (processor*ClientRemotingProcessor)ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
 	case cprotocol.NOTIFY_CONSUMER_IDS_CHANGED:
