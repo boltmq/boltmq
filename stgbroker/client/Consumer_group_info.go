@@ -3,9 +3,9 @@ package client
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	"git.oschina.net/gomecode/gcloud/common/logger"
 	"net"
 	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 // ConsumerGroupInfo 整个Consumer Group信息
