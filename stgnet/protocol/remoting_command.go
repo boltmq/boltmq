@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	configVersion = -1
+	configVersion int32 = -1
 )
 
 // RemotingCommand remoting command
@@ -28,11 +28,11 @@ var (
 // Since: 2017-08-22
 type RemotingCommand struct {
 	//header
-	Code      int               `json:"code"`
+	Code      int32             `json:"code"`
 	Language  string            `json:"language"`
-	Version   int               `json:"version"`
+	Version   int32             `json:"version"`
 	Opaque    int32             `json:"opaque"`
-	Flag      int               `json:"flag"`
+	Flag      int32             `json:"flag"`
 	Remark    string            `json:"remark"`
 	ExtFields map[string]string `json:"extFields"`
 	// 修改字段类型 2017/8/16 Add by yintongqiang
@@ -43,7 +43,7 @@ type RemotingCommand struct {
 }
 
 // CreateResponseCommand
-func CreateResponseCommand(code int, remark string) *RemotingCommand {
+func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 	return &RemotingCommand{
 		Code:   code,
 		Remark: remark,
@@ -51,7 +51,7 @@ func CreateResponseCommand(code int, remark string) *RemotingCommand {
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang
-func CreateRequestCommand(code int, customHeader CommandCustomHeader) *RemotingCommand {
+func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *RemotingCommand {
 	remotingClient := &RemotingCommand{
 		Code:         code,
 		CustomHeader: customHeader,
@@ -77,41 +77,48 @@ func (rc *RemotingCommand) setCMDVersion() {
 
 	v, e := strconv.Atoi(version)
 	if e == nil {
-		rc.Version = v
+		rc.Version = int32(v)
 	}
 }
 
 // IsOnewayRPC is oneway rpc, return bool
 func (rc *RemotingCommand) IsOnewayRPC() bool {
-	bits := 1 << rpcOneway
+	var bits int32
+	bits = 1 << rpcOneway
 	return (rc.Flag & bits) == bits
 }
 
 // MarkResponseType mark response type
 func (rc *RemotingCommand) MarkResponseType() {
-	bits := 1 << rpcType
+	var bits int32
+	bits = 1 << rpcType
 	rc.Flag |= bits
 }
 
 // IsResponseType is response type, return bool
 func (rc *RemotingCommand) IsResponseType() bool {
-	bits := 1 << rpcType
+	var bits int32
+	bits = 1 << rpcType
 	return (rc.Flag & bits) == bits
 }
 
 // EncodeHeader 编码头部
 func (rc *RemotingCommand) EncodeHeader() []byte {
-	length := 4
+	var (
+		length       int32 = 4
+		headerLength int32
+	)
 	headerData := rc.buildHeader()
-	length += len(headerData)
+	headerLength = int32(len(headerData))
+	length += headerLength
 
 	if rc.Body != nil {
-		length += len(rc.Body)
+		length += int32(len(rc.Body))
 	}
 
 	buf := bytes.NewBuffer([]byte{})
 	binary.Write(buf, binary.BigEndian, length)
-	binary.Write(buf, binary.BigEndian, len(headerData))
+	binary.Write(buf, binary.BigEndian, headerLength)
 	buf.Write(headerData)
 
 	return buf.Bytes()
