@@ -58,7 +58,7 @@ pullCallback PullCallback) *PullResultExt {
 		requestHeader := header.PullMessageRequestHeader{
 			ConsumerGroup:api.consumerGroup,
 			Topic:mq.Topic,
-			QueueId:mq.QueueId,
+			QueueId:int32(mq.QueueId),
 			QueueOffset:offset,
 			MaxMsgNums:maxNums,
 			SysFlag:sysFlagInner,

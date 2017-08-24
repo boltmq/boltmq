@@ -43,7 +43,7 @@ func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSy
 		for _, brokerData := range brokerDataList {
 			addr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 			if !strings.EqualFold(addr, "") {
-				topicConfig := stgcommon.TopicConfig{TopicName:newTopic, ReadQueueNums:queueNum, WriteQueueNums:queueNum, TopicSysFlag:topicSysFlag}
+				topicConfig := stgcommon.TopicConfig{TopicName:newTopic, ReadQueueNums:int32(queueNum), WriteQueueNums:int32(queueNum), TopicSysFlag:topicSysFlag}
 				adminImpl.mQClientFactory.MQClientAPIImpl.CreateTopic(addr, key, topicConfig, 1000 * 3)
 			}
 		}
