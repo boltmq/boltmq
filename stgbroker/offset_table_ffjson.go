@@ -35,7 +35,7 @@ func (j *OffsetTable) MarshalJSONBuf(buf fflib.EncodingBuffer) error {
 	_ = obj
 	_ = err
 	buf.WriteString(`{"offsets":`)
-	/* Falling back. type=map[string]map[int]int64 kind=map */
+	/* Falling back. type=table[string]table[int]int64 kind=table */
 	err = buf.Encode(j.Offsets)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ mainparse:
 
 handle_Offsets:
 
-	/* handler: j.Offsets type=map[string]map[int]int64 kind=map quoted=false*/
+	/* handler: j.Offsets type=table[string]table[int]int64 kind=table quoted=false*/
 
 	{
 
@@ -237,7 +237,7 @@ handle_Offsets:
 				}
 
 				tok = fs.Scan()
-				/* handler: tmpJOffsets type=map[int]int64 kind=map quoted=false*/
+				/* handler: tmpJOffsets type=table[int]int64 kind=table quoted=false*/
 
 				{
 

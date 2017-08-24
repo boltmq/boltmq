@@ -21,6 +21,7 @@ type RegisterBrokerRequestHeader struct {
 	BrokerId int
 }
 
-func(self *RegisterBrokerRequestHeader) CheckFields()  {
+func(self *RegisterBrokerRequestHeader) CheckFields() error {
 
+	return nil
 }
