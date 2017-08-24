@@ -76,7 +76,7 @@ func (com *ConsumerOffsetManager) ConfigFilePath() string {
 // Since 2017/8/22
 func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 
-	com.Offsets.foreach(func(k string, v map[string]int64) {
+	com.Offsets.foreach(func(k string, v map[int]int64) {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
 			topic := arrays[0]
