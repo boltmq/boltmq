@@ -386,7 +386,7 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 	}
 	requestHeader := header.CreateTopicRequestHeader{Topic: topicWithProjectGroup,
 		DefaultTopic: defaultTopic, ReadQueueNums: topicConfig.ReadQueueNums, WriteQueueNums: topicConfig.WriteQueueNums,
-		TopicFilterType: topicConfig.TopicFilterType.String(), TopicSysFlag: topicConfig.TopicSysFlag, Order: topicConfig.Order,
+		TopicFilterType: topicConfig.TopicFilterType, TopicSysFlag: topicConfig.TopicSysFlag, Order: topicConfig.Order,
 		Perm: topicConfig.Perm}
 	request := protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
