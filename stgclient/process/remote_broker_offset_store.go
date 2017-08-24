@@ -141,5 +141,14 @@ func (store *RemoteBrokerOffsetStore)UpdateOffset(mq *message.MessageQueue, offs
 }
 
 func (store *RemoteBrokerOffsetStore)fetchConsumeOffsetFromBroker(mq *message.MessageQueue) int64 {
+	 findBrokerResult:=store.mQClientFactory.findBrokerAddressInAdmin(mq.BrokerName)
+	if strings.EqualFold(findBrokerResult.brokerAddr,""){
+		store.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
+		findBrokerResult=store.mQClientFactory.findBrokerAddressInAdmin(mq.BrokerName)
+	}
+	if !strings.EqualFold(findBrokerResult.brokerAddr,""){
+       requestHeader:=header.QueryConsumerOffsetRequestHeader{Topic:mq.Topic,ConsumerGroup:store.groupName,QueueId:int32(mq.QueueId)}
+	   return store.mQClientFactory.MQClientAPIImpl.queryConsumerOffset(findBrokerResult.brokerAddr,requestHeader,1000*5)
+	}
 	return -1
 }

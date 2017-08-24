@@ -257,6 +257,25 @@ timeoutMillis int, communicationMode CommunicationMode, pullCallback PullCallbac
 	return nil
 }
 
+
+func (impl *MQClientAPIImpl)queryConsumerOffset(addr string, requestHeader header.QueryConsumerOffsetRequestHeader, timeoutMillis int64) int64 {
+	if !strings.EqualFold(impl.ProjectGroupPrefix,""){
+		requestHeader.ConsumerGroup=stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup,impl.ProjectGroupPrefix)
+		requestHeader.Topic=stgclient.BuildWithProjectGroup(requestHeader.Topic,impl.ProjectGroupPrefix)
+	}
+	request:=protocol.CreateRequestCommand(cprotocol.QUERY_CONSUMER_OFFSET,&requestHeader)
+	response,err:=impl.DefalutRemotingClient.InvokeSync(addr,request,timeoutMillis)
+	if response!=nil && err==nil{
+		switch response.Code {
+		case cprotocol.SUCCESS:
+			//todo decode
+			responseHeader:=header.QueryConsumerOffsetResponseHeader{}
+			return responseHeader.Offset
+		}
+	}
+	return 0
+}
+
 func (impl *MQClientAPIImpl)pullMessageSync(addr string, request *protocol.RemotingCommand, timeoutMillis int) *PullResultExt {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if err != nil {
