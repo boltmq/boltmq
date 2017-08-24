@@ -31,7 +31,7 @@ func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, req
 	case protocol2.HEART_BEAT:
 		return cmp.heartBeat(addr, conn, request)
 	case protocol2.UNREGISTER_CLIENT:
-		return cmp.heartBeat(addr, conn, request)
+		return cmp.unregisterClient(addr, conn, request)
 	case protocol2.QUERY_CONSUMER_OFFSET:
 		return cmp.queryConsumerOffset(addr, conn, request)
 	}
