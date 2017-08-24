@@ -125,11 +125,24 @@ func (rc *RemotingCommand) EncodeHeader() []byte {
 }
 
 func (rc *RemotingCommand) buildHeader() []byte {
+	rc.makeCustomHeaderToNet()
+
 	buf, err := ffjson.Marshal(rc)
 	if err != nil {
 		return nil
 	}
 	return buf
+}
+
+func (rc *RemotingCommand) makeCustomHeaderToNet() {
+	if rc.CustomHeader == nil {
+		return
+	}
+
+	extFields := encodeCommandCustomHeader(rc.CustomHeader)
+	for k, v := range extFields {
+		rc.ExtFields[k] = v
+	}
 }
 
 // Type return remoting command type
