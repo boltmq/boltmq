@@ -154,16 +154,21 @@ func (rc *RemotingCommand) Type() RemotingCommandType {
 	return REQUEST_COMMAND
 }
 
-func (rc *RemotingCommand) DecodeCommandCustomHeader() error {
+func (rc *RemotingCommand) DecodeCommandCustomHeader(commandCustomHeader CommandCustomHeader) error {
+	if commandCustomHeader == nil {
+		return nil
+	}
+
 	if rc.ExtFields == nil {
 		return nil
 	}
 
-	if rc.CustomHeader == nil {
-		return nil
+	err := decodeCommandCustomHeader(rc.ExtFields, commandCustomHeader)
+	if err != nil {
+		return err
 	}
 
-	return decodeCommandCustomHeader(rc.ExtFields, rc.CustomHeader)
+	return commandCustomHeader.CheckFields()
 }
 
 // DecodeRemotingCommand 解析返回RemotingCommand
