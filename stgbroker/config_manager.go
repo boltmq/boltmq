@@ -26,21 +26,21 @@ func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
 	}
 }
 
-func (self *ConfigManagerExt) Load() bool {
-	fileName := self.ConfigManager.ConfigFilePath()
+func (cme *ConfigManagerExt) Load() bool {
+	fileName := cme.ConfigManager.ConfigFilePath()
 	bytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		fmt.Println("ReadFile: ", err.Error())
 	}
 
-	self.ConfigManager.Decode(bytes)
+	cme.ConfigManager.Decode(bytes)
 	return true
 }
 
-func (self *ConfigManagerExt) Persist() {
-	jsonString := self.ConfigManager.Encode(true)
+func (cme *ConfigManagerExt) Persist() {
+	jsonString := cme.ConfigManager.Encode(true)
 	if jsonString != "" {
-		fileName := self.ConfigManager.ConfigFilePath()
+		fileName := cme.ConfigManager.ConfigFilePath()
 		f, _:= os.OpenFile(fileName, os.O_APPEND, 0666)
 		io.WriteString(f, jsonString)
 		fmt.Println(jsonString,fileName)

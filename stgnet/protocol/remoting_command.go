@@ -28,14 +28,16 @@ var (
 // Since: 2017-08-22
 type RemotingCommand struct {
 	//header
-	Code         int                 `json:"code"`
-	Language     string              `json:"language"`
-	Version      int                 `json:"version"`
-	Opaque       int32               `json:"opaque"`
-	Flag         int                 `json:"flag"`
-	Remark       string              `json:"remark"`
-	ExtFields    map[string]string   `json:"extFields"`
-	CustomHeader CommandCustomHeader `json:"commandCustomHeader,omitempty"` // 修改字段类型 2017/8/16 Add by yintongqiang
+	Code      int               `json:"code"`
+	Language  string            `json:"language"`
+	Version   int               `json:"version"`
+	Opaque    int32             `json:"opaque"`
+	Flag      int               `json:"flag"`
+	Remark    string            `json:"remark"`
+	ExtFields map[string]string `json:"extFields"`
+	// 修改字段类型 2017/8/16 Add by yintongqiang
+	// 字段不序列化 Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-08-24
+	CustomHeader CommandCustomHeader `json:"-"`
 	//body
 	Body []byte `json:"-"`
 }
