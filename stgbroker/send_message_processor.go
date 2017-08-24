@@ -15,11 +15,19 @@ import (
 	"net"
 )
 
+// SendMessageProcessor 处理客户端发送消息的请求
+// Author gaoyanlei
+// Since 2017/8/24
 type SendMessageProcessor struct {
 	*AbstractSendMessageProcessor
 	BrokerController *BrokerController
 }
 
+func NewSendMessageProcessor(brokerController *BrokerController) *SendMessageProcessor {
+	var sendMessageProcessor = new(SendMessageProcessor)
+	sendMessageProcessor.BrokerController = brokerController
+	return sendMessageProcessor
+}
 func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) *protocol.RemotingCommand {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
@@ -217,7 +225,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand, mqtraceContext mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
+func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand,
+	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	response := &protocol.RemotingCommand{}
 	responseHeader := new(header.SendMessageResponseHeader)
 	response.Opaque = request.Opaque

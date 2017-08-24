@@ -49,8 +49,8 @@ func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.R
 }
 
 func (asmp *AbstractSendMessageProcessor) buildMsgContext( // TODO ChannelHandlerContext ctx
-	requestHeader *header.SendMessageRequestHeader) mqtrace.SendMessageContext {
-	mqtraceContext := mqtrace.SendMessageContext{}
+	requestHeader *header.SendMessageRequestHeader) *mqtrace.SendMessageContext {
+	mqtraceContext := &mqtrace.SendMessageContext{}
 	mqtraceContext.ProducerGroup = requestHeader.ProducerGroup
 	mqtraceContext.Topic = requestHeader.Topic
 	mqtraceContext.MsgProps = requestHeader.Properties
