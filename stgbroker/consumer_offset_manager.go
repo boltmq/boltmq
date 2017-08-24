@@ -49,7 +49,9 @@ func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
 
 func (com *ConsumerOffsetManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
+		fmt.Println(string(jsonString))
 		ffjson.Unmarshal(jsonString, com.Offsets)
+		fmt.Println(com.Offsets.size())
 		/*
 				for k, v := range cc.Offsets {
 					m := sync.NewMap()
@@ -74,7 +76,7 @@ func (com *ConsumerOffsetManager) ConfigFilePath() string {
 // Since 2017/8/22
 func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 
-	com.Offsets.foreach(func(k string, v map[int]int64) {
+	com.Offsets.foreach(func(k string, v map[string]int64) {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
 			topic := arrays[0]
