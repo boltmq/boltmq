@@ -6,8 +6,8 @@ package header
 type CreateTopicRequestHeader struct {
 	Topic           string
 	DefaultTopic    string
-	ReadQueueNums   int
-	WriteQueueNums  int
+	ReadQueueNums   int32
+	WriteQueueNums  int32
 	Perm            int
 	TopicFilterType string
 	TopicSysFlag    int
