@@ -6,7 +6,7 @@ import (
 )
 
 type RegisterBrokerBody struct {
-	TopicConfigSerializeWrapper TopicConfigSerializeWrapper
+	TopicConfigSerializeWrapper *TopicConfigSerializeWrapper
 	FilterServerList []string
 }
 

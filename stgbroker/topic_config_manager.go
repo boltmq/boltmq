@@ -253,7 +253,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 // updateTopicConfig 更新topic信息
 // Author gaoyanlei
 // Since 2017/8/10
-func (tcm *TopicConfigManager) updateTopicConfig(topicConfig *stgcommon.TopicConfig, err error) {
+func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicConfig) {
 	value, err := tcm.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if value != nil && err == nil {
 		fmt.Sprint("update topic config, old:%s,new:%s", value, topicConfig)
@@ -332,10 +332,11 @@ func (tcm *TopicConfigManager) deleteTopicConfig(topic string) {
 // buildTopicConfigSerializeWrapper 创建TopicConfigSerializeWrapper
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) buildTopicConfigSerializeWrapper() {
+func (tcm *TopicConfigManager) buildTopicConfigSerializeWrapper() *body.TopicConfigSerializeWrapper{
 	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
 	topicConfigSerializeWrapper.DataVersion = tcm.DataVersion
 	topicConfigSerializeWrapper.TopicConfigTable = tcm.TopicConfigTable
+	return topicConfigSerializeWrapper
 }
 
 func (tcm *TopicConfigManager) Load() bool {

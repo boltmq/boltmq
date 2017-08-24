@@ -5,6 +5,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/out"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
@@ -23,7 +24,8 @@ type BrokerController struct {
 	ProducerManager       *client.ProducerManager
 	// ClientHousekeepingService
 	// DefaultTransactionCheckExecuter
-	PullMessageProcessor *PullMessageProcessor
+	PullMessageProcessor                 *PullMessageProcessor
+	UpdateMasterHAServerAddrPeriodically bool
 	// PullRequestHoldService
 	Broker2Client *Broker2Client
 	// SubscriptionGroupManager
@@ -48,6 +50,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	// TODO nettyServerConfig
 	// TODO messageStoreConfig
 	brokerController.ConsumerOffsetManager = NewConsumerOffsetManager(brokerController)
+	brokerController.UpdateMasterHAServerAddrPeriodically = false
 	brokerController.TopicConfigManager = NewTopicConfigManager(brokerController)
 	brokerController.PullMessageProcessor = NewPullMessageProcessor(brokerController)
 	// TODO pullRequestHoldService
@@ -71,45 +74,45 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	return brokerController
 }
 
-func (self *BrokerController) GetBrokerAddr() string {
-	// TODO return self.BrokerConfig.BrokerIP1+":"+self.n
+func (bc *BrokerController) GetBrokerAddr() string {
+	// TODO return bc.BrokerConfig.BrokerIP1+":"+bc.n
 	return ""
 }
 
-func (self *BrokerController) Initialize() bool {
+func (bc *BrokerController) Initialize() bool {
 	result := true
-	result = result && self.TopicConfigManager.Load()
-	result = result && self.SubscriptionGroupManager.Load()
-	result = result && self.ConsumerOffsetManager.Load()
+	result = result && bc.TopicConfigManager.Load()
+	result = result && bc.SubscriptionGroupManager.Load()
+	result = result && bc.ConsumerOffsetManager.Load()
 
 	if result {
 		// TODO messageStore
-		self.RemotingServer =
-			remoting.NewDefalutRemotingServer("10.122.1.210",10911)
+		bc.RemotingServer =
+			remoting.NewDefalutRemotingServer("10.122.1.210", 10911)
 	}
 	// TODO 统计
 
 	// 定时写入ConsumerOffset文件
-	consumerOffsetPersistTicker := timeutil.NewTicker(self.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
+	consumerOffsetPersistTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
 	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
-		self.ConsumerOffsetManager.configManagerExt.Persist()
+		bc.ConsumerOffsetManager.configManagerExt.Persist()
 	})
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
 	scanUnsubscribedTopicTicker := timeutil.NewTicker(5*1000, 1000*10)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
-		self.ConsumerOffsetManager.ScanUnsubscribedTopic()
+		bc.ConsumerOffsetManager.ScanUnsubscribedTopic()
 	})
 
 	// 如果namesrv不为空则更新namesrv地址
-	if self.BrokerConfig.NamesrvAddr != "" {
-		self.BrokerOuterAPI.UpdateNameServerAddressList(self.BrokerConfig.NamesrvAddr)
+	if bc.BrokerConfig.NamesrvAddr != "" {
+		bc.BrokerOuterAPI.UpdateNameServerAddressList(bc.BrokerConfig.NamesrvAddr)
 	} else {
 		// 更新
-		if self.BrokerConfig.FetchNamesrvAddrByAddressServer {
+		if bc.BrokerConfig.FetchNamesrvAddrByAddressServer {
 			FetchNameServerAddrTicker := timeutil.NewTicker(60*1000*2, 1000*10)
 			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
-				self.BrokerOuterAPI.FetchNameServerAddr()
+				bc.BrokerOuterAPI.FetchNameServerAddr()
 			})
 		}
 	}
@@ -119,10 +122,48 @@ func (self *BrokerController) Initialize() bool {
 
 }
 
-func (self *BrokerController) Shutdown() {
+func (bc *BrokerController) Shutdown() {
 
 }
 
-func (self *BrokerController) Start() {
-	self.RemotingServer.Start()
+func (bc *BrokerController) Start() {
+	bc.RemotingServer.Start()
+}
+func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
+	topicConfigWrapper := bc.TopicConfigManager.buildTopicConfigSerializeWrapper()
+	if !constant.IsWriteable(bc.BrokerConfig.BrokerPermission) || !constant.IsReadable(bc.BrokerConfig.BrokerPermission) {
+		topicConfigTable := topicConfigWrapper.TopicConfigTable
+		for it := topicConfigTable.Iterator(); it.HasNext(); {
+			_, value, _ := it.Next()
+			if topicConfig, ok := value.(*stgcommon.TopicConfig); ok {
+				topicConfig.Perm = bc.BrokerConfig.BrokerPermission
+			}
+		}
+		topicConfigWrapper.TopicConfigTable = topicConfigTable
+	}
+	registerBrokerResult := bc.BrokerOuterAPI.RegisterBrokerAll(
+		bc.BrokerConfig.BrokerClusterName,
+		bc.GetBrokerAddr(), //
+		bc.BrokerConfig.BrokerName,
+		bc.getHAServerAddr(),     //
+		bc.BrokerConfig.BrokerId, //
+		topicConfigWrapper,       //
+		oneway,
+		nil)
+
+	if registerBrokerResult != nil {
+		if bc.UpdateMasterHAServerAddrPeriodically && registerBrokerResult.HaServerAddr != "" {
+			// TODO this.messageStore.updateHaMasterAddress(registerBrokerResult.getHaServerAddr());
+		}
+
+		bc.SlaveSynchronize.masterAddr = registerBrokerResult.MasterAddr
+
+		if checkOrderConfig {
+			bc.TopicConfigManager.updateOrderTopicConfig(registerBrokerResult.KvTable)
+		}
+	}
+}
+func (bc *BrokerController) getHAServerAddr() string {
+
+	return ""
 }
