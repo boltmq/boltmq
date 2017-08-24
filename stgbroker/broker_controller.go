@@ -7,8 +7,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
-	"time"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"time"
 )
 
 type BrokerController struct {
@@ -19,7 +19,7 @@ type BrokerController struct {
 	// messageStoreConfig
 	// DataVersion
 	ConsumerOffsetManager *ConsumerOffsetManager
-	ConsumerManager       *ConsumerManager
+	ConsumerManager       *client.ConsumerManager
 	ProducerManager       *client.ProducerManager
 	// ClientHousekeepingService
 	// DefaultTransactionCheckExecuter
@@ -34,7 +34,7 @@ type BrokerController struct {
 	// ScheduledExecutorService
 	SlaveSynchronize *SlaveSynchronize
 	// MessageStore
-	 RemotingServer *remoting.RemotingServer
+	RemotingServer     *remoting.DefalutRemotingServer
 	TopicConfigManager *TopicConfigManager
 	// ExecutorService
 }
@@ -53,7 +53,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	// TODO pullRequestHoldService
 	// TODO defaultTransactionCheckExecuter
 	brokerController.ConsumerIdsChangeListener = NewDefaultConsumerIdsChangeListener(brokerController)
-	brokerController.ConsumerManager = NewConsumerManager(brokerController.ConsumerIdsChangeListener)
+	brokerController.ConsumerManager = client.NewConsumerManager(brokerController.ConsumerIdsChangeListener)
 	brokerController.ProducerManager = client.NewProducerManager()
 	// TODO clientHousekeepingService
 	brokerController.Broker2Client = NewBroker2Clientr(brokerController)
@@ -84,6 +84,8 @@ func (self *BrokerController) Initialize() bool {
 
 	if result {
 		// TODO messageStore
+		self.RemotingServer =
+			remoting.NewDefalutRemotingServer("10.122.1.210",10911)
 	}
 	// TODO 统计
 
@@ -122,5 +124,5 @@ func (self *BrokerController) Shutdown() {
 }
 
 func (self *BrokerController) Start() {
-
+	self.RemotingServer.Start()
 }

@@ -1,7 +1,6 @@
-package stgbroker
+package client
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
@@ -29,13 +28,13 @@ func NewConsumerManager(consumerIdsChangeListener rebalance.ConsumerIdsChangeLis
 	return consumerManager
 }
 
-func (cm *ConsumerManager) getConsumerGroupInfo(group string) *client.ConsumerGroupInfo {
+func (cm *ConsumerManager) GetConsumerGroupInfo(group string) *ConsumerGroupInfo {
 	value, err := cm.consumerTable.Get(group)
 	if err != nil {
 		return nil
 	}
 
-	if consumerGroupInfo, ok := value.(*client.ConsumerGroupInfo); ok {
+	if consumerGroupInfo, ok := value.(*ConsumerGroupInfo); ok {
 		return consumerGroupInfo
 	}
 
@@ -43,23 +42,26 @@ func (cm *ConsumerManager) getConsumerGroupInfo(group string) *client.ConsumerGr
 }
 
 func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.SubscriptionData {
-	consumerGroupInfo := cm.getConsumerGroupInfo(group)
+	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if consumerGroupInfo != nil {
 		return consumerGroupInfo.FindSubscriptionData(topic)
 	}
 	return nil
 }
 
-func (cm *ConsumerManager) registerConsumer(group string, conn net.Conn, consumeType heartbeat.ConsumeType,
+// registerConsumer 注册Consumer
+// Author gaoyanlei
+// Since 2017/8/24
+func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
-	consumerGroupInfo := cm.getConsumerGroupInfo(group)
+	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
-		tmp := client.NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
+		tmp := NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
 		prev, err := cm.consumerTable.Put(group, tmp)
 		if err != nil || prev == nil {
 			consumerGroupInfo = tmp
 		} else {
-			if consumerGroupInfo, ok := prev.(*client.ConsumerGroupInfo); ok {
+			if consumerGroupInfo, ok := prev.(*ConsumerGroupInfo); ok {
 				consumerGroupInfo = consumerGroupInfo
 			}
 		}
@@ -67,4 +69,8 @@ func (cm *ConsumerManager) registerConsumer(group string, conn net.Conn, consume
 	r1 := consumerGroupInfo.UpdateChannel(conn, consumeType, messageModel, consumeFromWhere)
 	// TODO
 	return r1
+}
+
+func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *ChannelInfo) {
+
 }

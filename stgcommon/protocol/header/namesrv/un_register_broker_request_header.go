@@ -18,6 +18,7 @@ type UnRegisterBrokerRequestHeader struct {
 	BrokerId int
 }
 
-func(self *UnRegisterBrokerRequestHeader) CheckFields()  {
+func (self *UnRegisterBrokerRequestHeader) CheckFields() error {
 
+	return nil
 }
