@@ -19,7 +19,7 @@ type SubscriptionGroupConfig struct {
 	ConsumeBroadcastEnable bool `json:"consumeBroadcastEnable"`
 
 	// 消费失败的消息放到一个重试队列，每个订阅组配置几个重试队列
-	RetryQueueNums int `json:"retryQueueNums"`
+	RetryQueueNums int32 `json:"retryQueueNums"`
 
 	// 重试消费最大次数，超过则投递到死信队列，不再投递，并报警
 	RetryMaxTimes int32 `json:"retryMaxTimes"`
