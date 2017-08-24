@@ -103,6 +103,7 @@ func (store *RemoteBrokerOffsetStore)RemoveOffset(mq *message.MessageQueue) {
 	store.offsetTable.Remove(mq)
 	logger.Infof("remove unnecessary messageQueue offset. mq, offsetTableSize")
 }
+
 func (rStore *RemoteBrokerOffsetStore)ReadOffset(mq *message.MessageQueue, rType store.ReadOffsetType) int64 {
 	switch rType {
 	case store.MEMORY_FIRST_THEN_STORE:

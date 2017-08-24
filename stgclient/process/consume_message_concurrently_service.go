@@ -37,9 +37,9 @@ func (consume *consumeRequest)run() {
 		logger.Infof("the message queue not be able to consume, because it's dropped")
 		return
 	}
-	var listener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
+	var msgListener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
 	context := consumer.ConsumeConcurrentlyContext{MessageQueue:consume.messageQueue}
-	status := listener.ConsumeMessage(consume.msgs, context)
+	status := msgListener.ConsumeMessage(consume.msgs, context)
 	//todo 消费统计
 	if !consume.processQueue.Dropped {
 		consume.processConsumeResult(status, context, consume)
@@ -53,7 +53,7 @@ func NewConsumeMessageConcurrentlyService(defaultMQPushConsumerImpl *DefaultMQPu
 		consumeExecutor:make(chan int, defaultMQPushConsumerImpl.defaultMQPushConsumer.consumeThreadMax),
 		messageListener:messageListener}
 }
-
+// 仅仅为了实现接口
 func (service *ConsumeMessageConcurrentlyService)Start() {
 
 }
@@ -67,6 +67,7 @@ func (service *ConsumeMessageConcurrentlyService)sendMessageBack(msg message.Mes
 	service.defaultMQPushConsumerImpl.sendMessageBack(msg, context.DelayLevelWhenNextConsume, context.MessageQueue.BrokerName)
 	return true
 }
+
 func (service *ConsumeMessageConcurrentlyService)processConsumeResult(status listener.ConsumeConcurrentlyStatus,
 context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	ackIndex := context.AckIndex
