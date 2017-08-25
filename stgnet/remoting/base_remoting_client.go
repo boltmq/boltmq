@@ -27,6 +27,10 @@ type BaseRemotingClient struct {
 
 // RegisterProcessor register porcessor
 func (rc *BaseRemotingClient) RegisterProcessor(requestCode int32, processor RequestProcessor) {
+	if rc.processorTable == nil {
+		rc.processorTable = make(map[int32]RequestProcessor)
+	}
+
 	rc.processorTableLock.Lock()
 	rc.processorTable[requestCode] = processor
 	rc.processorTableLock.Unlock()
