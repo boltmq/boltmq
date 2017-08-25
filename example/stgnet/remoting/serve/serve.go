@@ -19,15 +19,18 @@ type GetTopicStatsInfoProcessor struct {
 
 func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn net.Conn,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	fmt.Printf("GetTopicStatsInfoProcessor %d\n", request.Code)
+	fmt.Printf("Into GetTopicStatsInfo Processor: code %d\n", request.Code)
 
 	topicStatsInfoRequestHeader := &namesrv.GetTopicStatsInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(topicStatsInfoRequestHeader)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("DecodeCommandCustomHeader %v\n", topicStatsInfoRequestHeader)
+	fmt.Printf("\tDecode Request CommandCustomHeader: Topic[%s]\n", topicStatsInfoRequestHeader.Topic)
 
+	// TODO:具体业务处理
+
+	// 创建response并返回
 	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
 	response.Opaque = request.Opaque
 
