@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
@@ -66,7 +67,36 @@ func main() {
 		}
 	})
 
+	go func() {
+		var i int
+		timer := time.NewTimer(3 * time.Second)
+		for {
+			<-timer.C
+			sendHearBeat(addr)
+			i++
+			timer.Reset(2 * time.Second)
+			if i == 10 {
+				break
+			}
+		}
+
+	}()
+
 	select {}
+}
+
+func sendHearBeat(addr string) {
+	request := protocol.CreateRequestCommand(cmprotocol.HEART_BEAT, nil)
+	response, err := remotingClient.InvokeSync(addr, request, 3000)
+	if err != nil {
+		fmt.Printf("Send HeartBeat[Sync] failed: %s\n", err)
+	} else {
+		if response.Code == cmprotocol.SUCCESS {
+			fmt.Printf("Send HeartBeat[Sync] success. response: body[%s]\n", string(response.Body))
+		} else {
+			fmt.Printf("Send HeartBeat[Sync] failed: code[%d] err[%s]\n", response.Code, response.Remark)
+		}
+	}
 }
 
 func initClient() {
