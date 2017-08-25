@@ -28,7 +28,7 @@ func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn ne
 	}
 	fmt.Printf("DecodeCommandCustomHeader %v\n", topicStatsInfoRequestHeader)
 
-	response := protocol.CreateResponseCommand(cmprotocol.GET_TOPIC_STATS_INFO, "success")
+	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
 	response.Opaque = request.Opaque
 
 	return response, nil
