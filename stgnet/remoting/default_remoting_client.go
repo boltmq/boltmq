@@ -16,7 +16,7 @@ type DefalutRemotingClient struct {
 	namesrvAddrListLock sync.RWMutex
 	namesrvAddrChoosed  string
 	namesrvIndex        uint32
-	BaseRemotingClient
+	BaseRemotingAchieve
 }
 
 // NewDefalutRemotingClient return new default remoting client

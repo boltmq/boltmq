@@ -37,6 +37,18 @@ func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn ne
 	return response, nil
 }
 
+type ClientManageProcessor struct {
+}
+
+func (processor *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn,
+	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	fmt.Printf("Into ClientManage Processor: code %d\n", request.Code)
+
+	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
+	response.Opaque = request.Opaque
+	return response, nil
+}
+
 func main() {
 	initServer()
 	remotingServer.Start()
@@ -45,4 +57,5 @@ func main() {
 func initServer() {
 	remotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 11000)
 	remotingServer.RegisterProcessor(cmprotocol.GET_TOPIC_STATS_INFO, &GetTopicStatsInfoProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.HEART_BEAT, &ClientManageProcessor{})
 }

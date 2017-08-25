@@ -14,7 +14,7 @@ import (
 	"github.com/go-errors/errors"
 )
 
-type BaseRemotingClient struct {
+type BaseRemotingAchieve struct {
 	responseTable           map[int32]*ResponseFuture
 	responseTableLock       sync.RWMutex
 	rpcHook                 RPCHook
@@ -26,27 +26,27 @@ type BaseRemotingClient struct {
 }
 
 // RegisterProcessor register porcessor
-func (rc *BaseRemotingClient) RegisterProcessor(requestCode int32, processor RequestProcessor) {
-	if rc.processorTable == nil {
-		rc.processorTable = make(map[int32]RequestProcessor)
+func (ra *BaseRemotingAchieve) RegisterProcessor(requestCode int32, processor RequestProcessor) {
+	if ra.processorTable == nil {
+		ra.processorTable = make(map[int32]RequestProcessor)
 	}
 
-	rc.processorTableLock.Lock()
-	rc.processorTable[requestCode] = processor
-	rc.processorTableLock.Unlock()
+	ra.processorTableLock.Lock()
+	ra.processorTable[requestCode] = processor
+	ra.processorTableLock.Unlock()
 }
 
 // RegisterDefaultProcessor register default porcessor
-func (rc *BaseRemotingClient) RegisterDefaultProcessor(processor RequestProcessor) {
-	rc.defaultRequestProcessor = processor
+func (ra *BaseRemotingAchieve) RegisterDefaultProcessor(processor RequestProcessor) {
+	ra.defaultRequestProcessor = processor
 }
 
 // RegisterRPCHook 注册rpc hook
-func (rc *BaseRemotingClient) RegisterRPCHook(rpcHook RPCHook) {
-	rc.rpcHook = rpcHook
+func (ra *BaseRemotingAchieve) RegisterRPCHook(rpcHook RPCHook) {
+	ra.rpcHook = rpcHook
 }
 
-func (rc *BaseRemotingClient) processReceived(buffer []byte, addr string, conn net.Conn) {
+func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn net.Conn) {
 	var (
 		buf = bytes.NewBuffer([]byte{})
 	)
@@ -59,12 +59,12 @@ func (rc *BaseRemotingClient) processReceived(buffer []byte, addr string, conn n
 	}
 
 	// 开启gorouting处理响应
-	rc.startGoRoutine(func() {
-		rc.processMessageReceived(addr, conn, buf)
+	ra.startGoRoutine(func() {
+		ra.processMessageReceived(addr, conn, buf)
 	})
 }
 
-func (rc *BaseRemotingClient) processMessageReceived(addr string, conn net.Conn, buf *bytes.Buffer) {
+func (ra *BaseRemotingAchieve) processMessageReceived(addr string, conn net.Conn, buf *bytes.Buffer) {
 	// 解析报文
 	remotingCommand, err := protocol.DecodeRemotingCommand(buf)
 	if err != nil {
@@ -78,46 +78,46 @@ func (rc *BaseRemotingClient) processMessageReceived(addr string, conn net.Conn,
 
 	switch remotingCommand.Type() {
 	case protocol.REQUEST_COMMAND:
-		rc.processRequestCommand(addr, conn, remotingCommand)
+		ra.processRequestCommand(addr, conn, remotingCommand)
 	case protocol.RESPONSE_COMMAND:
-		rc.processResponseCommand(addr, conn, remotingCommand)
+		ra.processResponseCommand(addr, conn, remotingCommand)
 	default:
 	}
 }
 
-func (rc *BaseRemotingClient) processRequestCommand(addr string, conn net.Conn, remotingCommand *protocol.RemotingCommand) {
-	rc.processorTableLock.Lock()
-	processor, ok := rc.processorTable[remotingCommand.Code]
-	rc.processorTableLock.Unlock()
+func (ra *BaseRemotingAchieve) processRequestCommand(addr string, conn net.Conn, remotingCommand *protocol.RemotingCommand) {
+	ra.processorTableLock.Lock()
+	processor, ok := ra.processorTable[remotingCommand.Code]
+	ra.processorTableLock.Unlock()
 	if !ok {
-		processor = rc.defaultRequestProcessor
+		processor = ra.defaultRequestProcessor
 	}
 
 	if processor == nil {
 		errMsg := fmt.Sprintf("request type %d not supported", remotingCommand.Code)
 		response := protocol.CreateResponseCommand(protocol.REQUEST_CODE_NOT_SUPPORTED, errMsg)
 		response.Opaque = remotingCommand.Opaque
-		rc.sendResponse(response, addr, conn)
+		ra.sendResponse(response, addr, conn)
 		logger.Fatalf("addr[%s] %s", addr, errMsg)
 		return
 	}
 
 	// rpc hook before
-	if rc.rpcHook != nil {
-		rc.rpcHook.DoBeforeRequest(addr, conn, remotingCommand)
+	if ra.rpcHook != nil {
+		ra.rpcHook.DoBeforeRequest(addr, conn, remotingCommand)
 	}
 
 	response, err := processor.ProcessRequest(addr, conn, remotingCommand)
 
 	// rpc hook after
-	if rc.rpcHook != nil {
-		rc.rpcHook.DoAfterResponse(addr, conn, remotingCommand, response)
+	if ra.rpcHook != nil {
+		ra.rpcHook.DoAfterResponse(addr, conn, remotingCommand, response)
 	}
 
 	if err != nil {
 		response := protocol.CreateResponseCommand(protocol.SYSTEM_ERROR, err.Error())
 		response.Opaque = remotingCommand.Opaque
-		rc.sendResponse(response, addr, conn)
+		ra.sendResponse(response, addr, conn)
 		logger.Fatalf("process request exception %v", err)
 		return
 	}
@@ -133,14 +133,14 @@ func (rc *BaseRemotingClient) processRequestCommand(addr string, conn net.Conn, 
 
 	response.Opaque = remotingCommand.Opaque
 	response.MarkResponseType()
-	rc.sendResponse(response, addr, conn)
+	ra.sendResponse(response, addr, conn)
 }
 
-func (rc *BaseRemotingClient) processResponseCommand(addr string, conn net.Conn, response *protocol.RemotingCommand) {
+func (ra *BaseRemotingAchieve) processResponseCommand(addr string, conn net.Conn, response *protocol.RemotingCommand) {
 	// 获取响应
-	rc.responseTableLock.RLock()
-	responseFuture, ok := rc.responseTable[response.Opaque]
-	rc.responseTableLock.RUnlock()
+	ra.responseTableLock.RLock()
+	responseFuture, ok := ra.responseTable[response.Opaque]
+	ra.responseTableLock.RUnlock()
 	if !ok {
 		if response.Code == cmprotocol.NOTIFY_CONSUMER_IDS_CHANGED {
 			// TODO:
@@ -150,9 +150,9 @@ func (rc *BaseRemotingClient) processResponseCommand(addr string, conn net.Conn,
 		return
 	}
 
-	rc.responseTableLock.Lock()
-	delete(rc.responseTable, response.Opaque)
-	rc.responseTableLock.Unlock()
+	ra.responseTableLock.Lock()
+	delete(ra.responseTable, response.Opaque)
+	ra.responseTableLock.Unlock()
 
 	responseFuture.responseCommand = response
 	if responseFuture.invokeCallback != nil {
@@ -164,21 +164,21 @@ func (rc *BaseRemotingClient) processResponseCommand(addr string, conn net.Conn,
 	}
 }
 
-func (rc *BaseRemotingClient) sendRequest(request *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	return rc.send(request, addr, conn)
+func (ra *BaseRemotingAchieve) sendRequest(request *protocol.RemotingCommand, addr string, conn net.Conn) error {
+	return ra.send(request, addr, conn)
 }
 
-func (rc *BaseRemotingClient) startGoRoutine(fn func()) {
-	if rc.isRunning {
+func (ra *BaseRemotingAchieve) startGoRoutine(fn func()) {
+	if ra.isRunning {
 		go fn()
 	}
 }
 
-func (rc *BaseRemotingClient) sendResponse(response *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	return rc.send(response, addr, conn)
+func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, addr string, conn net.Conn) error {
+	return ra.send(response, addr, conn)
 }
 
-func (rc *BaseRemotingClient) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
+func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
 	header := remotingCommand.EncodeHeader()
 	body := remotingCommand.Body
 
@@ -186,20 +186,20 @@ func (rc *BaseRemotingClient) send(remotingCommand *protocol.RemotingCommand, ad
 	binary.Write(buf, binary.BigEndian, int32(len(header)+len(body)+4))
 	binary.Write(buf, binary.BigEndian, int32(len(header)))
 
-	//_, err := rc.bootstrap.Write(addr, buf.Bytes())
+	//_, err := ra.bootstrap.Write(addr, buf.Bytes())
 	_, err := conn.Write(buf.Bytes())
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
-	//_, err = rc.bootstrap.Write(addr, header)
+	//_, err = ra.bootstrap.Write(addr, header)
 	_, err = conn.Write(header)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
 	if body != nil && len(body) > 0 {
-		//_, err = rc.bootstrap.Write(addr, body)
+		//_, err = ra.bootstrap.Write(addr, body)
 		_, err = conn.Write(body)
 		if err != nil {
 			return errors.Wrap(err, 0)
@@ -209,15 +209,15 @@ func (rc *BaseRemotingClient) send(remotingCommand *protocol.RemotingCommand, ad
 	return nil
 }
 
-func (rc *BaseRemotingClient) invokeSync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
+func (ra *BaseRemotingAchieve) invokeSync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
 	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
 	responseFuture.done = make(chan bool)
 
-	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = responseFuture
-	rc.responseTableLock.Unlock()
+	ra.responseTableLock.Lock()
+	ra.responseTable[request.Opaque] = responseFuture
+	ra.responseTableLock.Unlock()
 
-	err := rc.sendRequest(request, addr, conn)
+	err := ra.sendRequest(request, addr, conn)
 	if err != nil {
 		logger.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
 		return nil, err
@@ -232,15 +232,15 @@ func (rc *BaseRemotingClient) invokeSync(addr string, conn net.Conn, request *pr
 	}
 }
 
-func (rc *BaseRemotingClient) invokeAsync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
+func (ra *BaseRemotingAchieve) invokeAsync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
 	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
 	responseFuture.invokeCallback = invokeCallback
 
-	rc.responseTableLock.Lock()
-	rc.responseTable[request.Opaque] = responseFuture
-	rc.responseTableLock.Unlock()
+	ra.responseTableLock.Lock()
+	ra.responseTable[request.Opaque] = responseFuture
+	ra.responseTableLock.Unlock()
 
-	err := rc.sendRequest(request, addr, conn)
+	err := ra.sendRequest(request, addr, conn)
 	if err != nil {
 		logger.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
 		return err
@@ -250,8 +250,8 @@ func (rc *BaseRemotingClient) invokeAsync(addr string, conn net.Conn, request *p
 	return nil
 }
 
-func (rc *BaseRemotingClient) invokeOneway(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
-	err := rc.sendRequest(request, addr, conn)
+func (ra *BaseRemotingAchieve) invokeOneway(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
+	err := ra.sendRequest(request, addr, conn)
 	if err != nil {
 		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", addr, err)
 		return err
@@ -261,11 +261,11 @@ func (rc *BaseRemotingClient) invokeOneway(addr string, conn net.Conn, request *
 }
 
 // 扫描发送请求响应报文是否超时
-func (rc *BaseRemotingClient) scanResponseTable() {
-	rc.responseTableLock.Lock()
-	for seq, responseFuture := range rc.responseTable {
+func (ra *BaseRemotingAchieve) scanResponseTable() {
+	ra.responseTableLock.Lock()
+	for seq, responseFuture := range ra.responseTable {
 		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
-			delete(rc.responseTable, seq)
+			delete(ra.responseTable, seq)
 
 			if responseFuture.invokeCallback != nil {
 				responseFuture.invokeCallback(responseFuture)
@@ -273,17 +273,17 @@ func (rc *BaseRemotingClient) scanResponseTable() {
 			}
 		}
 	}
-	rc.responseTableLock.Unlock()
+	ra.responseTableLock.Unlock()
 }
 
 // 定时扫描响应
-func (rc *BaseRemotingClient) startScheduledTask() {
-	rc.startGoRoutine(func() {
-		rc.timeoutTimer = time.NewTimer(3 * time.Second)
+func (ra *BaseRemotingAchieve) startScheduledTask() {
+	ra.startGoRoutine(func() {
+		ra.timeoutTimer = time.NewTimer(3 * time.Second)
 		for {
-			<-rc.timeoutTimer.C
-			rc.scanResponseTable()
-			rc.timeoutTimer.Reset(time.Second)
+			<-ra.timeoutTimer.C
+			ra.scanResponseTable()
+			ra.timeoutTimer.Reset(time.Second)
 		}
 	})
 }
