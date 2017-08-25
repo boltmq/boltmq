@@ -69,7 +69,7 @@ func DecodesMessageExt(buffer []byte, isReadBody bool) ([]*MessageExt, error) {
 	)
 
 	for buf.Len() > 0 {
-		msgExt, err := DecodeMessageExt(buf, isReadBody, true)
+		msgExt, err := decodeMessageExt(buf, isReadBody, true)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +80,16 @@ func DecodesMessageExt(buffer []byte, isReadBody bool) ([]*MessageExt, error) {
 }
 
 // DecodeMessageExt 解析消息体，返回MessageExt
-func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*MessageExt, error) {
+func DecodeMessageExt(buffer []byte, isReadBody, isCompressBody bool) (*MessageExt, error) {
+	var (
+		buf = bytes.NewBuffer(buffer)
+	)
+
+	return decodeMessageExt(buf, isReadBody, isCompressBody)
+}
+
+// 解析消息体，返回MessageExt
+func decodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*MessageExt, error) {
 	var (
 		bornHost         = make([]byte, 4)
 		bornPort         int32
@@ -225,7 +234,7 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 		binary.Read(buf, binary.BigEndian, &properties)
 
 		// 解析消息属性
-		msgExt.Properties = String2messageProperties(string(properties))
+		msgExt.Properties = Bytes2messageProperties(properties)
 	}
 
 	// 组装消息BornHost字段
@@ -242,32 +251,54 @@ func DecodeMessageExt(buf *bytes.Buffer, isReadBody, isCompressBody bool) (*Mess
 	return msgExt, nil
 }
 
+// 修复string不可见字符问题，使用[]byte  Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-08-25
 func MessageProperties2String(properties map[string]string) string {
-	b := bytes.Buffer{}
-	for k, v := range properties {
-		b.WriteString(k)
-		b.WriteString(string(NAME_VALUE_SEPARATOR))
-		b.WriteString(v)
-		b.WriteString(string(PROPERTY_SEPARATOR))
-	}
-	return b.String()
+	return string(MessageProperties2Bytes(properties))
 }
 
-func String2messageProperties(properties string) map[string]string {
-	m := make(map[string]string)
-
-	if len(properties) > 0 {
-		items := strings.Split(properties, string(PROPERTY_SEPARATOR))
-		if len(items) > 0 {
-			for i := 0; i < len(items); i++ {
-				nv := strings.Split(items[i], string(NAME_VALUE_SEPARATOR))
-				if len(nv) == 2 {
-					m[nv[1]] = nv[2]
-				}
-			}
-		}
+func MessageProperties2Bytes(properties map[string]string) []byte {
+	var (
+		b = bytes.NewBuffer([]byte{})
+	)
+	for k, v := range properties {
+		b.WriteString(k)
+		b.WriteByte(byte(NAME_VALUE_SEPARATOR))
+		b.WriteString(v)
+		b.WriteByte(byte(PROPERTY_SEPARATOR))
 	}
-	return m
+	return b.Bytes()
+}
+
+// 修复string不可见字符问题，使用[]byte  Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-08-25
+func String2messageProperties(propertiesStr string) map[string]string {
+	return Bytes2messageProperties([]byte(propertiesStr))
+}
+
+func Bytes2messageProperties(propertiesBuf []byte) map[string]string {
+	var (
+		tbuf = propertiesBuf
+	)
+	properties := make(map[string]string)
+	for len(tbuf) > 0 {
+		pi := bytes.IndexByte(tbuf, PROPERTY_SEPARATOR)
+		if pi == -1 {
+			break
+		}
+
+		propertie := tbuf[0:pi]
+
+		ni := bytes.IndexByte(propertie, NAME_VALUE_SEPARATOR)
+		if ni == -1 || ni > pi {
+			break
+		}
+
+		key := string(propertie[0:ni])
+		properties[key] = string(propertie[ni+1:])
+
+		tbuf = tbuf[pi+1:]
+	}
+
+	return properties
 }
 
 // CreateMessageId 解析消息msgId字段addr是host:port

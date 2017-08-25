@@ -10,6 +10,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 type BrokerController struct {
@@ -35,7 +36,7 @@ type BrokerController struct {
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
 	SlaveSynchronize *SlaveSynchronize
-	// MessageStore
+	//MessageStore       *stgstorelog.MessageStore
 	RemotingServer     *remoting.DefalutRemotingServer
 	TopicConfigManager *TopicConfigManager
 	// ExecutorService
@@ -92,6 +93,8 @@ func (bc *BrokerController) Initialize() bool {
 	}
 	// TODO 统计
 
+	bc.registerProcessor()
+
 	// 定时写入ConsumerOffset文件
 	consumerOffsetPersistTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
 	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
@@ -129,6 +132,7 @@ func (bc *BrokerController) Shutdown() {
 func (bc *BrokerController) Start() {
 	bc.RemotingServer.Start()
 }
+
 func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
 	topicConfigWrapper := bc.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !constant.IsWriteable(bc.BrokerConfig.BrokerPermission) || !constant.IsReadable(bc.BrokerConfig.BrokerPermission) {
@@ -166,4 +170,17 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 func (bc *BrokerController) getHAServerAddr() string {
 
 	return ""
+}
+
+func (bc *BrokerController) addDeleteTopicTask() {
+	// 定时写入ConsumerOffset文件
+	addDeleteTopicTaskTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
+	go addDeleteTopicTaskTicker.Do(func(tm time.Time) {
+		bc.ConsumerOffsetManager.configManagerExt.Persist()
+	})
+}
+
+func(bc *BrokerController) registerProcessor ()  {
+	clientProcessor := NewClientManageProcessor(bc)
+	bc.RemotingServer.RegisterProcessor(protocol.HEART_BEAT, clientProcessor)
 }
