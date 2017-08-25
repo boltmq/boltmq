@@ -44,10 +44,14 @@ type RemotingCommand struct {
 
 // CreateResponseCommand
 func CreateResponseCommand(code int32, remark string) *RemotingCommand {
-	return &RemotingCommand{
+	remotingClient := &RemotingCommand{
 		Code:   code,
 		Remark: remark,
 	}
+	remotingClient.MarkResponseType()
+	remotingClient.setCMDVersion()
+
+	return remotingClient
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang

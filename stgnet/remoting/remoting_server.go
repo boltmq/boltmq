@@ -11,7 +11,7 @@ type RemotingServer interface {
 	InvokeSync(conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error)
 	InvokeAsync(conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error
 	InvokeOneway(conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error
-	RegisterProcessor(requestCode int, processor RequestProcessor)
+	RegisterProcessor(requestCode int32, processor RequestProcessor)
 	RegisterDefaultProcessor(processor RequestProcessor)
 	RegisterRPCHook(rpcHook RPCHook)
 	Start()
