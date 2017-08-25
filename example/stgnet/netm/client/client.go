@@ -14,5 +14,5 @@ func main() {
 	}).Connect("10.122.1.200", 8000)
 
 	b.Write("10.122.1.200:8000", []byte("hello netm"))
-	b.LogFlush()
+	select {}
 }
