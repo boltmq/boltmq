@@ -1,11 +1,12 @@
 package netm
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/go-errors/errors"
 )
 
 // Bootstrap 启动器
@@ -133,7 +134,7 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (net.Conn, err
 	nconn, e := bootstrap.connect(addr)
 	if e != nil {
 		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	bootstrap.connTableMu.Lock()
@@ -152,7 +153,7 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (net.Conn, err
 func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	conn, e := net.Dial("tcp", addr)
 	if e != nil {
-		return nil, e
+		return nil, errors.Wrap(e, 0)
 	}
 
 	return conn, nil
@@ -209,17 +210,18 @@ func (bootstrap *Bootstrap) Write(addr string, buffer []byte) (n int, err error)
 	bootstrap.connTableMu.RUnlock()
 	if !ok {
 		bootstrap.Fatalf("not found connect: %s", addr)
-		err = fmt.Errorf("not found connect %s", addr)
+		err = errors.Errorf("not found connect %s", addr)
 		return
 	}
 
 	return bootstrap.write(addr, conn, buffer)
 }
 
-func (bootstrap *Bootstrap) write(addr string, conn net.Conn, buffer []byte) (n int, err error) {
-	n, err = conn.Write(buffer)
-	if err != nil {
+func (bootstrap *Bootstrap) write(addr string, conn net.Conn, buffer []byte) (n int, e error) {
+	n, e = conn.Write(buffer)
+	if e != nil {
 		bootstrap.disconnect(addr, conn)
+		e = errors.Wrap(e, 0)
 	}
 
 	return
