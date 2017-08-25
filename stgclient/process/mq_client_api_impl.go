@@ -56,7 +56,7 @@ func (impl *MQClientAPIImpl) Shutdwon() {
 }
 
 // 发送心跳到broker
-func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64)error {
+func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat.HeartbeatData, timeoutMillis int64) error {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerDatas := heartbeatData.ConsumerDataSet
 		for data := range consumerDatas.Iterator().C {
@@ -75,7 +75,7 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 		}
 	}
 	request := protocol.CreateRequestCommand(cprotocol.HEART_BEAT, nil)
-	request.Body=heartbeatData.Encode()
+	request.Body = heartbeatData.Encode()
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
@@ -113,8 +113,19 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	}
 	requestHeader := &header.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, requestHeader)
-	logger.Info(request.Remark)
-	//todo response处理
+	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
+	if response != nil {
+		switch response.Code {
+		case cprotocol.SUCCESS:
+			body := response.Body
+			if len(body)>0 {
+				//todo topicRouteData decode
+			}
+		}
+
+	} else {
+		logger.Errorf("GetTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
+	}
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
@@ -175,8 +186,8 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 				sendStatus = SEND_OK
 			default:
 			}
-			//todo 需从responde中解析出responseHeader
-			responseHeader := header.SendMessageResponseHeader{}
+			responseHeader := &header.SendMessageResponseHeader{}
+			response.DecodeCommandCustomHeader(responseHeader)
 			messageQueue := message.MessageQueue{Topic: msg.Topic, BrokerName: brokerName, QueueId: int(responseHeader.QueueId)}
 			sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
 			sendResult.TransactionId = responseHeader.TransactionId
@@ -229,8 +240,8 @@ func (impl *MQClientAPIImpl) GetMaxOffset(addr string, topic string, queueId int
 	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.SUCCESS:
-			//todo decoder response
-			responseHeader := header.GetMaxOffsetResponseHeader{}
+			responseHeader := &header.GetMaxOffsetResponseHeader{}
+			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Offset
 		}
 	} else {
@@ -271,8 +282,8 @@ func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader head
 	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.SUCCESS:
-			//todo decode
-			responseHeader := header.QueryConsumerOffsetResponseHeader{}
+			responseHeader := &header.QueryConsumerOffsetResponseHeader{}
+			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Offset
 		}
 	}
@@ -372,8 +383,8 @@ func (impl *MQClientAPIImpl) processPullResponse(response *protocol.RemotingComm
 	case cprotocol.PULL_OFFSET_MOVED:
 		pullStatus = consumer.OFFSET_ILLEGAL
 	}
-	//todo response生产PullMessageResponseHeader
 	reponseHeader := &header.PullMessageResponseHeader{}
+	response.DecodeCommandCustomHeader(reponseHeader)
 	return NewPullResultExt(pullStatus, reponseHeader.NextBeginOffset,
 		reponseHeader.MaxOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
 }
@@ -396,7 +407,7 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 		default:
 		}
 	} else {
-		logger.Errorf("createTopic error",err.Error())
+		logger.Errorf("createTopic error", err.Error())
 	}
 
 }
@@ -414,8 +425,8 @@ func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMill
 	if response != nil && err == nil {
 		switch response.Code {
 		case cprotocol.SUCCESS:
-			responseHeader := namesrv.GetKVConfigResponseHeader{}
-			//todo decode response
+			responseHeader := &namesrv.GetKVConfigResponseHeader{}
+			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Value, err
 		default:
 
