@@ -396,7 +396,7 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 		default:
 		}
 	} else {
-		logger.Errorf("CreateTopic error")
+		logger.Errorf("createTopic error",err.Error())
 	}
 
 }
