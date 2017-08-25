@@ -125,11 +125,24 @@ func (rc *RemotingCommand) EncodeHeader() []byte {
 }
 
 func (rc *RemotingCommand) buildHeader() []byte {
+	rc.makeCustomHeaderToNet()
+
 	buf, err := ffjson.Marshal(rc)
 	if err != nil {
 		return nil
 	}
 	return buf
+}
+
+func (rc *RemotingCommand) makeCustomHeaderToNet() {
+	if rc.CustomHeader == nil {
+		return
+	}
+
+	extFields := encodeCommandCustomHeader(rc.CustomHeader)
+	for k, v := range extFields {
+		rc.ExtFields[k] = v
+	}
 }
 
 // Type return remoting command type
@@ -141,16 +154,21 @@ func (rc *RemotingCommand) Type() RemotingCommandType {
 	return REQUEST_COMMAND
 }
 
-func (rc *RemotingCommand) DecodeCommandCustomHeader() error {
+func (rc *RemotingCommand) DecodeCommandCustomHeader(commandCustomHeader CommandCustomHeader) error {
+	if commandCustomHeader == nil {
+		return nil
+	}
+
 	if rc.ExtFields == nil {
 		return nil
 	}
 
-	if rc.CustomHeader == nil {
-		return nil
+	err := decodeCommandCustomHeader(rc.ExtFields, commandCustomHeader)
+	if err != nil {
+		return err
 	}
 
-	return decodeCommandCustomHeader(rc.ExtFields, rc.CustomHeader)
+	return commandCustomHeader.CheckFields()
 }
 
 // DecodeRemotingCommand 解析返回RemotingCommand
