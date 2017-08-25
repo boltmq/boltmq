@@ -39,3 +39,5 @@ docs/static/.DS_Store
 example/stgnet/netm/client/client
 example/stgnet/netm/serve/serve
 stgcommon/logger/test.log
+example/stgnet/remoting/client/client
+example/stgnet/remoting/serve/serve
