@@ -112,3 +112,53 @@ func reflectSturctSetField(obj interface{}, name string, value string) error {
 
 	return nil
 }
+
+// 将CommandCustomHeader转为map
+func encodeCommandCustomHeader(commandCustomHeader CommandCustomHeader) map[string]string {
+	var value string
+	structValue := reflect.ValueOf(commandCustomHeader).Elem()
+
+	extFields := make(map[string]string)
+	for i := 0; i < structValue.NumField(); i++ {
+		f := structValue.Field(i)
+		t := structValue.Type().Field(i)
+
+		switch f.Type().Kind() {
+		case reflect.String:
+			extFields[t.Name] = f.String()
+		case reflect.Int32:
+			value = strconv.FormatInt(f.Int(), 10)
+			extFields[t.Name] = value
+		case reflect.Int64:
+			value = strconv.FormatInt(f.Int(), 10)
+			extFields[t.Name] = value
+		case reflect.Int:
+			value = strconv.FormatInt(f.Int(), 10)
+			extFields[t.Name] = value
+		case reflect.Int16:
+			value = strconv.FormatInt(f.Int(), 10)
+			extFields[t.Name] = value
+		case reflect.Int8:
+			value = strconv.FormatInt(f.Int(), 10)
+			extFields[t.Name] = value
+		case reflect.Uint16:
+			value = strconv.FormatUint(f.Uint(), 10)
+			extFields[t.Name] = value
+		case reflect.Uint8:
+			value = strconv.FormatUint(f.Uint(), 10)
+			extFields[t.Name] = value
+		case reflect.Uint32:
+			value = strconv.FormatUint(f.Uint(), 10)
+			extFields[t.Name] = value
+		case reflect.Uint64:
+			value = strconv.FormatUint(f.Uint(), 10)
+			extFields[t.Name] = value
+		case reflect.Bool:
+			value = strconv.FormatBool(f.Bool())
+			extFields[t.Name] = value
+		default:
+		}
+	}
+
+	return extFields
+}

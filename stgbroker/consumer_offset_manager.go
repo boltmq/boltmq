@@ -88,3 +88,31 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 		}
 	})
 }
+func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) int64 {
+	key := topic + TOPIC_GROUP_SEPARATOR + group
+	value := com.Offsets.get(key)
+	if nil != value {
+		offset := value[queueId]
+		if offset != 0 {
+
+			return offset
+		}
+	}
+	return -1
+}
+func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int, offset int64)  {
+	key := topic + TOPIC_GROUP_SEPARATOR + group
+	com.commitOffset(key, queueId, offset)
+}
+
+
+func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset int64) {
+	value := com.Offsets.get(key)
+	if value == nil {
+		table := make(map[int]int64)
+		table[queueId] = offset
+		com.Offsets.put(key, table)
+	} else {
+		value[queueId] = offset
+	}
+}
