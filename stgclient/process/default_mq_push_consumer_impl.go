@@ -64,7 +64,7 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 	if size > impl.defaultMQPushConsumer.pullThresholdForQueue {
 
 	}
-	// todo 控流后续添加
+	// todo 顺序消费后续添加
 	if !impl.consumeOrderly {
 
 	}

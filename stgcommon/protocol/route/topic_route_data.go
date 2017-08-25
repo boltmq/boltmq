@@ -18,30 +18,35 @@
 package route
 
 import (
-	"sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"github.com/pquerna/ffjson/ffjson"
 	"strings"
+	"sync"
 )
 
 type TopicRouteData struct {
-	OrderTopicConf string
-	QueueDatas     []*QueueData
-	BrokerDatas    []*BrokerData
+	OrderTopicConf string        `json:"orderTopicConf"`
+	QueueDatas     []*QueueData  `json:"queueDatas"`
+	BrokerDatas    []*BrokerData `json:"brokerDatas"`
 }
 type QueueData struct {
-	BrokerName     string
-	ReadQueueNums  int
-	WriteQueueNums int
-	Perm           int
-	TopicSynFlag   int
+	BrokerName     string `json:"brokerName"`
+	ReadQueueNums  int    `json:"readQueueNums"`
+	WriteQueueNums int    `json:"writeQueueNums"`
+	Perm           int    `json:"perm"`
+	TopicSynFlag   int    `json:"topicSynFlag"`
 }
 type BrokerData struct {
-	BrokerName      string
-	BrokerAddrs     map[int]string
-	BrokerAddrsLock sync.RWMutex
+	BrokerName      string         `json:"brokerName"`
+	BrokerAddrs     map[int]string `json:"brokerAddrs"`
+	BrokerAddrsLock sync.RWMutex   `json:"-"`
 }
 
-func (brokerData*BrokerData)SelectBrokerAddr() string {
+func (topicRouteData *TopicRouteData) Decode(data []byte) error {
+	return ffjson.Unmarshal(data, topicRouteData)
+}
+
+func (brokerData *BrokerData) SelectBrokerAddr() string {
 	value := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 	if strings.EqualFold(value, "") {
 		for _, value := range brokerData.BrokerAddrs {
@@ -51,20 +56,20 @@ func (brokerData*BrokerData)SelectBrokerAddr() string {
 	return value
 }
 
-func (topicRouteData*TopicRouteData)CloneTopicRouteData() *TopicRouteData {
+func (topicRouteData *TopicRouteData) CloneTopicRouteData() *TopicRouteData {
 	queueDatas := []*QueueData{}
 	brokerDatas := []*BrokerData{}
 	for _, queueData := range topicRouteData.QueueDatas {
-		queueDatas = append(queueDatas, &QueueData{BrokerName:queueData.BrokerName, Perm:queueData.Perm,
-			WriteQueueNums:queueData.WriteQueueNums, ReadQueueNums:queueData.ReadQueueNums, TopicSynFlag:queueData.TopicSynFlag})
+		queueDatas = append(queueDatas, &QueueData{BrokerName: queueData.BrokerName, Perm: queueData.Perm,
+			WriteQueueNums: queueData.WriteQueueNums, ReadQueueNums: queueData.ReadQueueNums, TopicSynFlag: queueData.TopicSynFlag})
 	}
 	for _, brokerData := range topicRouteData.BrokerDatas {
-		brokerDatas = append(brokerDatas, &BrokerData{BrokerName:brokerData.BrokerName, BrokerAddrs:brokerData.BrokerAddrs})
+		brokerDatas = append(brokerDatas, &BrokerData{BrokerName: brokerData.BrokerName, BrokerAddrs: brokerData.BrokerAddrs})
 	}
 	return &TopicRouteData{
-		OrderTopicConf:topicRouteData.OrderTopicConf,
-		QueueDatas:queueDatas,
-		BrokerDatas:brokerDatas,
+		OrderTopicConf: topicRouteData.OrderTopicConf,
+		QueueDatas:     queueDatas,
+		BrokerDatas:    brokerDatas,
 	}
 }
 

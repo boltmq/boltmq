@@ -99,9 +99,15 @@ func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string
 		case cprotocol.SUCCESS:
 			body := response.Body
 			if len(body) > 0 {
-				//todo
+				topicRouteData := &route.TopicRouteData{}
+				topicRouteData.Decode(body)
+				return topicRouteData
 			}
+		default:
+
 		}
+	} else {
+		logger.Errorf("GetDefaultTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
 	}
 	return nil
 }
@@ -118,19 +124,22 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 		switch response.Code {
 		case cprotocol.SUCCESS:
 			body := response.Body
-			if len(body)>0 {
-				//todo topicRouteData decode
+			if len(body) > 0 {
+				topicRouteData := &route.TopicRouteData{}
+				topicRouteData.Decode(body)
+				return topicRouteData
 			}
 		}
 
 	} else {
 		logger.Errorf("GetTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
 	}
+	//todo 测试
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
-	mapBrokerAddrs[0] = "10.122.1.200:10911"
-	//mapBrokerAddrs[1] = "10.128.31.125:10911"
+	mapBrokerAddrs[0] = "10.122.1.210:10911"
+	mapBrokerAddrs[1] = "10.128.31.125:10911"
 	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
 	return routeData
 }
@@ -220,8 +229,8 @@ func (impl *MQClientAPIImpl) GetConsumerIdListByGroup(addr string, consumerGroup
 		switch response.Code {
 		case cprotocol.SUCCESS:
 			if len(response.Body) > 0 {
-				//todo decode
-				responseBody := header.GetConsumerListByGroupResponseBody{}
+				responseBody := &header.GetConsumerListByGroupResponseBody{}
+				responseBody.Decode(response.Body)
 				return responseBody.ConsumerIdList
 			}
 		}
