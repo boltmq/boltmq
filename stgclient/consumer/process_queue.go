@@ -1,20 +1,22 @@
 package consumer
 
 import (
-	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"sort"
-	"sync/atomic"
-	"strings"
 	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 )
+
 // ProcessQueue: 消息处理队列
 // Author: yintongqiang
 // Since:  2017/8/10
 
 type ProcessQueue struct {
-	sync.RWMutex
+	lockConsume       sync.RWMutex
+	lockTreeMap       sync.RWMutex
 	Dropped           bool
 	LastPullTimestamp int64
 	PullMaxIdleTime   int64
@@ -25,31 +27,34 @@ type ProcessQueue struct {
 	MsgAccCnt         int64
 }
 type TreeMap struct {
+	sync.RWMutex
 	keys     []int
 	innerMap map[int]*message.MessageExt
 }
 
 func NewTreeMap() *TreeMap {
 	return &TreeMap{
-		innerMap:make(map[int]*message.MessageExt)}
+		innerMap: make(map[int]*message.MessageExt)}
 }
 
-func (treeMap *TreeMap)put(offset int, msg *message.MessageExt) *message.MessageExt {
+func (treeMap *TreeMap) put(offset int, msg *message.MessageExt) *message.MessageExt {
 	treeMap.innerMap[offset] = msg
 	treeMap.keys = append(treeMap.keys, offset)
 	sort.Ints(treeMap.keys)
 	return msg
 }
 
-func (treeMap *TreeMap)get(offset int) *message.MessageExt {
+func (treeMap *TreeMap) get(offset int) *message.MessageExt {
 	return treeMap.innerMap[offset]
 }
 
-func (treeMap *TreeMap)firstKey() int {
+func (treeMap *TreeMap) firstKey() int {
 	return treeMap.keys[0]
 }
 
-func (treeMap *TreeMap)remove(offset int) *message.MessageExt {
+func (treeMap *TreeMap) remove(offset int) *message.MessageExt {
+	treeMap.Lock()
+	defer treeMap.Unlock()
 	msg := treeMap.innerMap[offset]
 	newKeys := []int{}
 	for _, key := range treeMap.keys {
@@ -65,20 +70,20 @@ func (treeMap *TreeMap)remove(offset int) *message.MessageExt {
 
 func NewProcessQueue() *ProcessQueue {
 	return &ProcessQueue{
-		PullMaxIdleTime:120000,
-		MsgTreeMap:NewTreeMap(),
+		PullMaxIdleTime: 120000,
+		MsgTreeMap:      NewTreeMap(),
 	}
 }
 
 func (pq *ProcessQueue) IsPullExpired() bool {
-	return (time.Now().Unix() * 1000 - pq.LastPullTimestamp) > pq.PullMaxIdleTime
+	return (time.Now().Unix()*1000 - pq.LastPullTimestamp) > pq.PullMaxIdleTime
 }
 
 func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lockTreeMap.Lock()
+	defer pq.lockTreeMap.Unlock()
 	dispatchToConsume := false
-	var validMsgCnt int32 = 0
+	var validMsgCnt int64 = 0
 	for _, msg := range msgs {
 		old := pq.MsgTreeMap.put(int(msg.QueueId), &msg)
 		if old == nil {
@@ -87,13 +92,13 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 		}
 
 	}
-	atomic.AddInt32(&validMsgCnt, 1)
-	if len(pq.MsgTreeMap.innerMap) > 0&& !pq.Consuming {
+	atomic.AddInt64(&pq.MsgCount, validMsgCnt)
+	if len(pq.MsgTreeMap.innerMap) > 0 && !pq.Consuming {
 		dispatchToConsume = true
 		pq.Consuming = true
 	}
 	if len(msgs) > 0 {
-		messageExt := msgs[len(msgs) - 1]
+		messageExt := msgs[len(msgs)-1]
 		property := messageExt.Properties[message.PROPERTY_MAX_OFFSET]
 		if !strings.EqualFold(property, "") {
 			maxOffset, _ := strconv.ParseInt(property, 10, 64)
@@ -107,9 +112,9 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 }
 
 func (pq *ProcessQueue) RemoveMessage(msgs []message.MessageExt) int64 {
-	var result int64= -1
-	pq.Lock()
-	defer pq.Unlock()
+	pq.lockTreeMap.Lock()
+	defer pq.lockTreeMap.Unlock()
+	var result int64 = -1
 	if len(pq.MsgTreeMap.innerMap) > 0 {
 		result = pq.QueueOffsetMax + 1
 		var removedCnt int64 = 0
