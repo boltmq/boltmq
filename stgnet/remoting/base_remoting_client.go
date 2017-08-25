@@ -3,7 +3,6 @@ package remoting
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"github.com/go-errors/errors"
 )
 
 type BaseRemotingClient struct {
@@ -189,20 +189,20 @@ func (rc *BaseRemotingClient) send(remotingCommand *protocol.RemotingCommand, ad
 	//_, err := rc.bootstrap.Write(addr, buf.Bytes())
 	_, err := conn.Write(buf.Bytes())
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	//_, err = rc.bootstrap.Write(addr, header)
 	_, err = conn.Write(header)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	if body != nil && len(body) > 0 {
 		//_, err = rc.bootstrap.Write(addr, body)
 		_, err = conn.Write(body)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 0)
 		}
 	}
 
@@ -228,7 +228,7 @@ func (rc *BaseRemotingClient) invokeSync(addr string, conn net.Conn, request *pr
 	case <-responseFuture.done:
 		return responseFuture.responseCommand, nil
 	case <-time.After(time.Duration(timeoutMillis) * time.Millisecond):
-		return nil, errors.New("invoke sync timeout")
+		return nil, errors.Errorf("invoke sync timeout")
 	}
 }
 
