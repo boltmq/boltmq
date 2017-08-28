@@ -14,6 +14,10 @@ import (
 	"github.com/go-errors/errors"
 )
 
+const (
+	FRAME_MAX_LENGTH = 8388608
+)
+
 type BaseRemotingAchieve struct {
 	responseTable           map[int32]*ResponseFuture
 	responseTableLock       sync.RWMutex
@@ -22,6 +26,7 @@ type BaseRemotingAchieve struct {
 	processorTable          map[int32]RequestProcessor // 注册的处理器
 	processorTableLock      sync.RWMutex
 	timeoutTimer            *time.Timer
+	framePacketActuator     FramePacketActuator
 	isRunning               bool
 }
 
@@ -47,21 +52,34 @@ func (ra *BaseRemotingAchieve) RegisterRPCHook(rpcHook RPCHook) {
 }
 
 func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn net.Conn) {
-	var (
-		buf = bytes.NewBuffer([]byte{})
-	)
+	if ra.framePacketActuator != nil {
+		bufs, err := ra.framePacketActuator.UnPack(addr, buffer)
+		if err != nil {
+			logger.Fatalf("processReceived unPack buffer failed: %v", err)
+			return
+		}
 
-	// 安全考虑进行拷贝数据，之后使用队列缓存
-	_, err := buf.Write(buffer)
-	if err != nil {
-		logger.Fatalf("processReceived write buffer failed: %v", err)
-		return
+		for _, buf := range bufs {
+			// 开启gorouting处理响应
+			ra.startGoRoutine(func() {
+				ra.processMessageReceived(addr, conn, buf)
+			})
+		}
+	} else {
+		// 不使用粘包
+		buf := bytes.NewBuffer([]byte{})
+		_, err := buf.Write(buffer)
+		// 安全考虑进行拷贝数据，之后使用队列缓存
+		if err != nil {
+			logger.Fatalf("processReceived write buffer failed: %v", err)
+			return
+		}
+
+		// 开启gorouting处理响应
+		ra.startGoRoutine(func() {
+			ra.processMessageReceived(addr, conn, buf)
+		})
 	}
-
-	// 开启gorouting处理响应
-	ra.startGoRoutine(func() {
-		ra.processMessageReceived(addr, conn, buf)
-	})
 }
 
 func (ra *BaseRemotingAchieve) processMessageReceived(addr string, conn net.Conn, buf *bytes.Buffer) {

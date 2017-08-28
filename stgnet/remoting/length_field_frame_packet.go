@@ -9,18 +9,20 @@ import (
 )
 
 type LengthFieldFramePacket struct {
-	maxFrameLength    int                      // 最大帧的长度
-	lengthFieldOffset int                      // 长度属性的起始偏移量
-	lengthFieldLength int                      // 长度属性的长度
-	bufTable          map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理，map不使用锁。
+	maxFrameLength      int                      // 最大帧的长度
+	lengthFieldOffset   int                      // 长度属性的起始偏移量
+	lengthFieldLength   int                      // 长度属性的长度
+	initialBytesToStrip int                      // 业务数据需要跳过的长度
+	bufTable            map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理，map不使用锁。
 }
 
-func NewLengthFieldFramePacket(maxFrameLength, lengthFieldOffset, lengthFieldLength int) *LengthFieldFramePacket {
+func NewLengthFieldFramePacket(maxFrameLength, lengthFieldOffset, lengthFieldLength, initialBytesToStrip int) *LengthFieldFramePacket {
 	return &LengthFieldFramePacket{
-		maxFrameLength:    maxFrameLength,
-		lengthFieldOffset: lengthFieldOffset,
-		lengthFieldLength: lengthFieldLength,
-		bufTable:          make(map[string]*bytes.Buffer),
+		maxFrameLength:      maxFrameLength,
+		lengthFieldOffset:   lengthFieldOffset,
+		lengthFieldLength:   lengthFieldLength,
+		initialBytesToStrip: initialBytesToStrip,
+		bufTable:            make(map[string]*bytes.Buffer),
 	}
 }
 
@@ -103,15 +105,20 @@ func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (
 }
 
 func (lffp *LengthFieldFramePacket) adjustBuffer(addr string, buf *bytes.Buffer, frameLength int) (*bytes.Buffer, error) {
-	// 读取报文
-	buffer := buf.Next(frameLength)
-
 	// buffer中报文长度
 	distance := buf.Len() - frameLength
 	if distance == 0 {
 		// buffer数据已经读取完
 		delete(lffp.bufTable, addr)
 	}
+
+	// 读取报文掉过的长度
+	if lffp.initialBytesToStrip > 0 {
+		buf.Next(lffp.initialBytesToStrip)
+	}
+
+	// 读取报文
+	buffer := buf.Next(frameLength)
 
 	return bytes.NewBuffer(buffer), nil
 }
