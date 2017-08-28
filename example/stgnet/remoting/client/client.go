@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
@@ -19,7 +20,7 @@ func main() {
 	fmt.Println("remoting client start success")
 
 	var (
-		addr     = "10.122.251.184:11000"
+		addr     = "10.122.1.200:11000"
 		request  *protocol.RemotingCommand
 		response *protocol.RemotingCommand
 		err      error
@@ -32,12 +33,12 @@ func main() {
 	request = protocol.CreateRequestCommand(cmprotocol.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
 	response, err = remotingClient.InvokeSync(addr, request, 3000)
 	if err != nil {
-		fmt.Printf("InvokeSync failed: %s\n", err)
+		fmt.Printf("Send Mssage[Sync] failed: %s\n", err)
 	} else {
 		if response.Code == cmprotocol.SUCCESS {
-			fmt.Printf("InvokeSync success: body->%s\n", string(response.Body))
+			fmt.Printf("Send Mssage[Sync] success. response: body[%s]\n", string(response.Body))
 		} else {
-			fmt.Printf("InvokeSync failed: code[%d] err[%s]\n", response.Code, response.Remark)
+			fmt.Printf("Send Mssage[Sync] failed: code[%d] err[%s]\n", response.Code, response.Remark)
 		}
 	}
 
@@ -46,27 +47,56 @@ func main() {
 		response := responseFuture.GetRemotingCommand()
 		if response == nil {
 			if responseFuture.IsSendRequestOK() {
-				fmt.Printf("InvokeAsync failed: send unreachable\n")
+				fmt.Printf("Send Mssage[Async] failed: send unreachable\n")
 				return
 			}
 
 			if responseFuture.IsTimeout() {
-				fmt.Printf("InvokeAsync failed: send timeout\n")
+				fmt.Printf("Send Mssage[Async] failed: send timeout\n")
 				return
 			}
 
-			fmt.Printf("InvokeAsync failed: unknow reseaon\n")
+			fmt.Printf("Send Mssage[Async] failed: unknow reseaon\n")
 			return
 		}
 
 		if response.Code == cmprotocol.SUCCESS {
-			fmt.Printf("InvokeAsync success: body->%s\n", string(response.Body))
+			fmt.Printf("Send Mssage[Async] success. response: body[%s]\n", string(response.Body))
 		} else {
-			fmt.Printf("InvokeAsync failed: code[%d] err[%s]\n", response.Code, response.Remark)
+			fmt.Printf("Send Mssage[Async] failed: code[%d] err[%s]\n", response.Code, response.Remark)
 		}
 	})
 
+	go func() {
+		var i int
+		timer := time.NewTimer(3 * time.Second)
+		for {
+			<-timer.C
+			sendHearBeat(addr)
+			i++
+			timer.Reset(2 * time.Second)
+			if i == 10 {
+				break
+			}
+		}
+
+	}()
+
 	select {}
+}
+
+func sendHearBeat(addr string) {
+	request := protocol.CreateRequestCommand(cmprotocol.HEART_BEAT, nil)
+	response, err := remotingClient.InvokeSync(addr, request, 3000)
+	if err != nil {
+		fmt.Printf("Send HeartBeat[Sync] failed: %s\n", err)
+	} else {
+		if response.Code == cmprotocol.SUCCESS {
+			fmt.Printf("Send HeartBeat[Sync] success. response: body[%s]\n", string(response.Body))
+		} else {
+			fmt.Printf("Send HeartBeat[Sync] failed: code[%d] err[%s]\n", response.Code, response.Remark)
+		}
+	}
 }
 
 func initClient() {
