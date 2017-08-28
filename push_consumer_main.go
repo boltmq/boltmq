@@ -31,6 +31,7 @@ func taskC() {
 func main() {
 	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("myConsumerGroup")
 	defaultMQPushConsumer.SetConsumeFromWhere(heartbeat.CONSUME_FROM_LAST_OFFSET)
+	defaultMQPushConsumer.SetMessageModel(heartbeat.BROADCASTING)
 	defaultMQPushConsumer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQPushConsumer.Subscribe("TestTopic", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
