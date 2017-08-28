@@ -23,7 +23,7 @@ type LocalFileOffsetStore struct {
 	// 消费名称
 	groupName string
 	// 保存每个队列的offset
-	offsetTable map[message.MessageQueue]int64
+	offsetTable map[string]baseStore.MessageQueueExt
 	sync.RWMutex
 	storePath string
 }
@@ -37,19 +37,21 @@ func NewLocalFileOffsetStore(mQClientFactory *MQClientInstance, groupName string
 		}
 		path = curUser.HomeDir + string(os.PathSeparator) + ".smartgo_offsets"
 	}
-	path = path + string(os.PathSeparator) + mQClientFactory.ClientId + string(os.PathSeparator) + groupName + string(os.PathSeparator) + "offsets.json"
-	return &LocalFileOffsetStore{mQClientFactory: mQClientFactory, groupName: groupName, offsetTable: make(map[message.MessageQueue]int64), storePath: path}
+	path = path + /*string(os.PathSeparator)*/"/" + mQClientFactory.ClientId + /*string(os.PathSeparator)*/"/" +
+		groupName + /*string(os.PathSeparator)*/"/" + "offsets.json"
+	return &LocalFileOffsetStore{mQClientFactory: mQClientFactory, groupName: groupName,
+		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: path}
 }
 
 // 读取本地offset
 func (store *LocalFileOffsetStore) Load() {
 	offsetSerializeWrapper := store.readLocalOffset()
 	if offsetSerializeWrapper != nil {
-		for mq, offset := range offsetSerializeWrapper.OffsetTable {
+		for mqStr, mqExt := range offsetSerializeWrapper.OffsetTable {
 			store.Lock()
-			store.offsetTable[mq] = offset
+			store.offsetTable[mqStr] = mqExt
 			store.Unlock()
-			logger.Infof("load consumer's offset, %v %v %v", store.groupName, mq.ToString(), offset)
+			logger.Infof("load consumer's offset, %v %v %v", store.groupName, mqStr, mqExt.Offset)
 		}
 	}
 }
@@ -59,17 +61,16 @@ func (store *LocalFileOffsetStore) UpdateOffset(mq *message.MessageQueue, offset
 	defer store.Unlock()
 	if mq != nil {
 		store.Lock()
-		offsetOld := store.offsetTable[*mq]
-		if offsetOld == 0 {
-			store.offsetTable[*mq] = offset
-			offsetOld = offset
-		}
-
-		if offsetOld != 0 {
+		mqOffsetOld, ok := store.offsetTable[mq.Key()]
+		if !ok {
+			mqOffsetExt := baseStore.MessageQueueExt{MessageQueue: *mq, Offset: offset}
+			store.offsetTable[mq.Key()] = mqOffsetExt
+			mqOffsetOld = mqOffsetExt
+		} else {
 			if increaseOnly {
-				stgcommon.CompareAndIncreaseOnly(&offsetOld, offset)
+				stgcommon.CompareAndIncreaseOnly(&mqOffsetOld.Offset, offset)
 			} else {
-				store.offsetTable[*mq] = offsetOld
+				store.offsetTable[mq.Key()] = mqOffsetOld
 			}
 		}
 	}
@@ -113,9 +114,9 @@ func (store *LocalFileOffsetStore) ReadOffset(mq *message.MessageQueue, rType ba
 		switch rType {
 		case baseStore.MEMORY_FIRST_THEN_STORE:
 		case baseStore.READ_FROM_MEMORY:
-			offset, ok := store.offsetTable[*mq]
+			mqOffsetExt, ok := store.offsetTable[mq.Key()]
 			if ok {
-				return offset
+				return mqOffsetExt.Offset
 			} else if baseStore.READ_FROM_MEMORY == rType {
 				return -1
 			}
@@ -125,10 +126,10 @@ func (store *LocalFileOffsetStore) ReadOffset(mq *message.MessageQueue, rType ba
 			if wrapper == nil {
 				return -1
 			}
-			offset, ok := wrapper.OffsetTable[*mq]
+			mqOffsetExt, ok := wrapper.OffsetTable[mq.Key()]
 			if ok {
-				store.UpdateOffset(mq, offset, false)
-				return offset
+				store.UpdateOffset(mq, mqOffsetExt.Offset, false)
+				return mqOffsetExt.Offset
 			}
 
 		default:
@@ -152,16 +153,18 @@ func (store *LocalFileOffsetStore) PersistAll(mqs set.Set) {
 	if mqs == nil || len(mqs.ToSlice()) == 0 {
 		return
 	}
-	offsetSerializeWrapper:=baseStore.NewOffsetSerializeWrapper()
-	for mq,offset:=range store.offsetTable{
-		if mqs.Contains(mq){
+	offsetSerializeWrapper := baseStore.NewOffsetSerializeWrapper()
+	for mq, offset := range store.offsetTable {
+		if mqs.Contains(mq) {
 			offsetSerializeWrapper.RWMutex.RLock()
-			offsetSerializeWrapper.OffsetTable[mq]=offset
+			offsetSerializeWrapper.OffsetTable[mq] = offset
 			offsetSerializeWrapper.RWMutex.Unlock()
 		}
 	}
-	//data,err:=ffjson.Marshal(offsetSerializeWrapper)
-	//if err==nil{
-	//
-	//}
+	data, err := ffjson.Marshal(offsetSerializeWrapper)
+	if err == nil {
+     stgcommon.String2File(data,store.storePath)
+	} else {
+		logger.Errorf("offsetSerializeWrapper Marshal error=%v ", err.Error())
+	}
 }

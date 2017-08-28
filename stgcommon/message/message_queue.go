@@ -1,15 +1,15 @@
 package message
 
 import (
-	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"strconv"
+	"strings"
 )
 
 type MessageQueue struct {
-	Topic      string
-	BrokerName string
-	QueueId    int
+	Topic      string `json:"topic"`
+	BrokerName string `json:"brokerName"`
+	QueueId    int    `json:"queueId"`
 }
 
 func (mq MessageQueue) HashBytes() []byte {
@@ -36,15 +36,15 @@ func (mq MessageQueue) hashCode() int {
 	var prime int = 31
 	var result int = 1
 	if strings.EqualFold(mq.BrokerName, "") {
-		result = prime * result + 0
+		result = prime*result + 0
 	} else {
-		result = prime * result + int(stgcommon.HashCode(mq.BrokerName))
+		result = prime*result + int(stgcommon.HashCode(mq.BrokerName))
 	}
-	result = prime * result + mq.QueueId
+	result = prime*result + mq.QueueId
 	if strings.EqualFold(mq.Topic, "") {
-		result = prime * result + 0
+		result = prime*result + 0
 	} else {
-		result = prime * result + int(stgcommon.HashCode(mq.Topic))
+		result = prime*result + int(stgcommon.HashCode(mq.Topic))
 	}
 	return result
 }
@@ -82,6 +82,10 @@ func (self MessageQueues) Len() int {
 	return len(self)
 }
 
-func (mq MessageQueue)ToString() string {
+func (mq MessageQueue) ToString() string {
 	return "MessageQueue [topic=" + mq.Topic + ", brokerName=" + mq.BrokerName + ", queueId=" + strconv.Itoa(mq.QueueId) + "]"
+}
+
+func (mq MessageQueue) Key() string {
+	return mq.Topic + "@" + mq.BrokerName + "@" + strconv.Itoa(mq.QueueId)
 }

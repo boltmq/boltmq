@@ -163,7 +163,7 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 				ProcessQueue:  consumer.NewProcessQueue(),
 			}
 			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
-			if nextOffset >= 0 {
+			if nextOffset >= -1 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
