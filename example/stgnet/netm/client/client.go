@@ -13,6 +13,8 @@ func main() {
 		fmt.Println("rece:", string(buffer))
 	}).Connect("10.122.1.200", 8000)
 
-	b.Write("10.122.1.200:8000", []byte("hello netm"))
+	msg := "hello netm"
+	fmt.Printf("send msg: %s\n", msg)
+	b.Write("10.122.1.200:8000", []byte(msg))
 	select {}
 }
