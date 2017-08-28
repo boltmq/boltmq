@@ -23,6 +23,7 @@ type DefalutRemotingClient struct {
 func NewDefalutRemotingClient() *DefalutRemotingClient {
 	remotingClient := &DefalutRemotingClient{}
 	remotingClient.responseTable = make(map[int32]*ResponseFuture)
+	remotingClient.framePacketActuator = NewLengthFieldFramePacket(FRAME_MAX_LENGTH, 0, 4, 4)
 	remotingClient.bootstrap = netm.NewBootstrap()
 	return remotingClient
 }

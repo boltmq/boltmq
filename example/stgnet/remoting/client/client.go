@@ -68,18 +68,12 @@ func main() {
 	})
 
 	go func() {
-		var i int
 		timer := time.NewTimer(3 * time.Second)
 		for {
 			<-timer.C
 			sendHearBeat(addr)
-			i++
 			timer.Reset(2 * time.Second)
-			if i == 10 {
-				break
-			}
 		}
-
 	}()
 
 	select {}

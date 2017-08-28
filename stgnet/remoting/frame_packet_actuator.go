@@ -2,6 +2,6 @@ package remoting
 
 import "bytes"
 
-type ByteToBufferFramePacket interface {
+type FramePacketActuator interface {
 	UnPack(addr string, buffer []byte) (bufs []*bytes.Buffer, e error)
 }
