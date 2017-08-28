@@ -37,8 +37,8 @@ func NewLocalFileOffsetStore(mQClientFactory *MQClientInstance, groupName string
 		}
 		path = curUser.HomeDir + string(os.PathSeparator) + ".smartgo_offsets"
 	}
-	path = path + /*string(os.PathSeparator)*/"/" + mQClientFactory.ClientId + /*string(os.PathSeparator)*/"/" +
-		groupName + /*string(os.PathSeparator)*/"/" + "offsets.json"
+	path = path + /*string(os.PathSeparator)*/ "/" + mQClientFactory.ClientId + /*string(os.PathSeparator)*/ "/" +
+		groupName + /*string(os.PathSeparator)*/ "/" + "offsets.json"
 	return &LocalFileOffsetStore{mQClientFactory: mQClientFactory, groupName: groupName,
 		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: path}
 }
@@ -154,17 +154,29 @@ func (store *LocalFileOffsetStore) PersistAll(mqs set.Set) {
 		return
 	}
 	offsetSerializeWrapper := baseStore.NewOffsetSerializeWrapper()
-	for mq, offset := range store.offsetTable {
-		if mqs.Contains(mq) {
-			offsetSerializeWrapper.RWMutex.RLock()
-			offsetSerializeWrapper.OffsetTable[mq] = offset
-			offsetSerializeWrapper.RWMutex.Unlock()
+	for mqKey, offset := range store.offsetTable {
+		//if mqs.Contains(mq) {
+		if store.setContainsMQ(mqKey, mqs) {
+			offsetSerializeWrapper.Lock()
+			offsetSerializeWrapper.OffsetTable[mqKey] = offset
+			offsetSerializeWrapper.Unlock()
 		}
 	}
 	data, err := ffjson.Marshal(offsetSerializeWrapper)
 	if err == nil {
-     stgcommon.String2File(data,store.storePath)
+		stgcommon.String2File(data, store.storePath)
 	} else {
 		logger.Errorf("offsetSerializeWrapper Marshal error=%v ", err.Error())
 	}
+}
+func (store *LocalFileOffsetStore) setContainsMQ(mqKey string, mqSet set.Set) bool {
+	containsFlag := false
+	for mqs := range mqSet.Iterator().C {
+		ms := mqs.(*message.MessageQueue)
+		if strings.EqualFold(ms.Key(), mqKey) {
+			containsFlag = true
+			break
+		}
+	}
+	return containsFlag
 }

@@ -154,6 +154,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 	// 默认send采用v2版本
 	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(&requestHeader)
 	request := protocol.CreateRequestCommand(cprotocol.SEND_MESSAGE_V2, requestHeaderV2)
+	request.Body=msg.Body
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
