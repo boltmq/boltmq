@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 func main() {
+	debug.SetMaxThreads(100000)
 	b := netm.NewBootstrap()
 
 	go func() {
