@@ -38,6 +38,8 @@ docs/static/.DS_Store
 
 example/stgnet/netm/client/client
 example/stgnet/netm/serve/serve
+example/stgnet/netm/benchmark/client/client
+example/stgnet/netm/benchmark/serve/serve
 stgcommon/logger/test.log
 example/stgnet/remoting/client/client
 example/stgnet/remoting/serve/serve

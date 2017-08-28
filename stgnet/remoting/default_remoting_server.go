@@ -17,13 +17,14 @@ type DefalutRemotingServer struct {
 
 // NewDefalutRemotingServer return new default remoting server
 func NewDefalutRemotingServer(host string, port int) *DefalutRemotingServer {
-	remotingClient := &DefalutRemotingServer{
+	remotingServe := &DefalutRemotingServer{
 		host: host,
 		port: port,
 	}
-	remotingClient.responseTable = make(map[int32]*ResponseFuture)
-	remotingClient.bootstrap = netm.NewBootstrap()
-	return remotingClient
+	remotingServe.responseTable = make(map[int32]*ResponseFuture)
+	remotingServe.framePacketActuator = NewLengthFieldFramePacket(FRAME_MAX_LENGTH, 0, 4, 4)
+	remotingServe.bootstrap = netm.NewBootstrap()
+	return remotingServe
 }
 
 // Start start server

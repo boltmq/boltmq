@@ -3,10 +3,10 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"os"
 	"strconv"
 
+	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
 )
 
@@ -48,7 +48,9 @@ func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 		Code:   code,
 		Remark: remark,
 	}
+	// 设置为响应报文
 	remotingClient.MarkResponseType()
+	// 设置版本信息
 	remotingClient.setCMDVersion()
 
 	return remotingClient
@@ -61,6 +63,7 @@ func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *Remotin
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
 	}
+	// 设置版本信息
 	remotingClient.setCMDVersion()
 
 	return remotingClient
@@ -112,6 +115,7 @@ func (rc *RemotingCommand) EncodeHeader() []byte {
 		length       int32 = 4
 		headerLength int32
 	)
+	// 构建头部报文
 	headerData := rc.buildHeader()
 	headerLength = int32(len(headerData))
 	length += headerLength
@@ -121,16 +125,21 @@ func (rc *RemotingCommand) EncodeHeader() []byte {
 	}
 
 	buf := bytes.NewBuffer([]byte{})
+	// 写入报文长度
 	binary.Write(buf, binary.BigEndian, length)
+	// 写入报文头部长度
 	binary.Write(buf, binary.BigEndian, headerLength)
+	// 写入报文头部
 	buf.Write(headerData)
 
 	return buf.Bytes()
 }
 
 func (rc *RemotingCommand) buildHeader() []byte {
+	// 处理custom header
 	rc.makeCustomHeaderToNet()
 
+	// json 编码
 	buf, err := ffjson.Marshal(rc)
 	if err != nil {
 		return nil
@@ -185,47 +194,48 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 
 	// step 1 读取报文长度
 	if buf.Len() < 4 {
-		return nil, fmt.Errorf("buffer length %d < 4", buf.Len())
+		return nil, errors.Errorf("frame length[%d] incorrect，minimal is 4", buf.Len())
 	}
 
 	err := binary.Read(buf, binary.BigEndian, &length)
 	if err != nil {
-		return nil, fmt.Errorf("read buffer length failed: %v", err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// step 2 读取报文头长度
 	if buf.Len() < 4 {
-		return nil, fmt.Errorf("buffer header length %d < 4", buf.Len())
+		return nil, errors.Errorf("frame header length[%d] incorrect，minimal is 4", buf.Len())
 	}
 
 	err = binary.Read(buf, binary.BigEndian, &headerLength)
 	if err != nil {
-		return nil, fmt.Errorf("read buffer header length failed: %v", err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// step 3 读取报文头数据
 	if buf.Len() == 0 || buf.Len() < int(headerLength) {
-		return nil, fmt.Errorf("header data invalid, length: %d", buf.Len())
+		return nil, errors.Errorf("frame header data[%d] incorrect，expect[%d]", buf.Len(), headerLength)
 	}
 
 	header := make([]byte, headerLength)
 	_, err = buf.Read(header)
 	if err != nil {
-		return nil, fmt.Errorf("read header data failed: %v", err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// step 4 读取报文Body
 	bodyLength = length - 4 - headerLength
 	if buf.Len() < int(bodyLength) {
-		return nil, fmt.Errorf("body length %d < %d", bodyLength, buf.Len())
+		return nil, errors.Errorf("frame body[%d] incorrect，expect[%d]", buf.Len(), bodyLength)
 	}
 
 	body := make([]byte, bodyLength)
 	_, err = buf.Read(body)
 	if err != nil {
-		return nil, fmt.Errorf("read body data failed: %v", err)
+		return nil, errors.Wrap(err, 0)
 	}
 
+	// 解码
 	return decodeRemotingCommand(header, body)
 }
 
