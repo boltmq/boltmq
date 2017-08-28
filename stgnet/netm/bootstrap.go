@@ -95,6 +95,7 @@ func (bootstrap *Bootstrap) Sync() {
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
+		// 以客户端ip,port管理连接
 		remoteAddr := conn.RemoteAddr().String()
 		bootstrap.connTableMu.Lock()
 		bootstrap.connTable[remoteAddr] = conn
@@ -109,7 +110,7 @@ func (bootstrap *Bootstrap) Sync() {
 	bootstrap.Noticef("Bootstrap Exiting..")
 }
 
-// Connect 连接指定地址、端口
+// Connect 连接指定地址、端口(服务器地址管理连接)
 func (bootstrap *Bootstrap) Connect(host string, port int) error {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
@@ -266,4 +267,31 @@ func (bootstrap *Bootstrap) getOpts() *Options {
 	opts := bootstrap.opts
 	bootstrap.optsMu.RUnlock()
 	return opts
+}
+
+// Size 当前连接数
+func (bootstrap *Bootstrap) Size() int {
+	bootstrap.connTableMu.RLock()
+	defer bootstrap.connTableMu.RUnlock()
+	return len(bootstrap.connTable)
+}
+
+// NewRandomConnect 连接指定地址、端口(客户端随机端口地址管理连接)。特殊业务使用
+func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (net.Conn, error) {
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+
+	nconn, e := bootstrap.connect(addr)
+	if e != nil {
+		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
+		return nil, errors.Wrap(e, 0)
+	}
+
+	localAddr := nconn.LocalAddr().String()
+	bootstrap.connTableMu.Lock()
+	bootstrap.connTable[localAddr] = nconn
+	bootstrap.connTableMu.Unlock()
+	bootstrap.Noticef("Connect listening on port: %s", addr)
+	bootstrap.Noticef("client connections on %s", localAddr)
+
+	return nconn, nil
 }
