@@ -212,7 +212,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 		} else {
 			switch pushConsumerImpl.defaultMQPushConsumer.messageModel {
 			case heartbeat.BROADCASTING:
-			//todo 本地存储
+			   pushConsumerImpl.OffsetStore=NewLocalFileOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			case heartbeat.CLUSTERING:
 				pushConsumerImpl.OffsetStore = NewRemoteBrokerOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			default:

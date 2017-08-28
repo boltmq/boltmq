@@ -2,13 +2,14 @@ package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	set "github.com/deckarep/golang-set"
 	"time"
 )
+
 // ConsumeMessageConcurrentlyService: 普通消费服务
 // Author: yintongqiang
 // Since:  2017/8/11
@@ -19,7 +20,7 @@ type ConsumeMessageConcurrentlyService struct {
 	messageListener           consumer.MessageListenerConcurrently
 	consumerGroup             string
 	// 模拟线程池
-	consumeExecutor           chan int
+	consumeExecutor chan int
 }
 
 type consumeRequest struct {
@@ -29,7 +30,7 @@ type consumeRequest struct {
 	*ConsumeMessageConcurrentlyService
 }
 
-func (consume *consumeRequest)run() {
+func (consume *consumeRequest) run() {
 	defer func() {
 		<-consume.consumeExecutor
 	}()
@@ -38,7 +39,7 @@ func (consume *consumeRequest)run() {
 		return
 	}
 	var msgListener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
-	context := consumer.ConsumeConcurrentlyContext{MessageQueue:consume.messageQueue}
+	context := consumer.ConsumeConcurrentlyContext{MessageQueue: consume.messageQueue}
 	status := msgListener.ConsumeMessage(consume.msgs, context)
 	//todo 消费统计
 	if !consume.processQueue.Dropped {
@@ -47,29 +48,30 @@ func (consume *consumeRequest)run() {
 }
 
 func NewConsumeMessageConcurrentlyService(defaultMQPushConsumerImpl *DefaultMQPushConsumerImpl, messageListener consumer.MessageListenerConcurrently) *ConsumeMessageConcurrentlyService {
-	return &ConsumeMessageConcurrentlyService{defaultMQPushConsumerImpl:defaultMQPushConsumerImpl,
-		defaultMQPushConsumer:defaultMQPushConsumerImpl.defaultMQPushConsumer,
-		consumerGroup:defaultMQPushConsumerImpl.defaultMQPushConsumer.consumerGroup,
-		consumeExecutor:make(chan int, defaultMQPushConsumerImpl.defaultMQPushConsumer.consumeThreadMax),
-		messageListener:messageListener}
+	return &ConsumeMessageConcurrentlyService{defaultMQPushConsumerImpl: defaultMQPushConsumerImpl,
+		defaultMQPushConsumer: defaultMQPushConsumerImpl.defaultMQPushConsumer,
+		consumerGroup:         defaultMQPushConsumerImpl.defaultMQPushConsumer.consumerGroup,
+		consumeExecutor:       make(chan int, defaultMQPushConsumerImpl.defaultMQPushConsumer.consumeThreadMax),
+		messageListener:       messageListener}
 }
+
 // 仅仅为了实现接口
-func (service *ConsumeMessageConcurrentlyService)Start() {
+func (service *ConsumeMessageConcurrentlyService) Start() {
 
 }
 
-func (service *ConsumeMessageConcurrentlyService)Shutdown() {
+func (service *ConsumeMessageConcurrentlyService) Shutdown() {
 	// 关闭通道
 	close(service.consumeExecutor)
 }
 
-func (service *ConsumeMessageConcurrentlyService)sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
+func (service *ConsumeMessageConcurrentlyService) sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
 	service.defaultMQPushConsumerImpl.sendMessageBack(msg, context.DelayLevelWhenNextConsume, context.MessageQueue.BrokerName)
 	return true
 }
 
-func (service *ConsumeMessageConcurrentlyService)processConsumeResult(status listener.ConsumeConcurrentlyStatus,
-context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
+func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status listener.ConsumeConcurrentlyStatus,
+	context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	ackIndex := context.AckIndex
 	if len(consumeRequest.msgs) == 0 {
 		return
@@ -89,8 +91,11 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 
 	}
 	switch service.defaultMQPushConsumer.messageModel {
-	//todo 广播后续添加
 	case heartbeat.BROADCASTING:
+		for i := ackIndex + 1; i < len(consumeRequest.msgs); i++ {
+			msg := consumeRequest.msgs[i]
+			logger.Warnf("BROADCASTING, the message consume failed, drop it, %v", msg.MsgId)
+		}
 	case heartbeat.CLUSTERING:
 		msgBackFailed := []message.MessageExt{}
 		msgList := []message.MessageExt{}
@@ -122,17 +127,17 @@ context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 
 }
 
-func (service *ConsumeMessageConcurrentlyService)submitConsumeRequestLater(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue) {
+func (service *ConsumeMessageConcurrentlyService) submitConsumeRequestLater(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue) {
 	go func() {
 		time.Sleep(time.Second * 5)
 		service.SubmitConsumeRequest(msgs, processQueue, messageQueue, true)
 	}()
 }
 
-func (service *ConsumeMessageConcurrentlyService)SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool) {
+func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool) {
 	consumeBatchSize := service.defaultMQPushConsumer.consumeMessageBatchMaxSize
 	if len(msgs) <= consumeBatchSize {
-		consumeRequest := &consumeRequest{msgs:msgs, processQueue:processQueue, messageQueue:messageQueue, ConsumeMessageConcurrentlyService:service}
+		consumeRequest := &consumeRequest{msgs: msgs, processQueue: processQueue, messageQueue: messageQueue, ConsumeMessageConcurrentlyService: service}
 		service.consumeExecutor <- 1
 		go consumeRequest.run()
 	} else {
@@ -146,10 +151,9 @@ func (service *ConsumeMessageConcurrentlyService)SubmitConsumeRequest(msgs []mes
 					break
 				}
 			}
-			consumeRequest := &consumeRequest{msgs:msgThis, processQueue:processQueue, messageQueue:messageQueue, ConsumeMessageConcurrentlyService:service}
+			consumeRequest := &consumeRequest{msgs: msgThis, processQueue: processQueue, messageQueue: messageQueue, ConsumeMessageConcurrentlyService: service}
 			service.consumeExecutor <- 1
 			go consumeRequest.run()
 		}
 	}
 }
-
