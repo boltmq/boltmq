@@ -58,6 +58,7 @@ func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 	defaultMQProducer.DefaultMQProducerImpl.Shutdown()
 }
 
+// 发送同步消息
 func (defaultMQProducer *DefaultMQProducer) Send(msg *message.Message) (SendResult, error) {
 	return defaultMQProducer.DefaultMQProducerImpl.Send(msg)
 }
