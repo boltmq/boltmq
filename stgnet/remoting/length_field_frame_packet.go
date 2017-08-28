@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"git.oschina.net/cloudzone/aaa/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"github.com/go-errors/errors"
 )
 
