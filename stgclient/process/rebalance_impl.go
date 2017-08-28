@@ -1,20 +1,20 @@
 package process
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
-	set "github.com/deckarep/golang-set"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
-	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	set "github.com/deckarep/golang-set"
 	"sort"
+	"strings"
 )
+
 // RebalanceImpl: rebalance接口
 // Author: yintongqiang
 // Since:  2017/8/11
-
 
 type RebalanceImpl interface {
 	ConsumeType() heartbeat.ConsumeType
@@ -23,11 +23,12 @@ type RebalanceImpl interface {
 	DispatchPullRequest(pullRequestList []*consumer.PullRequest)
 	ComputePullFromWhere(mq *message.MessageQueue) int64
 }
+
 // RebalanceImplExt: 接口基础属性
 // Author: yintongqiang
 // Since:  2017/8/11
 
-type RebalanceImplExt  struct {
+type RebalanceImplExt struct {
 	RebalanceImpl                RebalanceImpl
 	ProcessQueueTable            *sync.Map //*MessageQueue, *ProcessQueue
 	TopicSubscribeInfoTable      *sync.Map // topic  Set<*MessageQueue>
@@ -40,13 +41,13 @@ type RebalanceImplExt  struct {
 
 func NewRebalanceImplExt(rebalanceImpl RebalanceImpl) *RebalanceImplExt {
 	return &RebalanceImplExt{
-		RebalanceImpl:rebalanceImpl,
-		ProcessQueueTable:sync.NewMap(),
-		TopicSubscribeInfoTable:sync.NewMap(),
-		SubscriptionInner:sync.NewMap()}
+		RebalanceImpl:           rebalanceImpl,
+		ProcessQueueTable:       sync.NewMap(),
+		TopicSubscribeInfoTable: sync.NewMap(),
+		SubscriptionInner:       sync.NewMap()}
 }
 
-func (ext *RebalanceImplExt)doRebalance() {
+func (ext *RebalanceImplExt) doRebalance() {
 	for ite := ext.SubscriptionInner.Iterator(); ite.HasNext(); {
 		k, _, _ := ite.Next()
 		topic := k.(string)
@@ -54,7 +55,7 @@ func (ext *RebalanceImplExt)doRebalance() {
 	}
 
 }
-func (ext *RebalanceImplExt)RemoveProcessQueue(mq *message.MessageQueue) {
+func (ext *RebalanceImplExt) RemoveProcessQueue(mq *message.MessageQueue) {
 	prev, _ := ext.ProcessQueueTable.Remove(mq)
 	if prev != nil {
 		pq := prev.(*consumer.ProcessQueue)
@@ -64,13 +65,23 @@ func (ext *RebalanceImplExt)RemoveProcessQueue(mq *message.MessageQueue) {
 
 }
 
-func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
+func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 	switch ext.MessageModel {
-	case heartbeat.BROADCASTING://todo 广播消费后续添加
+	case heartbeat.BROADCASTING:
+		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
+		if mqSet != nil {
+			changed := ext.updateProcessQueueTableInRebalance(topic, mqSet.(set.Set))
+			if changed {
+				ext.RebalanceImpl.MessageQueueChanged(topic, mqSet.(set.Set), mqSet.(set.Set))
+				logger.Infof("messageQueueChanged %v %v", ext.ConsumerGroup, topic)
+			} else {
+				logger.Warnf("doRebalance, %v, but the topic[%v] not exist.", ext.ConsumerGroup, topic)
+			}
+		}
 	case heartbeat.CLUSTERING:
 		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
 		cidAll := ext.MQClientFactory.findConsumerIdList(topic, ext.ConsumerGroup)
-		if mqSet != nil&& len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
+		if mqSet != nil && len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
 			mqAll := []*message.MessageQueue{}
 			for val := range mqSet.(set.Set).Iterator().C {
 				mqAll = append(mqAll, val.(*message.MessageQueue))
@@ -101,7 +112,7 @@ func (ext *RebalanceImplExt)rebalanceByTopic(topic string) {
 
 }
 
-func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqSet set.Set) bool {
+func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mqSet set.Set) bool {
 	changed := false
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		msgQ, pQ, _ := ite.Next()
@@ -111,7 +122,7 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 			containsFlag := false
 			for mqs := range mqSet.Iterator().C {
 				ms := mqs.(*message.MessageQueue)
-				if strings.EqualFold(ms.Topic, mq.Topic)&&strings.EqualFold(ms.BrokerName, mq.BrokerName) && ms.QueueId == mq.QueueId {
+				if strings.EqualFold(ms.Topic, mq.Topic) && strings.EqualFold(ms.BrokerName, mq.BrokerName) && ms.QueueId == mq.QueueId {
 					containsFlag = true
 					break
 				}
@@ -147,9 +158,9 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 		pq, _ := ext.ProcessQueueTable.Get(mq)
 		if pq == nil {
 			pullRequest := &consumer.PullRequest{
-				ConsumerGroup:ext.ConsumerGroup,
-				MessageQueue:mq.(*message.MessageQueue),
-				ProcessQueue:consumer.NewProcessQueue(),
+				ConsumerGroup: ext.ConsumerGroup,
+				MessageQueue:  mq.(*message.MessageQueue),
+				ProcessQueue:  consumer.NewProcessQueue(),
 			}
 			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
 			if nextOffset >= 0 {
@@ -167,7 +178,7 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 	return changed
 }
 
-func (ext *RebalanceImplExt)destroy() {
+func (ext *RebalanceImplExt) destroy() {
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		_, pq, _ := ite.Next()
 		pq.(*consumer.ProcessQueue).Dropped = true
