@@ -21,7 +21,7 @@ func main() {
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
 		fmt.Println("rece:", string(buffer))
-	}).Connect(*host, *port)
+	})
 
 	// 创建连接
 	var conns []net.Conn
