@@ -51,10 +51,12 @@ func (processor *ClientManageProcessor) ProcessRequest(addr string, conn net.Con
 
 func main() {
 	initServer()
+	// 启动服务器，开始监听消息
 	remotingServer.Start()
 }
 
 func initServer() {
+	// 初始化服务端
 	remotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 11000)
 	remotingServer.RegisterProcessor(cmprotocol.GET_TOPIC_STATS_INFO, &GetTopicStatsInfoProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.HEART_BEAT, &ClientManageProcessor{})
