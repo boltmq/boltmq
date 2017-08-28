@@ -16,6 +16,7 @@ var (
 
 func main() {
 	initClient()
+	// 启动客户端
 	remotingClient.Start()
 	fmt.Println("remoting client start success")
 
@@ -26,6 +27,7 @@ func main() {
 		err      error
 	)
 
+	// 请求的custom header
 	topicStatsInfoRequestHeader := &namesrv.GetTopicStatsInfoRequestHeader{}
 	topicStatsInfoRequestHeader.Topic = "testTopic"
 
@@ -67,6 +69,7 @@ func main() {
 		}
 	})
 
+	// 心跳消息
 	go func() {
 		timer := time.NewTimer(3 * time.Second)
 		for {
@@ -94,6 +97,7 @@ func sendHearBeat(addr string) {
 }
 
 func initClient() {
+	// 初始化客户端
 	remotingClient = remoting.NewDefalutRemotingClient()
 	remotingClient.UpdateNameServerAddressList([]string{"10.122.1.100:10000"})
 }
