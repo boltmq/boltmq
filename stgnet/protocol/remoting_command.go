@@ -190,6 +190,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 		length       int32
 		headerLength int32
 		bodyLength   int32
+		body         []byte
 	)
 
 	// step 1 读取报文长度
@@ -229,10 +230,12 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 		return nil, errors.Errorf("frame body[%d] incorrect，expect[%d]", buf.Len(), bodyLength)
 	}
 
-	body := make([]byte, bodyLength)
-	_, err = buf.Read(body)
-	if err != nil {
-		return nil, errors.Wrap(err, 0)
+	if bodyLength > 0 {
+		body = make([]byte, bodyLength)
+		_, err = buf.Read(body)
+		if err != nil {
+			return nil, errors.Wrap(err, 0)
+		}
 	}
 
 	// 解码
