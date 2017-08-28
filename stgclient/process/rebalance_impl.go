@@ -157,7 +157,7 @@ func (ext *RebalanceImplExt)updateProcessQueueTableInRebalance(topic string, mqS
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
 				ext.ProcessQueueTable.Put(mq, pullRequest.ProcessQueue)
-				logger.Infof("doRebalance, add a new mq")
+				logger.Infof("doRebalance, add a new mq success")
 			} else {
 				logger.Warnf("doRebalance, add new mq failed")
 			}

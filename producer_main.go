@@ -29,7 +29,7 @@ func main() {
 		}
 	}
 	go Task()
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 600)
 	defaultMQProducer.Shutdown()
 	select {}
 }
