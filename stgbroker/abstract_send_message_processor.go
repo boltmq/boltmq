@@ -2,6 +2,10 @@ package stgbroker
 
 import (
 	"fmt"
+	"math/rand"
+	"net"
+	"strings"
+
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
@@ -9,9 +13,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"math/rand"
-	"net"
-	"strings"
 )
 
 const DLQ_NUMS_PER_GROUP = 1
@@ -35,16 +36,17 @@ func NewAbstractSendMessageProcessor(brokerController *BrokerController) *Abstra
 }
 
 func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *header.SendMessageRequestHeader {
-	var requestHeaderV2 *header.SendMessageRequestHeaderV2
+	var requestHeaderV2 header.SendMessageRequestHeaderV2
 	var requestHeader *header.SendMessageRequestHeader
 	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
-		request.DecodeCommandCustomHeader(requestHeaderV2)// TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		err := request.DecodeCommandCustomHeader(&requestHeaderV2) // TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		if err != nil {
+			fmt.Println("error")
+		}
 	}
-	if requestHeaderV2 == nil {
-		// TODO  requestHeader =(SendMessageRequestHeader) request.decodeCommandCustomHeader(SendMessageRequestHeader.class);
-	} else {
-		requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
-	}
+
+	requestHeader = header.CreateSendMessageRequestHeaderV1(&requestHeaderV2)
+
 	return requestHeader
 }
 

@@ -19,8 +19,10 @@ type CommandCustomHeader interface {
 // Author: jerrylou, <gunsluo@gmail.com>
 // Since: 2017-08-24
 func decodeCommandCustomHeader(extFields map[string]string, commandCustomHeader CommandCustomHeader) error {
+	structValue := reflect.ValueOf(commandCustomHeader).Elem()
+
 	for k, v := range extFields {
-		err := reflectSturctSetField(commandCustomHeader, k, v)
+		err := reflectSturctSetField(structValue, firstLetterToUpper(k), v)
 		if err != nil {
 			return err
 		}
@@ -30,8 +32,7 @@ func decodeCommandCustomHeader(extFields map[string]string, commandCustomHeader 
 }
 
 // 支持string int8 int16 int int32 int64 uint8 uint16 uint32 uint64 bool，非string类型将进行转换
-func reflectSturctSetField(obj interface{}, name string, value string) error {
-	structValue := reflect.ValueOf(obj).Elem()
+func reflectSturctSetField(structValue reflect.Value, name string, value string) error {
 	structFieldValue := structValue.FieldByName(name)
 
 	if !structFieldValue.IsValid() {
@@ -161,4 +162,28 @@ func encodeCommandCustomHeader(commandCustomHeader CommandCustomHeader) map[stri
 	}
 
 	return extFields
+}
+
+// 首字母大写
+func firstLetterToUpper(s string) string {
+	if len(s) > 0 {
+		b := []byte(s)
+		if b[0] >= 'a' && b[0] <= 'c' {
+			b[0] = b[0] - byte(32)
+			s = string(b)
+		}
+	}
+
+	return s
+}
+
+func isExistFieldInStruct(structValue reflect.Value, name string) bool {
+	for i := 0; i < structValue.NumField(); i++ {
+		t := structValue.Type().Field(i)
+		if t.Name == name {
+			return true
+		}
+	}
+
+	return false
 }
