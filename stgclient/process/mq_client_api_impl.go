@@ -138,7 +138,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	routeData := &route.TopicRouteData{}
 	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
-	mapBrokerAddrs[0] = "10.122.1.210:10911"
+	mapBrokerAddrs[0] = "10.122.1.218:10911"
 	//mapBrokerAddrs[1] = "10.122.1.210:10911"
 	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
 	return routeData
@@ -239,6 +239,7 @@ func (impl *MQClientAPIImpl) GetConsumerIdListByGroup(addr string, consumerGroup
 	return []string{}
 }
 
+// 获取队列最大offset
 func (impl *MQClientAPIImpl) GetMaxOffset(addr string, topic string, queueId int, timeoutMillis int64) int64 {
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
