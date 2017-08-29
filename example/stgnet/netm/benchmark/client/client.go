@@ -9,13 +9,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
-const (
-	max_conn_num = 50000
-)
-
 func main() {
 	host := flag.String("h", "10.128.31.103", "host")
 	port := flag.Int("p", 8000, "port")
+	mcn := flag.Int("c", 50000, "max connect num")
 	flag.Parse()
 
 	b := netm.NewBootstrap()
@@ -25,8 +22,10 @@ func main() {
 
 	// 创建连接
 	var conns []net.Conn
+	var maxConnNum int
+	maxConnNum = *mcn
 	start := time.Now()
-	for i := 0; i < max_conn_num; i++ {
+	for i := 0; i < maxConnNum; i++ {
 		conn, err := b.NewRandomConnect(*host, *port)
 		if err != nil {
 			fmt.Printf("create conn faild: %s\n", err)
