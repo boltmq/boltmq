@@ -43,7 +43,7 @@ func (cme *ConfigManagerExt) Persist() {
 		fileName := cme.ConfigManager.ConfigFilePath()
 		f, _:= os.OpenFile(fileName, os.O_APPEND, 0666)
 		io.WriteString(f, jsonString)
-		fmt.Println(jsonString,fileName)
+		//fmt.Println(jsonString,fileName)
 		// TODO 写入文件
 	}
 }

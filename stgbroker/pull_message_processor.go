@@ -38,12 +38,12 @@ func NewPullMessageProcessor(brokerController *BrokerController) *PullMessagePro
 	return pullMessageProcessor
 }
 
-func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) *protocol.RemotingCommand {
+func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	return pull.processRequest(request, conn, true)
 }
 
-func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) *protocol.RemotingCommand {
+func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.PullMessageResponseHeader{}
 	requestHeader := &header.PullMessageRequestHeader{}
@@ -54,7 +54,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	if !constant.IsReadable(pull.BrokerController.BrokerConfig.BrokerPermission) {
 		response.Code = commonprotocol.NO_PERMISSION
 		response.Remark = "the broker[" + pull.BrokerController.BrokerConfig.BrokerIP1 + "] pulling message is forbidden"
-		return response
+		return response, nil
 	}
 
 	// 确保订阅组存在
@@ -63,14 +63,14 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	if nil == subscriptionGroupConfig {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist, " + requestHeader.ConsumerGroup
-		return response
+		return response, nil
 	}
 
 	// 这个订阅组是否可以消费消息
 	if !subscriptionGroupConfig.ConsumeEnable {
 		response.Code = commonprotocol.NO_PERMISSION
 		response.Remark = "subscription group no permission, " + requestHeader.ConsumerGroup
-		return response
+		return response, nil
 	}
 
 	hasSuspendFlag := sysflag.HasSuspendFlag(requestHeader.SysFlag)
@@ -87,14 +87,14 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	if nil == topicConfig {
 		response.Code = commonprotocol.TOPIC_NOT_EXIST
 		response.Remark = "topic[" + requestHeader.Topic + "] not exist, apply first please!"
-		return response
+		return response, nil
 	}
 
 	// 检查topic权限
 	if !constant.IsReadable(topicConfig.Perm) {
 		response.Code = commonprotocol.NO_PERMISSION
 		response.Remark = "the topic[" + requestHeader.Topic + "] pulling message is forbidden"
-		return response
+		return response, nil
 	}
 
 	// 检查队列有效性
@@ -103,7 +103,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		logger.Warn(errorInfo)
 		response.Code = commonprotocol.SYSTEM_ERROR
 		response.Remark = errorInfo
-		return response
+		return response, nil
 	}
 	// 订阅关系处理
 	subscriptionData := &heartbeat.SubscriptionData{}
@@ -114,7 +114,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			logger.Warn("parse the consumer's subscription %v failed, group: %v", requestHeader.Subscription, requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_PARSE_FAILED
 			response.Remark = "parse the consumer's subscription failed"
-			return response
+			return response, nil
 		}
 	} else {
 		// 如果没有获取到维护的consumerGroup信息，则返回
@@ -123,13 +123,13 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			logger.Warn("the consumer's group info not exist, group: %v", requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's group info not exist"
-			return response
+			return response, nil
 		}
 
 		if !subscriptionGroupConfig.ConsumeBroadcastEnable && consumerGroupInfo.MessageModel == heartbeat.BROADCASTING {
 			response.Code = commonprotocol.NO_PERMISSION
 			response.Remark = "the consumer group[" + requestHeader.ConsumerGroup
-			return response
+			return response, nil
 		}
 
 		subscriptionData = consumerGroupInfo.FindSubscriptionData(requestHeader.Topic)
@@ -137,7 +137,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			logger.Warn("the consumer's subscription not exist, group: %v", requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's subscription not exist"
-			return response
+			return response, nil
 		}
 
 		// 判断Broker的订阅关系版本是否最新
@@ -145,7 +145,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			logger.Warn("the broker's subscription is not latest, group: %v %v", requestHeader.ConsumerGroup, subscriptionData.SubString)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_LATEST
 			response.Remark = "the consumer's subscription not latestGetMessageResult"
-			return response
+			return response, nil
 		}
 	}
 
@@ -291,7 +291,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	// TODO 存储Consumer消费进度
-	return response
+	return response, nil
 }
 
 func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
