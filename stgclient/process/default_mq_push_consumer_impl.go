@@ -1,22 +1,23 @@
 package process
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"errors"
-	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
-	set "github.com/deckarep/golang-set"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
-	"strings"
-	"math"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	set "github.com/deckarep/golang-set"
+	"math"
 	"strconv"
+	"strings"
+	"time"
 )
+
 // DefaultMQPushConsumerImpl: push消费的实现
 // Author: yintongqiang
 // Since:  2017/8/10
@@ -33,18 +34,20 @@ type DefaultMQPushConsumerImpl struct {
 	consumeMessageService            ConsumeMessageService
 	consumeOrderly                   bool
 	PullTimeDelayMillsWhenException  int
+	PullTimeDelayMillsWhenSuspend    int
 	BrokerSuspendMaxTimeMillis       int
 	ConsumerTimeoutMillisWhenSuspend int
 }
 
 func NewDefaultMQPushConsumerImpl(defaultMQPushConsumer *DefaultMQPushConsumer) *DefaultMQPushConsumerImpl {
-	impl := &DefaultMQPushConsumerImpl{defaultMQPushConsumer:defaultMQPushConsumer, serviceState:stgcommon.CREATE_JUST,
-		PullTimeDelayMillsWhenException:3000, BrokerSuspendMaxTimeMillis:1000 * 15, ConsumerTimeoutMillisWhenSuspend:1000 * 30}
+	impl := &DefaultMQPushConsumerImpl{defaultMQPushConsumer: defaultMQPushConsumer, serviceState: stgcommon.CREATE_JUST,
+		PullTimeDelayMillsWhenException: 3000, PullTimeDelayMillsWhenSuspend: 1000, BrokerSuspendMaxTimeMillis: 1000 * 15, ConsumerTimeoutMillisWhenSuspend: 1000 * 30}
 	impl.rebalanceImpl = NewRebalancePushImpl(impl)
 	return impl
 }
+
 // pullMessage消息放到阻塞队列中
-func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullRequest) {
+func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullRequest) {
 	processQueue := pullRequest.ProcessQueue
 	if processQueue.Dropped {
 		logger.Infof("the pull request is droped.")
@@ -55,9 +58,10 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 		logger.Error("The consumer service state not OK")
 		panic(errors.New("The consumer service state not OK"))
 	}
-	// todo 后续添加
 	if impl.pause {
-
+		logger.Warnf("consumer was paused, execute pull request later. instanceName=%v", impl.defaultMQPushConsumer.clientConfig.InstanceName)
+		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenSuspend)
+		return
 	}
 	size := processQueue.MsgCount
 	// todo 控流后续添加
@@ -74,8 +78,8 @@ func (impl*DefaultMQPushConsumerImpl)pullMessage(pullRequest *consumer.PullReque
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenException)
 		return
 	}
-	var pullCallBack PullCallback = &PullCallBackImpl{PullRequest:pullRequest, DefaultMQPushConsumerImpl:impl,
-		SubscriptionData:subData.(*heartbeat.SubscriptionData), beginTimestamp:time.Now().Unix() * 1000}
+	var pullCallBack PullCallback = &PullCallBackImpl{PullRequest: pullRequest, DefaultMQPushConsumerImpl: impl,
+		SubscriptionData: subData.(*heartbeat.SubscriptionData), beginTimestamp: time.Now().Unix() * 1000}
 	commitOffsetEnable := false
 	var commitOffsetValue int64 = 0
 	if impl.defaultMQPushConsumer.messageModel == heartbeat.CLUSTERING {
@@ -137,8 +141,8 @@ func (backImpl *PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
 			logger.Warnf(
 				"[BUG] pull message result maybe data wrong, nextBeginOffset: %v firstMsgOffset: %v prevRequestOffset: %v", //
 				pullResult.NextBeginOffset, //
-				firstMsgOffset, //
-				prevRequestOffset);
+				firstMsgOffset,             //
+				prevRequestOffset)
 		}
 	case consumer.NO_NEW_MSG:
 		backImpl.NextOffset = pullResult.NextBeginOffset
@@ -167,7 +171,6 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) correctTagsOffset(pullRequest
 		pushConsumerImpl.OffsetStore.UpdateOffset(pullRequest.MessageQueue, pullRequest.NextOffset, true)
 	}
 }
-
 
 // 订阅topic和tag
 func (impl *DefaultMQPushConsumerImpl) subscribe(topic string, subExpression string) {
@@ -212,7 +215,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 		} else {
 			switch pushConsumerImpl.defaultMQPushConsumer.messageModel {
 			case heartbeat.BROADCASTING:
-			   pushConsumerImpl.OffsetStore=NewLocalFileOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
+				pushConsumerImpl.OffsetStore = NewLocalFileOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			case heartbeat.CLUSTERING:
 				pushConsumerImpl.OffsetStore = NewRemoteBrokerOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			default:
@@ -240,7 +243,8 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:
 	case stgcommon.START_FAILED:
-	default:break
+	default:
+		break
 	}
 	pushConsumerImpl.updateTopicSubscribeInfoWhenSubscriptionChanged()
 	pushConsumerImpl.mQClientFactory.SendHeartbeatToAllBrokerWithLock()
@@ -248,7 +252,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 }
 
 // 关闭
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)Shutdown() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) Shutdown() {
 	switch pushConsumerImpl.serviceState {
 	case stgcommon.CREATE_JUST:
 	case stgcommon.RUNNING:
@@ -256,7 +260,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Shutdown() {
 		pushConsumerImpl.PersistConsumerOffset()
 		pushConsumerImpl.mQClientFactory.UnregisterConsumer(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 		pushConsumerImpl.mQClientFactory.Shutdown()
-		logger.Infof("the consumer [%v] shutdown OK", pushConsumerImpl.defaultMQPushConsumer.consumerGroup);
+		logger.Infof("the consumer [%v] shutdown OK", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 		pushConsumerImpl.serviceState = stgcommon.SHUTDOWN_ALREADY
 		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.destroy()
 	case stgcommon.SHUTDOWN_ALREADY:
@@ -265,7 +269,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Shutdown() {
 }
 
 // 检查配置
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)checkConfig() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) checkConfig() {
 	CheckGroup(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 	if strings.EqualFold("", pushConsumerImpl.defaultMQPushConsumer.consumerGroup) {
 		panic("consumerGroup is null")
@@ -279,7 +283,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)checkConfig() {
 }
 
 // 消费不了从新发送到队列
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.MessageExt, delayLevel int, brokerName string) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) sendMessageBack(msg message.MessageExt, delayLevel int, brokerName string) {
 	var brokerAddr string
 	if !strings.EqualFold(brokerName, "") {
 		brokerAddr = pushConsumerImpl.mQClientFactory.FindBrokerAddressInPublish(brokerAddr)
@@ -290,8 +294,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Warnf("sendMessageBack Exception,%v ", pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
-			newMsg := &message.Message{Topic:
-			stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body:msg.Body}
+			newMsg := &message.Message{Topic: stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup), Body: msg.Body}
 			originMsgId := message.GetOriginMessageId(msg.Message)
 			if strings.EqualFold(originMsgId, "") {
 				message.SetOriginMessageId(newMsg, msg.MsgId)
@@ -303,14 +306,14 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)sendMessageBack(msg message.Me
 			message.PutProperty(newMsg, message.PROPERTY_RETRY_TOPIC, msg.Topic)
 			reTimes := msg.ReconsumeTimes + 1
 			message.SetReconsumeTime(newMsg, strconv.Itoa(int(reTimes)))
-			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL, strconv.Itoa(3 + int(reTimes)))
+			newMsg.PutProperty(message.PROPERTY_DELAY_TIME_LEVEL, strconv.Itoa(3+int(reTimes)))
 			pushConsumerImpl.mQClientFactory.DefaultMQProducer.Send(newMsg)
 		}
 	}()
 }
 
 // 复制订阅信息
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) copySubscription() {
 	sub := pushConsumerImpl.defaultMQPushConsumer.subscription
 	if len(sub) > 0 {
 		for topic, subString := range sub {
@@ -332,7 +335,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)copySubscription() {
 }
 
 // 当订阅信息改变时，更新订阅信息
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSubscriptionChanged() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) updateTopicSubscribeInfoWhenSubscriptionChanged() {
 	subTable := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 	if subTable != nil {
 		for ite := subTable.Iterator(); ite.HasNext(); {
@@ -342,9 +345,8 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)updateTopicSubscribeInfoWhenSu
 	}
 }
 
-
 // 获取订阅信息
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) Subscriptions() set.Set {
 	subSet := set.NewSet()
 	for it := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Iterator(); it.HasNext(); {
 		_, v, _ := it.Next()
@@ -352,8 +354,9 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)Subscriptions() set.Set {
 	}
 	return subSet
 }
+
 // 更新订阅信息
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)UpdateTopicSubscribeInfo(topic string, info set.Set) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) UpdateTopicSubscribeInfo(topic string, info set.Set) {
 
 	sbInner := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 
@@ -366,39 +369,39 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)UpdateTopicSubscribeInfo(topic
 	}
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)GroupName() string {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) GroupName() string {
 	return pushConsumerImpl.defaultMQPushConsumer.consumerGroup
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)MessageModel() heartbeat.MessageModel {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) MessageModel() heartbeat.MessageModel {
 	return pushConsumerImpl.defaultMQPushConsumer.messageModel
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ConsumeType() heartbeat.ConsumeType {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) ConsumeType() heartbeat.ConsumeType {
 	return heartbeat.CONSUME_PASSIVELY
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ConsumeFromWhere() heartbeat.ConsumeFromWhere {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) ConsumeFromWhere() heartbeat.ConsumeFromWhere {
 	return pushConsumerImpl.defaultMQPushConsumer.consumeFromWhere
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsUnitMode() bool {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) IsUnitMode() bool {
 	return pushConsumerImpl.defaultMQPushConsumer.unitMode
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestImmediately(pullRequest)
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestLater(pullRequest, timeDelay)
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)DoRebalance() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) DoRebalance() {
 	pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.doRebalance()
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) PersistConsumerOffset() {
 	if pushConsumerImpl.serviceState != stgcommon.RUNNING {
 		panic(errors.New("The consumer service state not OK"))
 	}
@@ -410,7 +413,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl)PersistConsumerOffset() {
 	pushConsumerImpl.OffsetStore.PersistAll(storeSet)
 }
 
-func (pushConsumerImpl *DefaultMQPushConsumerImpl)IsSubscribeTopicNeedUpdate(topic string) bool {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) IsSubscribeTopicNeedUpdate(topic string) bool {
 	sbInner := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 	info := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.TopicSubscribeInfoTable
 	//ok, _ := sbInner.ContainsKey(topic)

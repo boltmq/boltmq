@@ -17,10 +17,15 @@ import (
 // Since:  2017/8/11
 
 type RebalanceImpl interface {
+	// 消费类型(主动或被动)
 	ConsumeType() heartbeat.ConsumeType
+    // 队列变更主要用于Schedule service for pull consumer todo 暂未实现
 	MessageQueueChanged(topic string, mqAll set.Set, mqDivided set.Set)
+	// 删除不必要的,非法的queue
 	RemoveUnnecessaryMessageQueue(mq *message.MessageQueue, pq *consumer.ProcessQueue) bool
+	// 分发拉取消息请求(拉取消息真正入口)
 	DispatchPullRequest(pullRequestList []*consumer.PullRequest)
+	// 计算队列拉取位置
 	ComputePullFromWhere(mq *message.MessageQueue) int64
 }
 
@@ -47,6 +52,7 @@ func NewRebalanceImplExt(rebalanceImpl RebalanceImpl) *RebalanceImplExt {
 		SubscriptionInner:       sync.NewMap()}
 }
 
+// 遍历topic执行rebalance
 func (ext *RebalanceImplExt) doRebalance() {
 	for ite := ext.SubscriptionInner.Iterator(); ite.HasNext(); {
 		k, _, _ := ite.Next()
@@ -55,6 +61,8 @@ func (ext *RebalanceImplExt) doRebalance() {
 	}
 
 }
+
+// 删除内存中非法的消费处理队列
 func (ext *RebalanceImplExt) RemoveProcessQueue(mq *message.MessageQueue) {
 	prev, _ := ext.ProcessQueueTable.Remove(mq)
 	if prev != nil {
@@ -64,7 +72,7 @@ func (ext *RebalanceImplExt) RemoveProcessQueue(mq *message.MessageQueue) {
 	}
 
 }
-
+// 负载topic
 func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 	switch ext.MessageModel {
 	case heartbeat.BROADCASTING:
@@ -113,6 +121,11 @@ func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 }
 
 func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mqSet set.Set) bool {
+	defer func() {
+		if e := recover(); e != nil {
+			panic(e)
+		}
+	}()
 	changed := false
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		msgQ, pQ, _ := ite.Next()
@@ -163,7 +176,7 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 				ProcessQueue:  consumer.NewProcessQueue(),
 			}
 			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
-			if nextOffset >= -1 {
+			if nextOffset >= 0 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
@@ -174,10 +187,12 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 			}
 		}
 	}
+	// 消费入口
 	ext.RebalanceImpl.DispatchPullRequest(pullRequestList)
 	return changed
 }
 
+// 清除消费处理队列(用于shutdown)
 func (ext *RebalanceImplExt) destroy() {
 	for ite := ext.ProcessQueueTable.Iterator(); ite.HasNext(); {
 		_, pq, _ := ite.Next()
