@@ -389,18 +389,21 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) IsUnitMode() bool {
 	return pushConsumerImpl.defaultMQPushConsumer.unitMode
 }
 
+// 立即执行pull请求
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestImmediately(pullRequest)
 }
 
+// 延迟执行pull请求
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) ExecutePullRequestLater(pullRequest *consumer.PullRequest, timeDelay int) {
 	pushConsumerImpl.mQClientFactory.PullMessageService.ExecutePullRequestLater(pullRequest, timeDelay)
 }
 
+// 执行负载
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) DoRebalance() {
 	pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.doRebalance()
 }
-
+// 持久化消费offset
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) PersistConsumerOffset() {
 	if pushConsumerImpl.serviceState != stgcommon.RUNNING {
 		panic(errors.New("The consumer service state not OK"))
