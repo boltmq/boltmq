@@ -38,7 +38,7 @@ func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.R
 	var requestHeaderV2 *header.SendMessageRequestHeaderV2
 	var requestHeader *header.SendMessageRequestHeader
 	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
-		// TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		request.DecodeCommandCustomHeader(requestHeaderV2)// TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
 	}
 	if requestHeaderV2 == nil {
 		// TODO  requestHeader =(SendMessageRequestHeader) request.decodeCommandCustomHeader(SendMessageRequestHeader.class);

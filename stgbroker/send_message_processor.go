@@ -28,21 +28,22 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 	sendMessageProcessor.BrokerController = brokerController
 	return sendMessageProcessor
 }
-func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) *protocol.RemotingCommand {
+func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error){
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(request)
+		return smp.consumerSendMsgBack(request),nil
 	}
 
 	requestHeader := smp.parseRequestHeader(request)
 	if requestHeader == nil {
-		return nil
+		return nil,nil
 	}
+
 	mqtraceContext := smp.buildMsgContext(requestHeader)
 	// TODO  this.executeSendMessageHookBefore(ctx, request, mqtraceContext)
 	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
 	// TODO this.executeSendMessageHookAfter(response, mqtraceContext);
-	return response
+	return response,nil
 }
 
 // consumerSendMsgBack 客户端返回未消费消息
