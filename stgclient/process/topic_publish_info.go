@@ -24,8 +24,10 @@ func NewTopicPublishInfo() *TopicPublishInfo {
 }
 
 func (topicPublishInfo *TopicPublishInfo)SelectOneMessageQueue(lastBrokerName string) *message.MessageQueue {
-	index := atomic.AddInt64(&topicPublishInfo.SendWhichQueue, 1)
+
 	if !strings.EqualFold(lastBrokerName, "") {
+		index :=topicPublishInfo.SendWhichQueue
+		atomic.AddInt64(&topicPublishInfo.SendWhichQueue, 1)
 		for _, mq := range topicPublishInfo.MessageQueueList {
 			index++
 			pos := int(math.Abs(float64(index))) % len(topicPublishInfo.MessageQueueList)
@@ -36,6 +38,8 @@ func (topicPublishInfo *TopicPublishInfo)SelectOneMessageQueue(lastBrokerName st
 		}
 		return nil
 	} else {
+		index :=topicPublishInfo.SendWhichQueue
+		atomic.AddInt64(&topicPublishInfo.SendWhichQueue, 1)
 		pos := int(math.Abs(float64(index))) % len(topicPublishInfo.MessageQueueList)
 		mq := topicPublishInfo.MessageQueueList[pos]
 		return mq
