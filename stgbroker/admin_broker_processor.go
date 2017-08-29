@@ -4,7 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	//protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"net"
