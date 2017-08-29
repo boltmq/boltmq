@@ -2,7 +2,6 @@ package remoting
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"net"
 	"sync"
@@ -208,27 +207,15 @@ func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, 
 	return ra.send(response, addr, conn)
 }
 
+// 发送报文
 func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
 	// 头部进行编码
 	header := remotingCommand.EncodeHeader()
 	body := remotingCommand.Body
 
-	buf := bytes.NewBuffer([]byte{})
-	// 整个报文长度
-	binary.Write(buf, binary.BigEndian, int32(len(header)+len(body)+4))
-	// 报文头部
-	binary.Write(buf, binary.BigEndian, int32(len(header)))
-
-	//_, err := ra.bootstrap.Write(addr, buf.Bytes())
-	// 发送报文的长度与头部长度
-	_, err := conn.Write(buf.Bytes())
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
-
 	//_, err = ra.bootstrap.Write(addr, header)
 	// 发送报文的头部
-	_, err = conn.Write(header)
+	_, err := conn.Write(header)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}

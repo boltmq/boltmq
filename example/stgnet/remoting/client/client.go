@@ -21,7 +21,7 @@ func main() {
 	fmt.Println("remoting client start success")
 
 	var (
-		addr     = "10.122.1.200:11000"
+		addr     = "10.122.1.200:10911"
 		request  *protocol.RemotingCommand
 		response *protocol.RemotingCommand
 		err      error
