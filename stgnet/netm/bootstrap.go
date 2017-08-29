@@ -89,11 +89,17 @@ func (bootstrap *Bootstrap) Sync() {
 					tmpDelay = ACCEPT_MAX_SLEEP
 				}
 			} else if bootstrap.isRunning() {
-				bootstrap.Noticef("Accept error: %v", err)
+				bootstrap.Errorf("Accept error: %v", err)
 			}
 			continue
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
+
+		err = bootstrap.cfgConnect(conn)
+		if err != nil {
+			bootstrap.Errorf("config connect error: %v", err)
+			continue
+		}
 
 		// 以客户端ip,port管理连接
 		remoteAddr := conn.RemoteAddr().String()
@@ -108,6 +114,17 @@ func (bootstrap *Bootstrap) Sync() {
 	}
 
 	bootstrap.Noticef("Bootstrap Exiting..")
+}
+
+// 配置连接
+func (bootstrap *Bootstrap) cfgConnect(conn net.Conn) error {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(false); err != nil {
+			return errors.Wrap(err, 0)
+		}
+	}
+
+	return nil
 }
 
 // Connect 连接指定地址、端口(服务器地址管理连接)
