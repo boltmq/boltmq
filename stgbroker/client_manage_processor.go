@@ -7,7 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	//protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
@@ -30,12 +30,16 @@ func NewClientManageProcessor(brokerController *BrokerController) *ClientManageP
 
 func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
-	case protocol2.HEART_BEAT:
-		return cmp.heartBeat(addr, conn, request)
-	case protocol2.UNREGISTER_CLIENT:
-		return cmp.unregisterClient(addr, conn, request)
-	case protocol2.QUERY_CONSUMER_OFFSET:
-		return cmp.queryConsumerOffset(addr, conn, request)
+	//case protocol2.HEART_BEAT:
+	//	return cmp.heartBeat(addr, conn, request)
+	//case protocol2.UNREGISTER_CLIENT:
+	//	return cmp.unregisterClient(addr, conn, request)
+	//case protocol2.GET_CONSUMER_LIST_BY_GROUP:
+	//	return cmp.getConsumerListByGroup(addr, conn, request)
+	//case protocol2.QUERY_CONSUMER_OFFSET:
+	//	return cmp.queryConsumerOffset(addr, conn, request)
+	//case protocol2.UPDATE_CONSUMER_OFFSET:
+	//	return cmp.updateConsumerOffset(addr, conn, request)
 	}
 	return nil, nil
 }
@@ -136,6 +140,62 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(addr string, conn net.Conn
 
 	cmp.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,
 		requestHeader.Topic, requestHeader.QueueId, requestHeader.CommitOffset)
+	response.Code = code.SUCCESS
+	response.Remark = ""
+	return response, nil
+}
+
+// updateConsumerOffset 更新消费者offset
+// Author gaoyanlei
+// Since 2017/8/25
+func (cmp *ClientManageProcessor) updateConsumerOffset(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	response := &protocol.RemotingCommand{}
+	requestHeader := &header.UpdateConsumerOffsetRequestHeader{}
+
+	context := &mqtrace.ConsumeMessageContext{}
+	context.ConsumerGroup = requestHeader.ConsumerGroup
+	context.Topic = requestHeader.Topic
+	context.ClientHost = conn.LocalAddr().String()
+	context.Success = true
+	context.Status = listener.CONSUME_SUCCESS.String()
+	// TODO
+	//final SocketAddress storeHost =
+	//	new InetSocketAddress(brokerController.getBrokerConfig().getBrokerIP1(), brokerController
+	//.getNettyServerConfig().getListenPort());
+
+	//preOffset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
+	//// TODO messageIds
+	//messageIds :=
+	//	cmp.BrokerController.MessageStore.GetMessageIds(requestHeader.getTopic(),
+	//		requestHeader.getQueueId(), preOffset, requestHeader.getCommitOffset(), storeHost)
+	//context.setMessageIds(messageIds)
+	response.Code = code.SUCCESS
+	response.Remark = ""
+	return response, nil
+}
+
+// updateConsumerOffset 更新消费者offset
+// Author gaoyanlei
+// Since 2017/8/25
+func (cmp *ClientManageProcessor) getConsumerListByGroup(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	response := &protocol.RemotingCommand{}
+	requestHeader := &header.GetConsumerListByGroupRequestHeader{}
+	consumerGroupInfo := cmp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
+	if consumerGroupInfo != nil {
+		//clientIds:=consumerGroupInfo.get
+	}
+
+	// TODO
+	//final SocketAddress storeHost =
+	//	new InetSocketAddress(brokerController.getBrokerConfig().getBrokerIP1(), brokerController
+	//.getNettyServerConfig().getListenPort());
+
+	//preOffset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
+	//// TODO messageIds
+	//messageIds :=
+	//	cmp.BrokerController.MessageStore.GetMessageIds(requestHeader.getTopic(),
+	//		requestHeader.getQueueId(), preOffset, requestHeader.getCommitOffset(), storeHost)
+	//context.setMessageIds(messageIds)
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil

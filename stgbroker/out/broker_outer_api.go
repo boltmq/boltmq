@@ -166,7 +166,7 @@ func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAdd
 	}
 }
 
-// 注销全部Broker
+// UnregisterBrokerAll 注销全部Broker
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerName string, brokerId int) {

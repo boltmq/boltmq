@@ -7,10 +7,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 type BrokerController struct {
@@ -86,13 +86,14 @@ func (bc *BrokerController) Initialize() bool {
 	result = result && bc.SubscriptionGroupManager.Load()
 	result = result && bc.ConsumerOffsetManager.Load()
 
+	bc.RemotingServer =
+		remoting.NewDefalutRemotingServer("0.0.0.0", 10911)
 	if result {
 		// TODO messageStore
-		bc.RemotingServer =
-			remoting.NewDefalutRemotingServer("10.122.1.210", 10911)
 	}
 	// TODO 统计
 
+	// 注册服务
 	bc.registerProcessor()
 
 	// 定时写入ConsumerOffset文件
@@ -147,11 +148,11 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 	}
 	registerBrokerResult := bc.BrokerOuterAPI.RegisterBrokerAll(
 		bc.BrokerConfig.BrokerClusterName,
-		bc.GetBrokerAddr(), //
+		bc.GetBrokerAddr(),
 		bc.BrokerConfig.BrokerName,
-		bc.getHAServerAddr(),     //
-		bc.BrokerConfig.BrokerId, //
-		topicConfigWrapper,       //
+		bc.getHAServerAddr(),
+		bc.BrokerConfig.BrokerId,
+		topicConfigWrapper,
 		oneway,
 		nil)
 
@@ -180,7 +181,44 @@ func (bc *BrokerController) addDeleteTopicTask() {
 	})
 }
 
-func(bc *BrokerController) registerProcessor ()  {
+// registerProcessor 注册提供服务
+// Author gaoyanlei
+// Since 2017/8/25
+func (bc *BrokerController) registerProcessor() {
+
+
 	clientProcessor := NewClientManageProcessor(bc)
+	// 心跳
 	bc.RemotingServer.RegisterProcessor(protocol.HEART_BEAT, clientProcessor)
+	// 注销client
+	bc.RemotingServer.RegisterProcessor(protocol.UNREGISTER_CLIENT, clientProcessor)
+	// 获取Consumer
+	bc.RemotingServer.RegisterProcessor(protocol.GET_CONSUMER_LIST_BY_GROUP, clientProcessor)
+	// 查询Consumer offset
+	bc.RemotingServer.RegisterProcessor(protocol.QUERY_CONSUMER_OFFSET, clientProcessor)
+	// 更新Consumer offset
+	bc.RemotingServer.RegisterProcessor(protocol.UPDATE_CONSUMER_OFFSET, clientProcessor)
+
+
+	adminBrokerProcessor := NewAdminBrokerProcessor(bc)
+	// 更新创建topic
+	bc.RemotingServer.RegisterProcessor(protocol.UPDATE_AND_CREATE_TOPIC, adminBrokerProcessor)
+	// 删除topic
+	bc.RemotingServer.RegisterProcessor(protocol.DELETE_TOPIC_IN_BROKER, adminBrokerProcessor)
+	// 获取最大offset
+	bc.RemotingServer.RegisterProcessor(protocol.GET_MAX_OFFSET, adminBrokerProcessor)
+
+
+	sendMessageProcessor := NewSendMessageProcessor(bc)
+	// 未优化过发送消息
+	bc.RemotingServer.RegisterProcessor(protocol.SEND_MESSAGE, sendMessageProcessor)
+	// 优化过发送消息
+	bc.RemotingServer.RegisterProcessor(protocol.SEND_MESSAGE_V2, sendMessageProcessor)
+	// 消费失败消息
+	bc.RemotingServer.RegisterProcessor(protocol.CONSUMER_SEND_MSG_BACK, sendMessageProcessor)
+
+
+	pullMessageProcessor := NewPullMessageProcessor(bc)
+	// 拉取消息
+	bc.RemotingServer.RegisterProcessor(protocol.PULL_MESSAGE, pullMessageProcessor)
 }
