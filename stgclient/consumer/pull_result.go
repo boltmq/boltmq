@@ -7,5 +7,5 @@ type PullResult struct {
 	NextBeginOffset int64
 	MinOffset       int64
 	MaxOffset       int64
-	MsgFoundList    []message.MessageExt
+	MsgFoundList    []*message.MessageExt
 }

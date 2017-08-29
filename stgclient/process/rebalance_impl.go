@@ -19,7 +19,7 @@ import (
 type RebalanceImpl interface {
 	// 消费类型(主动或被动)
 	ConsumeType() heartbeat.ConsumeType
-    // 队列变更主要用于Schedule service for pull consumer todo 暂未实现
+	// 队列变更主要用于Schedule service for pull consumer todo 暂未实现
 	MessageQueueChanged(topic string, mqAll set.Set, mqDivided set.Set)
 	// 删除不必要的,非法的queue
 	RemoveUnnecessaryMessageQueue(mq *message.MessageQueue, pq *consumer.ProcessQueue) bool
@@ -72,6 +72,7 @@ func (ext *RebalanceImplExt) RemoveProcessQueue(mq *message.MessageQueue) {
 	}
 
 }
+
 // 负载topic
 func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 	switch ext.MessageModel {
@@ -82,9 +83,9 @@ func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 			if changed {
 				ext.RebalanceImpl.MessageQueueChanged(topic, mqSet.(set.Set), mqSet.(set.Set))
 				logger.Infof("messageQueueChanged %v %v", ext.ConsumerGroup, topic)
-			} else {
-				logger.Warnf("doRebalance, %v, but the topic[%v] not exist.", ext.ConsumerGroup, topic)
 			}
+		} else {
+			logger.Warnf("doRebalance, %v, but the topic[%v] not exist.", ext.ConsumerGroup, topic)
 		}
 	case heartbeat.CLUSTERING:
 		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
@@ -135,7 +136,7 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 			containsFlag := false
 			for mqs := range mqSet.Iterator().C {
 				ms := mqs.(*message.MessageQueue)
-				if strings.EqualFold(ms.Topic, mq.Topic) && strings.EqualFold(ms.BrokerName, mq.BrokerName) && ms.QueueId == mq.QueueId {
+				if ms.Equal(*mq) {
 					containsFlag = true
 					break
 				}
@@ -175,7 +176,8 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 				MessageQueue:  mq.(*message.MessageQueue),
 				ProcessQueue:  consumer.NewProcessQueue(),
 			}
-			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
+			var nextOffset int64 = 1
+			//nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
 			if nextOffset >= 0 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)

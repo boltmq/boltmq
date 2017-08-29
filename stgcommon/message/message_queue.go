@@ -89,3 +89,7 @@ func (mq MessageQueue) ToString() string {
 func (mq MessageQueue) Key() string {
 	return mq.Topic + "@" + mq.BrokerName + "@" + strconv.Itoa(mq.QueueId)
 }
+
+func (mq MessageQueue) Equal(other MessageQueue) bool {
+	return strings.EqualFold(other.Topic, mq.Topic) && strings.EqualFold(other.BrokerName, mq.BrokerName) && other.QueueId == mq.QueueId
+}

@@ -25,6 +25,7 @@ type LocalFileOffsetStore struct {
 	// 保存每个队列的offset
 	offsetTable map[string]baseStore.MessageQueueExt
 	sync.RWMutex
+	// 本地存储路径
 	storePath string
 }
 
@@ -37,10 +38,10 @@ func NewLocalFileOffsetStore(mQClientFactory *MQClientInstance, groupName string
 		}
 		path = curUser.HomeDir + string(os.PathSeparator) + ".smartgo_offsets"
 	}
-	path = path + /*string(os.PathSeparator)*/ "/" + mQClientFactory.ClientId + /*string(os.PathSeparator)*/ "/" +
-		groupName + /*string(os.PathSeparator)*/ "/" + "offsets.json"
+	path = path + string(os.PathSeparator)  + mQClientFactory.ClientId + string(os.PathSeparator) +
+		groupName + string(os.PathSeparator) + "offsets.json"
 	return &LocalFileOffsetStore{mQClientFactory: mQClientFactory, groupName: groupName,
-		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: path}
+		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: strings.Replace(path,"\\","/",-1)}
 }
 
 // 读取本地offset

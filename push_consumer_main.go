@@ -15,7 +15,7 @@ type MessageListenerImpl struct {
 }
 
 
-func (listenerImpl *MessageListenerImpl)ConsumeMessage(msgs []message.MessageExt, context consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
+func (listenerImpl *MessageListenerImpl)ConsumeMessage(msgs []*message.MessageExt, context consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	return listener.CONSUME_SUCCESS
 }
 func taskC() {
@@ -35,9 +35,6 @@ func main() {
 	defaultMQPushConsumer.SetNamesrvAddr("127.0.0.1:9876")
 	defaultMQPushConsumer.Subscribe("TestTopic", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
-	var listener listener.MessageListener = &MessageListenerImpl{}
-	var listener1 =listener.(consumer.MessageListenerConcurrently)
-	listener1.ConsumeMessage(nil,consumer.ConsumeConcurrentlyContext{})
 	defaultMQPushConsumer.Start()
 	time.Sleep(time.Second*600)
 	defaultMQPushConsumer.Shutdown()

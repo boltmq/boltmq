@@ -63,6 +63,7 @@ func NewDefaultMQPushConsumer(consumerGroup string) *DefaultMQPushConsumer {
 	pushConsumer.consumerGroup = consumerGroup
 	pushConsumer.messageModel = heartbeat.CLUSTERING
 	pushConsumer.pullThresholdForQueue=1000
+	pushConsumer.consumeMessageBatchMaxSize=1
 	pushConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
 	pushConsumer.defaultMQPushConsumerImpl = NewDefaultMQPushConsumerImpl(pushConsumer)
 	return pushConsumer

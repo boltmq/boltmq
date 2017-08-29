@@ -71,6 +71,7 @@ func (treeMap *TreeMap) remove(offset int) *message.MessageExt {
 func NewProcessQueue() *ProcessQueue {
 	return &ProcessQueue{
 		PullMaxIdleTime: 120000,
+		LastPullTimestamp:time.Now().Unix()*1000,
 		MsgTreeMap:      NewTreeMap(),
 	}
 }
@@ -79,13 +80,13 @@ func (pq *ProcessQueue) IsPullExpired() bool {
 	return (time.Now().Unix()*1000 - pq.LastPullTimestamp) > pq.PullMaxIdleTime
 }
 
-func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
+func (pq *ProcessQueue) PutMessage(msgs []*message.MessageExt) bool {
 	pq.lockTreeMap.Lock()
 	defer pq.lockTreeMap.Unlock()
 	dispatchToConsume := false
 	var validMsgCnt int64 = 0
 	for _, msg := range msgs {
-		old := pq.MsgTreeMap.put(int(msg.QueueId), &msg)
+		old := pq.MsgTreeMap.put(int(msg.QueueId), msg)
 		if old == nil {
 			validMsgCnt++
 			pq.QueueOffsetMax = msg.QueueOffset
@@ -111,7 +112,7 @@ func (pq *ProcessQueue) PutMessage(msgs []message.MessageExt) bool {
 	return dispatchToConsume
 }
 
-func (pq *ProcessQueue) RemoveMessage(msgs []message.MessageExt) int64 {
+func (pq *ProcessQueue) RemoveMessage(msgs []*message.MessageExt) int64 {
 	pq.lockTreeMap.Lock()
 	defer pq.lockTreeMap.Unlock()
 	var result int64 = -1
