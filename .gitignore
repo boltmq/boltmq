@@ -43,3 +43,4 @@ example/stgnet/netm/benchmark/serve/serve
 stgcommon/logger/test.log
 example/stgnet/remoting/client/client
 example/stgnet/remoting/serve/serve
+producer_main
