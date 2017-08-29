@@ -89,12 +89,12 @@ func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (
 		}
 
 		// 长度小于报文长度，等待下个报文
-		if length < frameLength {
+		if length-end < frameLength {
 			break
 		}
 
 		// 报文长度足够，读取报文并调整buffer
-		rbuf, e := lffp.adjustBuffer(addr, buf, frameLength)
+		rbuf, e := lffp.adjustBuffer(addr, buf, frameLength+end)
 		if e != nil {
 			break
 		}

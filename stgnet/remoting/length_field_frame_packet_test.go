@@ -56,7 +56,7 @@ func TestUnpackOffsetFull(t *testing.T) {
 func prepareFullBuffer() []byte {
 	var (
 		buf          = bytes.NewBuffer([]byte{})
-		length int32 = 14
+		length int32 = 10
 	)
 	binary.Write(buf, binary.BigEndian, length)
 	buf.Write([]byte("abcdefghij"))
@@ -135,7 +135,7 @@ func TestUnpackOffsetPartOf(t *testing.T) {
 func preparePartOfOneBuffer() []byte {
 	var (
 		buf          = bytes.NewBuffer([]byte{})
-		length int32 = 14
+		length int32 = 10
 	)
 	binary.Write(buf, binary.BigEndian, length)
 
@@ -224,7 +224,7 @@ func TestUnpackOffsetPartOf2(t *testing.T) {
 func preparePartOfOneBuffer2() []byte {
 	var (
 		buf          = bytes.NewBuffer([]byte{})
-		length int32 = 14
+		length int32 = 10
 	)
 	binary.Write(buf, binary.BigEndian, length)
 	buf.Write([]byte("abcd"))
@@ -235,7 +235,7 @@ func preparePartOfOneBuffer2() []byte {
 func preparePartOfTwoBuffer2() []byte {
 	var (
 		buf          = bytes.NewBuffer([]byte{})
-		length int32 = 14
+		length int32 = 10
 	)
 	buf.Write([]byte("efghij"))
 	binary.Write(buf, binary.BigEndian, length)
@@ -310,7 +310,7 @@ func preparePartOfOneDiscardBuffer() []byte {
 func preparePartOfTwoDiscardBuffer() []byte {
 	var (
 		buf          = bytes.NewBuffer([]byte{})
-		length int32 = 14
+		length int32 = 10
 	)
 	binary.Write(buf, binary.BigEndian, length)
 
