@@ -28,7 +28,7 @@ func (service *PullMessageService) Start() {
 func (service *PullMessageService) Shutdown() {
 	service.isStoped = true
 }
-
+// 向通道中加入pullRequest
 func (service *PullMessageService) ExecutePullRequestImmediately(pullRequest *consumer.PullRequest) {
 	service.PullRequestQueue <- pullRequest
 }

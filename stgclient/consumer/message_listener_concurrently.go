@@ -9,5 +9,5 @@ import (
 // Since:  2017/8/10
 
 type MessageListenerConcurrently interface {
-	ConsumeMessage(msgs []message.MessageExt, context ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus
+	ConsumeMessage(msgs []*message.MessageExt, context ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus
 }

@@ -15,5 +15,5 @@ type ConsumeMessageService interface {
 	// 关闭
 	Shutdown()
 	// 提交消费请求
-	SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool)
+	SubmitConsumeRequest(msgs []*message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool)
 }

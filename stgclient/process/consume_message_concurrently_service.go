@@ -3,10 +3,12 @@ package process
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	set "github.com/deckarep/golang-set"
+	"strings"
 	"time"
 )
 
@@ -24,7 +26,7 @@ type ConsumeMessageConcurrentlyService struct {
 }
 
 type consumeRequest struct {
-	msgs         []message.MessageExt
+	msgs         []*message.MessageExt
 	processQueue *consumer.ProcessQueue
 	messageQueue *message.MessageQueue
 	*ConsumeMessageConcurrentlyService
@@ -40,6 +42,13 @@ func (consume *consumeRequest) run() {
 	}
 	var msgListener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
 	context := consumer.ConsumeConcurrentlyContext{MessageQueue: consume.messageQueue}
+	groupTopic := stgcommon.GetRetryTopic(consume.consumerGroup)
+	for _, msg := range consume.msgs {
+		retryTopic := msg.GetProperty(message.PROPERTY_RETRY_TOPIC)
+		if !strings.EqualFold(retryTopic, "") && strings.EqualFold(groupTopic, msg.Topic) {
+			msg.Topic = retryTopic
+		}
+	}
 	status := msgListener.ConsumeMessage(consume.msgs, context)
 	//todo 消费统计
 	if !consume.processQueue.Dropped {
@@ -70,6 +79,7 @@ func (service *ConsumeMessageConcurrentlyService) sendMessageBack(msg message.Me
 	return true
 }
 
+// 处理消费结果
 func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status listener.ConsumeConcurrentlyStatus,
 	context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	ackIndex := context.AckIndex
@@ -97,15 +107,17 @@ func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status li
 			logger.Warnf("BROADCASTING, the message consume failed, drop it, %v", msg.MsgId)
 		}
 	case heartbeat.CLUSTERING:
-		msgBackFailed := []message.MessageExt{}
-		msgList := []message.MessageExt{}
+		msgBackFailed := []*message.MessageExt{}
+		// 主要用于过滤掉失败消息,仅剩下已经成功的,用于后面业务删除
+		msgList := []*message.MessageExt{}
 		msgSet := set.NewSet()
+		// 主要利用set去重功能
 		for _, msg := range consumeRequest.msgs {
 			msgSet.Add(msg)
 		}
 		for i := ackIndex + 1; i < len(consumeRequest.msgs); i++ {
 			msg := consumeRequest.msgs[i]
-			if !service.sendMessageBack(msg, context) {
+			if !service.sendMessageBack(*msg, context) {
 				msg.ReconsumeTimes = msg.ReconsumeTimes + 1
 				msgBackFailed = append(msgBackFailed, msg)
 				msgSet.Remove(msg)
@@ -114,27 +126,30 @@ func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status li
 
 		if len(msgBackFailed) > 0 {
 			for val := range msgSet.Iterator().C {
-				msgList = append(msgList, val.(message.MessageExt))
+				msgList = append(msgList, val.(*message.MessageExt))
 			}
 			consumeRequest.msgs = msgList
 			service.submitConsumeRequestLater(msgBackFailed, consumeRequest.processQueue, consumeRequest.messageQueue)
 		}
 	}
+	// 删除已经已经成功消费的消息
 	offset := consumeRequest.processQueue.RemoveMessage(consumeRequest.msgs)
+	// 更新offset用于持久化
 	if offset >= 0 {
 		service.defaultMQPushConsumerImpl.OffsetStore.UpdateOffset(consumeRequest.messageQueue, offset, true)
 	}
 
 }
 
-func (service *ConsumeMessageConcurrentlyService) submitConsumeRequestLater(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue) {
+func (service *ConsumeMessageConcurrentlyService) submitConsumeRequestLater(msgs []*message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue) {
 	go func() {
 		time.Sleep(time.Second * 5)
 		service.SubmitConsumeRequest(msgs, processQueue, messageQueue, true)
 	}()
 }
 
-func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool) {
+// 提交消费请求
+func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []*message.MessageExt, processQueue *consumer.ProcessQueue, messageQueue *message.MessageQueue, dispathToConsume bool) {
 	consumeBatchSize := service.defaultMQPushConsumer.consumeMessageBatchMaxSize
 	if len(msgs) <= consumeBatchSize {
 		consumeRequest := &consumeRequest{msgs: msgs, processQueue: processQueue, messageQueue: messageQueue, ConsumeMessageConcurrentlyService: service}
@@ -142,7 +157,7 @@ func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []me
 		go consumeRequest.run()
 	} else {
 		for total := 0; total < len(msgs); {
-			msgThis := []message.MessageExt{}
+			msgThis := []*message.MessageExt{}
 			for i := 0; i < consumeBatchSize; i++ {
 				total++
 				if total < len(msgs) {

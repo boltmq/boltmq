@@ -104,7 +104,7 @@ func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue, pullResul
 	api.updatePullFromWhichNode(mq, int(pullResultExt.suggestWhichBrokerId))
 	if consumer.FOUND == pullResult.PullStatus {
 		// todo 有消息编解码操作
-		var msgListFilterAgain []message.MessageExt
+		var msgListFilterAgain []*message.MessageExt
 		// todo 类过滤默认都不执行
 		if len(subscriptionData.TagsSet.ToSlice()) != 0 && !subscriptionData.ClassFilterMode {
 		}
