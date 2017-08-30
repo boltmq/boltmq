@@ -18,6 +18,7 @@ type Bootstrap struct {
 	opts        *Options
 	optsMu      sync.RWMutex
 	handlers    []Handler
+	keepalive   bool
 	running     bool
 	grRunning   bool
 }
@@ -95,7 +96,8 @@ func (bootstrap *Bootstrap) Sync() {
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
-		err = bootstrap.cfgConnect(conn)
+		// 配置连接
+		err = bootstrap.setConnect(conn)
 		if err != nil {
 			bootstrap.Errorf("config connect error: %v", err)
 			continue
@@ -114,17 +116,6 @@ func (bootstrap *Bootstrap) Sync() {
 	}
 
 	bootstrap.Noticef("Bootstrap Exiting..")
-}
-
-// 配置连接
-func (bootstrap *Bootstrap) cfgConnect(conn net.Conn) error {
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		if err := tcpConn.SetKeepAlive(false); err != nil {
-			return errors.Wrap(err, 0)
-		}
-	}
-
-	return nil
 }
 
 // Connect 连接指定地址、端口(服务器地址管理连接)
@@ -172,6 +163,11 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	conn, e := net.Dial("tcp", addr)
 	if e != nil {
 		return nil, errors.Wrap(e, 0)
+	}
+
+	e = bootstrap.setConnect(conn)
+	if e != nil {
+		return nil, e
 	}
 
 	return conn, nil
@@ -315,4 +311,21 @@ func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (net.Conn, e
 	})
 
 	return nconn, nil
+}
+
+// SetKeepAlive 配置连接keepalive，default is false
+func (bootstrap *Bootstrap) SetKeepAlive(keepalive bool) *Bootstrap {
+	bootstrap.keepalive = keepalive
+	return bootstrap
+}
+
+// 配置连接
+func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(bootstrap.keepalive); err != nil {
+			return errors.Wrap(err, 0)
+		}
+	}
+
+	return nil
 }
