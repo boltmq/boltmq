@@ -18,6 +18,7 @@ type Bootstrap struct {
 	opts        *Options
 	optsMu      sync.RWMutex
 	handlers    []Handler
+	keepalive   bool
 	running     bool
 	grRunning   bool
 }
@@ -89,11 +90,18 @@ func (bootstrap *Bootstrap) Sync() {
 					tmpDelay = ACCEPT_MAX_SLEEP
 				}
 			} else if bootstrap.isRunning() {
-				bootstrap.Noticef("Accept error: %v", err)
+				bootstrap.Errorf("Accept error: %v", err)
 			}
 			continue
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
+
+		// 配置连接
+		err = bootstrap.setConnect(conn)
+		if err != nil {
+			bootstrap.Errorf("config connect error: %v", err)
+			continue
+		}
 
 		// 以客户端ip,port管理连接
 		remoteAddr := conn.RemoteAddr().String()
@@ -155,6 +163,11 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 	conn, e := net.Dial("tcp", addr)
 	if e != nil {
 		return nil, errors.Wrap(e, 0)
+	}
+
+	e = bootstrap.setConnect(conn)
+	if e != nil {
+		return nil, e
 	}
 
 	return conn, nil
@@ -293,5 +306,26 @@ func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (net.Conn, e
 	bootstrap.Noticef("Connect listening on port: %s", addr)
 	bootstrap.Noticef("client connections on %s", localAddr)
 
+	bootstrap.startGoRoutine(func() {
+		bootstrap.handleConn(addr, nconn)
+	})
+
 	return nconn, nil
+}
+
+// SetKeepAlive 配置连接keepalive，default is false
+func (bootstrap *Bootstrap) SetKeepAlive(keepalive bool) *Bootstrap {
+	bootstrap.keepalive = keepalive
+	return bootstrap
+}
+
+// 配置连接
+func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetKeepAlive(bootstrap.keepalive); err != nil {
+			return errors.Wrap(err, 0)
+		}
+	}
+
+	return nil
 }
