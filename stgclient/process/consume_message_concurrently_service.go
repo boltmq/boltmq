@@ -50,7 +50,13 @@ func (consume *consumeRequest) run() {
 		}
 	}
 	status := msgListener.ConsumeMessage(consume.msgs, context)
+	// 用于客户端返回不正常处理
+	if status != listener.CONSUME_SUCCESS && status != listener.RECONSUME_LATER {
+		logger.Warnf("consumeMessage return error, Group: %v Msgs: %v MQ: %v",consume.consumerGroup,consume.msgs,consume.messageQueue.ToString())
+		status = listener.RECONSUME_LATER
+	}
 	//todo 消费统计
+    // 处理队列没有drop对消费结果进行处理
 	if !consume.processQueue.Dropped {
 		consume.processConsumeResult(status, context, consume)
 	}
@@ -74,6 +80,7 @@ func (service *ConsumeMessageConcurrentlyService) Shutdown() {
 	close(service.consumeExecutor)
 }
 
+// 消费不了重发到重试队列
 func (service *ConsumeMessageConcurrentlyService) sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
 	service.defaultMQPushConsumerImpl.sendMessageBack(msg, context.DelayLevelWhenNextConsume, context.MessageQueue.BrokerName)
 	return true

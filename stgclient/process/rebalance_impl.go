@@ -158,7 +158,7 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 					if ext.RebalanceImpl.RemoveUnnecessaryMessageQueue(mq, pq) {
 						ite.Remove()
 						changed = true
-						logger.Error("[BUG]doRebalance, remove unnecessary mq, because pull is pause, so try to fixed it")
+						logger.Errorf("[BUG]doRebalance, remove unnecessary mq=%v, because pull is pause, so try to fixed it,pq=%v", mq.ToString(), pq.ToString())
 					}
 				default:
 					break
@@ -176,9 +176,10 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 				MessageQueue:  mq.(*message.MessageQueue),
 				ProcessQueue:  consumer.NewProcessQueue(),
 			}
-			var nextOffset int64 = 1
-			//nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
-			if nextOffset >= 0 {
+			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
+			//if nextOffset >= 0 {
+			//todo 测试
+			if nextOffset >= -1 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
