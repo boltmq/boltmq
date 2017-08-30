@@ -310,5 +310,9 @@ func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (net.Conn, e
 	bootstrap.Noticef("Connect listening on port: %s", addr)
 	bootstrap.Noticef("client connections on %s", localAddr)
 
+	bootstrap.startGoRoutine(func() {
+		bootstrap.handleConn(addr, nconn)
+	})
+
 	return nconn, nil
 }
