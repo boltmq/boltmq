@@ -36,7 +36,7 @@ func main() {
 	defaultMQPushConsumer.Subscribe("TestTopic", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
 	defaultMQPushConsumer.Start()
-	time.Sleep(time.Second*600)
+	time.Sleep(time.Second*6000)
 	defaultMQPushConsumer.Shutdown()
 	go taskC()
 	select {

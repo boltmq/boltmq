@@ -54,10 +54,12 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 		return
 	}
 	pullRequest.ProcessQueue.LastPullTimestamp = time.Now().Unix() * 1000
+	logger.Info(pullRequest.ProcessQueue.ToString())
 	if impl.serviceState != stgcommon.RUNNING {
 		logger.Error("The consumer service state not OK")
 		panic(errors.New("The consumer service state not OK"))
 	}
+	// 用于延迟消费
 	if impl.pause {
 		logger.Warnf("consumer was paused, execute pull request later. instanceName=%v", impl.defaultMQPushConsumer.clientConfig.InstanceName)
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenSuspend)
@@ -73,7 +75,6 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 
 	}
 	subData, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
-
 	if nil == subData {
 		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenException)
 		return
@@ -403,6 +404,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) ExecutePullRequestLater(pullR
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) DoRebalance() {
 	pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.doRebalance()
 }
+
 // 持久化消费offset
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) PersistConsumerOffset() {
 	if pushConsumerImpl.serviceState != stgcommon.RUNNING {

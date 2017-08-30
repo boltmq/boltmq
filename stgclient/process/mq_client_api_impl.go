@@ -90,7 +90,6 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
 	requestHeader := header.GetRouteInfoRequestHeader{Topic: topic}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
-	logger.Infof(request.Remark)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
@@ -136,7 +135,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	}
 	//todo 测试
 	routeData := &route.TopicRouteData{}
-	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
+	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 1, WriteQueueNums: 1, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
 	mapBrokerAddrs[0] = "127.0.0.1:10911"
 	//mapBrokerAddrs[1] = "10.122.1.210:10911"

@@ -23,6 +23,7 @@ func NewTopicPublishInfo() *TopicPublishInfo {
 	return &TopicPublishInfo{}
 }
 
+// 取模获取选择队列
 func (topicPublishInfo *TopicPublishInfo)SelectOneMessageQueue(lastBrokerName string) *message.MessageQueue {
 
 	if !strings.EqualFold(lastBrokerName, "") {

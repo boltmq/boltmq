@@ -1,6 +1,7 @@
 package consumer
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"sort"
 	"strconv"
@@ -70,9 +71,9 @@ func (treeMap *TreeMap) remove(offset int) *message.MessageExt {
 
 func NewProcessQueue() *ProcessQueue {
 	return &ProcessQueue{
-		PullMaxIdleTime: 120000,
-		LastPullTimestamp:time.Now().Unix()*1000,
-		MsgTreeMap:      NewTreeMap(),
+		PullMaxIdleTime:   120000,
+		LastPullTimestamp: time.Now().Unix() * 1000,
+		MsgTreeMap:        NewTreeMap(),
 	}
 }
 
@@ -132,4 +133,8 @@ func (pq *ProcessQueue) RemoveMessage(msgs []*message.MessageExt) int64 {
 	}
 
 	return result
+}
+
+func (pq *ProcessQueue) ToString() string {
+	return fmt.Sprintf("ProcessQueue[LastPullTimestamp=%v,MsgCount=%v,MsgAccCnt=%v]", pq.LastPullTimestamp, pq.MsgCount, pq.MsgAccCnt)
 }
