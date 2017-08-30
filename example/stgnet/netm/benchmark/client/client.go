@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	host := flag.String("h", "10.128.31.103", "host")
+	host := flag.String("h", "10.128.31.108", "host")
 	port := flag.Int("p", 8000, "port")
 	mcn := flag.Int("c", 50000, "max connect num")
 	flag.Parse()
