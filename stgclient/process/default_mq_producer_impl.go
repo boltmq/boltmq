@@ -243,7 +243,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)UpdateTopicPublishInfo(topic 
 		if prev != nil {
 			//atomic.AddInt64(&info.SendWhichQueue, prev.(*TopicPublishInfo).SendWhichQueue)
 			info.SendWhichQueue = prev.(*TopicPublishInfo).SendWhichQueue
-			logger.Info("updateTopicPublishInfo prev is not null")
+			logger.Infof("updateTopicPublishInfo prev is not null,prev=%v",prev)
 		}
 	}
 }

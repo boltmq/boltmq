@@ -24,25 +24,29 @@ import (
 // Since:  2017/8/10
 
 type DefaultMQPushConsumerImpl struct {
-	defaultMQPushConsumer            *DefaultMQPushConsumer
-	serviceState                     stgcommon.ServiceState
-	mQClientFactory                  *MQClientInstance
-	pause                            bool
-	rebalanceImpl                    RebalanceImpl
-	messageListenerInner             listener.MessageListener
-	pullAPIWrapper                   *PullAPIWrapper
-	OffsetStore                      store.OffsetStore
-	consumeMessageService            ConsumeMessageService
-	consumeOrderly                   bool
-	PullTimeDelayMillsWhenException  int
-	PullTimeDelayMillsWhenSuspend    int
-	BrokerSuspendMaxTimeMillis       int
-	ConsumerTimeoutMillisWhenSuspend int
+	defaultMQPushConsumer             *DefaultMQPushConsumer
+	serviceState                      stgcommon.ServiceState
+	mQClientFactory                   *MQClientInstance
+	pause                             bool
+	rebalanceImpl                     RebalanceImpl
+	messageListenerInner              listener.MessageListener
+	pullAPIWrapper                    *PullAPIWrapper
+	OffsetStore                       store.OffsetStore
+	consumeMessageService             ConsumeMessageService
+	consumeOrderly                    bool
+	PullTimeDelayMillsWhenException   int
+	PullTimeDelayMillsWhenSuspend     int
+	BrokerSuspendMaxTimeMillis        int
+	PullTimeDelayMillsWhenFlowControl int
+	ConsumerTimeoutMillisWhenSuspend  int
+	flowControlTimes1                 int64
+	flowControlTimes2                 int64
 }
 
 func NewDefaultMQPushConsumerImpl(defaultMQPushConsumer *DefaultMQPushConsumer) *DefaultMQPushConsumerImpl {
 	impl := &DefaultMQPushConsumerImpl{defaultMQPushConsumer: defaultMQPushConsumer, serviceState: stgcommon.CREATE_JUST,
-		PullTimeDelayMillsWhenException: 3000, PullTimeDelayMillsWhenSuspend: 1000, BrokerSuspendMaxTimeMillis: 1000 * 15, ConsumerTimeoutMillisWhenSuspend: 1000 * 30}
+		PullTimeDelayMillsWhenException: 3000, PullTimeDelayMillsWhenSuspend: 1000, BrokerSuspendMaxTimeMillis: 1000 * 15,
+		PullTimeDelayMillsWhenFlowControl: 50, ConsumerTimeoutMillisWhenSuspend: 1000 * 30, flowControlTimes1: 0, flowControlTimes2: 0}
 	impl.rebalanceImpl = NewRebalancePushImpl(impl)
 	return impl
 }
@@ -67,13 +71,27 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 		return
 	}
 	size := processQueue.MsgCount
-	// todo 控流后续添加
+	// 控流
 	if size > impl.defaultMQPushConsumer.pullThresholdForQueue {
-
+		impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenFlowControl)
+		impl.flowControlTimes1++
+		if (impl.flowControlTimes1 % 1000) == 0 {
+			logger.Warnf("the consumer message buffer is full, so do flow control, %v %v %v", size,
+				pullRequest, impl.flowControlTimes1)
+		}
+		return
 	}
-	// todo 顺序消费后续添加
+	// 控流
 	if !impl.consumeOrderly {
-
+		if processQueue.GetMaxSpan() > impl.defaultMQPushConsumer.consumeConcurrentlyMaxSpan {
+			impl.ExecutePullRequestLater(pullRequest, impl.PullTimeDelayMillsWhenFlowControl)
+			impl.flowControlTimes2++
+			if (impl.flowControlTimes2 % 1000) == 0 {
+				logger.Warnf("the queue's messages, span too long, so do flow control, %v %v %v", processQueue.GetMaxSpan(),
+					pullRequest, impl.flowControlTimes2)
+			}
+			return
+		}
 	}
 	subData, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
 	if nil == subData {

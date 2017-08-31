@@ -53,6 +53,10 @@ func (treeMap *TreeMap) firstKey() int {
 	return treeMap.keys[0]
 }
 
+func (treeMap *TreeMap) lastKey() int {
+	return treeMap.keys[len(treeMap.keys)-1]
+}
+
 func (treeMap *TreeMap) remove(offset int) *message.MessageExt {
 	treeMap.Lock()
 	defer treeMap.Unlock()
@@ -133,6 +137,15 @@ func (pq *ProcessQueue) RemoveMessage(msgs []*message.MessageExt) int64 {
 	}
 
 	return result
+}
+
+func (pq *ProcessQueue) GetMaxSpan() int64 {
+	defer pq.lockTreeMap.Unlock()
+	pq.lockTreeMap.Lock()
+	if len(pq.MsgTreeMap.innerMap) > 0 {
+		return int64(pq.MsgTreeMap.lastKey() - pq.MsgTreeMap.firstKey())
+	}
+	return 0
 }
 
 func (pq *ProcessQueue) ToString() string {
