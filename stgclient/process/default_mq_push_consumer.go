@@ -68,6 +68,7 @@ func NewDefaultMQPushConsumer(consumerGroup string) *DefaultMQPushConsumer {
 	pushConsumer.pullInterval = 0
 	pushConsumer.pullBatchSize = 32
 	pushConsumer.unitMode = false
+	pushConsumer.consumeConcurrentlyMaxSpan = 2000
 	pushConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
 	pushConsumer.defaultMQPushConsumerImpl = NewDefaultMQPushConsumerImpl(pushConsumer)
 	return pushConsumer
