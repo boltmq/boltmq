@@ -62,8 +62,12 @@ func NewDefaultMQPushConsumer(consumerGroup string) *DefaultMQPushConsumer {
 	pushConsumer := &DefaultMQPushConsumer{clientConfig: stgclient.NewClientConfig("")}
 	pushConsumer.consumerGroup = consumerGroup
 	pushConsumer.messageModel = heartbeat.CLUSTERING
-	pushConsumer.pullThresholdForQueue=1000
-	pushConsumer.consumeMessageBatchMaxSize=1
+	pushConsumer.pullThresholdForQueue = 1000
+	pushConsumer.consumeMessageBatchMaxSize = 1
+	pushConsumer.consumeThreadMax = 64
+	pushConsumer.pullInterval = 0
+	pushConsumer.pullBatchSize = 32
+	pushConsumer.unitMode = false
 	pushConsumer.allocateMessageQueueStrategy = rebalance.AllocateMessageQueueAveragely{}
 	pushConsumer.defaultMQPushConsumerImpl = NewDefaultMQPushConsumerImpl(pushConsumer)
 	return pushConsumer
@@ -85,7 +89,7 @@ func (pushConsumer *DefaultMQPushConsumer) SetMessageModel(model heartbeat.Messa
 }
 
 // 订阅topic和tag
-func (pushConsumer *DefaultMQPushConsumer) Subscribe(topic string,subExpression string) {
+func (pushConsumer *DefaultMQPushConsumer) Subscribe(topic string, subExpression string) {
 	pushConsumer.defaultMQPushConsumerImpl.subscribe(topic, subExpression)
 }
 

@@ -41,7 +41,7 @@ func (consume *consumeRequest) run() {
 		return
 	}
 	var msgListener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
-	context := consumer.ConsumeConcurrentlyContext{MessageQueue: consume.messageQueue}
+	context := consumer.NeWConsumeConcurrentlyContext(consume.messageQueue)
 	groupTopic := stgcommon.GetRetryTopic(consume.consumerGroup)
 	for _, msg := range consume.msgs {
 		retryTopic := msg.GetProperty(message.PROPERTY_RETRY_TOPIC)
@@ -81,14 +81,14 @@ func (service *ConsumeMessageConcurrentlyService) Shutdown() {
 }
 
 // 消费不了重发到重试队列
-func (service *ConsumeMessageConcurrentlyService) sendMessageBack(msg message.MessageExt, context consumer.ConsumeConcurrentlyContext) bool {
+func (service *ConsumeMessageConcurrentlyService) sendMessageBack(msg *message.MessageExt, context *consumer.ConsumeConcurrentlyContext) bool {
 	service.defaultMQPushConsumerImpl.sendMessageBack(msg, context.DelayLevelWhenNextConsume, context.MessageQueue.BrokerName)
 	return true
 }
 
 // 处理消费结果
 func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status listener.ConsumeConcurrentlyStatus,
-	context consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
+	context *consumer.ConsumeConcurrentlyContext, consumeRequest *consumeRequest) {
 	ackIndex := context.AckIndex
 	if len(consumeRequest.msgs) == 0 {
 		return
@@ -124,7 +124,7 @@ func (service *ConsumeMessageConcurrentlyService) processConsumeResult(status li
 		}
 		for i := ackIndex + 1; i < len(consumeRequest.msgs); i++ {
 			msg := consumeRequest.msgs[i]
-			if !service.sendMessageBack(*msg, context) {
+			if !service.sendMessageBack(msg, context) {
 				msg.ReconsumeTimes = msg.ReconsumeTimes + 1
 				msgBackFailed = append(msgBackFailed, msg)
 				msgSet.Remove(msg)

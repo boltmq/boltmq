@@ -221,7 +221,6 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 			case heartbeat.CLUSTERING:
 				pushConsumerImpl.OffsetStore = NewRemoteBrokerOffsetStore(pushConsumerImpl.mQClientFactory, pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 			default:
-				break
 
 			}
 			// 本地存储，load才有用
@@ -285,7 +284,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) checkConfig() {
 }
 
 // 消费不了从新发送到队列
-func (pushConsumerImpl *DefaultMQPushConsumerImpl) sendMessageBack(msg message.MessageExt, delayLevel int, brokerName string) {
+func (pushConsumerImpl *DefaultMQPushConsumerImpl) sendMessageBack(msg *message.MessageExt, delayLevel int, brokerName string) {
 	var brokerAddr string
 	if !strings.EqualFold(brokerName, "") {
 		brokerAddr = pushConsumerImpl.mQClientFactory.FindBrokerAddressInPublish(brokerAddr)

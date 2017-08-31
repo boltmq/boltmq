@@ -60,4 +60,6 @@ func initServer() {
 	remotingServer.RegisterProcessor(cmprotocol.GET_MAX_OFFSET, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.QUERY_CONSUMER_OFFSET, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.PULL_MESSAGE, &OtherProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.UPDATE_CONSUMER_OFFSET, &OtherProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.GET_CONSUMER_LIST_BY_GROUP, &OtherProcessor{})
 }
