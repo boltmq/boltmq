@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"runtime/debug"
+	"sync/atomic"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
@@ -21,7 +22,7 @@ func main() {
 		maxConnNum int
 		connTotal  int
 		sendTotal  int
-		receTotal  int
+		receTotal  int32
 		cStartTime time.Time
 		cEndTime   time.Time
 		cd         time.Duration
@@ -31,7 +32,7 @@ func main() {
 	)
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-		receTotal++
+		atomic.AddInt32(&receTotal, 1)
 		fmt.Println("receive:", receTotal, string(buffer))
 	})
 
@@ -72,7 +73,7 @@ func main() {
 			<-timer.C
 			timer.Reset(10 * time.Second)
 			fmt.Printf("create connect success [%d], failed[%d], spend time %v| send msg success [%d], failed[%d], spend time %v| receive msg success [%d], failed[%d]\n",
-				connTotal, maxConnNum-connTotal, cd, sendTotal, connTotal-sendTotal, sd, receTotal, sendTotal-receTotal)
+				connTotal, maxConnNum-connTotal, cd, sendTotal, connTotal-sendTotal, sd, receTotal, sendTotal-int(receTotal))
 		}
 	}()
 
