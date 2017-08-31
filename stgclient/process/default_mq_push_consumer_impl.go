@@ -2,6 +2,11 @@ package process
 
 import (
 	"errors"
+	"math"
+	"strconv"
+	"strings"
+	"time"
+
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/store"
@@ -12,10 +17,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	set "github.com/deckarep/golang-set"
-	"math"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // DefaultMQPushConsumerImpl: push消费的实现
@@ -54,7 +55,7 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 		return
 	}
 	pullRequest.ProcessQueue.LastPullTimestamp = time.Now().Unix() * 1000
-	logger.Info(pullRequest.ProcessQueue.ToString())
+	//logger.Info(pullRequest.ProcessQueue.ToString())
 	if impl.serviceState != stgcommon.RUNNING {
 		logger.Error("The consumer service state not OK")
 		panic(errors.New("The consumer service state not OK"))

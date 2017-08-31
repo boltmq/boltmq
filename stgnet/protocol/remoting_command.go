@@ -63,6 +63,8 @@ func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *Remotin
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
 	}
+	// 标识自增，请求唯一标识
+	remotingClient.Opaque = inrcOpaque()
 	// 设置版本信息
 	remotingClient.setCMDVersion()
 

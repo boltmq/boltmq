@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"github.com/go-errors/errors"
 )
@@ -168,11 +167,7 @@ func (ra *BaseRemotingAchieve) processResponseCommand(addr string, conn net.Conn
 	responseFuture, ok := ra.responseTable[response.Opaque]
 	ra.responseTableLock.RUnlock()
 	if !ok {
-		if response.Code == cmprotocol.NOTIFY_CONSUMER_IDS_CHANGED {
-			// TODO:
-		} else {
-			logger.Fatalf("processResponseCommand not found responseFuture: %d %v", response.Opaque, response)
-		}
+		logger.Fatalf("receive response, but not matched any request, %s response Opaque: %d", addr, response.Opaque)
 		return
 	}
 
