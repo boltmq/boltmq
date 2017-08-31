@@ -204,24 +204,24 @@ func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, 
 
 // 发送报文
 func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	// 头部进行编码
-	header := remotingCommand.EncodeHeader()
-	body := remotingCommand.Body
+	var (
+		header []byte
+		packet []byte
+	)
 
-	//_, err = ra.bootstrap.Write(addr, header)
-	// 发送报文的头部
-	_, err := conn.Write(header)
-	if err != nil {
-		return errors.Wrap(err, 0)
+	// 头部进行编码
+	header = remotingCommand.EncodeHeader()
+	if remotingCommand.Body != nil && len(remotingCommand.Body) > 0 {
+		packet = append(header, remotingCommand.Body...)
+	} else {
+		packet = header
 	}
 
-	// 发送报文的Body
-	if body != nil && len(body) > 0 {
-		//_, err = ra.bootstrap.Write(addr, body)
-		_, err = conn.Write(body)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
+	//_, err = ra.bootstrap.Write(addr, header)
+	// 发送报文
+	_, err := conn.Write(packet)
+	if err != nil {
+		return errors.Wrap(err, 0)
 	}
 
 	return nil
