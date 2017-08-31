@@ -4,6 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
@@ -103,10 +104,20 @@ func (api *PullAPIWrapper) processPullResult(mq *message.MessageQueue, pullResul
 	pullResult := pullResultExt.PullResult
 	api.updatePullFromWhichNode(mq, int(pullResultExt.suggestWhichBrokerId))
 	if consumer.FOUND == pullResult.PullStatus {
-		// todo 有消息编解码操作
-		var msgListFilterAgain []*message.MessageExt
-		// todo 类过滤默认都不执行
+		msgList, err := message.DecodesMessageExt(pullResultExt.messageBinary, true)
+		if err != nil {
+			logger.Errorf("message.DecodesMessageExt error=%v", err.Error())
+		}
+		var msgListFilterAgain []*message.MessageExt=msgList
 		if len(subscriptionData.TagsSet.ToSlice()) != 0 && !subscriptionData.ClassFilterMode {
+			msgListFilterAgain=[]*message.MessageExt{}
+			for _,msg:=range msgList{
+				if !strings.EqualFold(msg.GetTags(),""){
+					if subscriptionData.TagsSet.Contains(msg.GetTags()){
+						msgListFilterAgain=append(msgListFilterAgain,msg)
+					}
+				}
+			}
 		}
 		if !strings.EqualFold(projectGroupPrefix, "") {
 			subscriptionData.Topic = stgclient.ClearProjectGroup(subscriptionData.Topic, projectGroupPrefix)
