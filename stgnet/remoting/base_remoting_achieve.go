@@ -60,9 +60,11 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn 
 		}
 
 		for _, buf := range bufs {
+			// 解决线程数据安全问题
+			tbuf := buf
 			// 开启gorouting处理响应
 			ra.startGoRoutine(func() {
-				ra.processMessageReceived(addr, conn, buf)
+				ra.processMessageReceived(addr, conn, tbuf)
 			})
 		}
 	} else {
