@@ -53,4 +53,9 @@ sysctl -p /etc/sysctl.conf
 sysctl -w net.ipv4.route.flush=1
 ```
 
+### 遗留问题
+1. 逻辑粘包乱序问题没有处理（netty应该也没有处理，初步确定）
+2. 高并发情况下的缓冲处理能力。
+3. 长连接是否有方案使用复用线程的可能性。
+
 Read the [docs](http://git.oschina.net/cloudzone/smartgo)
