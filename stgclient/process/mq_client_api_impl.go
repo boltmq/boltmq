@@ -24,7 +24,7 @@ import (
 // Since:  2017/8/8
 
 type MQClientAPIImpl struct {
-	DefalutRemotingClient   *remoting.DefalutRemotingClient
+	DefalutRemotingClient   remoting.RemotingClient
 	ClientRemotingProcessor *ClientRemotingProcessor
 	ProjectGroupPrefix      string
 }
@@ -316,7 +316,7 @@ func (impl *MQClientAPIImpl) UpdateNameServerAddressList(addrs string) {
 	impl.DefalutRemotingClient.UpdateNameServerAddressList(strings.Split(addrs, ";"))
 }
 
-func (impl *MQClientAPIImpl) consumerSendMessageBack(addr string, msg message.MessageExt, consumerGroup string, delayLevel int, timeoutMillis int) {
+func (impl *MQClientAPIImpl) consumerSendMessageBack(addr string, msg *message.MessageExt, consumerGroup string, delayLevel int, timeoutMillis int) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
