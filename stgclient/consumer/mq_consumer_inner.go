@@ -12,11 +12,16 @@ type MQConsumerInner interface {
 	Subscriptions() set.Set
 	// Set<MessageQueue>
 	UpdateTopicSubscribeInfo(topic string, info set.Set)
+	// 组名称
 	GroupName() string
+	// 消息类型
 	MessageModel() heartbeat.MessageModel
+	// 消费类型
 	ConsumeType() heartbeat.ConsumeType
+	// 消费位置
 	ConsumeFromWhere() heartbeat.ConsumeFromWhere
 	IsUnitMode() bool
+	// 是否需要更新
 	IsSubscribeTopicNeedUpdate(topic string) bool
 	// 持久化offset
 	PersistConsumerOffset()
