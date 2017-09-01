@@ -36,27 +36,26 @@ func NewAbstractSendMessageProcessor(brokerController *BrokerController) *Abstra
 }
 
 func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *header.SendMessageRequestHeader {
-	var requestHeaderV2 header.SendMessageRequestHeaderV2
+	requestHeaderV2 := &header.SendMessageRequestHeaderV2{}
 	var requestHeader *header.SendMessageRequestHeader
 	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
-		err := request.DecodeCommandCustomHeader(&requestHeaderV2) // TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		err := request.DecodeCommandCustomHeader(requestHeaderV2) // TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
 		if err != nil {
 			fmt.Println("error")
 		}
 	}
 
-	requestHeader = header.CreateSendMessageRequestHeaderV1(&requestHeaderV2)
+	requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
 	return requestHeader
 }
 
-func (asmp *AbstractSendMessageProcessor) buildMsgContext( // TODO ChannelHandlerContext ctx
-	requestHeader *header.SendMessageRequestHeader) *mqtrace.SendMessageContext {
+func (asmp *AbstractSendMessageProcessor) buildMsgContext(conn net.Conn, requestHeader *header.SendMessageRequestHeader) *mqtrace.SendMessageContext {
 	mqtraceContext := &mqtrace.SendMessageContext{}
 	mqtraceContext.ProducerGroup = requestHeader.ProducerGroup
 	mqtraceContext.Topic = requestHeader.Topic
 	mqtraceContext.MsgProps = requestHeader.Properties
-	// TODO 	mqtraceContext.BornHost = requestHeader.ProducerGroup
+	mqtraceContext.BornHost = conn.LocalAddr().String()
 	mqtraceContext.BrokerAddr = asmp.BrokerController.GetBrokerAddr()
 	return mqtraceContext
 }
@@ -91,7 +90,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 		}
 
 		topicConfig, _ := asmp.BrokerController.TopicConfigManager.createTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
-			"", requestHeader.DefaultTopicQueueNums, topicSysFlag)
+			conn.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
 				topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(requestHeader.Topic,
