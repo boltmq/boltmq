@@ -46,7 +46,7 @@ func (mQClientManager *MQClientManager) GetAndCreateMQClientInstance(clientConfi
 		if prev != nil {
 			instance = prev
 		} else {
-			logger.Info("first CreateMQClientInstance clientId=%v", clientId)
+			logger.Infof("first CreateMQClientInstance clientId=%v", clientId)
 		}
 	}
 	return instance.(*MQClientInstance)
