@@ -177,31 +177,36 @@ func (pullImpl *DefaultMQPullConsumerImpl)IsSubscribeTopicNeedUpdate(topic strin
 	return false
 }
 
+// 持久化offset
 func (pullImpl *DefaultMQPullConsumerImpl)PersistConsumerOffset() {
 	if pullImpl.serviceState != stgcommon.RUNNING {
 		panic(errors.New("The consumer service state not OK"))
 	}
 	storeSet := set.NewSet()
 	for ite := pullImpl.RebalanceImpl.(*RebalancePullImpl).ProcessQueueTable.Iterator(); ite.HasNext(); {
-		k, _, _ := ite.Next()
-		storeSet.Add(k)
+		mq, _, _ := ite.Next()
+		storeSet.Add(mq)
 	}
 	pullImpl.OffsetStore.PersistAll(storeSet)
 }
 
+// 执行负载
 func (pullImpl *DefaultMQPullConsumerImpl)DoRebalance() {
 	pullImpl.RebalanceImpl.(*RebalancePullImpl).doRebalance()
 }
 
+// 远程拉取topic队列列表
 func (pullImpl *DefaultMQPullConsumerImpl)fetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	pullImpl.makeSureStateOK()
 	return pullImpl.mQClientFactory.MQAdminImpl.FetchSubscribeMessageQueues(topic)
 }
 
+// 拉取消息
 func (pullImpl*DefaultMQPullConsumerImpl)pull(mq *message.MessageQueue, subExpression string, offset int64, maxNums int) (*consumer.PullResult,error) {
 	return pullImpl.pullSyncImpl(mq, subExpression, offset, maxNums, false, pullImpl.defaultMQPullConsumer.consumerPullTimeoutMillis)
 }
 
+// 同步拉取消息
 func (pullImpl*DefaultMQPullConsumerImpl)pullSyncImpl(mq *message.MessageQueue, subExpression string, offset int64, maxNums int, block bool, timeout int) (*consumer.PullResult,error) {
 	pullImpl.makeSureStateOK()
 	if offset < 0 {

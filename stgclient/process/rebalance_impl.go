@@ -36,7 +36,7 @@ type RebalanceImpl interface {
 type RebalanceImplExt struct {
 	RebalanceImpl                RebalanceImpl
 	ProcessQueueTable            *sync.Map //*MessageQueue, *ProcessQueue
-	TopicSubscribeInfoTable      *sync.Map // topic  Set<*MessageQueue>
+	TopicSubscribeInfoTable      *sync.Map //topic  Set<*MessageQueue>
 	SubscriptionInner            *sync.Map //topic, *SubscriptionData
 	ConsumerGroup                string
 	MessageModel                 heartbeat.MessageModel
@@ -96,7 +96,9 @@ func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 				mqAll = append(mqAll, val.(*message.MessageQueue))
 			}
 			var mqs message.MessageQueues = mqAll
+			// 结构体排序
 			sort.Sort(mqs)
+			// 字符串排序
 			sort.Strings(cidAll)
 			strategy := ext.AllocateMessageQueueStrategy
 			allocateResult := strategy.Allocate(ext.ConsumerGroup, ext.MQClientFactory.ClientId, mqAll, cidAll)
