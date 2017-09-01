@@ -8,7 +8,7 @@ import (
 
 func main() {
 	defaultMQPullConsumer := process.NewDefaultMQPullConsumer("myConsumerGroup")
-	defaultMQPullConsumer.SetNamesrvAddr("127.0.0.1:9876")
+	defaultMQPullConsumer.SetNamesrvAddr("127.0.0.1:10911")
 	defaultMQPullConsumer.Start()
 
 	mqs := defaultMQPullConsumer.FetchSubscribeMessageQueues("TestTopic")
@@ -23,7 +23,7 @@ func main() {
 			}
 		}
 	}
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 600)
 	defaultMQPullConsumer.Shutdown()
 	select {
 
