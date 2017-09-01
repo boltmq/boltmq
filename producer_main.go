@@ -19,7 +19,7 @@ func Task() {
 }
 func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
-	defaultMQProducer.SetNamesrvAddr("127.0.0.1:9876")
+	defaultMQProducer.SetNamesrvAddr("127.0.0.1:10911")
 	defaultMQProducer.Start()
 	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "TestTopic", 8)
 	for i := 0; i < 10; i++ {
