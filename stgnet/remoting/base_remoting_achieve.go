@@ -299,7 +299,6 @@ func (ra *BaseRemotingAchieve) scanResponseTable() {
 	ra.responseTableLock.RLock()
 	for seq, responseFuture := range ra.responseTable {
 		// 超时判断
-		response := responseFuture.GetRemotingCommand()
 		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
 			seqs = append(seqs, seq)
 			logger.Fatalf("remove time out request %v", responseFuture)
