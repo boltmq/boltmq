@@ -142,11 +142,11 @@ func (rc *DefalutRemotingClient) createConnectByAddr(addrPtr *string) (net.Conn,
 
 func (rc *DefalutRemotingClient) chooseNameseverAddr() string {
 	if rc.namesrvAddrChoosed != "" {
-		//return rc.namesrvAddrChoosed
+		return rc.namesrvAddrChoosed
 		// 判断连接是否可用，不可用选取其它name server addr
-		if rc.bootstrap.HasConnect(rc.namesrvAddrChoosed) {
-			return rc.namesrvAddrChoosed
-		}
+		//if rc.bootstrap.HasConnect(rc.namesrvAddrChoosed) {
+		//	return rc.namesrvAddrChoosed
+		//}
 	}
 
 	var (
@@ -160,14 +160,14 @@ func (rc *DefalutRemotingClient) chooseNameseverAddr() string {
 		atomic.AddUint32(&rc.namesrvIndex, 1)
 		idx := rc.namesrvIndex % nlen
 
-		newAddr := rc.namesrvAddrList[idx]
-		rc.namesrvAddrChoosed = newAddr
-		//caddr = rc.namesrvAddrChoosed
-		//break
-		if rc.bootstrap.HasConnect(newAddr) {
-			caddr = rc.namesrvAddrChoosed
-			break
-		}
+		caddr = rc.namesrvAddrList[idx]
+		break
+		//newAddr := rc.namesrvAddrList[idx]
+		//rc.namesrvAddrChoosed = newAddr
+		//if rc.bootstrap.HasConnect(newAddr) {
+		//	caddr = rc.namesrvAddrChoosed
+		//	break
+		//}
 	}
 	rc.namesrvAddrListLock.RUnlock()
 
