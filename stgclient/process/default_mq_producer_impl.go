@@ -39,6 +39,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
 	defaultMQProducerImpl.StartFlag(true)
 	return nil
 }
+
 // 生产启动方法
 func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool) error {
 	switch defaultMQProducerImpl.ServiceState{
