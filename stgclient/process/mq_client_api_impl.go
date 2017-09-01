@@ -215,6 +215,8 @@ func (impl *MQClientAPIImpl) UpdateConsumerOffsetOneway(addr string, requestHead
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
 	request := protocol.CreateRequestCommand(cprotocol.UPDATE_CONSUMER_OFFSET, &requestHeader)
+	// oneway 特殊处理
+	request.MarkOnewayRPC()
 	impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
 }
 
