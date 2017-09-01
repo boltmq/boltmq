@@ -290,17 +290,42 @@ func (ra *BaseRemotingAchieve) invokeOneway(addr string, conn net.Conn, request 
 
 // 扫描发送请求响应报文是否超时
 func (ra *BaseRemotingAchieve) scanResponseTable() {
-	ra.responseTableLock.Lock()
+	var (
+		seqs []int32
+	)
+
+	// 检查超时响应，表更为对锁检查，过滤出超时响应后，写锁删除。
+	// 通常情况下，超时连接没有那么多。Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-09-01
+	ra.responseTableLock.RLock()
 	for seq, responseFuture := range ra.responseTable {
 		// 超时判断
+		response := responseFuture.GetRemotingCommand()
 		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
-			// 删除超时响应
-			delete(ra.responseTable, seq)
+			seqs = append(seqs, seq)
+			logger.Fatalf("remove time out request %v", responseFuture)
+		}
+	}
+	ra.responseTableLock.RUnlock()
 
-			if responseFuture.invokeCallback != nil {
+	// 没有超时连接
+	if len(seqs) == 0 {
+		return
+	}
+
+	ra.responseTableLock.Lock()
+	for _, seq := range seqs {
+		responseFuture, ok := ra.responseTable[seq]
+		if !ok {
+			continue
+		}
+		// 删除超时响应
+		delete(ra.responseTable, seq)
+
+		// 回调执行
+		if responseFuture.invokeCallback != nil {
+			ra.startGoRoutine(func() {
 				responseFuture.invokeCallback(responseFuture)
-				logger.Fatalf("remove time out request %v", responseFuture)
-			}
+			})
 		}
 	}
 	ra.responseTableLock.Unlock()
