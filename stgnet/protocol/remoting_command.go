@@ -104,6 +104,13 @@ func (rc *RemotingCommand) MarkResponseType() {
 	rc.Flag |= bits
 }
 
+// MarkOnewayRPC mark oneway type
+func (rc *RemotingCommand) MarkOnewayRPC() {
+	var bits int32
+	bits = 1 << rpcOneway
+	rc.Flag |= bits
+}
+
 // IsResponseType is response type, return bool
 func (rc *RemotingCommand) IsResponseType() bool {
 	var bits int32

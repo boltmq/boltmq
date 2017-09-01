@@ -19,31 +19,33 @@ import (
 // Author gaoyanlei
 // Since 2017/8/24
 type SendMessageProcessor struct {
-	*AbstractSendMessageProcessor
-	BrokerController *BrokerController
+	abstractSendMessageProcessor *AbstractSendMessageProcessor
+	BrokerController             *BrokerController
 }
 
 func NewSendMessageProcessor(brokerController *BrokerController) *SendMessageProcessor {
 	var sendMessageProcessor = new(SendMessageProcessor)
 	sendMessageProcessor.BrokerController = brokerController
+	sendMessageProcessor.abstractSendMessageProcessor = NewAbstractSendMessageProcessor(brokerController)
 	return sendMessageProcessor
 }
-func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error){
+
+func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(request),nil
+		return smp.consumerSendMsgBack(request), nil
 	}
 
-	requestHeader := smp.parseRequestHeader(request)
+	requestHeader := smp.abstractSendMessageProcessor.parseRequestHeader(request)
 	if requestHeader == nil {
-		return nil,nil
+		return nil, nil
 	}
 
-	mqtraceContext := smp.buildMsgContext(requestHeader)
+	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(conn, requestHeader)
 	// TODO  this.executeSendMessageHookBefore(ctx, request, mqtraceContext)
 	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
 	// TODO this.executeSendMessageHookAfter(response, mqtraceContext);
-	return response,nil
+	return response, nil
 }
 
 // consumerSendMsgBack 客户端返回未消费消息
@@ -92,7 +94,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	newTopic := stgcommon.GetRetryTopic(requestHeader.Group)
 	var queueIdInt int32
 	if queueIdInt < 0 {
-		num := (smp.Rand.Int31() % 99999999) % subscriptionGroupConfig.RetryQueueNums
+		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % subscriptionGroupConfig.RetryQueueNums
 		if num > 0 {
 			queueIdInt = num
 		} else {
@@ -146,7 +148,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	if msgExt.ReconsumeTimes >= subscriptionGroupConfig.RetryMaxTimes || delayLevel < 0 {
 		newTopic = stgcommon.GetDLQTopic(requestHeader.Group)
 		if queueIdInt < 0 {
-			num := (smp.Rand.Int31() % 99999999) % DLQ_NUMS_PER_GROUP
+			num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % DLQ_NUMS_PER_GROUP
 			if num > 0 {
 				queueIdInt = num
 			} else {
@@ -182,7 +184,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	msgInner.SysFlag = msgExt.SysFlag
 	msgInner.BornTimestamp = msgExt.BornTimestamp
 	msgInner.BornHost = msgExt.BornHost
-	msgInner.StoreHost = smp.StoreHost
+	msgInner.StoreHost = smp.abstractSendMessageProcessor.StoreHost
 	msgInner.ReconsumeTimes = msgExt.ReconsumeTimes + 1
 
 	// 保存源生消息的 msgId
@@ -228,11 +230,16 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 // Since 2017/8/17
 func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
-	response := &protocol.RemotingCommand{}
+	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.SendMessageResponseHeader{})
 	responseHeader := new(header.SendMessageResponseHeader)
+
+	if value, ok := response.CustomHeader.(*header.SendMessageResponseHeader); ok {
+		responseHeader = value
+	}
+
 	response.Opaque = request.Opaque
 	response.Code = -1
-	smp.msgCheck(conn, requestHeader, response)
+	smp.abstractSendMessageProcessor.msgCheck(conn, requestHeader, response)
 	if response.Code != -1 {
 		return response
 	}
@@ -244,7 +251,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	topicConfig := smp.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
 
 	if queueIdInt < 0 {
-		num := (smp.Rand.Int31() % 99999999) % topicConfig.WriteQueueNums
+		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % topicConfig.WriteQueueNums
 		if num > 0 {
 			queueIdInt = int32(num)
 		} else {
@@ -267,7 +274,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
 	msgInner.BornHost = conn.LocalAddr().String()
-	msgInner.StoreHost = smp.StoreHost
+	msgInner.StoreHost = smp.abstractSendMessageProcessor.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
 	} else {

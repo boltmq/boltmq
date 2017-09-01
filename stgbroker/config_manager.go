@@ -3,8 +3,7 @@ package stgbroker
 import (
 	"fmt"
 	"io/ioutil"
-	"io"
-	"os"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 type ConfigManager interface {
@@ -41,9 +40,6 @@ func (cme *ConfigManagerExt) Persist() {
 	jsonString := cme.ConfigManager.Encode(true)
 	if jsonString != "" {
 		fileName := cme.ConfigManager.ConfigFilePath()
-		f, _:= os.OpenFile(fileName, os.O_APPEND, 0666)
-		io.WriteString(f, jsonString)
-		//fmt.Println(jsonString,fileName)
-		// TODO 写入文件
+		stgcommon.String2File([]byte(jsonString),fileName)
 	}
 }

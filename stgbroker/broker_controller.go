@@ -138,12 +138,9 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 	topicConfigWrapper := bc.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !constant.IsWriteable(bc.BrokerConfig.BrokerPermission) || !constant.IsReadable(bc.BrokerConfig.BrokerPermission) {
 		topicConfigTable := topicConfigWrapper.TopicConfigTable
-		for it := topicConfigTable.Iterator(); it.HasNext(); {
-			_, value, _ := it.Next()
-			if topicConfig, ok := value.(*stgcommon.TopicConfig); ok {
-				topicConfig.Perm = bc.BrokerConfig.BrokerPermission
-			}
-		}
+		bc.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(k string, topicConfig *stgcommon.TopicConfig) {
+			topicConfig.Perm = bc.BrokerConfig.BrokerPermission
+		})
 		topicConfigWrapper.TopicConfigTable = topicConfigTable
 	}
 	registerBrokerResult := bc.BrokerOuterAPI.RegisterBrokerAll(

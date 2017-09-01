@@ -60,9 +60,11 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn 
 		}
 
 		for _, buf := range bufs {
+			// 解决线程数据安全问题
+			tbuf := buf
 			// 开启gorouting处理响应
 			ra.startGoRoutine(func() {
-				ra.processMessageReceived(addr, conn, buf)
+				ra.processMessageReceived(addr, conn, tbuf)
 			})
 		}
 	} else {
@@ -204,24 +206,24 @@ func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, 
 
 // 发送报文
 func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	// 头部进行编码
-	header := remotingCommand.EncodeHeader()
-	body := remotingCommand.Body
+	var (
+		header []byte
+		packet []byte
+	)
 
-	//_, err = ra.bootstrap.Write(addr, header)
-	// 发送报文的头部
-	_, err := conn.Write(header)
-	if err != nil {
-		return errors.Wrap(err, 0)
+	// 头部进行编码
+	header = remotingCommand.EncodeHeader()
+	if remotingCommand.Body != nil && len(remotingCommand.Body) > 0 {
+		packet = append(header, remotingCommand.Body...)
+	} else {
+		packet = header
 	}
 
-	// 发送报文的Body
-	if body != nil && len(body) > 0 {
-		//_, err = ra.bootstrap.Write(addr, body)
-		_, err = conn.Write(body)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
+	//_, err = ra.bootstrap.Write(addr, header)
+	// 发送报文
+	_, err := conn.Write(packet)
+	if err != nil {
+		return errors.Wrap(err, 0)
 	}
 
 	return nil
@@ -288,17 +290,42 @@ func (ra *BaseRemotingAchieve) invokeOneway(addr string, conn net.Conn, request 
 
 // 扫描发送请求响应报文是否超时
 func (ra *BaseRemotingAchieve) scanResponseTable() {
-	ra.responseTableLock.Lock()
+	var (
+		seqs []int32
+	)
+
+	// 检查超时响应，表更为对锁检查，过滤出超时响应后，写锁删除。
+	// 通常情况下，超时连接没有那么多。Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-09-01
+	ra.responseTableLock.RLock()
 	for seq, responseFuture := range ra.responseTable {
 		// 超时判断
+		response := responseFuture.GetRemotingCommand()
 		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
-			// 删除超时响应
-			delete(ra.responseTable, seq)
+			seqs = append(seqs, seq)
+			logger.Fatalf("remove time out request %v", responseFuture)
+		}
+	}
+	ra.responseTableLock.RUnlock()
 
-			if responseFuture.invokeCallback != nil {
+	// 没有超时连接
+	if len(seqs) == 0 {
+		return
+	}
+
+	ra.responseTableLock.Lock()
+	for _, seq := range seqs {
+		responseFuture, ok := ra.responseTable[seq]
+		if !ok {
+			continue
+		}
+		// 删除超时响应
+		delete(ra.responseTable, seq)
+
+		// 回调执行
+		if responseFuture.invokeCallback != nil {
+			ra.startGoRoutine(func() {
 				responseFuture.invokeCallback(responseFuture)
-				logger.Fatalf("remove time out request %v", responseFuture)
-			}
+			})
 		}
 	}
 	ra.responseTableLock.Unlock()

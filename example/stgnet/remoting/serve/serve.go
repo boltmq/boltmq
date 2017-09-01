@@ -19,7 +19,7 @@ type GetTopicStatsInfoProcessor struct {
 
 func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn net.Conn,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	fmt.Printf("GetTopicStatsInfoProcessor %d\n", request.Code)
+	fmt.Printf("GetTopicStatsInfoProcessor %d %d\n", request.Code, request.Opaque)
 
 	topicStatsInfoRequestHeader := &namesrv.GetTopicStatsInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(topicStatsInfoRequestHeader)
@@ -39,7 +39,7 @@ type OtherProcessor struct {
 
 func (processor *OtherProcessor) ProcessRequest(addr string, conn net.Conn,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	fmt.Printf("OtherProcessor %d\n", request.Code)
+	fmt.Printf("OtherProcessor %d %d\n", request.Code, request.Opaque)
 
 	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
 	response.Opaque = request.Opaque

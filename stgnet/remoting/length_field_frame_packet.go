@@ -3,6 +3,7 @@ package remoting
 import (
 	"bytes"
 	"encoding/binary"
+	"sync"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"github.com/go-errors/errors"
@@ -13,7 +14,8 @@ type LengthFieldFramePacket struct {
 	lengthFieldOffset   int                      // 长度属性的起始偏移量
 	lengthFieldLength   int                      // 长度属性的长度
 	initialBytesToStrip int                      // 业务数据需要跳过的长度
-	bufTable            map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理，map不使用锁。
+	bufTableLock        sync.RWMutex             // 报文缓存的读写锁
+	bufTable            map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理。
 }
 
 func NewLengthFieldFramePacket(maxFrameLength, lengthFieldOffset, lengthFieldLength, initialBytesToStrip int) *LengthFieldFramePacket {
@@ -39,10 +41,14 @@ func (lffp *LengthFieldFramePacket) UnPack(addr string, buffer []byte) (bufs []*
 	}
 
 	// 缓存报文
+	lffp.bufTableLock.RLock()
 	buf, ok := lffp.bufTable[addr]
+	lffp.bufTableLock.RUnlock()
 	if !ok {
 		buf = bytes.NewBuffer([]byte{})
+		lffp.bufTableLock.Lock()
 		lffp.bufTable[addr] = buf
+		lffp.bufTableLock.Unlock()
 	}
 
 	_, e = buf.Write(buffer)
@@ -82,7 +88,9 @@ func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (
 		// 报文传输出错或报文到达顺序与发送顺序不一致，顺序问题之后考虑。
 		if frameLength > lffp.maxFrameLength {
 			// 丢弃报文
+			lffp.bufTableLock.Lock()
 			delete(lffp.bufTable, addr)
+			lffp.bufTableLock.Unlock()
 			logger.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
 			e = errors.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
 			break
@@ -109,7 +117,9 @@ func (lffp *LengthFieldFramePacket) adjustBuffer(addr string, buf *bytes.Buffer,
 	distance := buf.Len() - frameLength
 	if distance == 0 {
 		// buffer数据已经读取完
+		lffp.bufTableLock.Lock()
 		delete(lffp.bufTable, addr)
+		lffp.bufTableLock.Unlock()
 	}
 
 	// 读取报文掉过的长度
