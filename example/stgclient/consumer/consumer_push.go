@@ -1,21 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"time"
 )
-
-
 
 type MessageListenerImpl struct {
 }
 
-
-func (listenerImpl *MessageListenerImpl)ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
+func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
+	for _, msg := range msgs {
+		fmt.Println(msg)
+	}
 	return listener.CONSUME_SUCCESS
 }
 func taskC() {
@@ -36,11 +37,8 @@ func main() {
 	defaultMQPushConsumer.Subscribe("TestTopic", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
 	defaultMQPushConsumer.Start()
-	time.Sleep(time.Second*6000)
+	time.Sleep(time.Second * 6000)
 	defaultMQPushConsumer.Shutdown()
 	go taskC()
-	select {
-
-	}
+	select {}
 }
-

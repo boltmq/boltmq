@@ -2,27 +2,24 @@ package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	set "github.com/deckarep/golang-set"
-	"strings"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"github.com/kataras/go-errors"
-	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
-	"strconv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	set "github.com/deckarep/golang-set"
+	"github.com/kataras/go-errors"
+	"strconv"
+	"strings"
+	"time"
 )
-
-
 
 // DefaultMQProducerImpl: 内部发送接口实现
 // Author: yintongqiang
 // Since:  2017/8/8
 
-
 type DefaultMQProducerImpl struct {
-	DefaultMQProducer     *DefaultMQProducer
+	DefaultMQProducer *DefaultMQProducer
 	// topic *TopicPublishInfo
 	TopicPublishInfoTable *sync.Map
 	ServiceState          stgcommon.ServiceState
@@ -30,9 +27,9 @@ type DefaultMQProducerImpl struct {
 }
 
 func NewDefaultMQProducerImpl(defaultMQProducer *DefaultMQProducer) *DefaultMQProducerImpl {
-	return &DefaultMQProducerImpl{DefaultMQProducer:defaultMQProducer,
-		TopicPublishInfoTable:sync.NewMap(),
-		ServiceState:stgcommon.CREATE_JUST}
+	return &DefaultMQProducerImpl{DefaultMQProducer: defaultMQProducer,
+		TopicPublishInfoTable: sync.NewMap(),
+		ServiceState:          stgcommon.CREATE_JUST}
 }
 
 func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
@@ -42,7 +39,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
 
 // 生产启动方法
 func (defaultMQProducerImpl *DefaultMQProducerImpl) StartFlag(startFactory bool) error {
-	switch defaultMQProducerImpl.ServiceState{
+	switch defaultMQProducerImpl.ServiceState {
 	case stgcommon.CREATE_JUST:
 		defaultMQProducerImpl.ServiceState = stgcommon.START_FAILED
 		// 检查配置
@@ -104,18 +101,31 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) CreateTopicByFlag(key, newTo
 	defaultMQProducerImpl.MQClientFactory.MQAdminImpl.CreateTopic(key, newTopic, queueNum, topicSysFlag)
 }
 
-// 对外提供消息发送方法
-func (defaultMQProducerImpl *DefaultMQProducerImpl) Send(msg *message.Message) (SendResult, error) {
+// 对外提供同步消息发送方法
+func (defaultMQProducerImpl *DefaultMQProducerImpl) send(msg *message.Message) (*SendResult, error) {
 	return defaultMQProducerImpl.SendByTimeout(msg, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
 }
+
+// 对外提供sendOneWay消息发送方法
+func (defaultMQProducerImpl *DefaultMQProducerImpl) sendOneWay(msg *message.Message) error {
+	_, err := defaultMQProducerImpl.sendDefaultImpl(msg, ONEWAY, nil, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
+	return err
+}
+
+// 发送异步消息
+func (defaultMQProducerImpl *DefaultMQProducerImpl) sendCallBack(msg *message.Message, callback SendCallback) error {
+	_, err := defaultMQProducerImpl.sendDefaultImpl(msg, ASYNC, callback, defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout)
+	return err
+}
+
 // 带timeout的发送消息
-func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.Message, timeout int64) (SendResult, error) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.Message, timeout int64) (*SendResult, error) {
 	return defaultMQProducerImpl.sendDefaultImpl(msg, SYNC, nil, timeout)
 }
 
 // 选择需要发送的queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message.Message, communicationMode CommunicationMode,
-sendCallback SendCallback, timeout int64) (SendResult, error) {
+	sendCallback SendCallback, timeout int64) (*SendResult, error) {
 	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
 		panic(errors.New("The producer service state not OK"))
 	}
@@ -128,7 +138,7 @@ sendCallback SendCallback, timeout int64) (SendResult, error) {
 		timesTotal := 1 + defaultMQProducerImpl.DefaultMQProducer.RetryTimesWhenSendFailed
 		times := 0
 		var mq *message.MessageQueue
-		for ; times < int(timesTotal) &&(endTimestamp - beginTimestamp) < maxTimeout; times++ {
+		for ; times < int(timesTotal) && (endTimestamp-beginTimestamp) < maxTimeout; times++ {
 			var lastBrokerName string
 			if mq != nil {
 				lastBrokerName = mq.BrokerName
@@ -152,14 +162,12 @@ sendCallback SendCallback, timeout int64) (SendResult, error) {
 			}
 		}
 	}
-	return SendResult{}, errors.New("sendDefaultImpl error")
+	return nil, errors.New("sendDefaultImpl error")
 }
 
 // 指定发送到某个queue
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.Message, mq *message.MessageQueue,
-communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (SendResult, error) {
-	sendResult := SendResult{}
-	var err error = nil
+	communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (*SendResult, error) {
 	brokerAddr := defaultMQProducerImpl.MQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		defaultMQProducerImpl.tryToFindTopicPublishInfo(mq.Topic)
@@ -175,17 +183,17 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 		//todo 自定义hook处理
 		// 构造SendMessageRequestHeader
 		requestHeader := header.SendMessageRequestHeader{
-			ProducerGroup:defaultMQProducerImpl.DefaultMQProducer.ProducerGroup,
-			Topic:msg.Topic,
-			DefaultTopic:defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey,
-			DefaultTopicQueueNums:int32(defaultMQProducerImpl.DefaultMQProducer.DefaultTopicQueueNums),
-			QueueId:int32(mq.QueueId),
-			SysFlag:int32(sysFlag),
-			BornTimestamp:time.Now().Unix() * 1000,
-			Flag:int32(msg.Flag),
-			Properties:message.MessageProperties2String(msg.Properties),
-			ReconsumeTimes:0,
-			UnitMode:defaultMQProducerImpl.DefaultMQProducer.UnitMode,
+			ProducerGroup:         defaultMQProducerImpl.DefaultMQProducer.ProducerGroup,
+			Topic:                 msg.Topic,
+			DefaultTopic:          defaultMQProducerImpl.DefaultMQProducer.CreateTopicKey,
+			DefaultTopicQueueNums: int32(defaultMQProducerImpl.DefaultMQProducer.DefaultTopicQueueNums),
+			QueueId:               int32(mq.QueueId),
+			SysFlag:               int32(sysFlag),
+			BornTimestamp:         time.Now().Unix() * 1000,
+			Flag:                  int32(msg.Flag),
+			Properties:            message.MessageProperties2String(msg.Properties),
+			ReconsumeTimes:        0,
+			UnitMode:              defaultMQProducerImpl.DefaultMQProducer.UnitMode,
 		}
 
 		if strings.HasPrefix(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
@@ -197,14 +205,15 @@ communicationMode CommunicationMode, sendCallback SendCallback, timeout int64) (
 			}
 		}
 
-		sendResult, err = defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
+		sendResult, err := defaultMQProducerImpl.MQClientFactory.MQClientAPIImpl.SendMessage(brokerAddr, mq.BrokerName, msg, requestHeader, timeout, communicationMode, sendCallback)
 		msg.Body = prevBody
 		return sendResult, err
 	} else {
 		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
 	}
-	return sendResult, errors.New("The broker[" + mq.BrokerName + "] not exist")
+	return nil, errors.New("The broker[" + mq.BrokerName + "] not exist")
 }
+
 // 检查配置文件
 func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
 	err := CheckGroup(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup)
@@ -218,7 +227,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
 }
 
 // 获取topic发布集合
-func (defaultMQProducerImpl *DefaultMQProducerImpl)GetPublishTopicList() set.Set {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) GetPublishTopicList() set.Set {
 	topicList := set.NewSet()
 	for it := defaultMQProducerImpl.TopicPublishInfoTable.Iterator(); it.HasNext(); {
 		k, _, _ := it.Next()
@@ -228,7 +237,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)GetPublishTopicList() set.Set
 }
 
 // 是否需要更新topic信息
-func (defaultMQProducerImpl *DefaultMQProducerImpl)IsPublishTopicNeedUpdate(topic string) bool {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) IsPublishTopicNeedUpdate(topic string) bool {
 	topicInfo, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 	if topicInfo == nil {
 		return true
@@ -238,19 +247,19 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)IsPublishTopicNeedUpdate(topi
 }
 
 // 更新topic信息
-func (defaultMQProducerImpl *DefaultMQProducerImpl)UpdateTopicPublishInfo(topic string, info *TopicPublishInfo) {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) UpdateTopicPublishInfo(topic string, info *TopicPublishInfo) {
 	if !strings.EqualFold(topic, "") && info != nil {
 		prev, _ := defaultMQProducerImpl.TopicPublishInfoTable.Put(topic, info)
 		if prev != nil {
 			//atomic.AddInt64(&info.SendWhichQueue, prev.(*TopicPublishInfo).SendWhichQueue)
 			info.SendWhichQueue = prev.(*TopicPublishInfo).SendWhichQueue
-			logger.Infof("updateTopicPublishInfo prev is not null,prev=%v",prev)
+			logger.Infof("updateTopicPublishInfo prev is not null,prev=%v", prev)
 		}
 	}
 }
 
 // 查询topic不存在则从nameserver更新
-func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(topic string) *TopicPublishInfo {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) tryToFindTopicPublishInfo(topic string) *TopicPublishInfo {
 	info, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
 	if nil == info || len(info.(*TopicPublishInfo).MessageQueueList) == 0 {
 		defaultMQProducerImpl.TopicPublishInfoTable.PutIfAbsent(topic, &TopicPublishInfo{})
@@ -266,9 +275,10 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToFindTopicPublishInfo(top
 		return topicPublishInfo.(*TopicPublishInfo)
 	}
 }
+
 // 压缩消息体
-func (defaultMQProducerImpl *DefaultMQProducerImpl)tryToCompressMessage(msg *message.Message) bool {
-	if msg != nil&& len(msg.Body) > 0 {
+func (defaultMQProducerImpl *DefaultMQProducerImpl) tryToCompressMessage(msg *message.Message) bool {
+	if msg != nil && len(msg.Body) > 0 {
 		if len(msg.Body) >= defaultMQProducerImpl.DefaultMQProducer.CompressMsgBodyOverHowmuch {
 			data := stgcommon.Compress(msg.Body)
 			msg.Body = data

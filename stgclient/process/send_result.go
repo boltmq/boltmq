@@ -18,16 +18,16 @@ type SendResult struct {
 	TransactionId string
 }
 
-func NewSendResult(sendStatus SendStatus, msgId string, messageQueue message.MessageQueue, queueOffset int64, projectGroupPrefix string) SendResult {
+func NewSendResult(sendStatus SendStatus, msgId string, messageQueue message.MessageQueue, queueOffset int64, projectGroupPrefix string) *SendResult {
 	if !strings.EqualFold(projectGroupPrefix, "") {
 		messageQueue.Topic = stgclient.ClearProjectGroup(messageQueue.Topic, projectGroupPrefix)
 	}
-	return SendResult{
+	return &SendResult{
 		SendStatus:sendStatus,
 		MsgId:msgId,
 		MessageQueue:messageQueue,
 		QueueOffset:queueOffset}
 }
-func (sendResult SendResult)ToString() string {
+func (sendResult *SendResult)ToString() string {
 	return "SendResult [sendStatus=" + sendResult.SendStatus.String() + ", msgId=" + sendResult.MsgId + ", messageQueue=" + sendResult.MessageQueue.ToString() + ", queueOffset=" + strconv.Itoa(int(sendResult.QueueOffset)) + "]"
 }
