@@ -12,5 +12,9 @@ type MQProducer interface {
 	// 关闭
 	Shutdown()
 	// 同步发送消息
-	Send(msg message.Message) (*SendResult, error)
+	Send(msg *message.Message) (*SendResult, error)
+	// 只发送不处理
+	SendOneWay(msg *message.Message) error
+	// 异步发送
+	SendCallBack(msg *message.Message,callback SendCallback) error
 }

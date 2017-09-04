@@ -145,7 +145,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 }
 
 func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,
-	timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) (SendResult, error) {
+	timeoutMillis int64, communicationMode CommunicationMode, sendCallback SendCallback) (*SendResult, error) {
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		msg.Topic = stgclient.BuildWithProjectGroup(msg.Topic, impl.ProjectGroupPrefix)
 		requestHeader.ProducerGroup = stgclient.BuildWithProjectGroup(requestHeader.ProducerGroup, impl.ProjectGroupPrefix)
@@ -157,17 +157,20 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 	request.Body = msg.Body
 	switch communicationMode {
 	case ONEWAY:
+		impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
 	case ASYNC:
+		 impl.sendMessageASync(addr, brokerName, msg, timeoutMillis, request, sendCallback)
+		return nil,nil
 	case SYNC:
 		return impl.sendMessageSync(addr, brokerName, msg, timeoutMillis, request)
 	default:
 		break
 	}
 
-	return SendResult{}, errors.New("SendMessage error")
+	return nil, errors.New("SendMessage error")
 }
 
-func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (SendResult, error) {
+func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (*SendResult, error) {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
 		logger.Errorf("sendMessageSync error=%v", err.Error())
@@ -175,8 +178,19 @@ func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg
 	return impl.processSendResponse(brokerName, msg, response)
 }
 
+func (impl *MQClientAPIImpl) sendMessageASync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand, callback SendCallback) error {
+	return impl.DefalutRemotingClient.InvokeAsync(addr, request, timeoutMillis, func(responseFuture *remoting.ResponseFuture) {
+      if responseFuture==nil || callback==nil{
+		  return
+	  }
+		response:=responseFuture.GetRemotingCommand()
+		sendResult,err:=impl.processSendResponse(brokerName, msg, response)
+		callback(sendResult,err)
+	})
+}
+
 // 处理发送消息响应
-func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (SendResult, error) {
+func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (*SendResult, error) {
 	if response != nil {
 		switch response.Code {
 		case cprotocol.FLUSH_DISK_TIMEOUT:
@@ -204,9 +218,9 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 			return sendResult, nil
 		}
 	} else {
-		return SendResult{}, errors.New("processSendResponse error response is nil")
+		return nil, errors.New("processSendResponse error response is nil")
 	}
-	return SendResult{}, errors.New("processSendResponse error")
+	return nil, errors.New("processSendResponse error")
 }
 
 func (impl *MQClientAPIImpl) UpdateConsumerOffsetOneway(addr string, requestHeader header.UpdateConsumerOffsetRequestHeader, timeoutMillis int64) {

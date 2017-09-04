@@ -59,6 +59,16 @@ func (defaultMQProducer *DefaultMQProducer) Shutdown() {
 }
 
 // 发送同步消息
-func (defaultMQProducer *DefaultMQProducer) Send(msg *message.Message) (SendResult, error) {
-	return defaultMQProducer.DefaultMQProducerImpl.Send(msg)
+func (defaultMQProducer *DefaultMQProducer) Send(msg *message.Message) (*SendResult, error) {
+	return defaultMQProducer.DefaultMQProducerImpl.send(msg)
+}
+
+// 发送sendOneWay消息
+func (defaultMQProducer *DefaultMQProducer) SendOneWay(msg *message.Message) error {
+	return defaultMQProducer.DefaultMQProducerImpl.sendOneWay(msg)
+}
+
+// 发送callback消息
+func (defaultMQProducer *DefaultMQProducer) SendCallBack(msg *message.Message, callback SendCallback) error {
+	return defaultMQProducer.DefaultMQProducerImpl.sendCallBack(msg, callback)
 }
