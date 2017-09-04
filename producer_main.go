@@ -24,8 +24,10 @@ func main() {
 	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "TestTopic", 8)
 	for i := 0; i < 10; i++ {
 		sendResult, err := defaultMQProducer.Send(message.NewMessage("TestTopic", "tagA", []byte("I'm so diao!")))
-		if err != nil {
+		if err == nil {
 			fmt.Println(sendResult.ToString())
+		}else{
+			fmt.Println(err)
 		}
 	}
 	go Task()
