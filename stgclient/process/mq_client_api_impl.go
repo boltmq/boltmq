@@ -136,7 +136,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	}
 	//todo 测试
 	routeData := &route.TopicRouteData{}
-	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 1, WriteQueueNums: 1, Perm: 6, TopicSynFlag: 0})
+	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
 	mapBrokerAddrs := make(map[int]string)
 	mapBrokerAddrs[0] = "127.0.0.1:10911"
 	//mapBrokerAddrs[1] = "10.122.1.210:10911"
@@ -157,6 +157,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 	request.Body = msg.Body
 	switch communicationMode {
 	case ONEWAY:
+		request.MarkOnewayRPC()
 		impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
 	case ASYNC:
 		 impl.sendMessageASync(addr, brokerName, msg, timeoutMillis, request, sendCallback)
@@ -212,7 +213,7 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 			}
 			responseHeader := &header.SendMessageResponseHeader{}
 			response.DecodeCommandCustomHeader(responseHeader)
-			messageQueue := message.MessageQueue{Topic: msg.Topic, BrokerName: brokerName, QueueId: int(responseHeader.QueueId)}
+			messageQueue := &message.MessageQueue{Topic: msg.Topic, BrokerName: brokerName, QueueId: int(responseHeader.QueueId)}
 			sendResult := NewSendResult(sendStatus, responseHeader.MsgId, messageQueue, responseHeader.QueueOffset, impl.ProjectGroupPrefix)
 			sendResult.TransactionId = responseHeader.TransactionId
 			return sendResult, nil

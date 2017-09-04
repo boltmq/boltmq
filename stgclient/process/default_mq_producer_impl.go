@@ -150,7 +150,9 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message
 				endTimestamp = time.Now().Unix() * 1000
 				switch communicationMode {
 				case ASYNC:
+					return nil, err
 				case ONEWAY:
+					return nil, err
 				case SYNC:
 					if sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
 						continue
@@ -162,7 +164,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message
 			}
 		}
 	}
-	return nil, errors.New("sendDefaultImpl error")
+	return nil, errors.New("sendDefaultImpl error topicPublishInfo is nil or messageQueueList length is zero")
 }
 
 // 指定发送到某个queue
