@@ -62,4 +62,7 @@ func initServer() {
 	remotingServer.RegisterProcessor(cmprotocol.PULL_MESSAGE, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.UPDATE_CONSUMER_OFFSET, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.GET_CONSUMER_LIST_BY_GROUP, &OtherProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.GET_ROUTEINTO_BY_TOPIC, &OtherProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.UPDATE_AND_CREATE_TOPIC, &OtherProcessor{})
+	remotingServer.RegisterProcessor(cmprotocol.GET_KV_CONFIG, &OtherProcessor{})
 }

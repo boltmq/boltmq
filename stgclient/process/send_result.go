@@ -13,12 +13,12 @@ import (
 type SendResult struct {
 	SendStatus    SendStatus
 	MsgId         string
-	MessageQueue  message.MessageQueue
+	MessageQueue  *message.MessageQueue
 	QueueOffset   int64
 	TransactionId string
 }
 
-func NewSendResult(sendStatus SendStatus, msgId string, messageQueue message.MessageQueue, queueOffset int64, projectGroupPrefix string) *SendResult {
+func NewSendResult(sendStatus SendStatus, msgId string, messageQueue *message.MessageQueue, queueOffset int64, projectGroupPrefix string) *SendResult {
 	if !strings.EqualFold(projectGroupPrefix, "") {
 		messageQueue.Topic = stgclient.ClearProjectGroup(messageQueue.Topic, projectGroupPrefix)
 	}
