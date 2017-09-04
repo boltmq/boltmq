@@ -18,6 +18,7 @@
 package route
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"github.com/pquerna/ffjson/ffjson"
 	"strings"
@@ -25,9 +26,10 @@ import (
 )
 
 type TopicRouteData struct {
-	OrderTopicConf string        `json:"orderTopicConf"`
-	QueueDatas     []*QueueData  `json:"queueDatas"`
-	BrokerDatas    []*BrokerData `json:"brokerDatas"`
+	OrderTopicConf    string              `json:"orderTopicConf"`
+	QueueDatas        []*QueueData        `json:"queueDatas"`
+	BrokerDatas       []*BrokerData       `json:"brokerDatas"`
+	FilterServerTable map[string][]string `json:"filterServerTable"`
 }
 type QueueData struct {
 	BrokerName     string `json:"brokerName"`
@@ -285,4 +287,33 @@ func (self BrokerDatas) Swap(i, j int) {
 
 func (self BrokerDatas) Len() int {
 	return len(self)
+}
+
+func (self *TopicRouteData) ToString() string {
+	queueDatas := ""
+	if self.QueueDatas != nil && len(self.QueueDatas) > 0 {
+		queueData = strings.Join(self.QueueDatas, ",")
+	}
+
+	brokerDatas := ""
+	if self.BrokerDatas != nil && len(self.BrokerDatas) > 0 {
+		brokerDatas = strings.Join(self.BrokerDatas, ",")
+	}
+
+	vals := make([]string, 0, len(self.FilterServerTable))
+	if self.FilterServerTable != nil && len(self.FilterServerTable) > 0 {
+		for brokerAddr, filterServer := range self.FilterServerTable {
+			filterServerList := ""
+			if filterServer != nil && len(filterServer) > 0 {
+				filterServerList = strings.Join(filterServer, ",")
+			}
+			val := fmt.Sprintf("brokerAddr=%s, filterServer=[%s]", brokerAddr, filterServerList)
+			vals = append(vals, val)
+		}
+	}
+	filterServerTable := strings.Join(vals, ",")
+
+	format := "TopicRouteData [orderTopicConf=%s, queueDatas=%s, brokerDatas=%s, filterServerTable=%s]"
+	info := fmt.Sprintf(format, self.OrderTopicConf, queueDatas, brokerDatas, filterServerTable)
+	return info
 }

@@ -7,6 +7,6 @@ import "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 // Since 2017/8/23
 type RegisterBrokerResult struct {
 	HaServerAddr string
-	MasterAddr string
-	KvTable body.KVTable
+	MasterAddr   string
+	KvTable      body.KVTable
 }

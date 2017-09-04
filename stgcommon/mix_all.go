@@ -16,15 +16,14 @@ import (
 // Since:  2017/8/10
 
 const (
-	SMARTGO_HOME_ENV       = "SMARTGO_HOME"
-	CLOUDMQ_HOME_PROPERTY  = "cloudmq.home.dir"
-	NAMESRV_ADDR_ENV       = "NAMESRV_ADDR"
-	NAMESRV_ADDR_PROPERTY  = "cloudmq.namesrv.addr"
-	MESSAGE_COMPRESS_LEVEL = "cloudmq.message.compressLevel"
-	WS_DOMAIN_NAME         = "jmenv.tbsite.net"
-	WS_DOMAIN_SUBGROUP     = "nsaddr"
-	// http://jmenv.tbsite.net:8080/rocketmq/nsaddr
-	WS_ADDR                     = "http://" + WS_DOMAIN_NAME + ":8080/cloudmq/" + WS_DOMAIN_SUBGROUP
+	SMARTGO_HOME_ENV            = "SMARTGO_HOME"
+	CLOUDMQ_HOME_PROPERTY       = "cloudmq.home.dir"
+	NAMESRV_ADDR_ENV            = "NAMESRV_ADDR"
+	NAMESRV_ADDR_PROPERTY       = "cloudmq.namesrv.addr"
+	MESSAGE_COMPRESS_LEVEL      = "cloudmq.message.compressLevel"
+	WS_DOMAIN_NAME              = "jmenv.tbsite.net"
+	WS_DOMAIN_SUBGROUP          = "nsaddr"
+	WS_ADDR                     = fmt.Sprintf("http://%s:8080/cloudmq/%s", WS_DOMAIN_NAME, WS_DOMAIN_SUBGROUP) // http://jmenv.tbsite.net:8080/rocketmq/nsaddr
 	DEFAULT_TOPIC               = "MY_DEFAULT_TOPIC"
 	BENCHMARK_TOPIC             = "BenchmarkTest"
 	DEFAULT_PRODUCER_GROUP      = "DEFAULT_PRODUCER"
@@ -88,6 +87,7 @@ func HashCode(s string) int64 {
 	}
 	return h
 }
+
 // 写文件 2017/8/28 Add by yintongjiang,windows"\\"需改成"/"
 func String2File(data []byte, fileName string) {
 	tmpFile := fileName + ".tmp"
@@ -109,7 +109,7 @@ func createFile(data []byte, fileName string) {
 		logger.Errorf("EnsureDir error=%v ", err.Error())
 	}
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0666)
-	if err!=nil {
+	if err != nil {
 		fmt.Println("create file error ", err.Error())
 	}
 	file.Write(data)

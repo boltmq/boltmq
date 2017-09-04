@@ -1,6 +1,6 @@
 package namesrv
 
-// GetTopicStatsInfoRequestHeader 获取topic 统计信息头
+// GetTopicStatsInfoRequestHeader 获取topic统计信息头
 // Author: jerrylou, <gunsluo@gmail.com>
 // Since: 2017-08-25
 type GetTopicStatsInfoRequestHeader struct {

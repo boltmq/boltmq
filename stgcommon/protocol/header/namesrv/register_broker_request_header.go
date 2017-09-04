@@ -1,27 +1,16 @@
 package namesrv
 
-// RegisterBrokerRequestHeader 注册broker头信息
+// RegisterBrokerRequestHeader 注册Broker-请求头
 // Author gaoyanlei
 // Since 2017/8/22
 type RegisterBrokerRequestHeader struct {
-
-	// broker名字
-	BrokerName string
-
-	// broker地址
-	BrokerAddr string
-
-	// 集群名字
-	ClusterName string
-
-	// ha地址
-	HaServerAddr string
-
-	// brokerId
-	BrokerId int64
+	BrokerName   string // broker名称
+	BrokerAddr   string // broker地址(ip:port)
+	ClusterName  string // 集群名字
+	HaServerAddr string // ha地址
+	BrokerId     int64  // brokerId
 }
 
-func(self *RegisterBrokerRequestHeader) CheckFields() error {
-
+func (self *RegisterBrokerRequestHeader) CheckFields() error {
 	return nil
 }

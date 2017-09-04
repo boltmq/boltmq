@@ -1,7 +1,12 @@
 package body
 
+import (
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+)
+
 type KVTable struct {
 	Table map[string]string
+	*protocol.RemotingSerializable
 }
 
 func NewKVTable() *KVTable {

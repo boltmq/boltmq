@@ -1,13 +1,14 @@
 package stgcommon
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 )
 
 type DataVersion struct {
-	Timestatmp int64 `json:"Timestatmp"`
-	Counter    int64 `json:"Counter"`
+	Timestatmp int64 `json:"timestatmp"`
+	Counter    int64 `json:"counter"`
 }
 
 func NewDataVersion() *DataVersion {
@@ -25,4 +26,8 @@ func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
 func (self *DataVersion) NextVersion() {
 	self.Timestatmp = time.Now().UnixNano()
 	self.Counter = atomic.AddInt64(&self.Counter, 1)
+}
+
+func (self *DataVersion) ToString() string {
+	val := fmt.Sprintf("dataVersion[timestatmp=%d, counter=%d]", self.Timestatmp, self.Counter)
 }
