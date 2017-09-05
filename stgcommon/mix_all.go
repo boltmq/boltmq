@@ -14,7 +14,6 @@ import (
 // mix_all: 大杂烩
 // Author: yintongqiang
 // Since:  2017/8/10
-
 const (
 	SMARTGO_HOME_ENV            = "SMARTGO_HOME"
 	CLOUDMQ_HOME_PROPERTY       = "cloudmq.home.dir"
@@ -23,7 +22,7 @@ const (
 	MESSAGE_COMPRESS_LEVEL      = "cloudmq.message.compressLevel"
 	WS_DOMAIN_NAME              = "jmenv.tbsite.net"
 	WS_DOMAIN_SUBGROUP          = "nsaddr"
-	WS_ADDR                     = fmt.Sprintf("http://%s:8080/cloudmq/%s", WS_DOMAIN_NAME, WS_DOMAIN_SUBGROUP) // http://jmenv.tbsite.net:8080/rocketmq/nsaddr
+	WS_ADDR                     = "http://" + WS_DOMAIN_NAME + ":8080/cloudmq/" + WS_DOMAIN_SUBGROUP // http://jmenv.tbsite.net:8080/rocketmq/nsaddr
 	DEFAULT_TOPIC               = "MY_DEFAULT_TOPIC"
 	BENCHMARK_TOPIC             = "BenchmarkTest"
 	DEFAULT_PRODUCER_GROUP      = "DEFAULT_PRODUCER"
@@ -38,10 +37,8 @@ const (
 	OFFSET_MOVED_EVENT          = "OFFSET_MOVED_EVENT"
 	DEFAULT_CHARSET             = "UTF-8"
 	MASTER_ID                   = 0
-	// 为每个Consumer Group建立一个默认的Topic，前缀 + GroupName，用来保存处理失败需要重试的消息
-	RETRY_GROUP_TOPIC_PREFIX = "%RETRY%"
-	// 为每个Consumer Group建立一个默认的Topic，前缀 + GroupName，用来保存重试多次都失败，接下来不再重试的消息
-	DLQ_GROUP_TOPIC_PREFIX = "%DLQ%"
+	RETRY_GROUP_TOPIC_PREFIX    = "%RETRY%" // 为每个ConsumerGroup建立一个默认的Topic，前缀+GroupName，用来保存处理失败需要重试的消息
+	DLQ_GROUP_TOPIC_PREFIX      = "%DLQ%"   // 为每个ConsumerGroup建立一个默认的Topic，前缀+GroupName，用来保存重试多次都失败，接下来不再重试的消息
 )
 
 func GetRetryTopic(consumerGroup string) string {
