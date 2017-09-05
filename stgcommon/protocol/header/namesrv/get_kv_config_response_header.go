@@ -7,6 +7,6 @@ type GetKVfConfigResponseHeader struct {
 	Value string
 }
 
-func (header *GetKVConfigResponseHeader) CheckFields() error {
+func (header *GetKVfConfigResponseHeader) CheckFields() error {
 	return nil
 }
