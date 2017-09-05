@@ -112,3 +112,20 @@ func createFile(data []byte, fileName string) {
 	file.Write(data)
 	defer file.Close()
 }
+func File2String(filePath string) (data string, err error) {
+	bf, err := file2String(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bf), nil
+}
+
+func file2String(filePath string) (bf []byte, err error) {
+	bf, err = ioutil.ReadFile(filePath)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return bf, nil
+}

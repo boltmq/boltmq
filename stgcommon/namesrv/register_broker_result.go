@@ -1,6 +1,8 @@
 package namesrv
 
-import "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+)
 
 // RegisterBrokerResult 注册broker返回结果
 // Author gaoyanlei

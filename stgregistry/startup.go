@@ -1,11 +1,11 @@
 package stgregistry
 
 import (
-	"time"
-	"log"
 	"fmt"
 	"github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
+	"log"
+	"time"
 )
 
 func startup() {

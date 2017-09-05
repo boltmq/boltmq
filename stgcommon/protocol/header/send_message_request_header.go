@@ -1,8 +1,8 @@
 package header
+
 // SendMessageRequestHeader: 发送消息请求头信息
 // Author: yintongqiang
 // Since:  2017/8/10
-
 type SendMessageRequestHeader struct {
 	ProducerGroup         string
 	Topic                 string
@@ -17,6 +17,6 @@ type SendMessageRequestHeader struct {
 	UnitMode              bool
 }
 
-func (header*SendMessageRequestHeader)CheckFields()error{
+func (header *SendMessageRequestHeader) CheckFields() error {
 	return nil
 }

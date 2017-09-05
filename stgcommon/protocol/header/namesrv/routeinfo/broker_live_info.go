@@ -13,6 +13,7 @@ type BrokerLiveInfo struct {
 }
 
 func (self *BrokerLiveInfo) ToString() string {
-	info := "BrokerLiveInfo [lastUpdateTimestamp=%d, dataVersion=%s, channel=%s, haServerAddr=%s]"
-	return fmt.Sprintf(info, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Channel, self.HaServerAddr)
+	format := "BrokerLiveInfo [lastUpdateTimestamp=%d, dataVersion=%s, channel=%d, haServerAddr=%s]"
+	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Channel, self.HaServerAddr)
+	return info
 }

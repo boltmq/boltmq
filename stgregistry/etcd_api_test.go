@@ -1,13 +1,13 @@
 package stgregistry
 
 import (
-	"testing"
-	"time"
-	"log"
-	"github.com/coreos/etcd/client"
 	"context"
+	"github.com/coreos/etcd/client"
+	"log"
 	"strconv"
 	"sync"
+	"testing"
+	"time"
 )
 
 func TestCreate(t *testing.T) {
@@ -95,7 +95,7 @@ func TestWatch(t *testing.T) {
 	wg.Wait()
 }
 
-func getKApi() (client.KeysAPI) {
+func getKApi() client.KeysAPI {
 	etcdAddrs := etcdAddrsFromConfig()
 
 	cfg := client.Config{
