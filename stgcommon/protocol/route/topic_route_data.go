@@ -31,6 +31,7 @@ type TopicRouteData struct {
 	BrokerDatas       []*BrokerData       `json:"brokerDatas"`
 	FilterServerTable map[string][]string `json:"filterServerTable"`
 }
+
 type QueueData struct {
 	BrokerName     string `json:"brokerName"`
 	ReadQueueNums  int    `json:"readQueueNums"`
@@ -38,6 +39,7 @@ type QueueData struct {
 	Perm           int    `json:"perm"`
 	TopicSynFlag   int    `json:"topicSynFlag"`
 }
+
 type BrokerData struct {
 	BrokerName      string         `json:"brokerName"`
 	BrokerAddrs     map[int]string `json:"brokerAddrs"`
@@ -290,14 +292,24 @@ func (self BrokerDatas) Len() int {
 }
 
 func (self *TopicRouteData) ToString() string {
-	queueDatas := ""
+	data1 := ""
+	queueDatas := make([]string, 0, len(self.QueueDatas))
 	if self.QueueDatas != nil && len(self.QueueDatas) > 0 {
-		queueData = strings.Join(self.QueueDatas, ",")
+		for _, v := range self.QueueDatas {
+			queueData := v.ToString()
+			queueDatas = append(queueDatas, queueData)
+		}
+		data1 = strings.Join(queueDatas, ",")
 	}
 
-	brokerDatas := ""
+	data2 := ""
+	brokerDatas := make([]string, 0, len(self.BrokerDatas))
 	if self.BrokerDatas != nil && len(self.BrokerDatas) > 0 {
-		brokerDatas = strings.Join(self.BrokerDatas, ",")
+		for _, v := range self.BrokerDatas {
+			brokerData := v.ToString()
+			brokerDatas = append(brokerDatas, brokerData)
+		}
+		data2 = strings.Join(brokerDatas, ",")
 	}
 
 	vals := make([]string, 0, len(self.FilterServerTable))
@@ -314,6 +326,25 @@ func (self *TopicRouteData) ToString() string {
 	filterServerTable := strings.Join(vals, ",")
 
 	format := "TopicRouteData [orderTopicConf=%s, queueDatas=%s, brokerDatas=%s, filterServerTable=%s]"
-	info := fmt.Sprintf(format, self.OrderTopicConf, queueDatas, brokerDatas, filterServerTable)
+	info := fmt.Sprintf(format, self.OrderTopicConf, data1, data2, filterServerTable)
+	return info
+}
+
+func (self *QueueData) ToString() string {
+	format := "QueueData [brokerName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicSynFlag=%d]"
+	info := fmt.Sprintf(format, self.BrokerName, self.ReadQueueNums, self.WriteQueueNums, self.Perm, self.TopicSynFlag)
+	return info
+}
+
+func (self *BrokerData) ToString() string {
+	brokerAddrs := make([]string, 0, len(self.BrokerAddrs))
+	if self.BrokerAddrs != nil && len(self.BrokerAddrs) == 0 {
+		for k, v := range self.BrokerAddrs {
+			brokerAddr := fmt.Sprintf("[brokerId=%d, brokerAddr=%s]", k, v)
+			brokerAddrs = append(brokerAddrs, brokerAddr)
+		}
+	}
+	format := "QueueData [brokerName=%s, brokerAddrs=%s]"
+	info := fmt.Sprintf(format, self.BrokerName, strings.Join(brokerAddrs, ","))
 	return info
 }
