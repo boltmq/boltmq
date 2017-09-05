@@ -1,6 +1,8 @@
 package stgregistry
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestStartup(t *testing.T) {
 	startup()

@@ -8,6 +8,6 @@ type RegisterBrokerResponseHeader struct {
 	MasterAddr   string // broker主节点地址
 }
 
-func (self *RegisterBrokerResponseHeader) CheckFields() {
-
+func (self *RegisterBrokerResponseHeader) CheckFields() error {
+	return nil
 }

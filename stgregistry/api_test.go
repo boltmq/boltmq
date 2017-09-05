@@ -1,8 +1,8 @@
 package stgregistry
 
 import (
-	"testing"
 	"log"
+	"testing"
 )
 
 func TestEtcdApi_RegisterBrokerResult(t *testing.T) {

@@ -3,7 +3,6 @@ package header
 // SendMessageRequestHeaderV2: 为减少网络传输数量准备
 // Author: yintongqiang
 // Since:  2017/8/10
-
 type SendMessageRequestHeaderV2 struct {
 	A string `json:"a"`
 	B string `json:"b"`
