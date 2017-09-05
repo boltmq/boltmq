@@ -1,5 +1,5 @@
 package kvConfigManager
 
-type configTable struct {
+type ConfigTable struct {
 
 }
