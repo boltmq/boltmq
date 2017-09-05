@@ -29,5 +29,6 @@ func (self *DataVersion) NextVersion() {
 }
 
 func (self *DataVersion) ToString() string {
-	val := fmt.Sprintf("dataVersion[timestatmp=%d, counter=%d]", self.Timestatmp, self.Counter)
+	info := fmt.Sprintf("dataVersion[timestatmp=%d, counter=%d]", self.Timestatmp, self.Counter)
+	return info
 }
