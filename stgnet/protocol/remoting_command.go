@@ -3,11 +3,11 @@ package protocol
 import (
 	"bytes"
 	"encoding/binary"
-	"os"
-	"strconv"
-
+	"fmt"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
+	"os"
+	"strconv"
 )
 
 // RemotingCommand 服务器与客户端通过传递RemotingCommand来交互
@@ -27,19 +27,15 @@ var (
 // Author: jerrylou, <gunsluo@gmail.com>
 // Since: 2017-08-22
 type RemotingCommand struct {
-	//header
-	Code      int32             `json:"code"`
-	Language  string            `json:"language"`
-	Version   int32             `json:"version"`
-	Opaque    int32             `json:"opaque"`
-	Flag      int32             `json:"flag"`
-	Remark    string            `json:"remark"`
-	ExtFields map[string]string `json:"extFields"`
-	// 修改字段类型 2017/8/16 Add by yintongqiang
-	// 字段不序列化 Modify: jerrylou, <gunsluo@gmail.com> Since: 2017-08-24
-	CustomHeader CommandCustomHeader `json:"-"`
-	//body
-	Body []byte `json:"-"`
+	Code         int32               `json:"code"`
+	Language     string              `json:"language"`
+	Version      int32               `json:"version"`
+	Opaque       int32               `json:"opaque"`
+	Flag         int32               `json:"flag"`
+	Remark       string              `json:"remark"`
+	ExtFields    map[string]string   `json:"extFields"` // 请求拓展字段
+	CustomHeader CommandCustomHeader `json:"-"`         // 修改字段类型,"CustomHeader"字段不序列化 2017/8/24 Modify by jerrylou, <gunsluo@gmail.com>
+	Body         []byte              `json:"-"`         // body
 }
 
 // CreateResponseCommand
@@ -63,11 +59,8 @@ func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *Remotin
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
 	}
-	// 标识自增，请求唯一标识
-	remotingClient.Opaque = inrcOpaque()
-	// 设置版本信息
-	remotingClient.setCMDVersion()
-
+	remotingClient.Opaque = inrcOpaque() // 标识自增，请求唯一标识
+	remotingClient.setCMDVersion()       // 设置版本信息
 	return remotingClient
 }
 
@@ -260,4 +253,14 @@ func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
 	}
 	remotingCommand.Body = body
 	return remotingCommand, nil
+}
+
+// ToString 打印RemotingCommand对象数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
+func (self *RemotingCommand) ToString() string {
+	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s]"
+	//TODO: flag(B)=Integer.toBinaryString(flag), extFields字段需要序列化
+	info := fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, self.Flag, self.Remark, self.ExtFields)
+	return info
 }
