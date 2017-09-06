@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sync/atomic"
+	"time"
 )
 
 // mix_all: 大杂烩
@@ -83,6 +84,12 @@ func HashCode(s string) int64 {
 		h = 31*h + int64(s[i])
 	}
 	return h
+}
+
+// GetCurrentTimeMillis 得到当前时间的毫秒数
+func GetCurrentTimeMillis() (currentTimeMillis int64) {
+	currentTimeMillis = time.Now().UnixNano() / int64(time.Millisecond)
+	return currentTimeMillis
 }
 
 // 写文件 2017/8/28 Add by yintongjiang,windows"\\"需改成"/"
