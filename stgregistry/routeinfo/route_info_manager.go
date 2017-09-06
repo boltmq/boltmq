@@ -1,4 +1,4 @@
-package stgregistry
+package routeinfo
 
 import (
 	nameServer "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
