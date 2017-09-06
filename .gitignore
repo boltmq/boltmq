@@ -30,6 +30,7 @@ _testmain.go
 *.tmp
 unit_test_*/*
 
+vendor/*/
 
 .DS_Store
 docs/.DS_Store

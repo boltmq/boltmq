@@ -2,7 +2,7 @@ package out
 
 import (
 	"container/list"
-	"git.oschina.net/cloudzone/cloudcommon-go/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
