@@ -11,6 +11,14 @@ const (
 	separator = string(os.PathSeparator)
 )
 
+// NamesrvConfig namesrv配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
+type NamesrvConfig struct {
+	SmartGoHome  string
+	KvConfigPath string
+}
+
 // GetSmartGoHome
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
