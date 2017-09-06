@@ -16,6 +16,20 @@ import (
 )
 
 const (
+	// RDONLY maps the memory read-only.
+	// Attempts to write to the MemoryMap object will result in undefined behavior.
+	RDONLY = 0
+	// RDWR maps the memory as read-write. Writes to the MemoryMap object will update the
+	// underlying file.
+	RDWR = 1 << iota
+	// COPY maps the memory as copy-on-write. Writes to the MemoryMap object will affect
+	// memory, but the underlying file will remain unchanged.
+	COPY
+	// If EXEC is set, the mapped memory is marked as executable.
+	EXEC
+)
+
+const (
 	ANON = 1 << iota // If the ANON flag is set, the mapped memory will not be backed by a file.
 )
 
