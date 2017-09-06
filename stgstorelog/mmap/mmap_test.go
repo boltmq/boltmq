@@ -6,15 +6,30 @@ package mmap
 
 import (
 	"bytes"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"testing"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"strconv"
+	"testing"
+)
+
+const (
+	// RDONLY maps the memory read-only.
+	// Attempts to write to the MemoryMap object will result in undefined behavior.
+	RDONLY = 0
+	// RDWR maps the memory as read-write. Writes to the MemoryMap object will update the
+	// underlying file.
+	RDWR = 1 << iota
+	// COPY maps the memory as copy-on-write. Writes to the MemoryMap object will affect
+	// memory, but the underlying file will remain unchanged.
+	COPY
+	// If EXEC is set, the mapped memory is marked as executable.
+	EXEC
 )
 
 var testData = []byte("0123456789ABCDEF")
+
 //var testPath = filepath.Join(os.TempDir(), "testdata")
 var testPath = filepath.Join("./", "testdata.tmp")
 

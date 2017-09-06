@@ -2,14 +2,37 @@
 // 本软件源代码版权归 my.oschina.net/tantexian 所有,允许复制与学习借鉴.
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
-package mmap
+package windows
 
 import (
 	"errors"
 	"os"
+	"reflect"
 	"sync"
 	"syscall"
+	"unsafe"
 )
+
+const (
+	// RDONLY maps the memory read-only.
+	// Attempts to write to the MemoryMap object will result in undefined behavior.
+	RDONLY = 0
+	// RDWR maps the memory as read-write. Writes to the MemoryMap object will update the
+	// underlying file.
+	RDWR = 1 << iota
+	// COPY maps the memory as copy-on-write. Writes to the MemoryMap object will affect
+	// memory, but the underlying file will remain unchanged.
+	COPY
+	// If EXEC is set, the mapped memory is marked as executable.
+	EXEC
+)
+
+const (
+	ANON = 1 << iota // If the ANON flag is set, the mapped memory will not be backed by a file.
+)
+
+// MemoryMap represents a file mapped into memory.
+type MemoryMap []byte
 
 // mmap on Windows is a two-step process.
 // First, we call CreateFileMapping to get a handle.
@@ -22,7 +45,7 @@ import (
 var handleLock sync.Mutex
 var handleMap = map[uintptr]syscall.Handle{}
 
-func mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
+func Mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
 	flProtect := uint32(syscall.PAGE_READONLY)
 	dwDesiredAccess := uint32(syscall.FILE_MAP_READ)
 	switch {
@@ -71,7 +94,7 @@ func mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
 	return m, nil
 }
 
-func flush(addr, len uintptr) error {
+func Flush(addr, len uintptr) error {
 	errno := syscall.FlushViewOfFile(addr, len)
 	if errno != nil {
 		return os.NewSyscallError("FlushViewOfFile", errno)
@@ -89,18 +112,18 @@ func flush(addr, len uintptr) error {
 	return os.NewSyscallError("FlushFileBuffers", errno)
 }
 
-func lock(addr, len uintptr) error {
+func Lock(addr, len uintptr) error {
 	errno := syscall.VirtualLock(addr, len)
 	return os.NewSyscallError("VirtualLock", errno)
 }
 
-func unlock(addr, len uintptr) error {
+func Unlock(addr, len uintptr) error {
 	errno := syscall.VirtualUnlock(addr, len)
 	return os.NewSyscallError("VirtualUnlock", errno)
 }
 
-func unmap(addr, len uintptr) error {
-	flush(addr, len)
+func Unmap(addr, len uintptr) error {
+	Flush(addr, len)
 	// Lock the UnmapViewOfFile along with the handleMap deletion.
 	// As soon as we unmap the view, the OS is free to give the
 	// same addr to another new map. We don't want another goroutine
@@ -122,4 +145,8 @@ func unmap(addr, len uintptr) error {
 
 	e := syscall.CloseHandle(syscall.Handle(handle))
 	return os.NewSyscallError("CloseHandle", e)
+}
+
+func (m *MemoryMap) header() *reflect.SliceHeader {
+	return (*reflect.SliceHeader)(unsafe.Pointer(m))
 }

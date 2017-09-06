@@ -1,4 +1,4 @@
-package main
+package pull
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
