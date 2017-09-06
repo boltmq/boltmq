@@ -160,8 +160,8 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 		request.MarkOnewayRPC()
 		impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
 	case ASYNC:
-		 impl.sendMessageASync(addr, brokerName, msg, timeoutMillis, request, sendCallback)
-		return nil,nil
+		impl.sendMessageASync(addr, brokerName, msg, timeoutMillis, request, sendCallback)
+		return nil, nil
 	case SYNC:
 		return impl.sendMessageSync(addr, brokerName, msg, timeoutMillis, request)
 	default:
@@ -181,12 +181,12 @@ func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg
 
 func (impl *MQClientAPIImpl) sendMessageASync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand, callback SendCallback) error {
 	return impl.DefalutRemotingClient.InvokeAsync(addr, request, timeoutMillis, func(responseFuture *remoting.ResponseFuture) {
-      if responseFuture==nil || callback==nil{
-		  return
-	  }
-		response:=responseFuture.GetRemotingCommand()
-		sendResult,err:=impl.processSendResponse(brokerName, msg, response)
-		callback(sendResult,err)
+		if responseFuture == nil || callback == nil {
+			return
+		}
+		response := responseFuture.GetRemotingCommand()
+		sendResult, err := impl.processSendResponse(brokerName, msg, response)
+		callback(sendResult, err)
 	})
 }
 
