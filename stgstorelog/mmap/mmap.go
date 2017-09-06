@@ -6,28 +6,21 @@ package mmap
 
 import (
 	"errors"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap/unix"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap/windows"
 	"os"
 	"reflect"
+	"runtime"
+	"strings"
 	"unsafe"
 )
 
 const (
-	// RDONLY maps the memory read-only.
-	// Attempts to write to the MemoryMap object will result in undefined behavior.
-	RDONLY = 0
-	// RDWR maps the memory as read-write. Writes to the MemoryMap object will update the
-	// underlying file.
-	RDWR = 1 << iota
-	// COPY maps the memory as copy-on-write. Writes to the MemoryMap object will affect
-	// memory, but the underlying file will remain unchanged.
-	COPY
-	// If EXEC is set, the mapped memory is marked as executable.
-	EXEC
+	ANON = 1 << iota // If the ANON flag is set, the mapped memory will not be backed by a file.
 )
 
 const (
-	// If the ANON flag is set, the mapped memory will not be backed by a file.
-	ANON = 1 << iota
+	WINDOWS = "windows" // windows operating system
 )
 
 // MemoryMap represents a file mapped into memory.
@@ -64,7 +57,12 @@ func MapRegion(f *os.File, length int, prot, flags int, offset int64) (MemoryMap
 		}
 		fd = ^uintptr(0)
 	}
-	return mmap(length, uintptr(prot), uintptr(flags), fd, offset)
+
+	if isWindowsOS() {
+		return windows.Mmap(length, uintptr(prot), uintptr(flags), fd, offset)
+	}
+
+	return unix.Mmap(length, uintptr(prot), uintptr(flags), fd, offset)
 }
 
 func (m *MemoryMap) header() *reflect.SliceHeader {
@@ -75,7 +73,12 @@ func (m *MemoryMap) header() *reflect.SliceHeader {
 // swapped out.
 func (m MemoryMap) Lock() error {
 	dh := m.header()
-	return lock(dh.Data, uintptr(dh.Len))
+
+	if isWindowsOS() {
+		return windows.Lock(dh.Data, uintptr(dh.Len))
+	}
+
+	return unix.Lock(dh.Data, uintptr(dh.Len))
 }
 
 // Unlock reverses the effect of Lock, allowing the mapped region to potentially
@@ -83,14 +86,23 @@ func (m MemoryMap) Lock() error {
 // If m is already unlocked, aan error will result.
 func (m MemoryMap) Unlock() error {
 	dh := m.header()
-	return unlock(dh.Data, uintptr(dh.Len))
+
+	if isWindowsOS() {
+		return windows.Unlock(dh.Data, uintptr(dh.Len))
+	}
+
+	return unix.Unlock(dh.Data, uintptr(dh.Len))
 }
 
 // flush synchronizes the mapping's contents to the file's contents on disk.
 func (m MemoryMap) Flush() error {
 	dh := m.header()
 
-	return flush(dh.Data, uintptr(dh.Len))
+	if isWindowsOS() {
+		return windows.Flush(dh.Data, uintptr(dh.Len))
+	}
+
+	return unix.Flush(dh.Data, uintptr(dh.Len))
 }
 
 // unmap deletes the memory mapped region, flushes any remaining changes, and sets
@@ -99,9 +111,20 @@ func (m MemoryMap) Flush() error {
 // result in undefined behavior.
 // unmap should only be called on the slice value that was originally returned from
 // a call to Map. Calling unmap on a derived slice may cause errors.
-func (m *MemoryMap) Unmap() error {
+func (m *MemoryMap) Unmap() (err error) {
 	dh := m.header()
-	err := unmap(dh.Data, uintptr(dh.Len))
+	if isWindowsOS() {
+		err = windows.Unmap(dh.Data, uintptr(dh.Len))
+	} else {
+		err = unix.Unmap(dh.Data, uintptr(dh.Len))
+	}
+
 	*m = nil
 	return err
+}
+
+// isWindowsOS check current os is windows
+// if current is windows operating system, return true ; otherwise return false
+func isWindowsOS() bool {
+	return strings.EqualFold(runtime.GOOS, WINDOWS)
 }
