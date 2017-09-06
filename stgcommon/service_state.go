@@ -1,9 +1,9 @@
 package stgcommon
 
-type ServiceState int
 // ServiceState: 服务状态枚举
 // Author: yintongqiang
 // Since:  2017/8/10
+type ServiceState int
 
 const (
 	CREATE_JUST ServiceState = iota

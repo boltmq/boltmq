@@ -152,6 +152,9 @@ var (
 	versionTable map[int]string
 )
 
+// getVersionTable 获取MQ版本号对应表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
 func getVersionTable() map[int]string {
 	once.Do(func() {
 		versionTable = make(map[int]string) // key:版本标识(枚举的ordinal值), value:版本描述信息(枚举的name值)
