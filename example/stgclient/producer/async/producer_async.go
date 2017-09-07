@@ -1,4 +1,4 @@
-package async
+package main
 
 import (
 	"fmt"
