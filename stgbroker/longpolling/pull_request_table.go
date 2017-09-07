@@ -22,7 +22,7 @@ func NewPullRequestTable() *PullRequestTable {
 // size 消息集合长度
 // Author rongzhihong
 // Since 2017/9/5
-func (table *PullRequestTable) size() int {
+func (table *PullRequestTable) Size() int {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -32,7 +32,7 @@ func (table *PullRequestTable) size() int {
 // put 存放消息
 // Author rongzhihong
 // Since 2017/9/5
-func (table *PullRequestTable) put(k string, v *ManyPullRequest) {
+func (table *PullRequestTable) Put(k string, v *ManyPullRequest) {
 	table.Lock()
 	defer table.Unlock()
 	table.PullRequestMap[k] = v
@@ -41,7 +41,7 @@ func (table *PullRequestTable) put(k string, v *ManyPullRequest) {
 // get 获得key对应的value
 // Author rongzhihong
 // Since 2017/9/5
-func (table *PullRequestTable) get(k string) *ManyPullRequest {
+func (table *PullRequestTable) Get(k string) *ManyPullRequest {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -56,7 +56,7 @@ func (table *PullRequestTable) get(k string) *ManyPullRequest {
 // remove 删除消息
 // Author rongzhihong
 // Since 2017/9/5
-func (table *PullRequestTable) remove(k string) *ManyPullRequest {
+func (table *PullRequestTable) Remove(k string) *ManyPullRequest {
 	table.Lock()
 	defer table.Unlock()
 
@@ -72,7 +72,7 @@ func (table *PullRequestTable) remove(k string) *ManyPullRequest {
 // putIfAbsent 不存在时，才存放消息
 // Author rongzhihong
 // Since 2017/9/5
-func (table *PullRequestTable) putIfAbsent(k string, v *ManyPullRequest) *ManyPullRequest {
+func (table *PullRequestTable) PutIfAbsent(k string, v *ManyPullRequest) *ManyPullRequest {
 	table.Lock()
 	defer table.Unlock()
 
@@ -82,16 +82,4 @@ func (table *PullRequestTable) putIfAbsent(k string, v *ManyPullRequest) *ManyPu
 		return nil
 	}
 	return oldV
-}
-
-// foreach 遍历消息集合执行fn方法
-// Author rongzhihong
-// Since 2017/9/5
-func (table *PullRequestTable) foreach(fn func(k string, v *ManyPullRequest)) {
-	table.RLock()
-	defer table.RUnlock()
-
-	for k, v := range table.PullRequestMap {
-		fn(k, v)
-	}
 }

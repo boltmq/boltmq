@@ -27,11 +27,10 @@ type BrokerController struct {
 	// DefaultTransactionCheckExecuter
 	PullMessageProcessor                 *PullMessageProcessor
 	UpdateMasterHAServerAddrPeriodically bool
-	// PullRequestHoldService
-	Broker2Client *Broker2Client
-	// SubscriptionGroupManager
-	ConsumerIdsChangeListener rebalance.ConsumerIdsChangeListener
-	SubscriptionGroupManager  *SubscriptionGroupManager
+	PullRequestHoldService               *PullRequestHoldService
+	Broker2Client                        *Broker2Client
+	ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
+	SubscriptionGroupManager             *SubscriptionGroupManager
 	// RebalanceLockManager
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
@@ -54,7 +53,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	brokerController.UpdateMasterHAServerAddrPeriodically = false
 	brokerController.TopicConfigManager = NewTopicConfigManager(brokerController)
 	brokerController.PullMessageProcessor = NewPullMessageProcessor(brokerController)
-	// TODO pullRequestHoldService
+	brokerController.PullRequestHoldService = NewPullRequestHoldService(brokerController)
 	// TODO defaultTransactionCheckExecuter
 	brokerController.ConsumerIdsChangeListener = NewDefaultConsumerIdsChangeListener(brokerController)
 	brokerController.ConsumerManager = client.NewConsumerManager(brokerController.ConsumerIdsChangeListener)
@@ -127,10 +126,15 @@ func (bc *BrokerController) Initialize() bool {
 }
 
 func (bc *BrokerController) Shutdown() {
-
+	if bc.PullRequestHoldService != nil {
+		bc.PullRequestHoldService.Shutdown()
+	}
 }
 
 func (bc *BrokerController) Start() {
+	if bc.PullRequestHoldService != nil {
+		bc.PullRequestHoldService.Start()
+	}
 	bc.RemotingServer.Start()
 }
 
@@ -183,7 +187,6 @@ func (bc *BrokerController) addDeleteTopicTask() {
 // Since 2017/8/25
 func (bc *BrokerController) registerProcessor() {
 
-
 	clientProcessor := NewClientManageProcessor(bc)
 	// 心跳
 	bc.RemotingServer.RegisterProcessor(protocol.HEART_BEAT, clientProcessor)
@@ -196,7 +199,6 @@ func (bc *BrokerController) registerProcessor() {
 	// 更新Consumer offset
 	bc.RemotingServer.RegisterProcessor(protocol.UPDATE_CONSUMER_OFFSET, clientProcessor)
 
-
 	adminBrokerProcessor := NewAdminBrokerProcessor(bc)
 	// 更新创建topic
 	bc.RemotingServer.RegisterProcessor(protocol.UPDATE_AND_CREATE_TOPIC, adminBrokerProcessor)
@@ -205,7 +207,6 @@ func (bc *BrokerController) registerProcessor() {
 	// 获取最大offset
 	bc.RemotingServer.RegisterProcessor(protocol.GET_MAX_OFFSET, adminBrokerProcessor)
 
-
 	sendMessageProcessor := NewSendMessageProcessor(bc)
 	// 未优化过发送消息
 	bc.RemotingServer.RegisterProcessor(protocol.SEND_MESSAGE, sendMessageProcessor)
@@ -213,7 +214,6 @@ func (bc *BrokerController) registerProcessor() {
 	bc.RemotingServer.RegisterProcessor(protocol.SEND_MESSAGE_V2, sendMessageProcessor)
 	// 消费失败消息
 	bc.RemotingServer.RegisterProcessor(protocol.CONSUMER_SEND_MSG_BACK, sendMessageProcessor)
-
 
 	pullMessageProcessor := NewPullMessageProcessor(bc)
 	// 拉取消息

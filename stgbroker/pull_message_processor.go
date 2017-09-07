@@ -3,6 +3,7 @@ package stgbroker
 import (
 	"container/list"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
@@ -17,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"net"
 	"strconv"
+	"time"
 )
 
 // PullMessageProcessor 拉消息请求处理
@@ -43,10 +45,47 @@ func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, req
 	return pull.processRequest(request, conn, true)
 }
 
+func (pull *PullMessageProcessor) ExcuteRequestWhenWakeup( /*addr string, conn net.Conn, */ request *protocol.RemotingCommand) {
+	run := func() {
+		// TODO response, err := pull.processRequest(request, conn, false)
+		response, err := pull.processRequest(request, nil, false)
+		if err != nil {
+			logger.Error("excuteRequestWhenWakeup run", err)
+			return
+		}
+
+		if response != nil {
+			response.Opaque = request.Opaque
+			response.MarkResponseType()
+			// TODO
+			/*			channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
+						public void operationComplete(ChannelFuture future) throws Exception {
+							if (!future.isSuccess()) {
+								log.error("processRequestWrapper response to "
+								+ future.channel().remoteAddress() + " failed",
+									future.cause());
+							log.error(request.toString());
+							log.error(response.toString());
+						}
+						}
+					});*/
+		}
+	}
+	fmt.Println(run)
+	// TODO: pull.BrokerController.PullMessageExecutor.submit(run)
+}
+
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.PullMessageResponseHeader{}
 	requestHeader := &header.PullMessageRequestHeader{}
+
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+		return nil, err
+	}
+
 	response.Opaque = request.Opaque
 	logger.Debug("receive PullMessage request command, ", request)
 
@@ -78,6 +117,9 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)
 
 	suspendTimeoutMillisLong := requestHeader.SuspendTimeoutMillis
+	// START: test data Add:rongzhihong
+	//hasSuspendFlag = true
+	// END: test data
 	if hasSuspendFlag == false {
 		suspendTimeoutMillisLong = 0
 	}
@@ -151,7 +193,11 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	// TODO 	 this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), subscriptionData);
 	getMessageResult := &stgstorelog.GetMessageResult{}
-	if nil == getMessageResult {
+	// START: test data Add:rongzhihong
+	//getMessageResult.Status = stgstorelog.NO_MESSAGE_IN_QUEUE
+	// END: test data
+
+	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
 		responseHeader.NextBeginOffset = getMessageResult.NextBeginOffset
 		responseHeader.MinOffset = getMessageResult.MinOffset
@@ -246,13 +292,12 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				if !pull.BrokerController.BrokerConfig.LongPollingEnable {
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
 				}
-				fmt.Println(pollingTimeMills)
-				// pullRequest :=longpolling.NewPullRequest(request,pollingTimeMills,pull.BrokerController.)
-				//	new PullRequest(request, channel, pollingTimeMills, this.brokerController
-				//.getMessageStore().now(), requestHeader.getQueueOffset());
-				//this.brokerController.getPullRequestHoldService().suspendPullRequest(
-				//	requestHeader.getTopic(), requestHeader.getQueueId(), pullRequest);
-				//response = null;
+
+				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
+				suspendTimestamp := time.Now().UnixNano() / 1000000
+				pullRequest := longpolling.NewPullRequest(request, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
+				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
+				response = nil
 			}
 		case commonprotocol.PULL_RETRY_IMMEDIATELY:
 		case commonprotocol.PULL_OFFSET_MOVED:
