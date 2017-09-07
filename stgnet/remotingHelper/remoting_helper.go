@@ -1,4 +1,4 @@
-package common
+package remotingHelper
 
 import (
 	"net"
@@ -9,10 +9,7 @@ const (
 	RemotingLogName = "SmartgoRemoting"
 )
 
-type RemotingHelper struct {
-}
-
-func (self *RemotingHelper) ParseChannelRemoteAddr(conn net.Conn) string {
+func ParseChannelRemoteAddr(conn net.Conn) string {
 	if conn == nil {
 		return ""
 	}

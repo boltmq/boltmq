@@ -259,8 +259,13 @@ func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RemotingCommand) ToString() string {
+	flagBinary := fmt.Sprintf("%b", self.Flag)
+	extFields := "{}"
+	if bf, err := ffjson.Marshal(self.ExtFields); err == nil {
+		extFields = string(bf)
+	}
+
 	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s]"
-	//TODO: flag(B)=Integer.toBinaryString(flag), extFields字段需要序列化
-	info := fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, self.Flag, self.Remark, self.ExtFields)
+	info := fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields)
 	return info
 }

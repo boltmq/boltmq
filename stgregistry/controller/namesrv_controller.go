@@ -2,10 +2,7 @@ package controller
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
-	//"git.oschina.net/cloudzone/smartgo/stgregistry/kvconfig"
-	//"git.oschina.net/cloudzone/smartgo/stgregistry/routeinfo"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	_ "git.oschina.net/cloudzone/smartgo/stgregistry/processor"
 )
 
 // NamesrvController 注意循环引用
