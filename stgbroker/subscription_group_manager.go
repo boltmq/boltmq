@@ -2,12 +2,12 @@ package stgbroker
 
 import (
 	"encoding/json"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	"os/user"
 	"github.com/pquerna/ffjson/ffjson"
-	"fmt"
+	"os/user"
 )
 
 // SubscriptionGroupManager  用来管理订阅组，包括订阅权限等
@@ -64,14 +64,17 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 // Since 2017/8/17
 func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
 	subscriptionGroupConfig, _ := sgm.SubscriptionGroupTable.Get(group)
-	if value, ok := subscriptionGroupConfig.(*subscription.SubscriptionGroupConfig); ok {
-		if value == nil {
+	if subscriptionGroupConfig == nil {
+		if sgm.BrokerController.BrokerConfig.AutoCreateSubscriptionGroup {
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
 			subscriptionGroupConfig.GroupName = group
 			sgm.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
 			sgm.DataVersion.NextVersion()
 			sgm.configManagerExt.Persist()
+			return subscriptionGroupConfig
 		}
+	}
+	if value, ok := subscriptionGroupConfig.(*subscription.SubscriptionGroupConfig); ok {
 		return value
 	}
 	return nil
@@ -84,7 +87,7 @@ func (sgm *SubscriptionGroupManager) Load() bool {
 
 func (sgm *SubscriptionGroupManager) Encode(prettyFormat bool) string {
 	if b, err := ffjson.Marshal(sgm.SubscriptionGroupTable); err == nil {
-		fmt.Println("SubscriptionGroupManager"+string(b)+"leng"+string(sgm.SubscriptionGroupTable.Size()))
+		fmt.Println("SubscriptionGroupManager" + string(b) + "leng" + string(sgm.SubscriptionGroupTable.Size()))
 		fmt.Println(sgm.SubscriptionGroupTable.Size())
 		return string(b)
 	}

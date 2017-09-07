@@ -1,8 +1,9 @@
-package longpolling
+package stgbroker
 
 import (
 	"bytes"
-	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"strconv"
@@ -10,24 +11,22 @@ import (
 	"time"
 )
 
-const TOPIC_GROUP_SEPARATOR = "@"
-
 // PullRequestHoldService 拉消息请求管理，如果拉不到消息，则在这里Hold住，等待消息到来
 // Author rongzhihong
 // Since 2017/9/5
 type PullRequestHoldService struct {
 	TOPIC_QUEUEID_SEPARATOR string
-	pullRequestTable        *PullRequestTable
-	brokerController        *stgbroker.BrokerController
+	pullRequestTable        *longpolling.PullRequestTable
+	brokerController        *BrokerController
 	isStopped               bool
 }
 
 // NewPullRequestHoldService 初始化拉消息请求服务
 // Author rongzhihong
 // Since 2017/9/5
-func (serv *PullRequestHoldService) NewPullRequestHoldService(brokerController *stgbroker.BrokerController) *PullRequestHoldService {
+func NewPullRequestHoldService(brokerController *BrokerController) *PullRequestHoldService {
 	holdServ := new(PullRequestHoldService)
-	holdServ.pullRequestTable = NewPullRequestTable()
+	holdServ.pullRequestTable = longpolling.NewPullRequestTable()
 	holdServ.TOPIC_QUEUEID_SEPARATOR = TOPIC_GROUP_SEPARATOR
 	holdServ.brokerController = brokerController
 	return holdServ
@@ -36,23 +35,23 @@ func (serv *PullRequestHoldService) NewPullRequestHoldService(brokerController *
 // buildKey 构造Key
 // Author rongzhihong
 // Since 2017/9/5
-func (serv *PullRequestHoldService) buildKey(topic string, queueId int64) string {
+func (serv *PullRequestHoldService) buildKey(topic string, queueId int32) string {
 	sb := bytes.Buffer{}
 	sb.WriteString(topic)
 	sb.WriteString(serv.TOPIC_QUEUEID_SEPARATOR)
-	sb.WriteString(strconv.FormatInt(queueId, 10))
+	sb.WriteString(fmt.Sprintf("%d", queueId))
 	return sb.String()
 }
 
 // SuspendPullRequest 延缓拉请求
 // Author rongzhihong
 // Since 2017/9/5
-func (serv *PullRequestHoldService) SuspendPullRequest(topic string, queueId int64, pullRequest *PullRequest) {
+func (serv *PullRequestHoldService) SuspendPullRequest(topic string, queueId int32, pullRequest *longpolling.PullRequest) {
 	key := serv.buildKey(topic, queueId)
-	mpr := serv.pullRequestTable.get(key)
+	mpr := serv.pullRequestTable.Get(key)
 	if nil == mpr {
-		mpr = new(ManyPullRequest)
-		prev := serv.pullRequestTable.putIfAbsent(key, mpr)
+		mpr = new(longpolling.ManyPullRequest)
+		prev := serv.pullRequestTable.PutIfAbsent(key, mpr)
 		if prev != nil {
 			mpr = prev
 		}
@@ -64,14 +63,17 @@ func (serv *PullRequestHoldService) SuspendPullRequest(topic string, queueId int
 // Author rongzhihong
 // Since 2017/9/5
 func (serv *PullRequestHoldService) checkHoldRequest() {
-	for k, _ := range serv.pullRequestTable.PullRequestMap {
+	for k := range serv.pullRequestTable.PullRequestMap {
 		kArray := strings.Split(k, serv.TOPIC_QUEUEID_SEPARATOR)
 		if 2 == len(kArray) {
 			topic := kArray[0]
-			queueId, _ := strconv.ParseInt(kArray[1], 10, 64)
+			queueId, err := strconv.Atoi(kArray[1])
+			if err != nil {
+				logger.Error(fmt.Sprintf("queueId=%s: string to int fail.", kArray[1]))
+			}
 			// TODO long offset =  this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId);
 			offset := int64(0)
-			serv.notifyMessageArriving(topic, queueId, offset)
+			serv.notifyMessageArriving(topic, int32(queueId), offset)
 		}
 	}
 }
@@ -79,32 +81,33 @@ func (serv *PullRequestHoldService) checkHoldRequest() {
 // notifyMessageArriving  消息到来通知
 // Author rongzhihong
 // Since 2017/9/5
-func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId, maxOffset int64) {
+func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId int32, maxOffset int64) {
 	key := serv.buildKey(topic, queueId)
-	mpr := serv.pullRequestTable.get(key)
+	mpr := serv.pullRequestTable.Get(key)
 	if mpr != nil {
 		requestList := mpr.CloneListAndClear()
-		if requestList != nil {
-			replayList := []*PullRequest{}
+		if requestList != nil && len(requestList) > 0 {
+			replayList := []*longpolling.PullRequest{}
 
 			for _, pullRequest := range requestList {
 				// 查看是否offset OK
-				if maxOffset > pullRequest.pullFromThisOffset {
-					// TODO brokerController.getPullMessageProcessor().excuteRequestWhenWakeup(request.getClientChannel(), request.getRequestCommand());
+				if maxOffset > pullRequest.PullFromThisOffset {
+					serv.brokerController.PullMessageProcessor.ExcuteRequestWhenWakeup(pullRequest.RequestCommand)
 					continue
 				} else {
 					// 尝试取最新Offset
-					// newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId)
-					newestOffset := int64(0)
-					if newestOffset > pullRequest.pullFromThisOffset {
-						// TODO brokerController.getPullMessageProcessor().excuteRequestWhenWakeup(request.getClientChannel(), request.getRequestCommand());
+					// TODO newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId)
+					newestOffset := int64(1)
+					if newestOffset > pullRequest.PullFromThisOffset {
+						serv.brokerController.PullMessageProcessor.ExcuteRequestWhenWakeup(pullRequest.RequestCommand)
 						continue
 					}
 				}
 
+				currentTimeMillis := time.Now().UnixNano() / 1000000
 				// 查看是否超时
-				if time.Now().Unix() >= (pullRequest.suspendTimestamp + pullRequest.timeoutMillis) {
-					// TODO: brokerController.getPullMessageProcessor().excuteRequestWhenWakeup(request.getClientChannel(), request.getRequestCommand());
+				if currentTimeMillis >= (pullRequest.SuspendTimestamp + pullRequest.TimeoutMillis) {
+					serv.brokerController.PullMessageProcessor.ExcuteRequestWhenWakeup(pullRequest.RequestCommand)
 					continue
 				}
 

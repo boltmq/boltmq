@@ -8,18 +8,18 @@ import (
 // Author gaoyanlei
 // Since 2017/8/18
 type PullRequest struct {
-	requestCommand protocol.RemotingCommand
+	RequestCommand *protocol.RemotingCommand
 	// TODO Channel clientChannel;
-	timeoutMillis      int64
-	suspendTimestamp   int64
-	pullFromThisOffset int64
+	TimeoutMillis      int64
+	SuspendTimestamp   int64
+	PullFromThisOffset int64
 }
 
-func NewPullRequest(requestCommand protocol.RemotingCommand, timeoutMillis, suspendTimestamp, pullFromThisOffset int64) *PullRequest {
+func NewPullRequest(requestCommand *protocol.RemotingCommand, timeoutMillis, suspendTimestamp, pullFromThisOffset int64) *PullRequest {
 	var pullRequest = new(PullRequest)
-	pullRequest.timeoutMillis = timeoutMillis
-	pullRequest.suspendTimestamp = suspendTimestamp
-	pullRequest.pullFromThisOffset = pullFromThisOffset
-	pullRequest.requestCommand = requestCommand
+	pullRequest.TimeoutMillis = timeoutMillis
+	pullRequest.SuspendTimestamp = suspendTimestamp
+	pullRequest.PullFromThisOffset = pullFromThisOffset
+	pullRequest.RequestCommand = requestCommand
 	return pullRequest
 }
