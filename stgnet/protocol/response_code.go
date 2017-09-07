@@ -1,14 +1,9 @@
 package protocol
 
-// ResponseCode: 响应码
-// Author: yintongqiang
-// Since:  2017/8/16
+// ResponseCode: xxx
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/7
 const (
-	SUCCESS                       = 0   // 成功
-	SYSTEM_ERROR                  = 1   // 发生了未捕获异常
-	SYSTEM_BUSY                   = 2   // 由于线程池拥堵，系统繁忙
-	REQUEST_CODE_NOT_SUPPORTED    = 3   // 请求代码不支持
-	TRANSACTION_FAILED            = 4   // 事务失败，添加db失败
 	FLUSH_DISK_TIMEOUT            = 10  // Broker 刷盘超时
 	SLAVE_NOT_AVAILABLE           = 11  // Broker 同步双写，Slave不可用
 	FLUSH_SLAVE_TIMEOUT           = 12  // Broker 同步双写，等待Slave应答超时

@@ -4,7 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	RequestCode "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgnet/common"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remotingHelper"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/controller"
 	"net"
@@ -37,7 +37,6 @@ func NewDefaultRequestProcessor(namesrvContro *controller.NamesrvController) *De
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) ProcessRequest(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	remotingHelper := new(common.RemotingHelper)
 	remoteAddr := remotingHelper.ParseChannelRemoteAddr(conn)
 	format := "receive request. code=%d, remoteAddr=%s, content=%s"
 	logger.Info(format, request.Code, remoteAddr, request.ToString())
