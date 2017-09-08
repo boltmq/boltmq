@@ -89,7 +89,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 			}
 		}
 
-		topicConfig, _ := asmp.BrokerController.TopicConfigManager.createTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
+		topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
 			conn.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
