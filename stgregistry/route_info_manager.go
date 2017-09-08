@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv/routeinfo"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	set "github.com/deckarep/golang-set"
+	"net"
 	"sync"
 )
 
@@ -80,7 +81,7 @@ func (self *RouteInfoManager) getAllTopicList() {
 //
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64, haServerAddr string, topicConfigWrapper body.TopicConfigSerializeWrapper, filterServerList []string, channel chan int) *namesrv.RegisterBrokerResult {
+func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64, haServerAddr string, topicConfigWrapper body.TopicConfigSerializeWrapper, filterServerList []string, channel net.Conn) *namesrv.RegisterBrokerResult {
 	return nil
 }
 
