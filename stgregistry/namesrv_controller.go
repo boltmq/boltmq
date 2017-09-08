@@ -12,7 +12,7 @@ type DefaultNamesrvController struct {
 	NamesrvConfig    *namesrv.NamesrvConfig
 	RemotingServer   *remoting.RemotingServer
 	RouteInfoManager *RouteInfoManager
-	KvConfigManager  *KVConfigSerializeWrapper
+	KvConfigManager  *KVConfigManager
 }
 
 // NamesrvController

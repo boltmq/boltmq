@@ -38,6 +38,16 @@ type RemotingCommand struct {
 	Body         []byte              `json:"-"`         // body
 }
 
+// CreateResponseCommand 只有通信层内部会调用，业务不会调用
+func CreateDefaultResponseCommand(customHeader ...CommandCustomHeader) *RemotingCommand {
+	cmd := CreateResponseCommand(SYSTEM_ERROR, "not set any response code")
+	// 设置头信息
+	if customHeader != nil && len(customHeader) > 0 {
+		cmd.CustomHeader = customHeader[0]
+	}
+	return cmd
+}
+
 // CreateResponseCommand
 func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 	remotingClient := &RemotingCommand{

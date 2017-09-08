@@ -1,12 +1,18 @@
 package stgregistry
 
 import (
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
-	RequestCode "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	namesrvUtil "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remotingHelper"
 	"net"
+	"strings"
 )
 
 // DefaultRequestProcessor NameServer网络请求处理结构体
@@ -27,7 +33,7 @@ func NewDefaultRequestProcessor(namesrvControl *DefaultNamesrvController) *Defau
 	return requestProcessor
 }
 
-// ProcessRequest
+// processRequest 默认请求处理器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -36,16 +42,16 @@ func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *prot
 	logger.Info(format, request.Code, remoteAddr, request.ToString())
 
 	switch request.Code {
-	case RequestCode.PUT_KV_CONFIG:
+	case code.PUT_KV_CONFIG:
 		// code=100, 向Namesrv追加KV配置
 		return self.putKVConfig(conn, request)
-	case RequestCode.GET_KV_CONFIG:
+	case code.GET_KV_CONFIG:
 		// code=101, 从Namesrv获取KV配置
 		return self.getKVConfig(conn, request)
-	case RequestCode.DELETE_KV_CONFIG:
+	case code.DELETE_KV_CONFIG:
 		// code=102, 从Namesrv删除KV配置
 		return self.deleteKVConfig(conn, request)
-	case RequestCode.REGISTER_BROKER:
+	case code.REGISTER_BROKER:
 		// code=103, 注册Broker，数据都是持久化的，如果存在则覆盖配置
 		brokerVersion := mqversion.Value2Version(request.Version)
 		if brokerVersion >= mqversion.V3_0_11 {
@@ -55,47 +61,47 @@ func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *prot
 			// 注：低版本注册Broke(不支持FilterServer)
 			return self.registerBroker(conn, request)
 		}
-	case RequestCode.UNREGISTER_BROKER:
+	case code.UNREGISTER_BROKER:
 		// code=104, 卸指定的Broker，数据都是持久化的
 		return self.unRegisterBroker(conn, request)
-	case RequestCode.GET_ROUTEINTO_BY_TOPIC:
+	case code.GET_ROUTEINTO_BY_TOPIC:
 		// code=105, 根据Topic获取BrokerName、队列数(包含读队列与写队列)
 		return self.getRouteInfoByTopic(conn, request)
-	case RequestCode.GET_BROKER_CLUSTER_INFO:
+	case code.GET_BROKER_CLUSTER_INFO:
 		// code=106, 获取注册到NameServer的所有Broker集群信息
 		return self.getBrokerClusterInfo(conn, request)
-	case RequestCode.WIPE_WRITE_PERM_OF_BROKER:
+	case code.WIPE_WRITE_PERM_OF_BROKER:
 		// code=205, 优雅地向Broker写数据
 		return self.wipeWritePermOfBroker(conn, request)
-	case RequestCode.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
+	case code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
 		// code=206, 从NameServer获取完整Topic列表
 		return self.getAllTopicListFromNamesrv(conn, request)
-	case RequestCode.DELETE_TOPIC_IN_NAMESRV:
+	case code.DELETE_TOPIC_IN_NAMESRV:
 		// code=216, 从Namesrv删除Topic配置
 		return self.deleteTopicInNamesrv(conn, request)
-	case RequestCode.GET_KV_CONFIG_BY_VALUE:
+	case code.GET_KV_CONFIG_BY_VALUE:
 		// code=217, Namesrv通过 project 获取所有的 server ip 信息
 		return self.getKVConfigByValue(conn, request)
-	case RequestCode.DELETE_KV_CONFIG_BY_VALUE:
+	case code.DELETE_KV_CONFIG_BY_VALUE:
 		// code=218, Namesrv删除指定 project group 下的所有 server ip 信息
 		// return deleteKVConfigByValue(conn, request)
 		return self.deleteKVConfigByValue(conn, request)
-	case RequestCode.GET_KVLIST_BY_NAMESPACE:
+	case code.GET_KVLIST_BY_NAMESPACE:
 		// code=219, 通过NameSpace获取所有的KV List
 		return self.getKVListByNamespace(conn, request)
-	case RequestCode.GET_TOPICS_BY_CLUSTER:
+	case code.GET_TOPICS_BY_CLUSTER:
 		// code=224, 获取指定集群下的全部Topic列表
 		return self.getTopicsByCluster(conn, request)
-	case RequestCode.GET_SYSTEM_TOPIC_LIST_FROM_NS:
+	case code.GET_SYSTEM_TOPIC_LIST_FROM_NS:
 		// code=304, 获取所有系统内置 Topic 列表
 		return self.getSystemTopicListFromNamesrv(conn, request)
-	case RequestCode.GET_UNIT_TOPIC_LIST:
+	case code.GET_UNIT_TOPIC_LIST:
 		// code=311, 单元化相关Topic
 		return self.getUnitTopicList(conn, request)
-	case RequestCode.GET_HAS_UNIT_SUB_TOPIC_LIST:
+	case code.GET_HAS_UNIT_SUB_TOPIC_LIST:
 		// code=312, 获取含有单元化订阅组的 Topic 列表
 		return self.getHasUnitSubTopicList(conn, request)
-	case RequestCode.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
+	case code.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
 		// code=313, 获取含有单元化订阅组的非单元化 Topic 列表
 		return self.getHasUnitSubUnUnitTopicList(conn, request)
 	default:
@@ -151,6 +157,36 @@ func (self *DefaultRequestProcessor) getBrokerClusterInfo(conn net.Conn, request
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	response := protocol.CreateDefaultResponseCommand()
+
+	requestHeader := &header.GetRouteInfoRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	topic := requestHeader.Topic
+	topicRouteData := self.namesrvController.RouteInfoManager.pickupTopicRouteData(topic)
+	if topicRouteData != nil {
+		orderTopicConf := self.namesrvController.KvConfigManager.getKVConfig(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
+		topicRouteData.OrderTopicConf = orderTopicConf
+
+		var content []byte
+		err = topicRouteData.Decode(content)
+		if err != nil {
+			fmt.Printf("topicRouteData.Decode() err: %s\n", err.Error())
+			// resurn nil, err
+		}
+		response.Body = content
+		response.Code = code.SUCCESS
+		response.Remark = ""
+		return response, nil
+
+	}
+
+	response.Code = code.TOPIC_NOT_EXIST
+	response.Remark = fmt.Sprintf("No topic route info in name server for the topic: %s, faq: %s", topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
 	return nil, nil
 }
 
@@ -165,7 +201,33 @@ func (self *DefaultRequestProcessor) putKVConfig(conn net.Conn, request *protoco
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVConfig(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	return nil, nil
+	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
+
+	responseHeader := &namesrv.GetKVConfigResponseHeader{}
+	err := response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	requestHeader := &namesrv.GetKVConfigRequestHeader{}
+	err = request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	value := self.namesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
+	if strings.TrimSpace(value) != "" {
+		responseHeader.Value = strings.TrimSpace(value)
+		response.Code = code.SUCCESS
+		response.Remark = ""
+		return response, nil
+	}
+
+	response.Code = code.QUERY_NOT_FOUND
+	response.Remark = fmt.Sprintf("No config item, Namespace: %s Key: %s", requestHeader.Namespace, requestHeader.Key)
+	return response, nil
 }
 
 // deleteKVConfig 从Namesrv删除KV配置

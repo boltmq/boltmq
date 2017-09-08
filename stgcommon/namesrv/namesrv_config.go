@@ -23,8 +23,8 @@ type NamesrvConfig interface {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 type DefaultNamesrvConfig struct {
-	smartGoHome  string
-	kvConfigPath string
+	smartgoHome  string `json:"smartgoHome"`
+	kvConfigPath string `json:"kvConfigPath"`
 }
 
 // NewDefaultNamesrvConfig 初始化
@@ -32,7 +32,7 @@ type DefaultNamesrvConfig struct {
 // Since: 2017/9/8
 func NewDefaultNamesrvConfig() NamesrvConfig {
 	namesrvConfig := &DefaultNamesrvConfig{
-		smartGoHome:  getSmartGoHome(),
+		smartgoHome:  getSmartGoHome(),
 		kvConfigPath: getKvConfigPath(),
 	}
 
@@ -64,7 +64,7 @@ func getKvConfigPath() string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultNamesrvConfig) GetSmartGoHome() string {
-	return self.smartGoHome
+	return self.smartgoHome
 }
 
 // GetKvConfigPath 对外提供方法
