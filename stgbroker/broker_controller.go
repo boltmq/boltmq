@@ -19,18 +19,17 @@ type BrokerController struct {
 	// nettyServerConfig
 	// nettyClientConfig
 	// messageStoreConfig
-	// DataVersion
-	ConsumerOffsetManager *ConsumerOffsetManager
-	ConsumerManager       *client.ConsumerManager
-	ProducerManager       *client.ProducerManager
-	// ClientHousekeepingService
+	ConfigDataVersion         *stgcommon.DataVersion
+	ConsumerOffsetManager     *ConsumerOffsetManager
+	ConsumerManager           *client.ConsumerManager
+	ProducerManager           *client.ProducerManager
+	ClientHousekeepingService *ClientHouseKeepingService
 	// DefaultTransactionCheckExecuter
-	PullMessageProcessor                 *PullMessageProcessor
-	UpdateMasterHAServerAddrPeriodically bool
-	PullRequestHoldService               *PullRequestHoldService
-	Broker2Client                        *Broker2Client
-	ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
-	SubscriptionGroupManager             *SubscriptionGroupManager
+	PullMessageProcessor      *PullMessageProcessor
+	PullRequestHoldService    *PullRequestHoldService
+	Broker2Client             *Broker2Client
+	SubscriptionGroupManager  *SubscriptionGroupManager
+	ConsumerIdsChangeListener rebalance.ConsumerIdsChangeListener
 	// RebalanceLockManager
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
@@ -38,7 +37,17 @@ type BrokerController struct {
 	//MessageStore       *stgstorelog.MessageStore
 	RemotingServer     *remoting.DefalutRemotingServer
 	TopicConfigManager *TopicConfigManager
-	// ExecutorService
+	// SendMessageExecutor ExecutorService
+	// PullMessageExecutor ExecutorService
+	// adminBrokerExecutor ExecutorService
+	// clientManageExecutor ExecutorService
+	UpdateMasterHAServerAddrPeriodically bool
+	// brokerStats BrokerStats
+	// sendThreadPoolQueue
+	// pullThreadPoolQueue
+	// filterServerManager
+	// brokerStatsManager BrokerStatsManager
+	StoreHost string
 }
 
 func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConfig NettyServerConfig,
@@ -49,6 +58,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	// TODO nettyServerConfig
 	// TODO nettyServerConfig
 	// TODO messageStoreConfig
+	brokerController.ConfigDataVersion = stgcommon.NewDataVersion()
 	brokerController.ConsumerOffsetManager = NewConsumerOffsetManager(brokerController)
 	brokerController.UpdateMasterHAServerAddrPeriodically = false
 	brokerController.TopicConfigManager = NewTopicConfigManager(brokerController)
@@ -58,7 +68,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	brokerController.ConsumerIdsChangeListener = NewDefaultConsumerIdsChangeListener(brokerController)
 	brokerController.ConsumerManager = client.NewConsumerManager(brokerController.ConsumerIdsChangeListener)
 	brokerController.ProducerManager = client.NewProducerManager()
-	// TODO clientHousekeepingService
+	brokerController.ClientHousekeepingService = NewClientHousekeepingService(brokerController)
 	brokerController.Broker2Client = NewBroker2Clientr(brokerController)
 	brokerController.SubscriptionGroupManager = NewSubscriptionGroupManager(brokerController)
 	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI()
@@ -170,7 +180,7 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 	}
 }
 func (bc *BrokerController) getHAServerAddr() string {
-
+	// TODO:
 	return ""
 }
 
@@ -218,4 +228,11 @@ func (bc *BrokerController) registerProcessor() {
 	pullMessageProcessor := NewPullMessageProcessor(bc)
 	// 拉取消息
 	bc.RemotingServer.RegisterProcessor(protocol.PULL_MESSAGE, pullMessageProcessor)
+}
+
+// registerProcessor 获得数据配置版本号
+// Author rongzhihong
+// Since 2017/9/8
+func (bc *BrokerController) getConfigDataVersion() string {
+	return bc.ConfigDataVersion.toJson()
 }

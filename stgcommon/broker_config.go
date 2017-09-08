@@ -1,6 +1,7 @@
 package stgcommon
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"os"
 	"runtime"
 )
@@ -55,7 +56,7 @@ type BrokerConfig struct {
 	// 订阅消息对应的线程池阻塞队列size
 	PullThreadPoolQueueCapacity int
 	// 过滤服务器数量
-	FilterServerNums int
+	FilterServerNums int32
 	// Consumer订阅消息时，Broker是否开启长轮询
 	LongPollingEnable bool
 	// 如果是短轮询，服务器挂起时间
@@ -71,16 +72,14 @@ type BrokerConfig struct {
 // Since 2017/8/9
 func NewBrokerConfig() *BrokerConfig {
 	return &BrokerConfig{
-		SmartGoHome: os.Getenv(SMARTGO_HOME_ENV),
-		NamesrvAddr:  os.Getenv(NAMESRV_ADDR_ENV),
-		//TODO 获取getLocalAddress
-		//BrokerIP1=
-		//BrokerIP2=
-		BrokerName:        localHostName(),
-		BrokerClusterName: "DefaultCluster",
-		BrokerId:          MASTER_ID,
-		// TODO PermName常量
-		//BrokerPermission="DefaultCluster"
+		SmartGoHome:                        os.Getenv(SMARTGO_HOME_ENV),
+		NamesrvAddr:                        os.Getenv(NAMESRV_ADDR_ENV),
+		BrokerIP1:                          stgclient.GetLocalAddress(),
+		BrokerIP2:                          stgclient.GetLocalAddress(),
+		BrokerName:                         localHostName(),
+		BrokerClusterName:                  "DefaultCluster",
+		BrokerId:                           MASTER_ID,
+		BrokerPermission:                   6,
 		DefaultTopicQueueNums:              8,
 		AutoCreateTopicEnable:              true,
 		ClusterTopicEnable:                 true,
