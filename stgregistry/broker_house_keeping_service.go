@@ -1,8 +1,4 @@
-package routeinfo
-
-import (
-	"git.oschina.net/cloudzone/smartgo/stgregistry/controller"
-)
+package stgregistry
 
 // BrokerHousekeepingServices Broker活动检测服务
 //
@@ -12,13 +8,13 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type BrokerHousekeepingService struct {
-	NamesrvController *controller.NamesrvController
+	NamesrvController *DefaultNamesrvController
 }
 
 // NewBrokerHousekeepingService 初始化Broker活动检测服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewBrokerHousekeepingService(namesrvController *controller.NamesrvController) *BrokerHousekeepingService {
+func NewBrokerHousekeepingService(namesrvController *DefaultNamesrvController) *BrokerHousekeepingService {
 	brokerHousekeepingService := BrokerHousekeepingService{
 		NamesrvController: namesrvController,
 	}

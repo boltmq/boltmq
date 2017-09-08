@@ -6,10 +6,12 @@ import (
 )
 
 func TestNamesrvConfig(t *testing.T) {
-	smartGoHome := GetSmartGoHome()
+	namesrvConfig := NewDefaultNamesrvConfig()
+
+	smartGoHome := namesrvConfig.GetSmartGoHome()
 	fmt.Printf("smartGoHome = %s\n", smartGoHome)
 
-	kvConfigPath := GetKvConfigPath()
+	kvConfigPath := namesrvConfig.GetKvConfigPath()
+	// example E:/source/src/git.oschina.net/cloudzone/smartgo/stgcommon/namesrv/stgregistry/kvConfig.json
 	fmt.Printf("kvConfigPath = %s\n", kvConfigPath)
-
 }

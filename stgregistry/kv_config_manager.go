@@ -1,29 +1,26 @@
-package kvconfig
+package stgregistry
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgregistry/controller"
 	"sync"
 )
 
-var (
-	configTable   *KVConfigSerializeWrapper
-	readWriteLock *sync.RWMutex
-)
-
+// KVConfigManager KV配置管理器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
 type KVConfigManager struct {
-	ConfigTable       *KVConfigSerializeWrapper
-	ReadWriteLock     *sync.RWMutex
-	NamesrvController *controller.NamesrvController
+	ConfigTable   *KVConfigSerializeWrapper
+	ReadWriteLock sync.RWMutex
 }
 
 // NewKVConfigManager 初始化KV配置管理器
+// // namesrvController *stgregistry.DefaultNamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewKVConfigManager(namesrvController *controller.NamesrvController) *KVConfigManager {
-	kvConfigManager := KVConfigManager{
-		NamesrvController: namesrvController,
+func NewKVConfigManager(configTable *KVConfigSerializeWrapper) *KVConfigManager {
+	kvConfigManager := &KVConfigManager{
+		ConfigTable:   configTable,
 	}
-	return &kvConfigManager
+	return kvConfigManager
 }
 
 // printAllPeriodically 打印namesrv全局配置信息

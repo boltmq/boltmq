@@ -1,4 +1,4 @@
-package kvconfig
+package stgregistry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"

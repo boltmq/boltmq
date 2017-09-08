@@ -1,42 +1,36 @@
-package processor
+package stgregistry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	RequestCode "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgnet/remotingHelper"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/controller"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remotingHelper"
 	"net"
-)
-
-var (
-	namesrvController *controller.NamesrvController
 )
 
 // DefaultRequestProcessor NameServer网络请求处理结构体
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type DefaultRequestProcessor struct {
-	NamesrvController *controller.NamesrvController
+	namesrvController *DefaultNamesrvController
 }
 
 // NewDefaultRequestProcessor 初始化NameServer网络请求处理
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewDefaultRequestProcessor(namesrvContro *controller.NamesrvController) *DefaultRequestProcessor {
-	defaultRequestProcessor := DefaultRequestProcessor{
-		NamesrvController: namesrvContro,
+func NewDefaultRequestProcessor(namesrvControl *DefaultNamesrvController) *DefaultRequestProcessor {
+	requestProcessor := &DefaultRequestProcessor{
+		namesrvController: namesrvControl,
 	}
 
-	namesrvController = namesrvContro
-	return &defaultRequestProcessor
+	return requestProcessor
 }
 
 // ProcessRequest
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) ProcessRequest(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	remoteAddr := remotingHelper.ParseChannelRemoteAddr(conn)
 	format := "receive request. code=%d, remoteAddr=%s, content=%s"
 	logger.Info(format, request.Code, remoteAddr, request.ToString())
