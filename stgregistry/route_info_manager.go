@@ -1,4 +1,4 @@
-package routeinfo
+package stgregistry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -30,7 +30,7 @@ type RouteInfoManager struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func NewRouteInfoManager() *RouteInfoManager {
-	routeInfoManager := RouteInfoManager{
+	routeInfoManager := &RouteInfoManager{
 		TopicQueueTable:   make(map[string][]*route.QueueData),
 		BrokerAddrTable:   make(map[string]*route.BrokerData),
 		ClusterAddrTable:  make(map[string]set.Set),
@@ -39,7 +39,7 @@ func NewRouteInfoManager() *RouteInfoManager {
 		ReadWriteLock:     new(sync.RWMutex),
 	}
 
-	return &routeInfoManager
+	return routeInfoManager
 }
 
 // getAllClusterInfo 获得所有集群名称
@@ -90,7 +90,6 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 func (self *RouteInfoManager) isBrokerTopicConfigChanged(brokerAddr string, dataVersion stgcommon.DataVersion) bool {
 	return false
 }
-
 
 // wipeWritePermOfBrokerByLock 加锁处理：优雅更新Broker写操作
 //
