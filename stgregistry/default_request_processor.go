@@ -2,11 +2,13 @@ package stgregistry
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	namesrvUtil "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
@@ -176,7 +178,7 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request 
 		err = topicRouteData.Decode(content)
 		if err != nil {
 			fmt.Printf("topicRouteData.Decode() err: %s\n", err.Error())
-			// resurn nil, err
+			return nil, err
 		}
 		response.Body = content
 		response.Code = code.SUCCESS
@@ -241,14 +243,78 @@ func (self *DefaultRequestProcessor) deleteKVConfig(conn net.Conn, request *prot
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	return nil, nil
+	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
+	err := response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
+	err = request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	var topicConfigWrapper body.TopicConfigSerializeWrapper
+	if request.Body != nil && len(request.Body) > 0 {
+		err = topicConfigWrapper.CustomDecode(request.Body, &topicConfigWrapper)
+		if err != nil {
+			fmt.Printf("topicConfigWrapper.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
+			return nil, err
+		}
+	} else {
+		dataVersion := stgcommon.NewDataVersion()
+		dataVersion.Timestatmp = 0
+		topicConfigWrapper.DataVersion = dataVersion
+	}
+
+	registerBrokerResult := self.namesrvController.RouteInfoManager.registerBroker(
+		requestHeader.ClusterName,
+		requestHeader.BrokerAddr,
+		requestHeader.BrokerName,
+		requestHeader.BrokerId,
+		requestHeader.HaServerAddr,
+		topicConfigWrapper,
+		[]string{},
+		conn,
+	)
+
+	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
+	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+
+	// 获取顺序消息 topic 列表
+	jsonValue := self.namesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	response.Body = jsonValue
+	response.Code = code.SUCCESS
+	response.Remark = ""
+
+	return response, nil
 }
 
 // unRegisterBroker  卸载指定的Broker，数据都是持久化的
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) unRegisterBroker(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	return nil, nil
+	response := protocol.CreateDefaultResponseCommand()
+	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	clusterName := requestHeader.ClusterName
+	brokerAddr := requestHeader.BrokerAddr
+	brokerName := requestHeader.BrokerName
+	brokerId := int64(requestHeader.BrokerId)
+	self.namesrvController.RouteInfoManager.unRegisterBroker(clusterName, brokerAddr, brokerName, brokerId)
+
+	response.Code = code.SUCCESS
+	response.Remark = ""
+	return response, nil
 }
 
 // getKVConfigByValue 通过 project 获取所有的 server ip 信息
