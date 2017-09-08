@@ -2,6 +2,7 @@ package stgregistry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv/routeinfo"
@@ -23,7 +24,7 @@ type RouteInfoManager struct {
 	ClusterAddrTable  map[string]set.Set                   // clusterName[set<brokerName>]
 	BrokerLiveTable   map[string]*routeinfo.BrokerLiveInfo // brokerAddr[brokerLiveTable]
 	FilterServerTable map[string][]string                  // brokerAddr[FilterServer]
-	ReadWriteLock     *sync.RWMutex                        // read & write lock
+	ReadWriteLock     sync.RWMutex                         // read & write lock
 }
 
 // NewRouteInfoManager 初始化Topic路由管理器
@@ -36,7 +37,6 @@ func NewRouteInfoManager() *RouteInfoManager {
 		ClusterAddrTable:  make(map[string]set.Set),
 		BrokerLiveTable:   make(map[string]*routeinfo.BrokerLiveInfo),
 		FilterServerTable: make(map[string][]string),
-		ReadWriteLock:     new(sync.RWMutex),
 	}
 
 	return routeInfoManager
@@ -153,6 +153,57 @@ func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRouteData {
+	topicRouteData := &route.TopicRouteData{}
+
+	foundQueueData := false
+	foundBrokerData := false
+	brokerNameSet := set.NewSet()
+
+	brokerDataList := make([]*route.BrokerData, 0)
+	topicRouteData.BrokerDatas = brokerDataList
+
+	filterServerMap := make(map[string][]string, 0)
+	topicRouteData.FilterServerTable = filterServerMap
+
+	self.ReadWriteLock.RLock()
+	if queueDataList, ok := self.TopicQueueTable[topic]; ok && queueDataList != nil {
+		topicRouteData.QueueDatas = queueDataList
+		foundQueueData = true
+
+		// BrokerName去重
+		for _, qd := range queueDataList {
+			brokerNameSet.Add(qd.BrokerName)
+		}
+
+		for brokerName := range brokerNameSet.Iterator().C {
+			if brokerData, ok := self.BrokerAddrTable[brokerName.(string)]; ok && brokerData != nil {
+				brokerAddrsClone := brokerData.CloneBrokerData().BrokerAddrs
+				brokerDataClone := &route.BrokerData{
+					BrokerName:  brokerData.BrokerName,
+					BrokerAddrs: brokerAddrsClone,
+				}
+				brokerDataList = append(brokerDataList, brokerDataClone)
+				foundBrokerData = true
+
+				if brokerAddrsClone != nil && len(brokerAddrsClone) > 0 {
+					// 增加FilterServer
+					for _, brokerAddr := range brokerAddrsClone {
+						if filterServerList, ok := self.FilterServerTable[brokerAddr]; ok {
+							filterServerMap[brokerAddr] = filterServerList
+						}
+					}
+				}
+			}
+		}
+
+	}
+	self.ReadWriteLock.RUnlock()
+	logger.Debug("pickupTopicRouteData: %s %s", topic, topicRouteData.ToString())
+
+	if foundBrokerData && foundQueueData {
+		return topicRouteData
+	}
+
 	return nil
 }
 

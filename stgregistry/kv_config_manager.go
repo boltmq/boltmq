@@ -18,7 +18,7 @@ type KVConfigManager struct {
 // Since: 2017/9/6
 func NewKVConfigManager(configTable *KVConfigSerializeWrapper) *KVConfigManager {
 	kvConfigManager := &KVConfigManager{
-		ConfigTable:   configTable,
+		ConfigTable: configTable,
 	}
 	return kvConfigManager
 }
@@ -55,6 +55,13 @@ func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string 
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVConfig(namespace, key string) string {
+	self.ReadWriteLock.RLock()
+	if kvTable, ok := self.ConfigTable.ConfigTable[namespace]; ok && kvTable != nil {
+		if value, ok := kvTable[key]; ok {
+			return value
+		}
+	}
+	self.ReadWriteLock.RUnlock()
 	return ""
 }
 
