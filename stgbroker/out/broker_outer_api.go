@@ -68,8 +68,8 @@ func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	addrs := self.topAddressing.FetchNSAddr()
 	if addrs != "" {
-		if strings.EqualFold(addrs, self.nameSrvAddr) {
-			logger.Info("k")
+		if !strings.EqualFold(addrs, self.nameSrvAddr) {
+			logger.Info("name server address changed, old: " + self.nameSrvAddr + " new: " + addrs)
 			self.UpdateNameServerAddressList(addrs)
 			self.nameSrvAddr = addrs
 			return self.nameSrvAddr
