@@ -5,6 +5,7 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"strconv"
 )
 
 // DefalutRemotingServer default remoting server
@@ -64,4 +65,11 @@ func (rs *DefalutRemotingServer) InvokeAsync(conn net.Conn, request *protocol.Re
 func (rs *DefalutRemotingServer) InvokeOneway(conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
 	addr := conn.RemoteAddr().String()
 	return rs.invokeOneway(addr, conn, request, timeoutMillis)
+}
+
+// GetListenPort 获得监听端口
+// Author rongzhihong
+// Since 2017/9/5
+func (rs *DefalutRemotingServer) GetListenPort() string {
+	return strconv.Itoa(rs.port)
 }

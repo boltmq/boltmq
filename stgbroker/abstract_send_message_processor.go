@@ -9,9 +9,11 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
@@ -21,9 +23,10 @@ const DLQ_NUMS_PER_GROUP = 1
 // Author gaoyanlei
 // Since 2017/8/14
 type AbstractSendMessageProcessor struct {
-	BrokerController *BrokerController
-	Rand             *rand.Rand
-	StoreHost        string
+	BrokerController    *BrokerController
+	Rand                *rand.Rand
+	StoreHost           string
+	sendMessageHookList []mqtrace.SendMessageHook
 }
 
 // NewAbstractSendMessageProcessor 初始化ConsumerOffsetManager
@@ -32,6 +35,7 @@ type AbstractSendMessageProcessor struct {
 func NewAbstractSendMessageProcessor(brokerController *BrokerController) *AbstractSendMessageProcessor {
 	return &AbstractSendMessageProcessor{
 		BrokerController: brokerController,
+		StoreHost:        brokerController.StoreHost,
 	}
 }
 
@@ -129,5 +133,75 @@ func DoResponse( //TODO ChannelHandlerContext ctx,
 	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
 		// TODO ctx.writeAndFlush(response);
+	}
+}
+
+// hasSendMessageHook 检查SendMessageHookList的长度
+// Author rongzhihong
+// Since 2017/9/11
+func (asmp *AbstractSendMessageProcessor) HasSendMessageHook() bool {
+	return asmp.sendMessageHookList != nil && len(asmp.sendMessageHookList) > 0
+}
+
+// RegisterSendMessageHook 注册赋值
+// Author rongzhihong
+// Since 2017/9/11
+func (asmp *AbstractSendMessageProcessor) RegisterSendMessageHook(sendMessageHookList []mqtrace.SendMessageHook) {
+	asmp.sendMessageHookList = sendMessageHookList
+}
+
+// ExecuteSendMessageHookBefore 发送消息前执行回调函数
+// Author rongzhihong
+// Since 2017/9/11
+func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore( /*ctx ChannelHandlerContext, */ request *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
+	defer utils.RecoveredFn()
+
+	if asmp.HasSendMessageHook() {
+		for _, hook := range asmp.sendMessageHookList {
+			requestHeader := new(header.SendMessageRequestHeader)
+			err := request.DecodeCommandCustomHeader(requestHeader)
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+
+			context.ProducerGroup = requestHeader.ProducerGroup
+			context.Topic = requestHeader.Topic
+			context.BodyLength = len(request.Body)
+			context.MsgProps = requestHeader.Properties
+			// TODO context.BornHost = RemotingHelper.parseChannelRemoteAddr(ctx.channel())
+			context.BrokerAddr = asmp.BrokerController.GetBrokerAddr()
+			context.QueueId = requestHeader.QueueId
+
+			hook.SendMessageBefore(context)
+			requestHeader.Properties = context.MsgProps
+		}
+	}
+}
+
+// ExecuteSendMessageHookAfter 发送消息后执行回调函数
+// Author rongzhihong
+// Since 2017/9/11
+func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookAfter(response *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
+	defer utils.RecoveredFn()
+
+	if asmp.HasSendMessageHook() {
+		for _, hook := range asmp.sendMessageHookList {
+
+			responseHeader := new(header.SendMessageResponseHeader)
+			err := response.DecodeCommandCustomHeader(responseHeader)
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+			if responseHeader != nil {
+				context.MsgId = responseHeader.MsgId
+				context.QueueId = responseHeader.QueueId
+				context.QueueOffset = responseHeader.QueueOffset
+				context.Code = int(response.Code)
+				context.ErrorMsg = response.Remark
+			}
+			hook.SendMessageAfter(context)
+		}
 	}
 }

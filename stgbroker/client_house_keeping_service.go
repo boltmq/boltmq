@@ -2,6 +2,8 @@ package stgbroker
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"net"
 	"time"
 )
 
@@ -9,7 +11,7 @@ import (
 // Author rongzhihong
 // Since 2017/9/8
 type ClientHouseKeepingService struct {
-	ticker               *time.Ticker
+	ticker               *timeutil.Ticker
 	brokerController     *BrokerController
 	ChannelEventListener *client.ChannelEventListener
 }
@@ -20,7 +22,7 @@ type ClientHouseKeepingService struct {
 func NewClientHousekeepingService(bc *BrokerController) *ClientHouseKeepingService {
 	chks := new(ClientHouseKeepingService)
 	chks.brokerController = bc
-	chks.ticker = time.NewTicker(time.Second * time.Duration(10))
+	chks.ticker = timeutil.NewTicker(10, 10)
 	return chks
 }
 
@@ -28,14 +30,11 @@ func NewClientHousekeepingService(bc *BrokerController) *ClientHouseKeepingServi
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) Start() {
-	time.Sleep(time.Second * time.Duration(10))
 	// 定时扫描过期的连接
-	for {
-		select {
-		case <-chks.ticker.C:
-			chks.scanExceptionChannel()
-		}
-	}
+	chks.ticker.Do(func(tm time.Time) {
+		chks.scanExceptionChannel()
+	})
+
 }
 
 // Shutdown 停止定时扫描过期的连接的服务
@@ -53,43 +52,43 @@ func (chks *ClientHouseKeepingService) Shutdown() {
 func (chks *ClientHouseKeepingService) scanExceptionChannel() {
 	// TODO:
 	//chks.brokerController.ProducerManager.scanNotActiveChannel();
-	//chks.brokerController.ConsumerManager.scanNotActiveChannel();
-	//chks.brokerController.FilterServerManager.scanNotActiveChannel();
+	chks.brokerController.ConsumerManager.ScanNotActiveChannel()
+	chks.brokerController.FilterServerManager.ScanNotActiveChannel()
 }
 
 // onChannelConnect 监听通道连接
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelConnect(remoteAddr string /*, Channel channel*/) {
+func (chks *ClientHouseKeepingService) onChannelConnect(remoteAddr string, conn net.Conn) {
 
 }
 
 // onChannelClose 监听通道关闭
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string /*, Channel channel*/) {
+func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string, conn net.Conn) {
 	// TODO
 	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.ConsumerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }
 
 // onChannelException 监听通道异常
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string /*, Channel channel*/) {
+func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string, conn net.Conn) {
 	// TODO
 	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.ConsumerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }
 
 // onChannelIdle 监听通道闲置
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelIdle(remoteAddr string /*, Channel channel*/) {
+func (chks *ClientHouseKeepingService) onChannelIdle(remoteAddr string, conn net.Conn) {
 	// TODO
 	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.ConsumerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	//chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }

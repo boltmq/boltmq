@@ -199,7 +199,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
-		// TODO  this.brokerController.registerBrokerAll(false, true);
+		tcm.BrokerController.RegisterBrokerAll(false, true)
 	}
 	return
 }
@@ -232,7 +232,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
-		// TODO  this.brokerController.registerBrokerAll(false, true);
+		tcm.BrokerController.RegisterBrokerAll(false, true)
 	}
 	return
 }

@@ -2,8 +2,10 @@ package client
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	set "github.com/deckarep/golang-set"
 	"net"
 )
@@ -73,4 +75,75 @@ func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consume
 
 func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *ChannelInfo) {
 
+}
+
+// ScanNotActiveChannel 扫描不活跃的通道
+// Author rongzhihong
+// Since 2017/9/11
+func (cm *ConsumerManager) ScanNotActiveChannel() {
+	iterator := cm.consumerTable.Iterator()
+	for iterator.HasNext() {
+		key, value, _ := iterator.Next()
+		group, ok := key.(string)
+		if !ok {
+			continue
+		}
+		consumerGroupInfo, ok := value.(*ConsumerGroupInfo)
+		if !ok {
+			continue
+		}
+		channelInfoTable := consumerGroupInfo.ConnTable
+		chanIterator := channelInfoTable.Iterator()
+		for chanIterator.HasNext() {
+			_, clientValue, _ := chanIterator.Next()
+			channelInfo, ok := clientValue.(*ChannelInfo)
+			if !ok {
+				continue
+			}
+			diff := timeutil.CurrentTimeMillis() - channelInfo.LastUpdateTimestamp
+			if diff > cm.ChannelExpiredTimeout {
+				logger.Warn("SCAN: remove expired channel from ConsumerManager consumerTable. channel=%s, consumerGroup=%s",
+					channelInfo.Addr, group)
+				channelInfo.Conn.Close()
+				chanIterator.Remove()
+			}
+		}
+
+		if channelInfoTable.IsEmpty() {
+			logger.Warn("SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup=%s", group)
+			iterator.Remove()
+		}
+	}
+}
+
+// ScanNotActiveChannel 扫描不活跃的通道
+// Author rongzhihong
+// Since 2017/9/11
+func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn) {
+	iterator := cm.consumerTable.Iterator()
+	for iterator.HasNext() {
+		key, value, _ := iterator.Next()
+		group, ok := key.(string)
+		if !ok {
+			continue
+		}
+		consumerGroupInfo, ok := value.(*ConsumerGroupInfo)
+		if !ok {
+			continue
+		}
+		isRemoved := consumerGroupInfo.doChannelCloseEvent(remoteAddr, conn)
+		if isRemoved {
+			if consumerGroupInfo.ConnTable.IsEmpty() {
+				remove, err := cm.consumerTable.Remove(group)
+				if err != nil {
+					logger.Error(err)
+					continue
+				}
+				if remove != nil {
+					logger.Info("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+				}
+			}
+			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())
+		}
+	}
 }

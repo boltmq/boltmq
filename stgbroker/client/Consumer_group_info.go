@@ -1,18 +1,17 @@
 package client
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"net"
 	"strings"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 // ConsumerGroupInfo 整个Consumer Group信息
 // Author gaoyanlei
 // Since 2017/8/17
 type ConsumerGroupInfo struct {
-	// TODO private static final Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 	GroupName           string
 	SubscriptionTable   *sync.Map
 	ConnTable           *sync.Map
@@ -47,7 +46,6 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 	return nil
 }
 
-
 func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
 	updated := false
@@ -79,4 +77,36 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 	//cg.lastUpdateTimestamp = System.currentTimeMillis();
 	//infoOld.setLastUpdateTimestamp(this.lastUpdateTimestamp);
 	return updated
+}
+
+// doChannelCloseEvent 关闭通道
+// Author rongzhihong
+// Since 2017/9/11
+func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Conn) bool {
+	info, err := cg.ConnTable.Remove(conn)
+	if err != nil {
+		logger.Error(err)
+		return false
+	}
+	if info != nil {
+		logger.Warn("NETTY EVENT: remove not active channel[%v] from ConsumerGroupInfo groupChannelTable, consumer group: %s",
+			info, cg.GroupName)
+		return true
+	}
+	return false
+}
+
+// getAllChannel 获得所有通道
+// Author rongzhihong
+// Since 2017/9/11
+func (cg *ConsumerGroupInfo) getAllChannel() []net.Conn {
+	result := []net.Conn{}
+	iterator := cg.ConnTable.Iterator()
+	for iterator.HasNext() {
+		key, _, _ := iterator.Next()
+		if channel, ok := key.(net.Conn); ok {
+			result = append(result, channel)
+		}
+	}
+	return result
 }

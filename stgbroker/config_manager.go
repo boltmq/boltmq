@@ -16,7 +16,6 @@ type ConfigManager interface {
 
 type ConfigManagerExt struct {
 	ConfigManager ConfigManager
-	// TODO log
 }
 
 func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
