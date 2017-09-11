@@ -20,5 +20,5 @@ func GetConsumerOffsetPath(rootDir string) string {
 // Author gaoyanlei
 // Since 2017/8/21
 func GetSubscriptionGroupPath(rootDir string) string {
-	return rootDir + string(os.PathSeparator) + "store" + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "subscriptionGroup1.json"
+	return rootDir + string(os.PathSeparator) + "store" + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "subscriptionGroup.json"
 }

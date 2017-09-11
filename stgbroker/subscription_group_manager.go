@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"github.com/pquerna/ffjson/ffjson"
 	"os/user"
 )
@@ -14,16 +13,12 @@ import (
 // Author gaoyanlei
 // Since 2017/8/9
 type SubscriptionGroupManager struct {
-	SubscriptionGroupTable *sync.Map
-
 	BrokerController *BrokerController
 
-	SubscriptionGroupConfigs []subscription.SubscriptionGroupConfig `json:"subscriptionGroupTable"`
-
-	DataVersion stgcommon.DataVersion `json:"dataVersion"`
+	SubscriptionGroupTable *subscription.SubscriptionGroupTable
+	DataVersion            stgcommon.DataVersion `json:"dataVersion"`
 
 	configManagerExt *ConfigManagerExt
-	// TODO  Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 }
 
 // NewSubscriptionGroupManager 初始化SubscriptionGroupManager
@@ -31,7 +26,7 @@ type SubscriptionGroupManager struct {
 // Since 2017/8/9
 func NewSubscriptionGroupManager(brokerController *BrokerController) *SubscriptionGroupManager {
 	var subscriptionGroupManager = new(SubscriptionGroupManager)
-	subscriptionGroupManager.SubscriptionGroupTable = sync.NewMap()
+	subscriptionGroupManager.SubscriptionGroupTable = subscription.NewSubscriptionGroupTable()
 	subscriptionGroupManager.BrokerController = brokerController
 	subscriptionGroupManager.configManagerExt = NewConfigManagerExt(subscriptionGroupManager)
 	subscriptionGroupManager.init()
@@ -63,7 +58,7 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 // Author gaoyanlei
 // Since 2017/8/17
 func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
-	subscriptionGroupConfig, _ := sgm.SubscriptionGroupTable.Get(group)
+	subscriptionGroupConfig:= sgm.SubscriptionGroupTable.Get(group)
 	if subscriptionGroupConfig == nil {
 		if sgm.BrokerController.BrokerConfig.AutoCreateSubscriptionGroup {
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
@@ -74,10 +69,7 @@ func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *
 			return subscriptionGroupConfig
 		}
 	}
-	if value, ok := subscriptionGroupConfig.(*subscription.SubscriptionGroupConfig); ok {
-		return value
-	}
-	return nil
+	return subscriptionGroupConfig
 }
 
 func (sgm *SubscriptionGroupManager) Load() bool {
@@ -96,13 +88,7 @@ func (sgm *SubscriptionGroupManager) Encode(prettyFormat bool) string {
 
 func (sgm *SubscriptionGroupManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
-		subscriptionGroupManagernew := new(SubscriptionGroupManager)
-		json.Unmarshal(jsonString, subscriptionGroupManagernew)
-		for _, v := range subscriptionGroupManagernew.SubscriptionGroupConfigs {
-			if b, err := json.Marshal(v); err == nil {
-				sgm.SubscriptionGroupTable.Put(v.GroupName, string(b))
-			}
-		}
+		json.Unmarshal(jsonString, sgm.SubscriptionGroupTable)
 	}
 }
 
