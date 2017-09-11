@@ -1,6 +1,8 @@
 package stgbroker
 
-import "fmt"
+import (
+	"net"
+)
 
 // DefaultConsumerIdsChangeListener ConsumerId列表变化，通知所有Consumer
 // Author gaoyanlei
@@ -21,12 +23,10 @@ func NewDefaultConsumerIdsChangeListener(brokerController *BrokerController) *De
 // ConsumerIdsChanged 通知Consumer改变
 // Author gaoyanlei
 // Since 2017/8/9
-func (listener *DefaultConsumerIdsChangeListener) ConsumerIdsChanged(group string, channels []string) {
+func (listener *DefaultConsumerIdsChangeListener) ConsumerIdsChanged(group string, channels []net.Conn) {
 	if channels != nil && listener.BrokerController.BrokerConfig.NotifyConsumerIdsChangedEnable {
-
-		for index, value := range channels {
-			// TODO Broker主动通知Consumer，Id列表发生变化，
-			fmt.Printf("arr[%d]=%d \n", index, value)
+		for _, conn := range channels {
+			listener.BrokerController.Broker2Client.notifyConsumerIdsChanged(conn, group)
 		}
 	}
 }

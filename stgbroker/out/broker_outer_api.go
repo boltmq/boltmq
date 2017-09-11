@@ -17,9 +17,6 @@ import (
 // @author gaoyanlei
 // @since 2017/8/9
 type BrokerOuterAPI struct {
-	// TODO Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-	// TODO RemotingClient remotingClient;
-
 	topAddressing  *namesrv.TopAddressing
 	remotingClient *remoting.DefalutRemotingClient
 	nameSrvAddr    string
@@ -113,7 +110,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 			result.MasterAddr = responseHeader.MasterAddr
 			result.HaServerAddr = responseHeader.HaServerAddr
 			if response.Body != nil {
-				//result.KvTable(KVTable.decode(response.getBody(), KVTable.class));
+				//TODO result.KvTable(KVTable.decode(response.getBody(), KVTable.class));
 			}
 			return result
 		}
