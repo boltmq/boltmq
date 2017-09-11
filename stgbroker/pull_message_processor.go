@@ -73,15 +73,14 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, reques
 }
 
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
-	responseHeader := &header.PullMessageResponseHeader{}
-	requestHeader := &header.PullMessageRequestHeader{}
+	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
+	responseHeader :=&header.PullMessageResponseHeader{}
 
-	err := request.DecodeCommandCustomHeader(requestHeader)
-	if err != nil {
-		logger.Error(err)
-		return nil, err
+	if pullMessageResponseHeader, ok := response.CustomHeader.(*header.PullMessageResponseHeader); ok {
+		responseHeader = pullMessageResponseHeader
 	}
+
+	requestHeader :=&header.PullMessageRequestHeader{}
 
 	response.Opaque = request.Opaque
 	logger.Debug("receive PullMessage request command, ", request)

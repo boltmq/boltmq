@@ -88,6 +88,7 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 		}
 	})
 }
+
 func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	value := com.Offsets.get(key)
@@ -100,11 +101,11 @@ func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) 
 	}
 	return -1
 }
-func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int, offset int64)  {
+
+func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int, offset int64) {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	com.commitOffset(key, queueId, offset)
 }
-
 
 func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset int64) {
 	value := com.Offsets.get(key)
