@@ -222,7 +222,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, channel chan int) {
+func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, conn net.Conn) {
 
 }
 

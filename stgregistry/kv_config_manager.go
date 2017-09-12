@@ -8,17 +8,18 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 type KVConfigManager struct {
-	ConfigTable   *KVConfigSerializeWrapper
-	ReadWriteLock sync.RWMutex
+	ConfigTable       *KVConfigSerializeWrapper
+	ReadWriteLock     sync.RWMutex
+	// NamesrvController *DefaultNamesrvController // 暂时不需要
 }
 
 // NewKVConfigManager 初始化KV配置管理器
-// // namesrvController *stgregistry.DefaultNamesrvController
+// // NamesrvController *stgregistry.DefaultNamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewKVConfigManager(configTable *KVConfigSerializeWrapper) *KVConfigManager {
+func NewKVConfigManager() *KVConfigManager {
 	kvConfigManager := &KVConfigManager{
-		ConfigTable: configTable,
+		ConfigTable: new(KVConfigSerializeWrapper),
 	}
 	return kvConfigManager
 }
@@ -89,6 +90,6 @@ func (self *KVConfigManager) putKVConfig(namespace, key string) {
 // load 加载kvConfig.json至KVConfigManager的configTable，即持久化转移到内存
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *KVConfigManager) load() {
-
+func (self *KVConfigManager) load() error {
+	return nil
 }
