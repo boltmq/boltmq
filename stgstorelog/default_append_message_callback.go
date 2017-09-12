@@ -42,7 +42,11 @@ func NewDefaultAppendMessageCallback(size int32) *DefaultAppendMessageCallback {
 
 func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedByteBuffer *MappedByteBuffer, maxBlank int32, msg interface{}) *AppendMessageResult {
 	// TODO
-	msgInner := msg.(MessageExtBrokerInner)
+	msgInner, ok := msg.(*MessageExtBrokerInner)
+	if !ok {
+		// TODO
+	}
+
 	wroteOffset := fileFromOffset + int64(mappedByteBuffer.WritePos)
 	msgId, err := message.CreateMessageId(msgInner.StoreHost, wroteOffset)
 	if err != nil {

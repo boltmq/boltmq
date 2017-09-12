@@ -22,12 +22,12 @@ func Test_write_read(t *testing.T) {
 	messageStoreConfig := NewMessageStoreConfig()
 	master := NewDefaultMessageStore(messageStoreConfig, nil)
 
-	loadFlag := master.load()
+	loadFlag := master.Load()
 	if !loadFlag {
 		t.Error("load message store failed")
 	}
 
-	err := master.start()
+	err := master.Start()
 	if err != nil {
 		t.Errorf("start message store failed:%s", err.Error())
 	}
