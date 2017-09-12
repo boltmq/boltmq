@@ -53,9 +53,8 @@ func Test_write_read(t *testing.T) {
 		fmt.Printf("read %d ok \r\n", i)
 	}
 
-	master.shutdown()
-
-	master.destroy()
+	master.Shutdown()
+	master.Destroy()
 
 }
 

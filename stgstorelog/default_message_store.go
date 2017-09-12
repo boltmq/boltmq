@@ -37,7 +37,7 @@ type DefaultMessageStore struct {
 	StoreStatsService        *StoreStatsService        // 运行时数据统计
 	RunningFlags             *RunningFlags             // 运行过程标志位
 	SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
-	Shutdown                 bool                      // 存储服务是否启动
+	ShutdownFlag             bool                      // 存储服务是否启动
 	StoreCheckpoint          *StoreCheckpoint
 	BrokerStatsManager       *stats.BrokerStatsManager
 }
@@ -48,7 +48,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageFilter = nil
 	ms.RunningFlags = nil
 	ms.SystemClock = new(stgcommon.SystemClock)
-	ms.Shutdown = true
+	ms.ShutdownFlag = true
 
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
@@ -94,19 +94,17 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 func (self *DefaultMessageStore) Load() bool {
 	result := true
 
-	lastExitOk := !self.isTempFileExist()
-	msg := "abnormally"
-	if lastExitOk {
-		msg = "normally"
+	if lastExitOk := !self.isTempFileExist(); lastExitOk {
+		logger.Info("last shutdown normally")
+	} else {
+		logger.Info("last shutdown abnormally")
 	}
-
-	logger.Infof("last shutdown %s", msg)
 
 	// load 定时进度
 	// 这个步骤要放置到最前面，从CommitLog里Recover定时消息需要依赖加载的定时级别参数
 	// slave依赖scheduleMessageService做定时消息的恢复
 	if nil != self.ScheduleMessageService {
-		result = result && self.ScheduleMessageService.load()
+		result = result && self.ScheduleMessageService.Load()
 	}
 
 	// load commit log
@@ -114,6 +112,8 @@ func (self *DefaultMessageStore) Load() bool {
 
 	// load consume queue
 	result = result && self.loadConsumeQueue()
+
+	// TODO load 事务模块
 
 	return result
 }
@@ -196,16 +196,25 @@ func (self *DefaultMessageStore) Start() error {
 	go self.CommitLog.Start()
 	go self.StoreStatsService.Start()
 
-	// TODO scheduleMessageService
+	// slave不启动scheduleMessageService避免对消费队列的并发操作
+	if self.ScheduleMessageService != nil && config.SLAVE != self.MessageStoreConfig.BrokerRole {
+		self.ScheduleMessageService.Start()
+	}
+
 	// TODO reputMessageService
-	// TODO transactionStateService
+	if self.ReputMessageService != nil {
+
+	}
+
+	// transactionStateService
+	go self.TransactionStateService.Start()
+
 	// TODO haService
+	go self.HAService.Start()
 
 	self.createTempFile()
-
-	// TODO addScheduleTask
-
-	self.Shutdown = false
+	self.addScheduleTask()
+	self.ShutdownFlag = false
 
 	return nil
 }
@@ -232,20 +241,20 @@ func (self *DefaultMessageStore) createTempFile() error {
 	return nil
 }
 
-func (self *DefaultMessageStore) shutdown() {
-	if !self.Shutdown {
-		self.Shutdown = true
+func (self *DefaultMessageStore) Shutdown() {
+	if !self.ShutdownFlag {
+		self.ShutdownFlag = true
 
 		// TODO
 	}
 }
 
-func (self *DefaultMessageStore) destroy() {
+func (self *DefaultMessageStore) Destroy() {
 	// TODO
 }
 
 func (self *DefaultMessageStore) PutMessage(msg *MessageExtBrokerInner) *PutMessageResult {
-	if self.Shutdown {
+	if self.ShutdownFlag {
 		return &PutMessageResult{PutMessageStatus: SERVICE_NOT_AVAILABLE}
 	}
 
@@ -283,7 +292,7 @@ func (self *DefaultMessageStore) QueryMessage(topic string, key string, maxNum i
 }
 
 func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId int32, offset int64, maxMsgNums int32, subscriptionData *heartbeat.SubscriptionData) *GetMessageResult {
-	if self.Shutdown {
+	if self.ShutdownFlag {
 		logger.Warn("message store has shutdown, so getMessage is forbidden")
 		return nil
 	}
@@ -404,4 +413,8 @@ func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
 func (self *DefaultMessageStore) SlaveFallBehindMuch() int64 {
 	// TODO
 	return 0
+}
+
+func (self *DefaultMessageStore) addScheduleTask() {
+	// TODO
 }

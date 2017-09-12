@@ -8,6 +8,11 @@ func NewScheduleMessageService(defaultMessageStore *DefaultMessageStore) *Schedu
 	return nil
 }
 
-func (self *ScheduleMessageService) load() bool {
+func (self *ScheduleMessageService) Load() bool {
+	// TODO
 	return true
+}
+
+func (self *ScheduleMessageService) Start() {
+	// TODO
 }
