@@ -91,7 +91,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	return ms
 }
 
-func (self *DefaultMessageStore) load() bool {
+func (self *DefaultMessageStore) Load() bool {
 	result := true
 
 	lastExitOk := !self.isTempFileExist()
@@ -191,7 +191,7 @@ func (self *DefaultMessageStore) isTempFileExist() bool {
 	return exist
 }
 
-func (self *DefaultMessageStore) start() error {
+func (self *DefaultMessageStore) Start() error {
 	self.FlushConsumeQueueService.run()
 	go self.CommitLog.start()
 	go self.StoreStatsService.start()
