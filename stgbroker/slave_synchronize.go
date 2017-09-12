@@ -4,7 +4,6 @@ package stgbroker
 // Author gaoyanlei
 // Since 2017/8/10
 type SlaveSynchronize struct {
-	// TODO Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
 	BrokerController *BrokerController
 	masterAddr       string
 }

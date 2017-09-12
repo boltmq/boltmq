@@ -25,15 +25,15 @@ func IsInherited(perm int) bool {
 func Perm2String(perm int) string {
 	str := "---"
 	if IsReadable(perm) {
-		str = "R--"
+		str = "R" + str[1:]
 	}
 
 	if IsWriteable(perm) {
-		str = "-W-"
+		str = str[:1] + "W" + str[2:]
 	}
 
 	if IsInherited(perm) {
-		str = "--X"
+		str = str[:2] + "X"
 	}
 	return str
 }

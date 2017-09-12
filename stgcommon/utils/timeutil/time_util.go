@@ -9,3 +9,10 @@ import "time"
 func NowTimestamp() int64 {
 	return time.Now().UnixNano()
 }
+
+// NowMilliseconds  当前时间毫秒数
+// Author rongzhihong
+// Since 2017/9/5
+func CurrentTimeMillis() int64 {
+	return time.Now().UnixNano() / 1000000
+}

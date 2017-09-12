@@ -8,7 +8,7 @@ type SendMessageContext struct {
 	Topic         string
 	MsgId         string
 	OriginMsgId   string
-	QueueId       int
+	QueueId       int32
 	QueueOffset   int64
 	BrokerAddr    string
 	BornHost      string
