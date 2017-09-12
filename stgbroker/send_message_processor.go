@@ -21,6 +21,8 @@ import (
 type SendMessageProcessor struct {
 	abstractSendMessageProcessor *AbstractSendMessageProcessor
 	BrokerController             *BrokerController
+	sendMessageHookList          []mqtrace.SendMessageHook
+	consumeMessageHookList       []mqtrace.ConsumeMessageHook
 }
 
 func NewSendMessageProcessor(brokerController *BrokerController) *SendMessageProcessor {
@@ -42,9 +44,9 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 	}
 
 	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(conn, requestHeader)
-	// TODO  this.executeSendMessageHookBefore(ctx, request, mqtraceContext)
+	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore( /*ctx, */ request, mqtraceContext)
 	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
-	// TODO this.executeSendMessageHookAfter(response, mqtraceContext);
+	smp.abstractSendMessageProcessor.ExecuteSendMessageHookAfter(response, mqtraceContext)
 	return response, nil
 }
 
@@ -67,7 +69,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 		messageIds := make(map[string]int64)
 		messageIds[requestHeader.OriginMsgId] = requestHeader.Offset
 		context.MessageIds = messageIds
-		// TODO this.executeConsumeMessageHookAfter(context);
+		smp.ExecuteConsumeMessageHookAfter(context)
 	}
 
 	// 确保订阅组存在
@@ -267,6 +269,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	msgInner := new(stgstorelog.MessageExtBrokerInner)
 	msgInner.Topic = requestHeader.Topic
 	msgInner.Body = body
+	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
 	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(topicConfig.TopicFilterType, msgInner.GetTags())
@@ -302,7 +305,6 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 		case stgstorelog.FLUSH_DISK_TIMEOUT:
 			response.Code = commonprotocol.FLUSH_DISK_TIMEOUT
 			sendOK = true
-			break
 		case stgstorelog.FLUSH_SLAVE_TIMEOUT:
 			response.Code = commonprotocol.FLUSH_SLAVE_TIMEOUT
 			sendOK = true
@@ -316,7 +318,6 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 		case stgstorelog.MESSAGE_ILLEGAL:
 			response.Code = commonprotocol.MESSAGE_ILLEGAL
 			response.Remark = "the message is illegal, maybe length not matched."
-			break
 		case stgstorelog.SERVICE_NOT_AVAILABLE:
 			response.Code = commonprotocol.SERVICE_NOT_AVAILABLE
 			response.Remark = "service not available now, maybe disk full, " + smp.diskUtil() + ", maybe your broker machine memory too small."
@@ -341,10 +342,17 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 			DoResponse( // TODO  ctx
 				request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
-				// TODO 	  this.brokerController.getPullRequestHoldService().notifyMessageArriving(
-				// TODO requestHeader.getTopic(), queueIdInt,
-				// TODO 	putMessageResult.getAppendMessageResult().getLogicsOffset() + 1);
+				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
+					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
 			}
+
+			// 消息轨迹：记录发送成功的消息
+			if smp.HasSendMessageHook() {
+				mqtraceContext.MsgId = responseHeader.MsgId
+				mqtraceContext.QueueId = responseHeader.QueueId
+				mqtraceContext.QueueOffset = responseHeader.QueueOffset
+			}
+			return nil
 
 		}
 
@@ -354,6 +362,45 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	}
 
 	return response
+}
+
+// HasSendMessageHook 判断是否存在发送消息回调
+// Author rongzhihong
+// Since 2017/9/5
+func (smp *SendMessageProcessor) HasSendMessageHook() bool {
+	return smp.sendMessageHookList != nil && len(smp.sendMessageHookList) > 0
+}
+
+// RegisterSendMessageHook 注册赋值发送消息回调
+// Author rongzhihong
+// Since 2017/9/5
+func (smp *SendMessageProcessor) RegisterSendMessageHook(sendMessageHookList []mqtrace.SendMessageHook) {
+	smp.sendMessageHookList = sendMessageHookList
+}
+
+// HasConsumeMessageHook 判断是否存在消费消息回调
+// Author rongzhihong
+// Since 2017/9/5
+func (smp *SendMessageProcessor) HasConsumeMessageHook() bool {
+	return smp.consumeMessageHookList != nil && len(smp.consumeMessageHookList) > 0
+}
+
+// RegisterSendMessageHook 注册赋值消费消息回调
+// Author rongzhihong
+// Since 2017/9/5
+func (smp *SendMessageProcessor) RegisterConsumeMessageHook(consumeMessageHookList []mqtrace.ConsumeMessageHook) {
+	smp.consumeMessageHookList = consumeMessageHookList
+}
+
+// ExecuteConsumeMessageHookAfter 消费消息后执行回调
+// Author rongzhihong
+// Since 2017/9/5
+func (smp *SendMessageProcessor) ExecuteConsumeMessageHookAfter(context *mqtrace.ConsumeMessageContext) {
+	if smp.HasConsumeMessageHook() {
+		for _, hook := range smp.consumeMessageHookList {
+			hook.ConsumeMessageAfter(context)
+		}
+	}
 }
 
 func (smp *SendMessageProcessor) diskUtil() string {

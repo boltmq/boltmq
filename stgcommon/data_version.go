@@ -1,7 +1,9 @@
 package stgcommon
 
 import (
+	"encoding/json"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"sync/atomic"
 	"time"
 )
@@ -31,4 +33,16 @@ func (self *DataVersion) NextVersion() {
 func (self *DataVersion) ToString() string {
 	info := fmt.Sprintf("dataVersion[timestatmp=%d, counter=%d]", self.Timestatmp, self.Counter)
 	return info
+}
+
+// ToJson DataVersion转json字符串
+// Author rongzhihong
+// Since 2017/9/8
+func (self *DataVersion) ToJson() string {
+	byteArray, err := json.Marshal(self)
+	if err != nil {
+		logger.Error(err)
+		return ""
+	}
+	return string(byteArray)
 }

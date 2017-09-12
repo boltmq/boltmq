@@ -54,7 +54,7 @@ func (tcm *TopicConfigManager) init() {
 			tcm.SystemTopicList = mapset.NewSet()
 			tcm.SystemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = tcm.BrokerController.BrokerConfig.DefaultTopicQueueNums
-			topicConfig.WriteQueueNums = 1
+			topicConfig.WriteQueueNums = tcm.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.Perm = constant.PERM_INHERIT | constant.PERM_READ | constant.PERM_WRITE
 			tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 		}
@@ -143,7 +143,7 @@ func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicC
 func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
 	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
-	defer tcm.lockTopicConfigTable.Lock()
+	defer tcm.lockTopicConfigTable.Unlock()
 	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	// 是否新创建topic
 	createNew := false
@@ -176,10 +176,12 @@ func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 			}
 			perm := defaultTopicConfig.Perm
 			perm &= 0xFFFFFFFF ^ constant.PERM_INHERIT
-			topicConfig.WriteQueueNums = queueNums
-			topicConfig.ReadQueueNums = queueNums
-			topicConfig.TopicSysFlag = topicSysFlag
-			topicConfig.TopicFilterType = defaultTopicConfig.TopicFilterType
+			topicConfig = &stgcommon.TopicConfig{
+				WriteQueueNums:  queueNums,
+				ReadQueueNums:   queueNums,
+				TopicSysFlag:    topicSysFlag,
+				TopicFilterType: defaultTopicConfig.TopicFilterType,
+			}
 
 		} else {
 			return nil, errors.New("No permissions to create topic")
@@ -192,12 +194,12 @@ func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topic, topicConfig)
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 		createNew = true
-		// TODO this.persist();
+		tcm.configManagerExt.Persist()
 	}
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
-		// TODO  this.brokerController.registerBrokerAll(false, true);
+		tcm.BrokerController.RegisterBrokerAll(false, true)
 	}
 	return
 }
@@ -230,7 +232,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
-		// TODO  this.brokerController.registerBrokerAll(false, true);
+		tcm.BrokerController.RegisterBrokerAll(false, true)
 	}
 	return
 }

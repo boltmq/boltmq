@@ -17,9 +17,6 @@ import (
 // @author gaoyanlei
 // @since 2017/8/9
 type BrokerOuterAPI struct {
-	// TODO Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-	// TODO RemotingClient remotingClient;
-
 	topAddressing  *namesrv.TopAddressing
 	remotingClient *remoting.DefalutRemotingClient
 	nameSrvAddr    string
@@ -68,8 +65,8 @@ func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	addrs := self.topAddressing.FetchNSAddr()
 	if addrs != "" {
-		if strings.EqualFold(addrs, self.nameSrvAddr) {
-			logger.Info("k")
+		if !strings.EqualFold(addrs, self.nameSrvAddr) {
+			logger.Info("name server address changed, old: " + self.nameSrvAddr + " new: " + addrs)
 			self.UpdateNameServerAddressList(addrs)
 			self.nameSrvAddr = addrs
 			return self.nameSrvAddr
@@ -113,7 +110,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 			result.MasterAddr = responseHeader.MasterAddr
 			result.HaServerAddr = responseHeader.HaServerAddr
 			if response.Body != nil {
-				//result.KvTable(KVTable.decode(response.getBody(), KVTable.class));
+				//TODO result.KvTable(KVTable.decode(response.getBody(), KVTable.class));
 			}
 			return result
 		}

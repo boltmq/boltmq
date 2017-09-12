@@ -88,6 +88,7 @@ func CreateBrokerController() *BrokerController {
 
 	// 初始化日志
 	controller := NewBrokerController(*brokerConfig)
+	controller.ConfigFile = brokerConfigPath
 
 	// 初始化controller
 	initResult := controller.Initialize()

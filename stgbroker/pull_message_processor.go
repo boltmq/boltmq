@@ -1,8 +1,6 @@
 package stgbroker
 
 import (
-	"container/list"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
@@ -14,21 +12,20 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/topic"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"net"
 	"strconv"
-	"time"
 )
 
 // PullMessageProcessor 拉消息请求处理
 // Author gaoyanlei
 // Since 2017/8/10
 type PullMessageProcessor struct {
-	// TODO Logger log = LoggerFactory.getLogger(LoggerName.BrokerLoggerName);
-
 	BrokerController       *BrokerController
-	ConsumeMessageHookList list.List
+	ConsumeMessageHookList []mqtrace.ConsumeMessageHook
 }
 
 // NewPullMessageProcessor 初始化PullMessageProcessor
@@ -45,12 +42,14 @@ func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, req
 	return pull.processRequest(request, conn, true)
 }
 
-func (pull *PullMessageProcessor) ExcuteRequestWhenWakeup( /*addr string, conn net.Conn, */ request *protocol.RemotingCommand) {
-	run := func() {
-		// TODO response, err := pull.processRequest(request, conn, false)
-		response, err := pull.processRequest(request, nil, false)
+// ExecuteRequestWhenWakeup  唤醒拉取消息的请求
+// Author rongzhihong
+// Since 2017/9/5
+func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, request *protocol.RemotingCommand) {
+	go func() {
+		response, err := pull.processRequest(request, conn, false)
 		if err != nil {
-			logger.Error("excuteRequestWhenWakeup run", err)
+			logger.Error("ExecuteRequestWhenWakeup run", err)
 			return
 		}
 
@@ -70,21 +69,18 @@ func (pull *PullMessageProcessor) ExcuteRequestWhenWakeup( /*addr string, conn n
 						}
 					});*/
 		}
-	}
-	fmt.Println(run)
-	// TODO: pull.BrokerController.PullMessageExecutor.submit(run)
+	}()
 }
 
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
-	responseHeader := &header.PullMessageResponseHeader{}
-	requestHeader := &header.PullMessageRequestHeader{}
+	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
+	responseHeader :=&header.PullMessageResponseHeader{}
 
-	err := request.DecodeCommandCustomHeader(requestHeader)
-	if err != nil {
-		logger.Error(err)
-		return nil, err
+	if pullMessageResponseHeader, ok := response.CustomHeader.(*header.PullMessageResponseHeader); ok {
+		responseHeader = pullMessageResponseHeader
 	}
+
+	requestHeader :=&header.PullMessageRequestHeader{}
 
 	response.Opaque = request.Opaque
 	logger.Debug("receive PullMessage request command, ", request)
@@ -217,7 +213,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			// 消息轨迹：记录客户端拉取的消息记录（不表示消费成功）
 			if pull.hasConsumeMessageHook() {
 				// 执行hook
-				context := mqtrace.ConsumeMessageContext{}
+				context := new(mqtrace.ConsumeMessageContext)
 				context.ConsumerGroup = requestHeader.ConsumerGroup
 				context.Topic = requestHeader.Topic
 				context.ClientHost = conn.LocalAddr().String()
@@ -229,7 +225,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				messageIds := make(map[string]int64)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
-				// TODO this.executeConsumeMessageHookBefore(context);
+				pull.ExecuteConsumeMessageHookBefore(context)
 			}
 		case stgstorelog.MESSAGE_WAS_REMOVING:
 			response.Code = commonprotocol.PULL_RETRY_IMMEDIATELY
@@ -294,8 +290,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				}
 
 				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
-				suspendTimestamp := time.Now().UnixNano() / 1000000
-				pullRequest := longpolling.NewPullRequest(request, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
+				suspendTimestamp := timeutil.CurrentTimeMillis()
+				pullRequest := longpolling.NewPullRequest(request, conn, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil
 			}
@@ -340,9 +336,29 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 }
 
 func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
-	return pull.ConsumeMessageHookList.Len() > 0
+	return pull.ConsumeMessageHookList != nil && len(pull.ConsumeMessageHookList) > 0
 }
 
 func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMovedEvent) {
 	// TODO
+}
+
+// ConsumeMessageHook 消费消息回调
+// Author rongzhihong
+// Since 2017/9/11
+func (pull *PullMessageProcessor) RegisterConsumeMessageHook(consumeMessageHookList []mqtrace.ConsumeMessageHook) {
+	pull.ConsumeMessageHookList = consumeMessageHookList
+}
+
+// ExecuteConsumeMessageHookBefore 消费消息前，执行回调
+// Author rongzhihong
+// Since 2017/9/11
+func (pull *PullMessageProcessor) ExecuteConsumeMessageHookBefore(context *mqtrace.ConsumeMessageContext) {
+	defer utils.RecoveredFn()
+
+	if pull.hasConsumeMessageHook() {
+		for _, hook := range pull.ConsumeMessageHookList {
+			hook.ConsumeMessageBefore(context)
+		}
+	}
 }
