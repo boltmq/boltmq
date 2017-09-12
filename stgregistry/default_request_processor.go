@@ -117,7 +117,56 @@ func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *prot
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	return nil, nil
+	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
+	err := response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
+	err = request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		return nil, err
+	}
+
+	var registerBrokerBody body.RegisterBrokerBody
+	if request.Body != nil && len(request.Body) > 0 {
+		err = registerBrokerBody.CustomDecode(request.Body, &registerBrokerBody)
+		if err != nil {
+			fmt.Printf("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
+			return nil, err
+		}
+	} else {
+		dataVersion := stgcommon.NewDataVersion()
+		dataVersion.Timestatmp = 0
+		registerBrokerBody.TopicConfigSerializeWrapper = new(body.TopicConfigSerializeWrapper)
+		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
+	}
+
+	registerBrokerResult := self.namesrvController.RouteInfoManager.registerBroker(
+		requestHeader.ClusterName,                      // 1
+		requestHeader.BrokerAddr,                       // 2
+		requestHeader.BrokerName,                       // 3
+		requestHeader.BrokerId,                         // 4
+		requestHeader.HaServerAddr,                     // 5
+		registerBrokerBody.TopicConfigSerializeWrapper, // 6
+		registerBrokerBody.FilterServerList,            // 7
+		conn, // 8
+	)
+
+	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
+	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+
+	// 获取顺序消息 topic 列表
+	jsonValue := self.namesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	response.Body = jsonValue
+	response.Code = code.SUCCESS
+	response.Remark = ""
+
+	return response, nil
 }
 
 // getKVListByNamespace 获取指定Namespace所有的KV配置列表
@@ -258,9 +307,9 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 		return nil, err
 	}
 
-	var topicConfigWrapper body.TopicConfigSerializeWrapper
+	topicConfigWrapper := new(body.TopicConfigSerializeWrapper)
 	if request.Body != nil && len(request.Body) > 0 {
-		err = topicConfigWrapper.CustomDecode(request.Body, &topicConfigWrapper)
+		err = topicConfigWrapper.CustomDecode(request.Body, topicConfigWrapper)
 		if err != nil {
 			fmt.Printf("topicConfigWrapper.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
 			return nil, err
