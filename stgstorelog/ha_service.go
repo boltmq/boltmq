@@ -5,5 +5,10 @@ type HAService struct {
 }
 
 func NewHAService(defaultMessageStore *DefaultMessageStore) *HAService {
-	return nil
+	// TODO
+	return &HAService{}
+}
+
+func (self *HAService) Start() {
+	// TODO
 }

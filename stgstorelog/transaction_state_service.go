@@ -10,3 +10,7 @@ func NewTransactionStateService(defaultMessageStore *DefaultMessageStore) *Trans
 
 	return tss
 }
+
+func (self *TransactionStateService) Start() {
+	// TODO
+}
