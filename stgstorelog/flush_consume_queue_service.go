@@ -4,6 +4,6 @@ type FlushConsumeQueueService struct {
 	// TODO
 }
 
-func (self *FlushConsumeQueueService) run() {
+func (self *FlushConsumeQueueService) Start() {
 	
 }

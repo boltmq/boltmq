@@ -28,7 +28,7 @@ type ConsumeQueue struct {
 }
 
 func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSize int64, defaultMessageStore *DefaultMessageStore) *ConsumeQueue {
-	consumeQueue := &ConsumeQueue{}
+	consumeQueue := new(ConsumeQueue)
 	consumeQueue.storePath = storePath
 	consumeQueue.mapedFileSize = mapedFileSize
 	consumeQueue.defaultMessageStore = defaultMessageStore

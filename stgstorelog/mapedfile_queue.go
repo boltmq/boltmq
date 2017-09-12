@@ -201,8 +201,8 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 		createOffset = startOffset - (startOffset % int64(self.mapedFileSize))
 	} else {
 		// 如果mapedFile不为空，则获取list的最后一个文件
-		mapedFileLastObj := (self.mapedFiles.Back().Value).(MapedFile)
-		mapedFileLast = &mapedFileLastObj
+		mapedFileLastObj := (self.mapedFiles.Back().Value).(*MapedFile)
+		mapedFileLast = mapedFileLastObj
 	}
 	self.rwLock.RUnlock()
 	if mapedFileLast != nil && mapedFileLast.isFull() {
@@ -243,15 +243,23 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 func (self *MapedFileQueue) getMinOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
-	mappedfile := self.mapedFiles.Front().Value.(MapedFile)
-	return mappedfile.fileFromOffset
+	if self.mapedFiles.Len() > 0 {
+		mappedfile := self.mapedFiles.Front().Value.(MapedFile)
+		return mappedfile.fileFromOffset
+	}
+
+	return -1
 }
 
 func (self *MapedFileQueue) getMaxOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
-	mappedfile := self.mapedFiles.Back().Value.(MapedFile)
-	return mappedfile.fileFromOffset
+	if self.mapedFiles.Len() > 0 {
+		mappedfile := self.mapedFiles.Back().Value.(MapedFile)
+		return mappedfile.fileFromOffset
+	}
+
+	return 0
 }
 
 // deleteLastMapedFile 恢复时调用
