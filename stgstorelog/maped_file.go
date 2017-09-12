@@ -56,7 +56,7 @@ type MapedFile struct {
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
 func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
-	mapedFile := &MapedFile{}
+	mapedFile := new(MapedFile)
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
 
@@ -248,27 +248,4 @@ func ensureDirOK(dirName string) error {
 	}
 
 	return nil
-}
-
-// AppendMessageWithCache 将消息添加到内存中
-// Return: AppendMessageResult
-// Author: zhoufei@gome.com.cn
-// Since: 2017/9/12
-func (self *MapedFile) AppendMessageWithCache(msg interface{}, appendMessageCallback AppendMessageCallback) *AppendMessageResult {
-	if msg == nil {
-		panic(errors.New("AppendMessage nil msg error!!!"))
-	}
-
-	curPos := atomic.LoadInt64(&self.wrotePostion)
-	// 表示还有剩余空间
-	if curPos < self.fileSize {
-		result := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, int32(self.fileSize)-int32(curPos), msg)
-		atomic.AddInt64(&self.wrotePostion, int64(result.WroteBytes))
-		self.storeTimestamp = result.StoreTimestamp
-		return result
-	}
-
-	// TODO: 上层应用应该保证不会走到这里???
-	logger.Errorf("MapedFile.appendMessage return null, wrotePostion:%d fileSize:%d", curPos, self.fileSize)
-	return &AppendMessageResult{Status: APPENDMESSAGE_UNKNOWN_ERROR}
 }

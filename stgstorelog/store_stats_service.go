@@ -4,6 +4,6 @@ type StoreStatsService struct {
 	// TODO
 }
 
-func (self *StoreStatsService) start() {
+func (self *StoreStatsService) Start() {
 	// TODO
 }

@@ -110,7 +110,7 @@ func (self *DefaultMessageStore) Load() bool {
 	}
 
 	// load commit log
-	result = result && self.CommitLog.load()
+	result = result && self.CommitLog.Load()
 
 	// load consume queue
 	result = result && self.loadConsumeQueue()
@@ -192,9 +192,9 @@ func (self *DefaultMessageStore) isTempFileExist() bool {
 }
 
 func (self *DefaultMessageStore) Start() error {
-	self.FlushConsumeQueueService.run()
-	go self.CommitLog.start()
-	go self.StoreStatsService.start()
+	go self.FlushConsumeQueueService.Start()
+	go self.CommitLog.Start()
+	go self.StoreStatsService.Start()
 
 	// TODO scheduleMessageService
 	// TODO reputMessageService
@@ -355,6 +355,7 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 		// TODO
 	}
 
+	var consumeQueueConMap *concurrent.ConcurrentMap
 	if consumeQueueMap == nil {
 		newMap := concurrent.NewConcurrentMap(128)
 		oldMap, err := self.ConsumeQueueTable.PutIfAbsent(topic, newMap)
@@ -363,18 +364,20 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 		}
 
 		if oldMap != nil {
-			consumeQueueMap = oldMap
+			consumeQueueConMap = oldMap.(*concurrent.ConcurrentMap)
 		} else {
-			consumeQueueMap = newMap
+			consumeQueueConMap = newMap
 		}
-
+	} else {
+		consumeQueueConMap = consumeQueueMap.(*concurrent.ConcurrentMap)
 	}
 
-	consumeQueueConMap := consumeQueueMap.(*concurrent.ConcurrentMap)
 	logic, err := consumeQueueConMap.Get(queueId)
 	if err != nil {
 		// TODO
 	}
+
+	var logicCQ *ConsumeQueue
 
 	if logic == nil {
 		storePathRootDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
@@ -385,15 +388,11 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 		}
 
 		if oldLogic != nil {
-			logic = oldLogic
+			logicCQ = oldLogic.(*ConsumeQueue)
 		} else {
-			logic = newLogic
+			logicCQ = newLogic
 		}
 	}
 
-	if logic != nil {
-		return logic.(*ConsumeQueue)
-	}
-
-	return nil
+	return logicCQ
 }

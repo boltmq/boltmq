@@ -35,13 +35,13 @@ func NewCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
 		commitLog.FlushCommitLogService = new(FlushRealTimeService)
 	}
 
-	commitLog.AppendMessageCallback = NewDefaultAppendMessageCallback(defaultMessageStore.MessageStoreConfig.MaxMessageSize)
 	commitLog.TopicQueueTable = make(map[string]int64, 1024)
+	commitLog.AppendMessageCallback = NewDefaultAppendMessageCallback(defaultMessageStore.MessageStoreConfig.MaxMessageSize, commitLog)
 
 	return commitLog
 }
 
-func (self *CommitLog) load() bool {
+func (self *CommitLog) Load() bool {
 	result := self.MapedFileQueue.load()
 
 	if result {
@@ -53,7 +53,7 @@ func (self *CommitLog) load() bool {
 	return result
 }
 
-func (self *CommitLog) start() {
+func (self *CommitLog) Start() {
 	// TODO
 }
 
@@ -87,8 +87,15 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 	switch result.Status {
 	case APPENDMESSAGE_PUT_OK:
 		break
-
+		// TODO
 	}
 
-	return nil
+	// TODO DispatchRequest
+	self.mutex.Unlock()
+
+	putMessageResult := &PutMessageResult{PutMessageStatus: PUTMESSAGE_PUT_OK, AppendMessageResult: result}
+
+	// TODO
+
+	return putMessageResult
 }

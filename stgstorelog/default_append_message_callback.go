@@ -32,10 +32,12 @@ type DefaultAppendMessageCallback struct {
 	commitLog          *CommitLog
 }
 
-func NewDefaultAppendMessageCallback(size int32) *DefaultAppendMessageCallback {
+func NewDefaultAppendMessageCallback(size int32, commitLog *CommitLog) *DefaultAppendMessageCallback {
 	callBack := &DefaultAppendMessageCallback{}
 	callBack.msgIdMemory = NewMappedByteBuffer(make([]byte, message.MSG_ID_LENGTH))
 	callBack.msgStoreItemMemory = NewMappedByteBuffer(make([]byte, size+END_FILE_MIN_BLANK_LENGTH))
+	callBack.maxMessageSize = size
+	callBack.commitLog = commitLog
 
 	return callBack
 }
@@ -137,7 +139,7 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 	result := &AppendMessageResult{
 		Status:         APPENDMESSAGE_PUT_OK,
 		WroteOffset:    wroteOffset,
-		WroteBytes:     int(maxBlank),
+		WroteBytes:     int(msgLen),
 		MsgId:          msgId,
 		StoreTimestamp: msgInner.StoreTimestamp,
 		LogicsOffset:   queryOffset}
