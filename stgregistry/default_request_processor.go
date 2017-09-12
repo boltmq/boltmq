@@ -12,7 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgnet/remotingHelper"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"net"
 	"strings"
 )
@@ -21,25 +21,24 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type DefaultRequestProcessor struct {
-	namesrvController *DefaultNamesrvController
+	NamesrvController *DefaultNamesrvController
 }
 
 // NewDefaultRequestProcessor 初始化NameServer网络请求处理
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewDefaultRequestProcessor(namesrvControl *DefaultNamesrvController) *DefaultRequestProcessor {
+func NewDefaultRequestProcessor(namesrvController *DefaultNamesrvController) remoting.RequestProcessor {
 	requestProcessor := &DefaultRequestProcessor{
-		namesrvController: namesrvControl,
+		NamesrvController: namesrvController,
 	}
-
 	return requestProcessor
 }
 
-// processRequest 默认请求处理器
+// ProcessRequest 默认请求处理器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) processRequest(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	remoteAddr := remotingHelper.ParseChannelRemoteAddr(conn)
+func (self *DefaultRequestProcessor) ProcessRequest(remoteAddr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	//remoteAddr := remotingHelper.ParseChannelRemoteAddr(conn)
 	format := "receive request. code=%d, remoteAddr=%s, content=%s"
 	logger.Info(format, request.Code, remoteAddr, request.ToString())
 
@@ -146,7 +145,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
 	}
 
-	registerBrokerResult := self.namesrvController.RouteInfoManager.registerBroker(
+	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(
 		requestHeader.ClusterName,                      // 1
 		requestHeader.BrokerAddr,                       // 2
 		requestHeader.BrokerName,                       // 3
@@ -161,7 +160,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	jsonValue := self.namesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	jsonValue := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
 	response.Body = jsonValue
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -173,6 +172,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVListByNamespace(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+
 	return nil, nil
 }
 
@@ -218,9 +218,9 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request 
 	}
 
 	topic := requestHeader.Topic
-	topicRouteData := self.namesrvController.RouteInfoManager.pickupTopicRouteData(topic)
+	topicRouteData := self.NamesrvController.RouteInfoManager.pickupTopicRouteData(topic)
 	if topicRouteData != nil {
-		orderTopicConf := self.namesrvController.KvConfigManager.getKVConfig(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
+		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
 		topicRouteData.OrderTopicConf = orderTopicConf
 
 		var content []byte
@@ -268,7 +268,7 @@ func (self *DefaultRequestProcessor) getKVConfig(conn net.Conn, request *protoco
 		return nil, err
 	}
 
-	value := self.namesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
+	value := self.NamesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
 	if strings.TrimSpace(value) != "" {
 		responseHeader.Value = strings.TrimSpace(value)
 		response.Code = code.SUCCESS
@@ -320,7 +320,7 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 		topicConfigWrapper.DataVersion = dataVersion
 	}
 
-	registerBrokerResult := self.namesrvController.RouteInfoManager.registerBroker(
+	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(
 		requestHeader.ClusterName,
 		requestHeader.BrokerAddr,
 		requestHeader.BrokerName,
@@ -335,7 +335,7 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	jsonValue := self.namesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	jsonValue := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
 	response.Body = jsonValue
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -359,7 +359,7 @@ func (self *DefaultRequestProcessor) unRegisterBroker(conn net.Conn, request *pr
 	brokerAddr := requestHeader.BrokerAddr
 	brokerName := requestHeader.BrokerName
 	brokerId := int64(requestHeader.BrokerId)
-	self.namesrvController.RouteInfoManager.unRegisterBroker(clusterName, brokerAddr, brokerName, brokerId)
+	self.NamesrvController.RouteInfoManager.unRegisterBroker(clusterName, brokerAddr, brokerName, brokerId)
 
 	response.Code = code.SUCCESS
 	response.Remark = ""

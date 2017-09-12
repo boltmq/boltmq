@@ -30,7 +30,19 @@ type DefaultNamesrvConfig struct {
 // NewDefaultNamesrvConfig 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
-func NewDefaultNamesrvConfig() NamesrvConfig {
+func NewDefaultNamesrvConfig() *DefaultNamesrvConfig {
+	namesrvConfig := &DefaultNamesrvConfig{
+		smartgoHome:  getSmartGoHome(),
+		kvConfigPath: getKvConfigPath(),
+	}
+
+	return namesrvConfig
+}
+
+// NewNamesrvConfig 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
+func NewNamesrvConfig() NamesrvConfig {
 	namesrvConfig := &DefaultNamesrvConfig{
 		smartgoHome:  getSmartGoHome(),
 		kvConfigPath: getKvConfigPath(),
