@@ -396,3 +396,12 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 
 	return logicCQ
 }
+
+func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
+	// TODO
+}
+
+func (self *DefaultMessageStore) SlaveFallBehindMuch() int64 {
+	// TODO
+	return 0
+}
