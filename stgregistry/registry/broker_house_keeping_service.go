@@ -14,7 +14,6 @@ import (
 // Since: 2017/9/6
 type BrokerHousekeepingService struct {
 	NamesrvController *DefaultNamesrvController
-	//RemotingServer    *remoting.DefalutRemotingServer
 }
 
 // NewBrokerHousekeepingService 初始化Broker活动检测服务
