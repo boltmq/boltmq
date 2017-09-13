@@ -1,6 +1,7 @@
 package namesrv
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"os"
 	"path/filepath"
@@ -8,7 +9,8 @@ import (
 )
 
 const (
-	separator = string(os.PathSeparator)
+	separator               = string(os.PathSeparator)
+	smartgoKVConfigFileName = "smartgoKVConfig.toml"
 )
 
 // NamesrvConfig namesrv配置项
@@ -27,25 +29,13 @@ type DefaultNamesrvConfig struct {
 	kvConfigPath string `json:"kvConfigPath"`
 }
 
-// NewDefaultNamesrvConfig 初始化
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/8
-func NewDefaultNamesrvConfig() *DefaultNamesrvConfig {
-	namesrvConfig := &DefaultNamesrvConfig{
-		smartgoHome:  getSmartGoHome(),
-		kvConfigPath: getKvConfigPath(),
-	}
-
-	return namesrvConfig
-}
-
 // NewNamesrvConfig 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 func NewNamesrvConfig() NamesrvConfig {
 	namesrvConfig := &DefaultNamesrvConfig{
 		smartgoHome:  getSmartGoHome(),
-		kvConfigPath: getKvConfigPath(),
+		kvConfigPath: GetKvConfigPath(),
 	}
 
 	return namesrvConfig
@@ -62,14 +52,38 @@ func getSmartGoHome() string {
 	return smartGoHome
 }
 
-// getKvConfigPath 获得KV配置文件路径
+// GetKvConfigPath 获得KV配置文件路径
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
-func getKvConfigPath() string {
-	workDir, _ := os.Getwd()
-	format := workDir + separator + "stgregistry" + separator + "kvConfig.json"
+func GetKvConfigPath() string {
+	// 获取程序运行路径
+	workDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	format := workDir + separator + smartgoKVConfigFileName
 	kvConfigPath := filepath.ToSlash(format) // 将workDir中平台相关的路径分隔符转换为'/'
+	if exists, _ := validateExists(kvConfigPath); !exists {
+		// 特别标注，配合IDE开发
+		// workDirPath, _ := os.Getwd()
+		kvConfigPath = "../../conf/" + string(smartgoKVConfigFileName)
+		fmt.Printf("ide.kvConfigPath=%s\n", kvConfigPath)
+		return kvConfigPath
+	}
+
+	fmt.Printf("namesrvConfig.kvConfigPath=%s\n", kvConfigPath)
 	return kvConfigPath
+}
+
+// validateExists 校验文件或文件夹是否存在
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/13
+func validateExists(fileFullPath string) (bool, error) {
+	_, err := os.Stat(fileFullPath)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 // GetSmartGoHome 对外提供方法

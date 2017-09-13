@@ -1,6 +1,7 @@
 package stgregistry
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
@@ -18,15 +19,15 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type DefaultNamesrvController struct {
-	NamesrvConfig             namesrv.NamesrvConfig
-	RemotingServer            *remoting.DefalutRemotingServer
-	RouteInfoManager          *RouteInfoManager
-	KvConfigManager           *KVConfigManager
-	BrokerHousekeepingService *BrokerHousekeepingService
-	scanBrokerTicker          *timeutil.Ticker // 扫描2分钟不活跃broker的定时器
-	printNamesrvTicker        *timeutil.Ticker // 周期性打印namesrv数据的定时器
-	RemotingExecutor          []net.Conn       //对应java代码的remotingExecutor
-	RequestProcessor          remoting.RequestProcessor
+	NamesrvConfig             namesrv.NamesrvConfig           // namesrv配置项
+	RemotingServer            *remoting.DefalutRemotingServer // 远程请求server端
+	RouteInfoManager          *RouteInfoManager               // topic路由管理器
+	KvConfigManager           *KVConfigManager                // kv管理器
+	BrokerHousekeepingService client.ChannelEventListener     // 扫描不活跃broker
+	scanBrokerTicker          *timeutil.Ticker                // 扫描2分钟不活跃broker的定时器
+	printNamesrvTicker        *timeutil.Ticker                // 周期性打印namesrv数据的定时器
+	RemotingExecutor          []net.Conn                      //对应java代码的remotingExecutor
+	RequestProcessor          remoting.RequestProcessor       // 默认请求处理器
 }
 
 // NewNamesrvController 初始化默认的NamesrvController
@@ -79,8 +80,8 @@ func (self *DefaultNamesrvController) initialize() bool {
 
 	// this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService)
 	// (2)将namesrv作为一个netty server启动，即初始化通信层
-	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
-	self.BrokerHousekeepingService.RemotingServer = remotingServer
+	//remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
+	//self.BrokerHousekeepingService.RemotingServer = remotingServer
 
 	// (3)启动服务端请求的handle处理线程池
 	// this.remotingExecutor = Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));

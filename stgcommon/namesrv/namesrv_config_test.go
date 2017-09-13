@@ -6,7 +6,7 @@ import (
 )
 
 func TestNamesrvConfig(t *testing.T) {
-	namesrvConfig := NewDefaultNamesrvConfig()
+	namesrvConfig := NewNamesrvConfig()
 
 	smartGoHome := namesrvConfig.GetSmartGoHome()
 	fmt.Printf("smartGoHome = %s\n", smartGoHome)
