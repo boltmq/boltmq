@@ -222,7 +222,111 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, conn net.Conn) {
+func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, conn net.Conn) {
+
+	// 加读锁，寻找断开连接的Broker
+	queryBroker := false
+	brokerAddrFound := ""
+	if conn != nil {
+		this.ReadWriteLock.RLock()
+		for k, v := range this.BrokerLiveTable {
+			if v != nil && v.Conn == conn {
+				brokerAddrFound = k
+				queryBroker = true
+			}
+		}
+		this.ReadWriteLock.RUnlock()
+	}
+
+	if !queryBroker {
+		brokerAddrFound = remoteAddr
+	} else {
+		logger.Info("the broker's channel destroyed, %s, clean it's data structure at once", brokerAddrFound)
+	}
+
+	// 加写锁，删除相关数据结构
+	if queryBroker && len(brokerAddrFound) > 0 {
+		this.ReadWriteLock.Lock()
+		// 1 清理brokerLiveTable
+		delete(this.BrokerLiveTable, brokerAddrFound)
+
+		// 2 清理FilterServer
+		delete(this.FilterServerTable, brokerAddrFound)
+
+		// 3 清理brokerAddrTable
+		brokerNameFound := ""
+		removeBrokerName := false
+		for bn, brokerData := range this.BrokerAddrTable {
+			if brokerNameFound == "" {
+				if brokerData != nil {
+
+					// 3.1 遍历Master/Slave，删除brokerAddr
+					if brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
+						brokerAddrs := brokerData.BrokerAddrs
+						for brokerId, brokerAddr := range brokerAddrs {
+							if brokerAddr == brokerAddrFound {
+								brokerNameFound = brokerData.BrokerName
+								delete(brokerAddrs, brokerId)
+								removeMsg := "remove brokerAddr[%d, %s, %s] from brokerAddrTable, because channel destroyed"
+								logger.Info(removeMsg, brokerId, brokerAddr, brokerData.BrokerName)
+								break
+							}
+						}
+					}
+
+					// 3.2 BrokerName无关联BrokerAddr
+					if len(brokerData.BrokerAddrs) == 0 {
+						removeBrokerName = true
+						delete(this.BrokerAddrTable, bn)
+						removeMsg := "remove brokerAddr[%s] from brokerAddrTable, because channel destroyed"
+						logger.Info(removeMsg, brokerData.BrokerName)
+					}
+				}
+			}
+		}
+
+		// 4 清理clusterAddrTable
+		if brokerNameFound != "" && removeBrokerName {
+			for clusterName, brokerNames := range this.ClusterAddrTable {
+				if brokerNames.Cardinality() > 0 && brokerNames.Contains(brokerNameFound) {
+					brokerNames.Remove(brokerNameFound)
+					removeMsg := "remove brokerName[%s], clusterName[%s] from clusterAddrTable, because channel destroyed"
+					logger.Info(removeMsg, brokerNameFound, clusterName)
+
+					// 如果集群对应的所有broker都下线了， 则集群也删除掉
+					if brokerNames.Cardinality() == 0 {
+						msgEmpty := "remove the clusterName[%s] from clusterAddrTable, because channel destroyed and no broker in this cluster"
+						logger.Info(msgEmpty, clusterName)
+						delete(this.ClusterAddrTable, clusterName)
+					}
+					break
+				}
+			}
+
+		}
+
+		// 5 清理topicQueueTable
+		if removeBrokerName {
+			for topic, queueDataList := range this.TopicQueueTable {
+				if queueDataList != nil {
+					for _, queueData := range queueDataList {
+						if queueData.BrokerName == brokerAddrFound {
+
+							//TODO:delete(this.TopicQueueTable, index)
+							removeMsg := "remove topic[%s %s], from topicQueueTable, because channel destroyed"
+							logger.Info(removeMsg, topic, queueData.ToString())
+						}
+					}
+					if len(queueDataList) == 0 {
+						delete(this.TopicQueueTable, topic)
+						removeMsg := "remove topic[%s] all queue, from topicQueueTable, because channel destroyed"
+						logger.Info(removeMsg, topic)
+					}
+				}
+			}
+		}
+		this.ReadWriteLock.Unlock()
+	}
 
 }
 
