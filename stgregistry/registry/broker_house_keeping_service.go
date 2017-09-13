@@ -1,8 +1,7 @@
-package stgregistry
+package registry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
-	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"net"
 )
 
@@ -15,15 +14,15 @@ import (
 // Since: 2017/9/6
 type BrokerHousekeepingService struct {
 	NamesrvController *DefaultNamesrvController
-	RemotingServer    *remoting.DefalutRemotingServer
+	//RemotingServer    *remoting.DefalutRemotingServer
 }
 
 // NewBrokerHousekeepingService 初始化Broker活动检测服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewBrokerHousekeepingService(namesrvController *DefaultNamesrvController) client.ChannelEventListener {
+func NewBrokerHousekeepingService(controller *DefaultNamesrvController) client.ChannelEventListener {
 	brokerHousekeepingService := &BrokerHousekeepingService{
-		NamesrvController: namesrvController,
+		NamesrvController: controller,
 	}
 	return brokerHousekeepingService
 }

@@ -1,9 +1,11 @@
 package main
 
-import "git.oschina.net/cloudzone/smartgo/stgregistry"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgregistry/registry"
+)
 
 func main() {
 
-	stgregistry.Start()
+	registry.Startup()
 	select {}
 }

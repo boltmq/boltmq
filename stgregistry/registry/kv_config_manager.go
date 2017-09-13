@@ -1,6 +1,9 @@
-package stgregistry
+package registry
 
 import (
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"strings"
 	"sync"
 )
 
@@ -8,18 +11,19 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 type KVConfigManager struct {
-	ConfigTable       *KVConfigSerializeWrapper
+	ConfigTable       map[string]map[string]string // 数据格式：Namespace[Key[Value]]
 	ReadWriteLock     sync.RWMutex
-	// NamesrvController *DefaultNamesrvController // 暂时不需要
+	NamesrvController *DefaultNamesrvController
 }
 
 // NewKVConfigManager 初始化KV配置管理器
 // // NamesrvController *stgregistry.DefaultNamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewKVConfigManager() *KVConfigManager {
+func NewKVConfigManager(controller *DefaultNamesrvController) *KVConfigManager {
 	kvConfigManager := &KVConfigManager{
-		ConfigTable: new(KVConfigSerializeWrapper),
+		ConfigTable:       make(map[string]map[string]string),
+		NamesrvController: controller,
 	}
 	return kvConfigManager
 }
@@ -57,7 +61,7 @@ func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string 
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 	self.ReadWriteLock.RLock()
-	if kvTable, ok := self.ConfigTable.ConfigTable[namespace]; ok && kvTable != nil {
+	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		if value, ok := kvTable[key]; ok {
 			return value
 		}
@@ -91,5 +95,25 @@ func (self *KVConfigManager) putKVConfig(namespace, key string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
+	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
+	content, err := stgcommon.File2String(kvConfigPath)
+	if err != nil {
+		fmt.Printf("load kvConfigPath=%s error: %s\n", kvConfigPath, err.Error())
+		return err
+	}
+
+	if strings.TrimSpace(content) == "" {
+		buf := []byte(content)
+		var kvConfigSerializeWrapper *KVConfigSerializeWrapper
+		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)
+		if err != nil {
+			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s", err.Error())
+		}
+		if kvConfigSerializeWrapper != nil && kvConfigSerializeWrapper.ConfigTable != nil {
+			for k, v := range kvConfigSerializeWrapper.ConfigTable {
+				self.ConfigTable[k] = v
+			}
+		}
+	}
 	return nil
 }

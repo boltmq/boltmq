@@ -1,4 +1,4 @@
-package stgregistry
+package registry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
@@ -26,48 +26,25 @@ type DefaultNamesrvController struct {
 	BrokerHousekeepingService client.ChannelEventListener     // 扫描不活跃broker
 	scanBrokerTicker          *timeutil.Ticker                // 扫描2分钟不活跃broker的定时器
 	printNamesrvTicker        *timeutil.Ticker                // 周期性打印namesrv数据的定时器
-	RemotingExecutor          []net.Conn                      //对应java代码的remotingExecutor
+	RemotingExecutor          []net.Conn                      // 对应java代码的remotingExecutor
 	RequestProcessor          remoting.RequestProcessor       // 默认请求处理器
 }
 
 // NewNamesrvController 初始化默认的NamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/12
-func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig) *DefaultNamesrvController {
-	namesrvController := &DefaultNamesrvController{
+func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
+	controller := &DefaultNamesrvController{
 		scanBrokerTicker:   timeutil.NewTicker(5*second, 10*second),
 		printNamesrvTicker: timeutil.NewTicker(1*minute, 10*minute),
 		NamesrvConfig:      namesrvConfig,
+		RemotingServer:     remotingServer,
 		RouteInfoManager:   NewRouteInfoManager(),
-		KvConfigManager:    NewKVConfigManager(),
 	}
-
-	namesrvController.BrokerHousekeepingService = NewBrokerHousekeepingService(namesrvController)
-	return namesrvController
-}
-
-func (self *DefaultNamesrvController) shutdown() {
-	//TODO:this.remotingExecutor.shutdown();
-	if self.scanBrokerTicker != nil {
-		self.scanBrokerTicker.Stop()
-	}
-	if self.printNamesrvTicker != nil {
-		self.printNamesrvTicker.Stop()
-	}
-	self.RemotingServer.Shutdown()
-
-}
-
-func (self *DefaultNamesrvController) start() error {
-	self.RemotingServer.Start()
-	return nil
-}
-
-func (self *DefaultNamesrvController) registerProcessor() error {
-	//this.remotingServer.registerDefaultProcessor(new DefaultRequestProcessor(this), this.remotingExecutor);
-	processor := NewDefaultRequestProcessor(self)
-	self.RemotingServer.RegisterDefaultProcessor(processor)
-	return nil
+	// KvConfigManager:    NewKVConfigManager(),
+	controller.KvConfigManager = NewKVConfigManager(controller)
+	controller.BrokerHousekeepingService = NewBrokerHousekeepingService(controller)
+	return controller
 }
 
 func (self *DefaultNamesrvController) initialize() bool {
@@ -80,8 +57,7 @@ func (self *DefaultNamesrvController) initialize() bool {
 
 	// this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService)
 	// (2)将namesrv作为一个netty server启动，即初始化通信层
-	//remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
-	//self.BrokerHousekeepingService.RemotingServer = remotingServer
+	// remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
 
 	// (3)启动服务端请求的handle处理线程池
 	// this.remotingExecutor = Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
@@ -100,6 +76,28 @@ func (self *DefaultNamesrvController) initialize() bool {
 	}()
 
 	return true
+}
+
+func (self *DefaultNamesrvController) shutdown() {
+	//TODO:this.remotingExecutor.shutdown();
+	if self.scanBrokerTicker != nil {
+		self.scanBrokerTicker.Stop()
+	}
+	if self.printNamesrvTicker != nil {
+		self.printNamesrvTicker.Stop()
+	}
+	self.RemotingServer.Shutdown()
+}
+
+func (self *DefaultNamesrvController) start() error {
+	self.RemotingServer.Start()
+	return nil
+}
+
+func (self *DefaultNamesrvController) registerProcessor() error {
+	processor := NewDefaultRequestProcessor(self)
+	self.RemotingServer.RegisterDefaultProcessor(processor)
+	return nil
 }
 
 func (self *DefaultNamesrvController) startScanNotActiveBroker() {
