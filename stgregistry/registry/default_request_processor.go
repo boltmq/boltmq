@@ -1,4 +1,4 @@
-package stgregistry
+package registry
 
 import (
 	"fmt"
