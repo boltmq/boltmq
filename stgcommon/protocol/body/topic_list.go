@@ -10,3 +10,10 @@ type TopicList struct {
 	BrokerAddr string  `json:"brokerAddr"` // broker地址
 	*protocol.RemotingSerializable
 }
+
+func NewTopicList() *TopicList {
+	topicList := &TopicList{
+		TopicList: set.NewSet(),
+	}
+	return topicList
+}
