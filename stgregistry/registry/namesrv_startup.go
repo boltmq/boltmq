@@ -18,15 +18,12 @@ func Startup() *DefaultNamesrvController {
 	controller := CreateNamesrvController()
 	if initResult := controller.initialize(); !initResult {
 		controller.shutdown()
-		msg := "controller initialize fail."
-		fmt.Println(msg)
-		logger.Info(msg)
+		fmt.Println("controller initialize fail.")
+		logger.Info("controller initialize fail.")
 		os.Exit(-3)
 	}
 
-	//设置JVM关闭钩子，当JVM关闭之前，执行controller.shutdown()来关闭Namesrv服务控制，然后再关闭JVM
-
-
+	//TODO:设置JVM关闭钩子，当JVM关闭之前，执行controller.shutdown()来关闭Namesrv服务控制，然后再关闭JVM
 	controller.start()
 
 	tip := "The Name Server boot success."

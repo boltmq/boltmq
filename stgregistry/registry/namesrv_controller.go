@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"net"
 	"time"
 )
 
@@ -26,7 +25,6 @@ type DefaultNamesrvController struct {
 	BrokerHousekeepingService client.ChannelEventListener     // 扫描不活跃broker
 	scanBrokerTicker          *timeutil.Ticker                // 扫描2分钟不活跃broker的定时器
 	printNamesrvTicker        *timeutil.Ticker                // 周期性打印namesrv数据的定时器
-	RemotingExecutor          []net.Conn                      // 对应java代码的remotingExecutor
 	RequestProcessor          remoting.RequestProcessor       // 默认请求处理器
 }
 
@@ -41,7 +39,6 @@ func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig, remotingS
 		RemotingServer:     remotingServer,
 		RouteInfoManager:   NewRouteInfoManager(),
 	}
-	// KvConfigManager:    NewKVConfigManager(),
 	controller.KvConfigManager = NewKVConfigManager(controller)
 	controller.BrokerHousekeepingService = NewBrokerHousekeepingService(controller)
 	return controller
@@ -56,21 +53,18 @@ func (self *DefaultNamesrvController) initialize() bool {
 	}
 
 	// this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService)
-	// (2)将namesrv作为一个netty server启动，即初始化通信层
+	// (2)TODO:将namesrv作为一个netty server启动，即初始化通信层
 	// remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
 
-	// (3)启动服务端请求的handle处理线程池
-	// this.remotingExecutor = Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
-
-	// (4)注册默认DefaultRequestProcessor和remotingExecutor，只要start启动，就开始处理请求
+	// (3)注册默认DefaultRequestProcessor，只要start启动就开始处理请求
 	self.registerProcessor()
 
-	// (5)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
+	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
 	go func() {
 		self.startScanNotActiveBroker()
 	}()
 
-	// (6)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
+	// (5)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
 	go func() {
 		self.startPrintAllPeriodically()
 	}()
