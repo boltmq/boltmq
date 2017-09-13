@@ -187,7 +187,13 @@ func (self *DefaultRequestProcessor) deleteTopicInNamesrv(conn net.Conn, request
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	return nil, nil
+	response := protocol.CreateDefaultResponseCommand()
+	body := self.NamesrvController.RouteInfoManager.getAllTopicList()
+
+	response.Body = body
+	response.Code = code.SUCCESS
+	response.Remark = ""
+	return response, nil
 }
 
 // wipeWritePermOfBroker 优雅地向Broker写数据
@@ -201,6 +207,7 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(conn net.Conn, reques
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getBrokerClusterInfo(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+
 	return nil, nil
 }
 

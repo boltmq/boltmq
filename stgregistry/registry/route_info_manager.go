@@ -67,8 +67,18 @@ func (self *RouteInfoManager) deleteTopic(topic string) {
 // getAllTopicList 获取所有Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) getAllTopicList() {
-
+func (self *RouteInfoManager) getAllTopicList() []byte {
+	topicList := body.TopicList{
+		TopicList: set.NewSet(),
+	}
+	self.ReadWriteLock.RLock()
+	if self.TopicQueueTable != nil && len(self.TopicQueueTable) > 0 {
+		for topic, _ := range self.TopicQueueTable {
+			topicList.TopicList.Add(topic)
+		}
+	}
+	self.ReadWriteLock.RUnlock()
+	return topicList.CustomEncode(&topicList)
 }
 
 // registerBroker 注册Broker
@@ -140,7 +150,46 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerName string, brokerId int64) {
+	self.ReadWriteLock.Lock()
+	if brokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; ok {
+		delete(self.BrokerLiveTable, brokerAddr)
+		result := "OK"
+		if brokerLiveInfo != nil {
+			result = "Failed"
+		}
+		logger.Info("unregisterBroker, remove from brokerLiveTable %s, %s", result, brokerAddr)
+	}
 
+	if filterServerInfo, ok := self.FilterServerTable[brokerAddr]; ok {
+		delete(self.FilterServerTable, brokerAddr)
+		result := "OK"
+		if filterServerInfo != nil {
+			result = "Failed"
+		}
+		logger.Info("unregisterBroker, remove from FilterServerTable %s, %s", result, brokerAddr)
+	}
+
+	removeBrokerName := false
+	if brokerData, ok := self.BrokerAddrTable[brokerName]; ok && brokerData != nil {
+		if addr, ok := brokerData.BrokerAddrs[int(brokerId)]; ok {
+			delete(brokerData.BrokerAddrs, int(brokerId))
+			result := "OK"
+			if addr != "" {
+				result = "Failed"
+			}
+			logger.Info("unregisterBroker, remove addr from brokerAddrTable %s, %s", result, brokerAddr)
+		}
+
+		if len(brokerData.BrokerAddrs) == 0 {
+			//TODO:
+			removeBrokerName = true
+		}
+	}
+
+	if removeBrokerName {
+
+	}
+	self.ReadWriteLock.Unlock()
 }
 
 // removeTopicByBrokerName 根据brokerName移除它对应的Topic数据
