@@ -151,43 +151,62 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 // Since: 2017/9/6
 func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerName string, brokerId int64) {
 	self.ReadWriteLock.Lock()
+
+	result := "Failed"
 	if brokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; ok {
 		delete(self.BrokerLiveTable, brokerAddr)
-		result := "OK"
 		if brokerLiveInfo != nil {
-			result = "Failed"
+			result = "OK"
 		}
-		logger.Info("unregisterBroker, remove from brokerLiveTable %s, %s", result, brokerAddr)
 	}
+	logger.Info("unRegisterBroker, remove from brokerLiveTable %s, %s", result, brokerAddr)
 
+	result = "Failed"
 	if filterServerInfo, ok := self.FilterServerTable[brokerAddr]; ok {
 		delete(self.FilterServerTable, brokerAddr)
-		result := "OK"
 		if filterServerInfo != nil {
-			result = "Failed"
+			result = "OK"
 		}
-		logger.Info("unregisterBroker, remove from FilterServerTable %s, %s", result, brokerAddr)
 	}
+	logger.Info("unRegisterBroker, remove from filterServerTable %s, %s", result, brokerAddr)
 
 	removeBrokerName := false
-	if brokerData, ok := self.BrokerAddrTable[brokerName]; ok && brokerData != nil {
+	result = "Failed"
+	if brokerData, ok := self.BrokerAddrTable[brokerName]; ok && brokerData != nil && brokerData.BrokerAddrs != nil {
 		if addr, ok := brokerData.BrokerAddrs[int(brokerId)]; ok {
 			delete(brokerData.BrokerAddrs, int(brokerId))
-			result := "OK"
 			if addr != "" {
-				result = "Failed"
+				result = "OK"
 			}
-			logger.Info("unregisterBroker, remove addr from brokerAddrTable %s, %s", result, brokerAddr)
 		}
+		logger.Info("unRegisterBroker, remove addr from brokerAddrTable %s, %d, %s", result, brokerId, brokerAddr)
 
 		if len(brokerData.BrokerAddrs) == 0 {
-			//TODO:
+			result = "OK"
+			delete(self.BrokerAddrTable, brokerName)
+			logger.Info("unRegisterBroker, remove name from brokerAddrTable %s, %s", result, brokerName)
 			removeBrokerName = true
 		}
 	}
 
 	if removeBrokerName {
+		if nameSet, ok := self.ClusterAddrTable[clusterName]; ok && nameSet != nil {
+			result = "Failed"
+			if nameSet.Contains(brokerName) {
+				result = "OK"
+			}
+			nameSet.Remove(brokerName)
+			logger.Info("unRegisterBroker, remove name from clusterAddrTable %s, %s, %s", result, clusterName, brokerName)
 
+			if nameSet.Cardinality() == 0 {
+				result = "OK"
+				delete(self.ClusterAddrTable, clusterName)
+				logger.Info("unRegisterBroker, remove cluster from clusterAddrTable %s, %s", result, clusterName)
+			}
+		}
+
+		// 删除相应的topic
+		self.removeTopicByBrokerName(brokerName)
 	}
 	self.ReadWriteLock.Unlock()
 }
@@ -196,7 +215,23 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
+	if self.TopicQueueTable != nil {
+		for topic, queueDataList := range self.TopicQueueTable {
+			if queueDataList != nil {
+				for index, queueData := range queueDataList {
+					if queueData.BrokerName == brokerName {
+						logger.Info("removeTopicByBrokerName, remove one broker's topic %s %s", topic, queueData.ToString())
+						queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
+					}
+				}
 
+				if len(queueDataList) == 0 {
+					logger.Info("removeTopicByBrokerName, remove the topic all queue %s", topic)
+					delete(self.TopicQueueTable, topic)
+				}
+			}
+		}
+	}
 }
 
 // pickupTopicRouteData 根据Topic收集路由数据
@@ -351,17 +386,16 @@ func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, conn net.Conn)
 					break
 				}
 			}
-
 		}
 
 		// 5 清理topicQueueTable
 		if removeBrokerName {
 			for topic, queueDataList := range this.TopicQueueTable {
 				if queueDataList != nil {
-					for _, queueData := range queueDataList {
+					for index, queueData := range queueDataList {
 						if queueData.BrokerName == brokerAddrFound {
-
-							//TODO:delete(this.TopicQueueTable, index)
+							//TODO:从queueDataList切片中删除索引为index的数据
+							queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
 							removeMsg := "remove topic[%s %s], from topicQueueTable, because channel destroyed"
 							logger.Info(removeMsg, topic, queueData.ToString())
 						}

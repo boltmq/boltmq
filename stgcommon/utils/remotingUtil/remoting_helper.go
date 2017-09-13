@@ -1,12 +1,8 @@
-package remotingHelper
+package remotingUtil
 
 import (
 	"net"
 	"strings"
-)
-
-const (
-	RemotingLogName = "SmartgoRemoting"
 )
 
 func ParseChannelRemoteAddr(conn net.Conn) string {

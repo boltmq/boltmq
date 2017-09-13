@@ -1,4 +1,4 @@
-package remotingHelper
+package remotingUtil
 
 import (
 	"testing"

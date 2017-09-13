@@ -38,7 +38,7 @@ func NewDefaultRequestProcessor(namesrvController *DefaultNamesrvController) rem
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) ProcessRequest(remoteAddr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	//remoteAddr := remotingHelper.ParseChannelRemoteAddr(conn)
+	//remoteAddr := remotingUtil.ParseChannelRemoteAddr(conn)
 	format := "receive request. code=%d, remoteAddr=%s, content=%s"
 	logger.Info(format, request.Code, remoteAddr, request.ToString())
 
@@ -160,8 +160,8 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	jsonValue := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
-	response.Body = jsonValue
+	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
@@ -244,7 +244,8 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request 
 	}
 
 	response.Code = code.TOPIC_NOT_EXIST
-	response.Remark = fmt.Sprintf("No topic route info in name server for the topic: %s, faq: %s", topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
+	remark := "No topic route info in name server for the topic: %s, faq: %s"
+	response.Remark = fmt.Sprintf(remark, topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
 	return nil, nil
 }
 
@@ -342,8 +343,8 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	jsonValue := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
-	response.Body = jsonValue
+	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""
 

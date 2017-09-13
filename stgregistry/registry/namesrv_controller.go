@@ -73,7 +73,6 @@ func (self *DefaultNamesrvController) initialize() bool {
 }
 
 func (self *DefaultNamesrvController) shutdown() {
-	//TODO:this.remotingExecutor.shutdown();
 	if self.scanBrokerTicker != nil {
 		self.scanBrokerTicker.Stop()
 	}
