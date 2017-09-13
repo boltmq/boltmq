@@ -1,9 +1,13 @@
 package client
 
+import (
+	"net"
+)
+
 // ChannelEventListener Channel事件监听器
 type ChannelEventListener interface {
-	onChannelConnect(remoteAddr string)   //  channel connect event
-	onChannelClose(remoteAddr string)     //  channel close event
-	onChannelException(remoteAddr string) //  channel exception event
-	onChannelIdle(remoteAddr string)      //  channel idle event
+	OnChannelConnect(remoteAddr string, conn net.Conn)   //  channel connect event
+	OnChannelClose(remoteAddr string, conn net.Conn)     //  channel close event
+	OnChannelException(remoteAddr string, conn net.Conn) //  channel exception event
+	OnChannelIdle(remoteAddr string, conn net.Conn)      //  channel idle event
 }

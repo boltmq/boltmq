@@ -1,6 +1,7 @@
 package stgregistry
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"net"
 )
@@ -20,7 +21,7 @@ type BrokerHousekeepingService struct {
 // NewBrokerHousekeepingService 初始化Broker活动检测服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewBrokerHousekeepingService(namesrvController *DefaultNamesrvController) *BrokerHousekeepingService {
+func NewBrokerHousekeepingService(namesrvController *DefaultNamesrvController) client.ChannelEventListener {
 	brokerHousekeepingService := &BrokerHousekeepingService{
 		NamesrvController: namesrvController,
 	}
@@ -30,27 +31,27 @@ func NewBrokerHousekeepingService(namesrvController *DefaultNamesrvController) *
 // onChannelConnect
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) onChannelConnect(remoteAddr string, conn net.Conn) {
+func (self *BrokerHousekeepingService) OnChannelConnect(remoteAddr string, conn net.Conn) {
 
 }
 
 // onChannelClose Channel被关闭,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) onChannelClose(remoteAddr string, conn net.Conn) {
+func (self *BrokerHousekeepingService) OnChannelClose(remoteAddr string, conn net.Conn) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
 }
 
 // onChannelException Channel出现异常,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) onChannelException(remoteAddr string, conn net.Conn) {
+func (self *BrokerHousekeepingService) OnChannelException(remoteAddr string, conn net.Conn) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
 }
 
 // onChannelIdle Channe的Idle时间超时,通知Topic路由管理器，清除无效Brokers
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) onChannelIdle(remoteAddr string, conn net.Conn) {
+func (self *BrokerHousekeepingService) OnChannelIdle(remoteAddr string, conn net.Conn) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
 }
