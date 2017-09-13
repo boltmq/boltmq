@@ -8,12 +8,12 @@ import (
 
 type BrokerLiveInfo struct {
 	LastUpdateTimestamp int64
-	DataVersion         stgcommon.DataVersion
+	DataVersion         *stgcommon.DataVersion
 	Conn                net.Conn
 	HaServerAddr        string
 }
 
-func NewBrokerLiveInfo(dataVersion stgcommon.DataVersion, haServerAddr string, conn net.Conn) *BrokerLiveInfo {
+func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, conn net.Conn) *BrokerLiveInfo {
 	brokerLiveInfo := BrokerLiveInfo{
 		LastUpdateTimestamp: stgcommon.GetCurrentTimeMillis(),
 		DataVersion:         dataVersion,
