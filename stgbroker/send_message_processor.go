@@ -35,7 +35,7 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(request), nil
+		return smp.consumerSendMsgBack(conn, request), nil
 	}
 
 	requestHeader := smp.abstractSendMessageProcessor.parseRequestHeader(request)
@@ -44,7 +44,7 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 	}
 
 	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(conn, requestHeader)
-	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore( /*ctx, */ request, mqtraceContext)
+	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(conn, request, mqtraceContext)
 	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
 	smp.abstractSendMessageProcessor.ExecuteSendMessageHookAfter(response, mqtraceContext)
 	return response, nil
@@ -53,7 +53,7 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 // consumerSendMsgBack 客户端返回未消费消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerContext ctx
+func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
@@ -63,7 +63,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 		context := new(mqtrace.ConsumeMessageContext)
 		context.ConsumerGroup = requestHeader.Group
 		context.Topic = requestHeader.OriginTopic
-		// TODO context.ClientHost=RemotingHelper.parseChannelRemoteAddr(ctx.channel()
+		context.ClientHost = conn.RemoteAddr().String()
 		context.Success = false
 		context.Status = string(listener.RECONSUME_LATER)
 		messageIds := make(map[string]int64)
@@ -197,7 +197,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack( // TODO ChannelHandlerCont
 	}
 	message.SetOriginMessageId(&msgInner.Message, originMsgId)
 
-	// TODO this.brokerController.getMessageStore().putMessage(msgInner)
+	smp.BrokerController.MessageStore.PutMessage(msgInner)
 	putMessageResult := new(stgstorelog.PutMessageResult)
 
 	if putMessageResult != nil {
@@ -293,9 +293,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 		}
 	}
 
-	// TODO this.brokerController.getMessageStore().putMessage(msgInner)
-	putMessageResult := new(stgstorelog.PutMessageResult)
-
+	putMessageResult := smp.BrokerController.MessageStore.PutMessage(msgInner)
 	if putMessageResult != nil {
 		sendOK := false
 		switch putMessageResult.PutMessageStatus {
@@ -352,8 +350,8 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 				mqtraceContext.QueueId = responseHeader.QueueId
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
-			return nil
-
+			// TODO return nil
+			return response
 		}
 
 	} else {

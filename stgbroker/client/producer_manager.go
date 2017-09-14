@@ -42,7 +42,7 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 	value, ok := connTable[channelInfo.Addr]
 	if !ok || nil == value {
 		connTable[channelInfo.Addr] = channelInfo.Conn
-		logger.Info("new producer connected, group: %v channel: %v", group, channelInfo.Addr)
+		logger.Infof("new producer connected, group: %s channel: %s", group, channelInfo.Addr)
 	}
 
 }
@@ -54,10 +54,10 @@ func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *Channel
 	connTable := pm.GroupChannelTable.get(group)
 	if nil != connTable {
 		delete(connTable, channelInfo.Addr)
-		logger.Info("unregister a producer %v from groupChannelTable %v", group,
+		logger.Infof("unregister a producer %s from groupChannelTable %s", group,
 			channelInfo.Addr)
 	} else {
 		pm.GroupChannelTable.remove(group)
-		logger.Info("unregister a producer %v from groupChannelTable", group)
+		logger.Infof("unregister a producer %s from groupChannelTable", group)
 	}
 }

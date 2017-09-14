@@ -22,7 +22,7 @@ type ClientHouseKeepingService struct {
 func NewClientHousekeepingService(bc *BrokerController) *ClientHouseKeepingService {
 	chks := new(ClientHouseKeepingService)
 	chks.brokerController = bc
-	chks.ticker = timeutil.NewTicker(10, 10)
+	chks.ticker = timeutil.NewTicker(1000*10, 1000*10)
 	return chks
 }
 
@@ -31,7 +31,7 @@ func NewClientHousekeepingService(bc *BrokerController) *ClientHouseKeepingServi
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) Start() {
 	// 定时扫描过期的连接
-	chks.ticker.Do(func(tm time.Time) {
+	go chks.ticker.Do(func(tm time.Time) {
 		chks.scanExceptionChannel()
 	})
 

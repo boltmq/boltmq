@@ -31,3 +31,17 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 	//brokerStatsManager.statsTable.Put()
 	return brokerStatsManager
 }
+
+// Start  BrokerStatsManager启动入口
+// Author rongzhihong
+// Since 2017/9/12
+func (bsm *BrokerStatsManager) Start() {
+	// TODO
+}
+
+// Start  BrokerStatsManager停止入口
+// Author rongzhihong
+// Since 2017/9/12
+func (bsm *BrokerStatsManager) Shutdown() {
+	// TODO
+}
