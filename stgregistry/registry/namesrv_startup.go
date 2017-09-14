@@ -1,13 +1,12 @@
 package registry
 
 import (
-	"flag"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"os"
 )
 
@@ -27,19 +26,23 @@ func Startup() *DefaultNamesrvController {
 	controller.start()
 
 	tip := "The Name Server boot success."
-	logger.Info("tip")
+	logger.Info(tip)
 	fmt.Println(tip)
 
 	return controller
 }
 
 func CreateNamesrvController() *DefaultNamesrvController {
+	logger.Info("createNamesrvController() start ... ")
 	// 加载配置文件
-	var namesrvCfg *namesrv.DefaultNamesrvConfig
-	kvConfigPath := flag.String("c", namesrv.GetKvConfigPath(), "")
-	flag.Parse()
-	parseutil.ParseConf(*kvConfigPath, &namesrvCfg)
-	if namesrvCfg.GetSmartGoHome() == "" {
+	var namesrvConfig namesrv.DefaultNamesrvConfig
+	cfgPath := "../../conf/smartgoKVConfig.toml"
+	parseutil.ParseConf(cfgPath, &namesrvConfig)
+
+	logger.Info("smartgoKVConfig.SmartgoHome=%s", namesrvConfig.SmartgoHome)
+	logger.Info("smartgoKVConfig.KvConfigPath=%s", namesrvConfig.KvConfigPath)
+
+	if namesrvConfig.GetSmartGoHome() == "" {
 		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
 		fmt.Printf(msg, stgcommon.SMARTGO_HOME_ENV)
 		os.Exit(-2)
@@ -47,7 +50,8 @@ func CreateNamesrvController() *DefaultNamesrvController {
 
 	// 初始化NamesrvController
 	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
-	controller := NewNamesrvController(namesrvCfg, remotingServer)
+	controller := NewNamesrvController(&namesrvConfig, remotingServer)
 
+	logger.Info("createNamesrvController() end ... ")
 	return controller
 }

@@ -1,11 +1,11 @@
-package main
+package start
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgregistry/registry"
+	"testing"
 )
 
-func main() {
-
+func TestStart(t *testing.T) {
 	registry.Startup()
 	select {}
 }
