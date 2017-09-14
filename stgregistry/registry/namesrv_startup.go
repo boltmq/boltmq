@@ -15,6 +15,7 @@ import (
 // Since: 2017/9/14
 func Startup() *DefaultNamesrvController {
 	controller := CreateNamesrvController()
+
 	if initResult := controller.initialize(); !initResult {
 		controller.shutdown()
 		fmt.Println("controller initialize fail.")
@@ -39,13 +40,22 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	cfgPath := "../../conf/smartgoKVConfig.toml"
 	parseutil.ParseConf(cfgPath, &namesrvConfig)
 
-	logger.Info("smartgoKVConfig.SmartgoHome=%s", namesrvConfig.SmartgoHome)
-	logger.Info("smartgoKVConfig.KvConfigPath=%s", namesrvConfig.KvConfigPath)
+	if namesrvConfig.SmartgoHome != "" {
+		logger.Info("smartgoKVConfig.SmartgoHome=%s", namesrvConfig.SmartgoHome)
+	}
+	if namesrvConfig.KvConfigPath != "" {
+		logger.Info("smartgoKVConfig.KvConfigPath=%s", namesrvConfig.KvConfigPath)
+	}
 
 	if namesrvConfig.GetSmartGoHome() == "" {
-		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
-		fmt.Printf(msg, stgcommon.SMARTGO_HOME_ENV)
-		os.Exit(-2)
+		cfg := namesrv.NewNamesrvConfig()
+		namesrvConfig.KvConfigPath = cfg.GetKvConfigPath()
+		namesrvConfig.SmartgoHome = cfg.GetSmartGoHome()
+		if namesrvConfig.GetSmartGoHome() == "" {
+			msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
+			fmt.Printf(msg, stgcommon.SMARTGO_HOME_ENV)
+			os.Exit(-2)
+		}
 	}
 
 	// 初始化NamesrvController

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"strings"
 	"sync"
 )
@@ -182,14 +182,15 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
-	logger.Info("kvConfigManager load start ... ")
 	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
 	content, err := stgcommon.File2String(kvConfigPath)
 	if err != nil {
 		logger.Error("load kvConfigPath=%s error: %s", kvConfigPath, err.Error())
 		return err
 	}
-	logger.Info("read %s successful. content: %s", kvConfigPath, content)
+	values := strings.Split(kvConfigPath, "/")
+	kvConfigName := values[len(values)-1]
+	logger.Info("read %s successful. content: %s", kvConfigName, content)
 
 	if strings.TrimSpace(content) == "" {
 		buf := []byte(content)
