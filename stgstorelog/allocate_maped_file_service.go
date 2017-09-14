@@ -7,7 +7,11 @@ package stgstorelog
 type AllocateMapedFileService struct {
 }
 
-func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath string, nextNextFilePath string, filesize int64) *MapedFile {
+func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath string, nextNextFilePath string, filesize int64) (*MapedFile, error) {
 	// TODO: putRequestAndReturnMapedFile待完成
-	return &MapedFile{}
+	return &MapedFile{}, nil
+}
+
+func (self *AllocateMapedFileService) run() {
+	// TODO
 }

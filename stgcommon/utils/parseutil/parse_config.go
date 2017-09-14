@@ -2,6 +2,7 @@ package parseutil
 
 import (
 	"fmt"
+
 	"github.com/BurntSushi/toml"
 )
 

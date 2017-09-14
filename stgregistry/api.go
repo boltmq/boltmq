@@ -12,7 +12,7 @@ import (
 
 type SmartgoConfig struct {
 	Global  globalConfig
-	Namesrv map[string]namesrv
+	Namesrv map[string]namesrvCfg
 }
 
 type globalConfig struct {
@@ -20,7 +20,7 @@ type globalConfig struct {
 	Stghome string
 }
 
-type namesrv struct {
+type namesrvCfg struct {
 	Addrs []string `toml:"etcdaddrs"`
 }
 

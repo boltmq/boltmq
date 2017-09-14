@@ -5,5 +5,5 @@ package stgstorelog
 // Since 2017/8/16
 type PutMessageResult struct {
 	PutMessageStatus    PutMessageStatus
-	AppendMessageResult AppendMessageResult
+	AppendMessageResult *AppendMessageResult
 }

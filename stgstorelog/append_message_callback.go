@@ -9,5 +9,5 @@ package stgstorelog
 // Since: 2017/8/6
 type AppendMessageCallback interface {
 	// write MapedByteBuffer,and return How many bytes to write
-	doAppend(fileFromOffset int64, mappedByteBuffer *MappedByteBuffer, maxBlank int, msg interface{}) (int)
+	doAppend(fileFromOffset int64, mappedByteBuffer *MappedByteBuffer, maxBlank int32, msg interface{}) *AppendMessageResult
 }

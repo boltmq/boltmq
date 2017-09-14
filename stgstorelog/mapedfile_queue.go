@@ -6,14 +6,15 @@ package stgstorelog
 
 import (
 	"container/list"
-	"sync"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"sort"
 	"os"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
 	"path/filepath"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"sort"
+	"sync"
 	"time"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 type MapedFileQueue struct {
@@ -26,7 +27,7 @@ type MapedFileQueue struct {
 	// 各个文件
 	mapedFiles list.List
 	// 读写锁（针对mapedFiles）
-	rwLock *sync.RWMutex
+	rwLock sync.RWMutex
 	// 预分配MapedFile对象服务
 	allocateMapedFileService *AllocateMapedFileService
 	// 刷盘刷到哪里
@@ -121,41 +122,50 @@ func (self *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/8
 func (self *MapedFileQueue) load() bool {
-	files, err := fileutil.ListFilesOrDir(self.storePath, "FILE")
+	exist, err := PathExists(self.storePath)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Info(err.Error())
 		return false
 	}
-	if len(files) != 0 {
-		// 按照文件名，升序排列
-		sort.Strings(files)
-		for _, path := range files {
-			file, error := os.OpenFile(path, os.O_RDONLY, 0666)
-			if error != nil {
-				logger.Error(error.Error())
-			}
-			size, error := fileutil.FileSize(file)
-			if error != nil {
-				logger.Error(error.Error())
-			}
-			// 校验文件大小是否匹配
-			if size != int64(self.mapedFileSize) {
-				logger.Warn("filesize(%d) mapedFileSize(%d) length not matched message store config value, ignore it", size, self.mapedFileSize)
-				return true
-			}
 
-			// 恢复队列
-			mapedFile, error := NewMapedFile(self.storePath, int64(self.mapedFileSize))
-			if error != nil {
-				logger.Error(error.Error())
-				return false
+	if exist {
+		files, err := fileutil.ListFilesOrDir(self.storePath, "FILE")
+		if err != nil {
+			logger.Error(err.Error())
+			return false
+		}
+		if len(files) != 0 {
+			// 按照文件名，升序排列
+			sort.Strings(files)
+			for _, path := range files {
+				file, error := os.OpenFile(path, os.O_RDONLY, 0666)
+				if error != nil {
+					logger.Error(error.Error())
+				}
+				size, error := fileutil.FileSize(file)
+				if error != nil {
+					logger.Error(error.Error())
+				}
+				// 校验文件大小是否匹配
+				if size != int64(self.mapedFileSize) {
+					logger.Warn("filesize(%d) mapedFileSize(%d) length not matched message store config value, ignore it", size, self.mapedFileSize)
+					return true
+				}
+
+				// 恢复队列
+				mapedFile, error := NewMapedFile(self.storePath, int64(self.mapedFileSize))
+				if error != nil {
+					logger.Error(error.Error())
+					return false
+				}
+				mapedFile.wrotePostion = self.mapedFileSize
+				mapedFile.committedPosition = self.mapedFileSize
+				self.mapedFiles.PushBack(mapedFile)
+				logger.Info("load mapfiled %v success.", mapedFile.fileName)
 			}
-			mapedFile.wrotePostion = self.mapedFileSize
-			mapedFile.committedPosition = self.mapedFileSize
-			self.mapedFiles.PushBack(mapedFile)
-			logger.Info("load mapfiled %v success.", mapedFile.fileName)
 		}
 	}
+
 	return true
 }
 
@@ -191,11 +201,11 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 		createOffset = startOffset - (startOffset % int64(self.mapedFileSize))
 	} else {
 		// 如果mapedFile不为空，则获取list的最后一个文件
-		mapedFileLastObj := (self.mapedFiles.Back().Value).(MapedFile)
-		mapedFileLast = &mapedFileLastObj
+		mapedFileLastObj := (self.mapedFiles.Back().Value).(*MapedFile)
+		mapedFileLast = mapedFileLastObj
 	}
 	self.rwLock.RUnlock()
-	if mapedFileLast.isFull() {
+	if mapedFileLast != nil && mapedFileLast.isFull() {
 		createOffset = mapedFileLast.fileFromOffset + self.mapedFileSize
 
 	}
@@ -205,7 +215,11 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 		nextNextPath := self.storePath + string(filepath.Separator) +
 			fileutil.Offset2FileName(createOffset+self.mapedFileSize)
 		if self.allocateMapedFileService != nil {
-			mapedFile = self.allocateMapedFileService.putRequestAndReturnMapedFile(nextPath, nextNextPath, self.mapedFileSize)
+			var err error
+			mapedFile, err = self.allocateMapedFileService.putRequestAndReturnMapedFile(nextPath, nextNextPath, self.mapedFileSize)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			var err error
 			mapedFile, err = NewMapedFile(nextPath, self.mapedFileSize)
@@ -226,18 +240,26 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 	return mapedFileLast, nil
 }
 
-func (self *MapedFileQueue) getMinOffset() (int64) {
+func (self *MapedFileQueue) getMinOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
-	mappedfile := self.mapedFiles.Front().Value.(MapedFile)
-	return mappedfile.fileFromOffset
+	if self.mapedFiles.Len() > 0 {
+		mappedfile := self.mapedFiles.Front().Value.(MapedFile)
+		return mappedfile.fileFromOffset
+	}
+
+	return -1
 }
 
-func (self *MapedFileQueue) getMaxOffset() (int64) {
+func (self *MapedFileQueue) getMaxOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
-	mappedfile := self.mapedFiles.Back().Value.(MapedFile)
-	return mappedfile.fileFromOffset
+	if self.mapedFiles.Len() > 0 {
+		mappedfile := self.mapedFiles.Back().Value.(MapedFile)
+		return mappedfile.fileFromOffset
+	}
+
+	return 0
 }
 
 // deleteLastMapedFile 恢复时调用

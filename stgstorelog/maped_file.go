@@ -5,16 +5,16 @@
 package stgstorelog
 
 import (
-	"os"
-	"strconv"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
-	"sync/atomic"
 	"errors"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"os"
+	"path/filepath"
+	"strconv"
 	"sync"
+	"sync/atomic"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 	"github.com/toolkits/file"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 const (
@@ -56,12 +56,17 @@ type MapedFile struct {
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
 func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
-	mapedFile := &MapedFile{}
+	mapedFile := new(MapedFile)
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
 
-	fileutil.EnsureDir(filePath)
-	exist := fileutil.IsExist(filePath)
+	commitRootDir := GetParentDirectory(filePath)
+	ensureDirOK(commitRootDir)
+
+	exist, err := PathExists(filePath)
+	if err != nil {
+		return nil, err
+	}
 
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 	defer file.Close()
@@ -77,8 +82,10 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 		file.Write(bytes)
 	}
 
+	fileName := filepath.Base(mapedFile.file.Name())
+
 	// 文件名即offset起始地址
-	offset, err := strconv.ParseInt(fileutil.Basename(mapedFile.fileName), 10, 64)
+	offset, err := strconv.ParseInt(fileName, 10, 64)
 	if err != nil {
 		logger.Error(err.Error())
 		return nil, err
@@ -102,7 +109,7 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 // Return: appendNums 成功添加消息字节数
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
-func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageCallback AppendMessageCallback) (appendNums int) {
+func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageCallback AppendMessageCallback) *AppendMessageResult {
 	if msg == nil {
 		panic(errors.New("AppendMessage nil msg error!!!"))
 	}
@@ -110,15 +117,15 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 	curPos := atomic.LoadInt64(&self.wrotePostion)
 	// 表示还有剩余空间
 	if curPos < self.fileSize {
-		appendNums := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, int(self.fileSize)-int(curPos), msg)
-		atomic.AddInt64(&self.wrotePostion, int64(appendNums))
-		self.storeTimestamp = timeutil.NowTimestamp()
-		return appendNums
+		result := appendMessageCallback.doAppend(self.fileFromOffset, self.mappedByteBuffer, int32(self.fileSize)-int32(curPos), msg)
+		atomic.AddInt64(&self.wrotePostion, int64(result.WroteBytes))
+		self.storeTimestamp = result.StoreTimestamp
+		return result
 	}
 
 	// TODO: 上层应用应该保证不会走到这里???
-	logger.Error("AppendMessage 上层应用应该保证不会走到这里!!!")
-	return -1
+	logger.Errorf("MapedFile.appendMessage return null, wrotePostion:%d fileSize:%d", curPos, self.fileSize)
+	return &AppendMessageResult{Status: APPENDMESSAGE_UNKNOWN_ERROR}
 }
 
 // appendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
@@ -178,7 +185,7 @@ func (self *MapedFile) Unmap() {
 // Return: 是否需要立即刷盘
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
-func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
+func (self *MapedFile) isAbleToFlush(flushLeastPages int32) bool {
 	// 获取当前flush到磁盘的位置
 	flush := self.committedPosition
 	// 获取当前write到缓冲区的位置
@@ -189,7 +196,7 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) (bool) {
 	}
 	// 只有未刷盘数据满足指定page数目才刷盘
 	// OS_PAGE_SIZE默认为1024*4=4k
-	if (flushLeastPages > 0) {
+	if flushLeastPages > 0 {
 		// 计算出前期写缓冲区的位置到已刷盘的数据位置之间的数据，是否大于等于设置的至少得刷盘page个数
 		// 超过则需要刷盘
 		return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= int64(flushLeastPages)
@@ -212,4 +219,33 @@ func (self *MapedFile) destroy() bool {
 		return false
 	}
 	return true
+}
+
+func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
+	if pos < self.wrotePostion && pos >= 0 {
+		self.mappedByteBuffer.slice()
+	}
+
+	return nil
+}
+
+func ensureDirOK(dirName string) error {
+	if len(dirName) > 0 {
+		exist, err := PathExists(dirName)
+
+		if err != nil {
+			logger.Info(err.Error())
+			return err
+		}
+
+		if !exist {
+			err := os.MkdirAll(dirName, os.ModePerm)
+			if err != nil {
+				logger.Info("crate store root dir %s, error:%s", dirName, err.Error())
+				return err
+			}
+		}
+	}
+
+	return nil
 }
