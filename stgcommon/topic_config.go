@@ -1,5 +1,7 @@
 package stgcommon
 
+import "fmt"
+
 const (
 	DefaultReadQueueNums  = 16
 	DefaultWriteQueueNums = 16
@@ -41,5 +43,6 @@ func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums i
 }
 
 func (tc *TopicConfig) ToString() string {
-	return ""
+	format := "TopicConfig [topicName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicFilterType=%d, topicSysFlag=%d, order=%t]"
+	return fmt.Sprintf(format, tc.TopicName, tc.ReadQueueNums, tc.WriteQueueNums, tc.Perm, int(tc.TopicFilterType), tc.TopicSysFlag, tc.Order)
 }
