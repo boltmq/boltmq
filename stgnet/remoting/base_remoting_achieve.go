@@ -3,11 +3,11 @@ package remoting
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"github.com/go-errors/errors"
 )
@@ -50,10 +50,15 @@ func (ra *BaseRemotingAchieve) RegisterRPCHook(rpcHook RPCHook) {
 	ra.rpcHook = rpcHook
 }
 
-func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn net.Conn) {
+func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx netm.Context) {
+	if ctx == nil {
+		logger.Fatalf("processReceived context is nil")
+		return
+	}
+
 	if ra.framePacketActuator != nil {
 		// 粘包处理，之后使用队列缓存
-		bufs, err := ra.framePacketActuator.UnPack(addr, buffer)
+		bufs, err := ra.framePacketActuator.UnPack(ctx.Addr(), buffer)
 		if err != nil {
 			logger.Fatalf("processReceived unPack buffer failed: %v", err)
 			return
@@ -64,7 +69,7 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn 
 			tbuf := buf
 			// 开启gorouting处理响应
 			ra.startGoRoutine(func() {
-				ra.processMessageReceived(addr, conn, tbuf)
+				ra.processMessageReceived(ctx, tbuf)
 			})
 		}
 	} else {
@@ -79,16 +84,16 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, addr string, conn 
 
 		// 开启gorouting处理响应
 		ra.startGoRoutine(func() {
-			ra.processMessageReceived(addr, conn, buf)
+			ra.processMessageReceived(ctx, buf)
 		})
 	}
 }
 
-func (ra *BaseRemotingAchieve) processMessageReceived(addr string, conn net.Conn, buf *bytes.Buffer) {
+func (ra *BaseRemotingAchieve) processMessageReceived(ctx netm.Context, buf *bytes.Buffer) {
 	// 解析报文
 	remotingCommand, err := protocol.DecodeRemotingCommand(buf)
 	if err != nil {
-		logger.Fatalf("processReceived deconde failed: %v", err)
+		logger.Fatalf("processMessageReceived deconde failed: %v", err)
 		return
 	}
 
@@ -99,14 +104,14 @@ func (ra *BaseRemotingAchieve) processMessageReceived(addr string, conn net.Conn
 	// 报文分类处理
 	switch remotingCommand.Type() {
 	case protocol.REQUEST_COMMAND:
-		ra.processRequestCommand(addr, conn, remotingCommand)
+		ra.processRequestCommand(ctx, remotingCommand)
 	case protocol.RESPONSE_COMMAND:
-		ra.processResponseCommand(addr, conn, remotingCommand)
+		ra.processResponseCommand(ctx, remotingCommand)
 	default:
 	}
 }
 
-func (ra *BaseRemotingAchieve) processRequestCommand(addr string, conn net.Conn, remotingCommand *protocol.RemotingCommand) {
+func (ra *BaseRemotingAchieve) processRequestCommand(ctx netm.Context, remotingCommand *protocol.RemotingCommand) {
 	// 获取业务处理器，没有注册使用默认处理器
 	ra.processorTableLock.Lock()
 	processor, ok := ra.processorTable[remotingCommand.Code]
@@ -120,29 +125,29 @@ func (ra *BaseRemotingAchieve) processRequestCommand(addr string, conn net.Conn,
 		errMsg := fmt.Sprintf("request type %d not supported", remotingCommand.Code)
 		response := protocol.CreateResponseCommand(protocol.REQUEST_CODE_NOT_SUPPORTED, errMsg)
 		response.Opaque = remotingCommand.Opaque
-		ra.sendResponse(response, addr, conn)
-		logger.Fatalf("addr[%s] %s", addr, errMsg)
+		ra.sendResponse(response, ctx)
+		logger.Fatalf("processRequestCommand addr[%s] %s", ctx.Addr(), errMsg)
 		return
 	}
 
 	// rpc hook before
 	if ra.rpcHook != nil {
-		ra.rpcHook.DoBeforeRequest(addr, conn, remotingCommand)
+		ra.rpcHook.DoBeforeRequest(ctx, remotingCommand)
 	}
 
 	// 调用处理器
-	response, err := processor.ProcessRequest(addr, conn, remotingCommand)
+	response, err := processor.ProcessRequest(ctx, remotingCommand)
 
 	// rpc hook after
 	if ra.rpcHook != nil {
-		ra.rpcHook.DoAfterResponse(addr, conn, remotingCommand, response)
+		ra.rpcHook.DoAfterResponse(ctx, remotingCommand, response)
 	}
 
 	// 错误处理
 	if err != nil {
 		response := protocol.CreateResponseCommand(protocol.SYSTEM_ERROR, err.Error())
 		response.Opaque = remotingCommand.Opaque
-		ra.sendResponse(response, addr, conn)
+		ra.sendResponse(response, ctx)
 		logger.Fatalf("process request exception %v", err)
 		return
 	}
@@ -160,16 +165,16 @@ func (ra *BaseRemotingAchieve) processRequestCommand(addr string, conn net.Conn,
 	// 返回响应
 	response.Opaque = remotingCommand.Opaque
 	response.MarkResponseType()
-	ra.sendResponse(response, addr, conn)
+	ra.sendResponse(response, ctx)
 }
 
-func (ra *BaseRemotingAchieve) processResponseCommand(addr string, conn net.Conn, response *protocol.RemotingCommand) {
+func (ra *BaseRemotingAchieve) processResponseCommand(ctx netm.Context, response *protocol.RemotingCommand) {
 	// 获取响应
 	ra.responseTableLock.RLock()
 	responseFuture, ok := ra.responseTable[response.Opaque]
 	ra.responseTableLock.RUnlock()
 	if !ok {
-		logger.Fatalf("receive response, but not matched any request, %s response Opaque: %d", addr, response.Opaque)
+		logger.Fatalf("receive response, but not matched any request, %s response Opaque: %d", ctx.Addr(), response.Opaque)
 		return
 	}
 
@@ -190,22 +195,22 @@ func (ra *BaseRemotingAchieve) processResponseCommand(addr string, conn net.Conn
 	}
 }
 
-func (ra *BaseRemotingAchieve) sendRequest(request *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	return ra.send(request, addr, conn)
-}
-
 func (ra *BaseRemotingAchieve) startGoRoutine(fn func()) {
 	if ra.isRunning {
 		go fn()
 	}
 }
 
-func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, addr string, conn net.Conn) error {
-	return ra.send(response, addr, conn)
+func (ra *BaseRemotingAchieve) sendRequest(request *protocol.RemotingCommand, ctx netm.Context) error {
+	return ra.send(request, ctx)
+}
+
+func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, ctx netm.Context) error {
+	return ra.send(response, ctx)
 }
 
 // 发送报文
-func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, addr string, conn net.Conn) error {
+func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, ctx netm.Context) error {
 	var (
 		header []byte
 		packet []byte
@@ -221,7 +226,7 @@ func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, a
 
 	//_, err = ra.bootstrap.Write(addr, header)
 	// 发送报文
-	_, err := conn.Write(packet)
+	_, err := ctx.Write(packet)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
@@ -229,7 +234,7 @@ func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, a
 	return nil
 }
 
-func (ra *BaseRemotingAchieve) invokeSync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
+func (ra *BaseRemotingAchieve) invokeSync(ctx netm.Context, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
 	// 创建请求响应
 	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
 	responseFuture.done = make(chan bool)
@@ -240,9 +245,9 @@ func (ra *BaseRemotingAchieve) invokeSync(addr string, conn net.Conn, request *p
 	ra.responseTableLock.Unlock()
 
 	// 发送请求
-	err := ra.sendRequest(request, addr, conn)
+	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeSync->sendRequest failed: %s %v", addr, err)
+		logger.Fatalf("invokeSync->sendRequest failed: %s %v", ctx.Addr(), err)
 		return nil, err
 	}
 	responseFuture.sendRequestOK = true
@@ -256,7 +261,7 @@ func (ra *BaseRemotingAchieve) invokeSync(addr string, conn net.Conn, request *p
 	}
 }
 
-func (ra *BaseRemotingAchieve) invokeAsync(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
+func (ra *BaseRemotingAchieve) invokeAsync(ctx netm.Context, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
 	// 创建请求响应
 	responseFuture := newResponseFuture(request.Opaque, timeoutMillis)
 	responseFuture.invokeCallback = invokeCallback
@@ -267,9 +272,9 @@ func (ra *BaseRemotingAchieve) invokeAsync(addr string, conn net.Conn, request *
 	ra.responseTableLock.Unlock()
 
 	// 发送请求
-	err := ra.sendRequest(request, addr, conn)
+	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeASync->sendRequest failed: %s %v", addr, err)
+		logger.Fatalf("invokeASync->sendRequest failed: %s %v", ctx.Addr(), err)
 		return err
 	}
 	responseFuture.sendRequestOK = true
@@ -277,11 +282,11 @@ func (ra *BaseRemotingAchieve) invokeAsync(addr string, conn net.Conn, request *
 	return nil
 }
 
-func (ra *BaseRemotingAchieve) invokeOneway(addr string, conn net.Conn, request *protocol.RemotingCommand, timeoutMillis int64) error {
+func (ra *BaseRemotingAchieve) invokeOneway(ctx netm.Context, request *protocol.RemotingCommand, timeoutMillis int64) error {
 	// 发送请求
-	err := ra.sendRequest(request, addr, conn)
+	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", addr, err)
+		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", ctx.Addr(), err)
 		return err
 	}
 

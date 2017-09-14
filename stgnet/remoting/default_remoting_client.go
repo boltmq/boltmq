@@ -1,7 +1,6 @@
 package remoting
 
 import (
-	"net"
 	"sync"
 	"sync/atomic"
 
@@ -30,8 +29,8 @@ func NewDefalutRemotingClient() *DefalutRemotingClient {
 
 // Start start client
 func (rc *DefalutRemotingClient) Start() {
-	rc.bootstrap.RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-		rc.processReceived(buffer, addr, conn)
+	rc.bootstrap.RegisterHandler(func(buffer []byte, ctx netm.Context) {
+		rc.processReceived(buffer, ctx)
 	})
 
 	rc.isRunning = true
@@ -79,21 +78,21 @@ func (rc *DefalutRemotingClient) UpdateNameServerAddressList(addrs []string) {
 // InvokeSync 同步调用并返回响应, addr为空字符串，则在namesrvAddrList中选择地址
 func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.RemotingCommand, timeoutMillis int64) (*protocol.RemotingCommand, error) {
 	// 创建连接，如果addr为空字符串，则在name server中选择一个地址。
-	conn, err := rc.createConnectByAddr(&addr)
+	ctx, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return nil, err
 	}
 
 	// rpc hook before
 	if rc.rpcHook != nil {
-		rc.rpcHook.DoBeforeRequest(addr, conn, request)
+		rc.rpcHook.DoBeforeRequest(ctx, request)
 	}
 
-	response, err := rc.invokeSync(addr, conn, request, timeoutMillis)
+	response, err := rc.invokeSync(ctx, request, timeoutMillis)
 
 	// rpc hook after
 	if rc.rpcHook != nil {
-		rc.rpcHook.DoAfterResponse(addr, conn, request, response)
+		rc.rpcHook.DoAfterResponse(ctx, request, response)
 	}
 
 	return response, err
@@ -102,36 +101,36 @@ func (rc *DefalutRemotingClient) InvokeSync(addr string, request *protocol.Remot
 // InvokeAsync 异步调用
 func (rc *DefalutRemotingClient) InvokeAsync(addr string, request *protocol.RemotingCommand, timeoutMillis int64, invokeCallback InvokeCallback) error {
 	// 创建连接，如果addr为空字符串，则在name server中选择一个地址。
-	conn, err := rc.createConnectByAddr(&addr)
+	ctx, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return err
 	}
 
 	// rpc hook before
 	if rc.rpcHook != nil {
-		rc.rpcHook.DoBeforeRequest(addr, conn, request)
+		rc.rpcHook.DoBeforeRequest(ctx, request)
 	}
 
-	return rc.invokeAsync(addr, conn, request, timeoutMillis, invokeCallback)
+	return rc.invokeAsync(ctx, request, timeoutMillis, invokeCallback)
 }
 
 // InvokeSync 单向发送消息
 func (rc *DefalutRemotingClient) InvokeOneway(addr string, request *protocol.RemotingCommand, timeoutMillis int64) error {
 	// 创建连接，如果addr为空字符串，则在name server中选择一个地址。
-	conn, err := rc.createConnectByAddr(&addr)
+	ctx, err := rc.createConnectByAddr(&addr)
 	if err != nil {
 		return err
 	}
 
 	// rpc hook before
 	if rc.rpcHook != nil {
-		rc.rpcHook.DoBeforeRequest(addr, conn, request)
+		rc.rpcHook.DoBeforeRequest(ctx, request)
 	}
 
-	return rc.invokeOneway(addr, conn, request, timeoutMillis)
+	return rc.invokeOneway(ctx, request, timeoutMillis)
 }
 
-func (rc *DefalutRemotingClient) createConnectByAddr(addrPtr *string) (net.Conn, error) {
+func (rc *DefalutRemotingClient) createConnectByAddr(addrPtr *string) (netm.Context, error) {
 	if *addrPtr == "" {
 		*addrPtr = rc.chooseNameseverAddr()
 	}
