@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"net"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 )
@@ -17,7 +17,7 @@ var (
 type GetTopicStatsInfoProcessor struct {
 }
 
-func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn net.Conn,
+func (processor *GetTopicStatsInfoProcessor) ProcessRequest(ctx netm.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	fmt.Printf("GetTopicStatsInfoProcessor %d %d\n", request.Code, request.Opaque)
 
@@ -37,7 +37,7 @@ func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn ne
 type OtherProcessor struct {
 }
 
-func (processor *OtherProcessor) ProcessRequest(addr string, conn net.Conn,
+func (processor *OtherProcessor) ProcessRequest(ctx netm.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	fmt.Printf("OtherProcessor %d %d\n", request.Code, request.Opaque)
 
