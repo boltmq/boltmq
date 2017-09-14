@@ -12,6 +12,8 @@ import (
 const (
 	separator               = string(os.PathSeparator)
 	smartgoKVConfigFileName = "kvConfig.json"
+	projectPath             = "/git.oschina.net/cloudzone/smartgo"
+	moduleName              = "/stgregistry/start/conf"
 )
 
 // NamesrvConfig namesrv配置项
@@ -69,12 +71,10 @@ func GetKvConfigPath() string {
 	kvConfigPath := filepath.ToSlash(format) // 将workDir中平台相关的路径分隔符转换为'/'
 	if exists, _ := validateExists(kvConfigPath); !exists {
 		// 特别标注，配合IDE开发
-		kvConfigPath := os.Getenv("GOPATH") + "/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/conf/" + smartgoKVConfigFileName
+		kvConfigPath := os.Getenv("GOPATH") + "/src" + projectPath + moduleName + "/" + smartgoKVConfigFileName
 		fmt.Printf("ide.kvConfigPath=%s\n", kvConfigPath)
 		return kvConfigPath
 	}
-
-	fmt.Printf("namesrvConfig.kvConfigPath=%s\n", kvConfigPath)
 	return kvConfigPath
 }
 
