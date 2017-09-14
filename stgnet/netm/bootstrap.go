@@ -90,10 +90,15 @@ func (bootstrap *Bootstrap) Sync() {
 				if tmpDelay > ACCEPT_MAX_SLEEP {
 					tmpDelay = ACCEPT_MAX_SLEEP
 				}
+				continue
 			} else if bootstrap.isRunning() {
 				bootstrap.Errorf("Accept error: %v", err)
+				continue
+			} else {
+				bootstrap.Errorf("Exiting: %v", err)
+				bootstrap.LogFlush()
+				break
 			}
-			continue
 		}
 		tmpDelay = ACCEPT_MIN_SLEEP
 
@@ -213,6 +218,9 @@ func (bootstrap *Bootstrap) Shutdown() {
 	bootstrap.running = false
 	bootstrap.mu.Unlock()
 
+	// 关闭listener
+	bootstrap.listener.Close()
+
 	// 关闭所有连接
 	bootstrap.contextTableLock.Lock()
 	for addr, ctx := range bootstrap.contextTable {
@@ -256,13 +264,15 @@ func (bootstrap *Bootstrap) handleConn(addr string, ctx Context) {
 		if err != nil {
 			bootstrap.disconnect(addr, ctx)
 			bootstrap.Fatalf("failed handle connect: %s %s", addr, err)
-			return
+			break
 		}
 
 		for _, fn := range bootstrap.handlers {
 			fn(b[:n], ctx)
 		}
 	}
+
+	bootstrap.Noticef("Connect[%s] Exiting..", addr)
 }
 
 func (bootstrap *Bootstrap) startGoRoutine(fn func()) {
