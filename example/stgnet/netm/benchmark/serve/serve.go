@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"log"
 	"runtime/debug"
 	"time"
 
@@ -23,8 +23,8 @@ func main() {
 	}()
 
 	b.Bind("0.0.0.0", 8000).
-		RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-			fmt.Println("rece:", string(buffer))
-			conn.Write([]byte("hi, client"))
+		RegisterHandler(func(buffer []byte, ctx netm.Context) {
+			log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
+			ctx.Write([]byte("hi, client"))
 		}).Sync()
 }

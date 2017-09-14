@@ -341,3 +341,16 @@ func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
 
 	return nil
 }
+
+// Contexts 返回context
+func (bootstrap *Bootstrap) Contexts() []Context {
+	var contexts []Context
+
+	bootstrap.contextTableLock.RLock()
+	for _, ctx := range bootstrap.contextTable {
+		contexts = append(contexts, ctx)
+	}
+	bootstrap.contextTableLock.RUnlock()
+
+	return contexts
+}
