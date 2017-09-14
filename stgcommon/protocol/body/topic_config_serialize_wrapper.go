@@ -9,7 +9,7 @@ import (
 // @author gaoyanlei
 // @since 2017/8/11
 type TopicConfigSerializeWrapper struct {
-	TopicConfigTable *TopicConfigTable
+	TopicConfigTable *TopicConfigTable      `json:"topiConfigTable"`
 	DataVersion      *stgcommon.DataVersion `json:"dataVersion"`
 	*protocol.RemotingSerializable
 }

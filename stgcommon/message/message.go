@@ -28,7 +28,7 @@ func (msg *Message) ClearProperty(name string) {
 }
 
 func (self *Message) PutProperty(name string, value string) {
-	if self.Properties != nil {
+	if self.Properties == nil {
 		self.Properties = make(map[string]string)
 	}
 

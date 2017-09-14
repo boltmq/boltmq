@@ -60,6 +60,16 @@ func (brokerData *BrokerData) SelectBrokerAddr() string {
 	return value
 }
 
+func (self *BrokerData) CloneBrokerData() *BrokerData {
+	brokerDataClone := &BrokerData{
+		BrokerName:      self.BrokerName,
+		BrokerAddrsLock: self.BrokerAddrsLock,
+		BrokerAddrs:     self.BrokerAddrs,
+	}
+
+	return brokerDataClone
+}
+
 func (topicRouteData *TopicRouteData) CloneTopicRouteData() *TopicRouteData {
 	queueDatas := []*QueueData{}
 	brokerDatas := []*BrokerData{}

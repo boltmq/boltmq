@@ -6,10 +6,11 @@ package stgstorelog
 
 import "bytes"
 import (
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 	"errors"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/byteutil"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
 )
 
 type MappedByteBuffer struct {
@@ -49,6 +50,12 @@ func (self *MappedByteBuffer) WriteInt32(i int32) (mappedByteBuffer *MappedByteB
 	return self
 }
 
+func (self *MappedByteBuffer) WriteInt64(i int64) (mappedByteBuffer *MappedByteBuffer) {
+	toBytes := byteutil.Int64ToBytes(i)
+	self.Write(toBytes)
+	return self
+}
+
 // Read reads the next len(p) bytes from the buffer or until the buffer
 // is drained. The return value n is the number of bytes read. If the
 // buffer has no data to return, err is io.EOF (unless en(p) is zero);
@@ -69,7 +76,7 @@ func (self *MappedByteBuffer) ReadInt32() (i int32) {
 // slice 返回当前MappedByteBuffer.byteBuffer中从开始位置到len的分片buffer
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
-func (self *MappedByteBuffer) slice() (*bytes.Buffer) {
+func (self *MappedByteBuffer) slice() *bytes.Buffer {
 	return bytes.NewBuffer(self.MMapBuf[:self.ReadPos])
 }
 
