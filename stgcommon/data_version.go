@@ -25,6 +25,13 @@ func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
 	self.Counter = dataVersion.Counter
 }
 
+func (self *DataVersion) EqualDataVersion(dataVersion *DataVersion) bool {
+	if dataVersion == nil {
+		return false
+	}
+	return self.Timestatmp == dataVersion.Timestatmp && self.Counter == dataVersion.Counter
+}
+
 func (self *DataVersion) NextVersion() {
 	self.Timestatmp = time.Now().UnixNano()
 	self.Counter = atomic.AddInt64(&self.Counter, 1)
