@@ -89,7 +89,7 @@ func (abp *AdminBrokerProcessor) deleteTopic(addr string, conn net.Conn, request
 	abp.BrokerController.TopicConfigManager.deleteTopicConfig(responseHeader.Topic)
 	abp.BrokerController.addDeleteTopicTask()
 
-	logger.Info("deleteTopic called by %v", conn.LocalAddr().String())
+	logger.Infof("deleteTopic called by %v", conn.LocalAddr().String())
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil

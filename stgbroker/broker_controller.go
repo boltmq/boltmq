@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
@@ -10,8 +11,13 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+	storeStatis "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
+	"strconv"
 	"time"
 )
 
@@ -20,7 +26,7 @@ type BrokerController struct {
 	// TODO
 	// nettyServerConfig
 	// nettyClientConfig
-	// messageStoreConfig
+	MessageStoreConfig        *stgstorelog.MessageStoreConfig
 	ConfigDataVersion         *stgcommon.DataVersion
 	ConsumerOffsetManager     *ConsumerOffsetManager
 	ConsumerManager           *client.ConsumerManager
@@ -35,8 +41,8 @@ type BrokerController struct {
 	// RebalanceLockManager
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
-	SlaveSynchronize *SlaveSynchronize
-	//MessageStore       *stgstorelog.MessageStore
+	SlaveSynchronize   *SlaveSynchronize
+	MessageStore       *stgstorelog.DefaultMessageStore
 	RemotingServer     *remoting.DefalutRemotingServer
 	TopicConfigManager *TopicConfigManager
 	// SendMessageExecutor ExecutorService
@@ -44,10 +50,10 @@ type BrokerController struct {
 	// adminBrokerExecutor ExecutorService
 	// clientManageExecutor ExecutorService
 	UpdateMasterHAServerAddrPeriodically bool
-	// brokerStats BrokerStats
-	FilterServerManager *FilterServerManager
-	brokerStatsManager  *stats.BrokerStatsManager
-	StoreHost           string
+	brokerStats                          *storeStatis.BrokerStats
+	FilterServerManager                  *FilterServerManager
+	brokerStatsManager                   *stats.BrokerStatsManager
+	StoreHost                            string
 	// configFile
 	ConfigFile             *string
 	sendMessageHookList    []mqtrace.SendMessageHook
@@ -55,13 +61,13 @@ type BrokerController struct {
 }
 
 func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConfig NettyServerConfig,
-   nettyClientConfig NettyClientConfig , //
-   messageStoreConfig MessageStoreConfig */) *BrokerController {
+	   nettyClientConfig NettyClientConfig , //*/
+	messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
 	// TODO nettyServerConfig
 	// TODO nettyServerConfig
-	// TODO messageStoreConfig
+	brokerController.MessageStoreConfig = messageStoreConfig
 	brokerController.ConfigDataVersion = stgcommon.NewDataVersion()
 	brokerController.ConsumerOffsetManager = NewConsumerOffsetManager(brokerController)
 	brokerController.UpdateMasterHAServerAddrPeriodically = false
@@ -80,7 +86,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 
 	if brokerController.BrokerConfig.NamesrvAddr != "" {
 		brokerController.BrokerOuterAPI.UpdateNameServerAddressList(brokerController.BrokerConfig.NamesrvAddr)
-		logger.Info("user specfied name server address: {}", brokerController.BrokerConfig.NamesrvAddr)
+		logger.Infof("user specfied name server address: %s", brokerController.BrokerConfig.NamesrvAddr)
 	}
 
 	brokerController.SlaveSynchronize = NewSlaveSynchronize(brokerController)
@@ -95,27 +101,52 @@ func (bc *BrokerController) GetBrokerAddr() string {
 	return bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
 }
 
+// Initialize BrokerController初始化
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) Initialize() bool {
+	defer utils.RecoveredFn()
+
 	result := true
 	result = result && bc.TopicConfigManager.Load()
 	result = result && bc.SubscriptionGroupManager.Load()
 	result = result && bc.ConsumerOffsetManager.Load()
 
+	bc.RemotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 10911)
+
+	// Master监听Slave请求的端口，默认为服务端口+1
+	// bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
+	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
+	// TODO test
+	bc.MessageStoreConfig.MapedFileSizeCommitLog = 1024 * 8
+
+	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
+
 	if result {
-		// TODO messageStore
+		bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
 	}
 
-	// TODO result = result && this.messageStore.load();
+	result = result && bc.MessageStore.Load()
 	if !result {
 		return result
 	}
 
-	bc.RemotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 10911)
-	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
-
 	// 注册服务
 	bc.registerProcessor()
-	// TODO 统计
+
+	bc.brokerStats = storeStatis.NewBrokerStats(bc.MessageStore)
+	// TODO this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
+
+	// 定时统计
+	initialDelay, err := strconv.Atoi(fmt.Sprint(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()))
+	if err != nil {
+		logger.Error(err)
+		return false
+	}
+	brokerStatsRecordTicker := timeutil.NewTicker(1000*60*60*24, initialDelay)
+	go brokerStatsRecordTicker.Do(func(tm time.Time) {
+		bc.brokerStats.Record()
+	})
 
 	// 定时写入ConsumerOffset文件
 	consumerOffsetPersistTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
@@ -124,7 +155,7 @@ func (bc *BrokerController) Initialize() bool {
 	})
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
-	scanUnsubscribedTopicTicker := timeutil.NewTicker(5*1000, 1000*10)
+	scanUnsubscribedTopicTicker := timeutil.NewTicker(60*60*1000, 10*60*1000)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
 		bc.ConsumerOffsetManager.ScanUnsubscribedTopic()
 	})
@@ -135,44 +166,136 @@ func (bc *BrokerController) Initialize() bool {
 	} else {
 		// 更新
 		if bc.BrokerConfig.FetchNamesrvAddrByAddressServer {
-			FetchNameServerAddrTicker := timeutil.NewTicker(60*1000*2, 1000*10)
+			FetchNameServerAddrTicker := timeutil.NewTicker(1000*60*2, 1000*10)
 			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
 				bc.BrokerOuterAPI.FetchNameServerAddr()
 			})
 		}
 	}
 
-	// TODO messageStoreConfig
-	return result
+	// 定时主从同步
+	if config.SLAVE == bc.MessageStoreConfig.BrokerRole {
+		if bc.MessageStoreConfig.HaMasterAddress != "" && len(bc.MessageStoreConfig.HaMasterAddress) >= 6 {
+			// TODO bc.MessageStore.updateHaMasterAddress(bc.MessageStoreConfig.HaMasterAddress)
+			bc.UpdateMasterHAServerAddrPeriodically = false
+		} else {
+			bc.UpdateMasterHAServerAddrPeriodically = true
+		}
 
+		// ScheduledTask syncAll slave
+		slaveSynchronizeTicker := timeutil.NewTicker(1000*60, 1000*10)
+		go slaveSynchronizeTicker.Do(func(tm time.Time) {
+			bc.SlaveSynchronize.syncAll()
+		})
+	} else {
+		printMasterAndSlaveDiffTicker := timeutil.NewTicker(1000*60, 1000*10)
+		go printMasterAndSlaveDiffTicker.Do(func(tm time.Time) {
+			bc.printMasterAndSlaveDiff()
+		})
+	}
+
+	return result
 }
 
+// Shutdown BrokerController停止入口
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) Shutdown() {
-	bc.RemotingServer.Shutdown()
-	if bc.PullRequestHoldService != nil {
-		bc.PullRequestHoldService.Shutdown()
+	if bc.brokerStatsManager != nil {
+		bc.brokerStatsManager.Shutdown()
 	}
+
 	if bc.ClientHousekeepingService != nil {
 		bc.ClientHousekeepingService.Shutdown()
 	}
+
+	if bc.PullRequestHoldService != nil {
+		bc.PullRequestHoldService.Shutdown()
+	}
+
+	if bc.RemotingServer != nil {
+		// bc.RemotingServer.Shutdown()
+	}
+
+	if bc.MessageStore != nil {
+		bc.MessageStore.Shutdown()
+	}
+
+	bc.unregisterBrokerAll()
+
+	if bc.BrokerOuterAPI != nil {
+		bc.BrokerOuterAPI.Shutdown()
+	}
+
+	bc.ConsumerOffsetManager.persist()
+
 	if bc.FilterServerManager != nil {
 		bc.FilterServerManager.Shutdown()
 	}
 }
 
+// Start BrokerController启动入口
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) Start() {
+	if bc.MessageStore != nil {
+		bc.MessageStore.Start()
+	}
+
+	if bc.RemotingServer != nil {
+		bc.RemotingServer.Start()
+	}
+
+	if bc.BrokerOuterAPI != nil {
+		bc.BrokerOuterAPI.Start()
+	}
+
 	if bc.PullRequestHoldService != nil {
 		bc.PullRequestHoldService.Start()
 	}
+
 	if bc.ClientHousekeepingService != nil {
 		bc.ClientHousekeepingService.Start()
 	}
+
 	if bc.FilterServerManager != nil {
 		bc.FilterServerManager.Start()
 	}
-	bc.RemotingServer.Start()
+
+	bc.RegisterBrokerAll(true, false)
+
+	registerBrokerAllTicker := timeutil.NewTicker(1000*30, 1000*10)
+	registerBrokerAllTicker.Do(func(tm time.Time) {
+		bc.RegisterBrokerAll(true, false)
+	})
+
+	if bc.brokerStatsManager != nil {
+		bc.brokerStatsManager.Start()
+	}
+
+	bc.addDeleteTopicTask()
 }
 
+// unregisterBrokerAll 注销所有broker
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) unregisterBrokerAll() {
+	brokerId, err := strconv.Atoi(fmt.Sprint(bc.BrokerConfig.BrokerId))
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	bc.BrokerOuterAPI.UnregisterBrokerAll(
+		bc.BrokerConfig.BrokerClusterName,
+		bc.GetBrokerAddr(),
+		bc.BrokerConfig.BrokerName,
+		brokerId)
+}
+
+// RegisterBrokerAll 注册所有broker
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
 	topicConfigWrapper := bc.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !constant.IsWriteable(bc.BrokerConfig.BrokerPermission) || !constant.IsReadable(bc.BrokerConfig.BrokerPermission) {
@@ -190,11 +313,11 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 		bc.BrokerConfig.BrokerId,
 		topicConfigWrapper,
 		oneway,
-		nil)
+		bc.FilterServerManager.BuildNewFilterServerList())
 
 	if registerBrokerResult != nil {
 		if bc.UpdateMasterHAServerAddrPeriodically && registerBrokerResult.HaServerAddr != "" {
-			// TODO this.messageStore.updateHaMasterAddress(registerBrokerResult.getHaServerAddr());
+			// TODO bc.MessageStore.updateHaMasterAddress(registerBrokerResult.HaServerAddr)
 		}
 
 		bc.SlaveSynchronize.masterAddr = registerBrokerResult.MasterAddr
@@ -204,11 +327,17 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 		}
 	}
 }
+
+// getHAServerAddr 获得HAServer的地址
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) getHAServerAddr() string {
-	// TODO:
-	return ""
+	return bc.BrokerConfig.BrokerIP2 + ":" + fmt.Sprint(bc.MessageStoreConfig.HaListenPort)
 }
 
+// addDeleteTopicTask 定时添加删除Topic
+// Author rongzhihong
+// Since 2017/9/12
 func (bc *BrokerController) addDeleteTopicTask() {
 	// 定时写入ConsumerOffset文件
 	addDeleteTopicTaskTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*60*5)
@@ -272,7 +401,7 @@ func (bc *BrokerController) getConfigDataVersion() string {
 // Since 2017/9/11
 func (bc *BrokerController) RegisterSendMessageHook(hook mqtrace.SendMessageHook) {
 	bc.sendMessageHookList = append(bc.sendMessageHookList, hook)
-	logger.Info("register SendMessageHook Hook, %s", hook.HookName())
+	logger.Infof("register SendMessageHook Hook, %s", hook.HookName())
 }
 
 // RegisterSendMessageHook 注册消费消息的回调
@@ -280,5 +409,15 @@ func (bc *BrokerController) RegisterSendMessageHook(hook mqtrace.SendMessageHook
 // Since 2017/9/11
 func (bc *BrokerController) RegisterConsumeMessageHook(hook mqtrace.ConsumeMessageHook) {
 	bc.consumeMessageHookList = append(bc.consumeMessageHookList, hook)
-	logger.Info("register ConsumeMessageHook Hook, %s", hook.HookName())
+	logger.Infof("register ConsumeMessageHook Hook, %s", hook.HookName())
+}
+
+// printMasterAndSlaveDiff 输出主从偏移量差值
+// Author rongzhihong
+// Since 2017/9/11
+func (bc *BrokerController) printMasterAndSlaveDiff() {
+	// TODO diff := bc.MessageStore.slaveFallBehindMuch()
+	diff := 0
+	// XXX: warn and notify me
+	logger.Infof("slave fall behind master, how much, %d bytes", diff)
 }

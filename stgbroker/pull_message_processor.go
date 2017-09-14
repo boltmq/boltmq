@@ -16,6 +16,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"net"
 	"strconv"
 )
@@ -49,7 +50,7 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, reques
 	go func() {
 		response, err := pull.processRequest(request, conn, false)
 		if err != nil {
-			logger.Error("ExecuteRequestWhenWakeup run", err)
+			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
 			return
 		}
 
@@ -74,13 +75,17 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, reques
 
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
-	responseHeader :=&header.PullMessageResponseHeader{}
+	responseHeader := &header.PullMessageResponseHeader{}
 
 	if pullMessageResponseHeader, ok := response.CustomHeader.(*header.PullMessageResponseHeader); ok {
 		responseHeader = pullMessageResponseHeader
 	}
 
-	requestHeader :=&header.PullMessageRequestHeader{}
+	requestHeader := &header.PullMessageRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
 
 	response.Opaque = request.Opaque
 	logger.Debug("receive PullMessage request command, ", request)
@@ -149,7 +154,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		var err error
 		subscriptionData, err = filter.BuildSubscriptionData4Ponit(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.Subscription)
 		if err != nil {
-			logger.Warn("parse the consumer's subscription %v failed, group: %v", requestHeader.Subscription, requestHeader.ConsumerGroup)
+			logger.Warnf("parse the consumer's subscription %s failed, group: %s", requestHeader.Subscription, requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_PARSE_FAILED
 			response.Remark = "parse the consumer's subscription failed"
 			return response, nil
@@ -158,7 +163,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		// 如果没有获取到维护的consumerGroup信息，则返回
 		consumerGroupInfo := pull.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 		if nil == consumerGroupInfo {
-			logger.Warn("the consumer's group info not exist, group: %v", requestHeader.ConsumerGroup)
+			logger.Warnf("the consumer's group info not exist, group: %s", requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's group info not exist"
 			return response, nil
@@ -172,7 +177,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		subscriptionData = consumerGroupInfo.FindSubscriptionData(requestHeader.Topic)
 		if nil == subscriptionData {
-			logger.Warn("the consumer's subscription not exist, group: %v", requestHeader.ConsumerGroup)
+			logger.Warnf("the consumer's subscription not exist, group: %s", requestHeader.ConsumerGroup)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's subscription not exist"
 			return response, nil
@@ -180,15 +185,15 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		// 判断Broker的订阅关系版本是否最新
 		if subscriptionData.SubVersion < requestHeader.SubVersion {
-			logger.Warn("the broker's subscription is not latest, group: %v %v", requestHeader.ConsumerGroup, subscriptionData.SubString)
+			logger.Warnf("the broker's subscription is not latest, group: %s %s", requestHeader.ConsumerGroup, subscriptionData.SubString)
 			response.Code = commonprotocol.SUBSCRIPTION_NOT_LATEST
 			response.Remark = "the consumer's subscription not latestGetMessageResult"
 			return response, nil
 		}
 	}
 
-	// TODO 	 this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), subscriptionData);
-	getMessageResult := &stgstorelog.GetMessageResult{}
+	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
+		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
 	// START: test data Add:rongzhihong
 	//getMessageResult.Status = stgstorelog.NO_MESSAGE_IN_QUEUE
 	// END: test data
@@ -234,7 +239,15 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		case stgstorelog.NO_MESSAGE_IN_QUEUE:
 			if 0 != requestHeader.QueueOffset {
 				response.Code = commonprotocol.PULL_OFFSET_MOVED
-				// TODO log
+				// XXX: warn and notify me
+				logger.Warnf("the broker store no queue data, "+
+					"fix the request offset %d to %d, Topic: %s QueueId: %d Consumer Group: %s",
+					requestHeader.QueueOffset,
+					getMessageResult.NextBeginOffset,
+					requestHeader.Topic,
+					requestHeader.QueueId,
+					requestHeader.ConsumerGroup,
+				)
 			} else {
 				response.Code = commonprotocol.PULL_NOT_FOUND
 			}
@@ -244,14 +257,15 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_OVERFLOW_BADLY:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Info("the request offset: %v over flow badly, broker max offset: %v, consumer: %v", requestHeader.QueueOffset, getMessageResult.MaxOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, conn.LocalAddr().String())
 		case stgstorelog.OFFSET_OVERFLOW_ONE:
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_TOO_SMALL:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Info("the request offset: %v too small, broker min offset: %v, consumer: %v", requestHeader.QueueOffset, getMessageResult.MinOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, conn.LocalAddr().String())
 		default:
 		}
+
 		switch response.Code {
 		case commonprotocol.SUCCESS:
 			// TODO  统计
@@ -297,8 +311,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			}
 		case commonprotocol.PULL_RETRY_IMMEDIATELY:
 		case commonprotocol.PULL_OFFSET_MOVED:
-			//if (pull.B.getMessageStoreConfig().getBrokerRole() != BrokerRole.SLAVE
-			if pull.BrokerController.BrokerConfig.OffsetCheckInSlave {
+			if pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE ||
+				pull.BrokerController.BrokerConfig.OffsetCheckInSlave {
 
 				mq := message.MessageQueue{
 					Topic:      requestHeader.Topic,
@@ -319,19 +333,26 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				response.Code = commonprotocol.PULL_RETRY_IMMEDIATELY
 			}
 
+			logger.Warnf("PULL_OFFSET_MOVED:topic=%s, groupId=%d, clientId=%d, offset=%d, suggestBrokerId=%d",
+				requestHeader.Topic, requestHeader.ConsumerGroup, requestHeader.QueueOffset, responseHeader.SuggestWhichBrokerId)
+		default:
 		}
-		// TODO
-		// 存储Consumer消费进度
-		storeOffsetEnable := brokerAllowSuspend                      // 说明是首次调用，相对于长轮询通知
-		storeOffsetEnable = storeOffsetEnable && hasCommitOffsetFlag // 说明Consumer设置了标志位
-		// TODO 	storeOffsetEnable = storeOffsetEnable // 只有Master支持存储offset && pull.BrokerController.getMessageStoreConfig().getBrokerRole() != BrokerRole.SLAVE;
-
 	} else {
 		response.Code = commonprotocol.SYSTEM_ERROR
 		response.Remark = "store getMessage return null"
 	}
 
-	// TODO 存储Consumer消费进度
+	// 存储Consumer消费进度
+	storeOffsetEnable := brokerAllowSuspend                      // 说明是首次调用，相对于长轮询通知
+	storeOffsetEnable = storeOffsetEnable && hasCommitOffsetFlag // 说明Consumer设置了标志位
+	// 只有Master支持存储offset
+	storeOffsetEnable = storeOffsetEnable && pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE
+
+	if storeOffsetEnable {
+		pull.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,
+			requestHeader.Topic, int(requestHeader.QueueId), requestHeader.CommitOffset)
+	}
+
 	return response, nil
 }
 

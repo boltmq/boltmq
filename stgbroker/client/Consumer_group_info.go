@@ -56,7 +56,7 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 	if infoOld == nil || err != nil {
 		prev, err := cg.ConnTable.Put(infoNew.LocalAddr().String(), infoNew)
 		if prev == nil || err != nil {
-			logger.Info("new consumer connected, group: %v %v %v channel: %v", cg.GroupName, consumeType,
+			logger.Infof("new consumer connected, group: %s %v %v channel: %s", cg.GroupName, consumeType,
 				messageModel, infoNew.LocalAddr().String())
 			updated = true
 		}
@@ -64,8 +64,8 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 	} else {
 		if infoold, ok := infoOld.(net.Conn); ok {
 			if !strings.EqualFold(infoNew.LocalAddr().String(), infoold.LocalAddr().String()) {
-				logger.Error(
-					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %v OLD: %v NEW: %v ",
+				logger.Errorf(
+					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
 					cg.GroupName,                 //
 					infoold.LocalAddr().String(), //
 					infoNew.LocalAddr().String())
@@ -89,7 +89,7 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Con
 		return false
 	}
 	if info != nil {
-		logger.Warn("NETTY EVENT: remove not active channel[%v] from ConsumerGroupInfo groupChannelTable, consumer group: %s",
+		logger.Warnf("NETTY EVENT: remove not active channel[%v] from ConsumerGroupInfo groupChannelTable, consumer group: %s",
 			info, cg.GroupName)
 		return true
 	}

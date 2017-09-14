@@ -5,7 +5,10 @@ import (
 	"os/user"
 	"strings"
 
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/pquerna/ffjson/ffjson"
+	"sync"
 )
 
 const TOPIC_GROUP_SEPARATOR = "@"
@@ -21,6 +24,8 @@ type ConsumerOffsetManager struct {
 	BrokerController *BrokerController
 
 	configManagerExt *ConfigManagerExt
+
+	persistLock *sync.RWMutex
 }
 
 // NewConsumerOffsetManager 初始化ConsumerOffsetManager
@@ -115,5 +120,22 @@ func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset i
 		com.Offsets.put(key, table)
 	} else {
 		value[queueId] = offset
+	}
+}
+
+// persist 将内存数据刷入文件中
+// Author rongzhihong
+// Since 2017/9/12
+func (com *ConsumerOffsetManager) persist() {
+	defer utils.RecoveredFn()
+
+	jsonString := com.Encode(true)
+	if jsonString != "" {
+		fileName := com.ConfigFilePath()
+
+		com.persistLock.RLock()
+		defer com.persistLock.Unlock()
+
+		stgcommon.String2File([]byte(jsonString), fileName)
 	}
 }

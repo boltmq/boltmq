@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"os"
 	"strings"
@@ -71,13 +72,21 @@ func CreateBrokerController() *BrokerController {
 		os.Exit(-3)
 	}
 
+	// 初始化brokerConfig
+	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
+	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
+	if config.SLAVE == messageStoreConfig.BrokerRole {
+		ratio := messageStoreConfig.AccessMessageInMemoryMaxRatio - 10
+		messageStoreConfig.AccessMessageInMemoryMaxRatio = ratio
+	}
+
 	// BrokerId的处理（switch-case语法：只要匹配到一个case，则顺序往下执行，直到遇到break，因此若没有break则不管后续case匹配与否都会执行）
-	switch smartgoBrokerConfig.BrokerRole {
+	switch messageStoreConfig.BrokerRole {
 	//如果是同步master也会执行下述case中brokerConfig.setBrokerId(MixAll.MASTER_ID);语句，直到遇到break
-	case config.ASYNC_MASTER.BrokerRoleString():
-	case config.SYNC_MASTER.BrokerRoleString():
+	case config.ASYNC_MASTER:
+	case config.SYNC_MASTER:
 		brokerConfig.BrokerId = stgcommon.MASTER_ID
-	case config.SLAVE.BrokerRoleString():
+	case config.SLAVE:
 		if brokerConfig.BrokerId <= 0 {
 			fmt.Println("Slave's brokerId must be > 0")
 			os.Exit(-3)
@@ -87,7 +96,7 @@ func CreateBrokerController() *BrokerController {
 	}
 
 	// 初始化日志
-	controller := NewBrokerController(*brokerConfig)
+	controller := NewBrokerController(*brokerConfig, messageStoreConfig)
 	controller.ConfigFile = brokerConfigPath
 
 	// 初始化controller
