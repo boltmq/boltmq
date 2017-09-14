@@ -704,7 +704,7 @@ func (self *RouteInfoManager) getTopicsByCluster(cluster string) []byte {
 // getUnitTopics 获取单元逻辑下的所有topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) getUnitTopics() []byte {
+func (self *RouteInfoManager) getUnitTopicList() []byte {
 	topicList := body.NewTopicList()
 	self.ReadWriteLock.RLock()
 	if self.TopicQueueTable != nil {
@@ -738,7 +738,7 @@ func (self *RouteInfoManager) getHasUnitSubTopicList() []byte {
 // GetHasUnitSubUnUnitTopicList 获取含有单元化订阅组的 非单元化Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) GetHasUnitSubUnUnitTopicList() []byte {
+func (self *RouteInfoManager) getHasUnitSubUnUnitTopicList() []byte {
 	topicList := body.NewTopicList()
 	self.ReadWriteLock.RLock()
 	if self.TopicQueueTable != nil {
