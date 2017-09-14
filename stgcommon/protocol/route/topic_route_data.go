@@ -61,10 +61,11 @@ func (brokerData *BrokerData) SelectBrokerAddr() string {
 }
 
 func (self *BrokerData) CloneBrokerData() *BrokerData {
-	brokerDataClone := &BrokerData{
-		BrokerName:      self.BrokerName,
-		BrokerAddrsLock: self.BrokerAddrsLock,
-		BrokerAddrs:     self.BrokerAddrs,
+	brokerDataClone := &BrokerData{}
+	brokerDataClone.BrokerName = self.BrokerName
+	brokerDataClone.BrokerAddrs = make(map[int]string, 0)
+	for k, v := range self.BrokerAddrs {
+		brokerDataClone.BrokerAddrs[k] = v
 	}
 
 	return brokerDataClone
