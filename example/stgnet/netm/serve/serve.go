@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"net"
+	"log"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
@@ -10,8 +9,8 @@ import (
 func main() {
 	b := netm.NewBootstrap()
 	b.SetKeepAlive(false).Bind("0.0.0.0", 8000).
-		RegisterHandler(func(buffer []byte, addr string, conn net.Conn) {
-			fmt.Println("rece:", string(buffer))
-			conn.Write([]byte("hi, client"))
+		RegisterHandler(func(buffer []byte, ctx netm.Context) {
+			log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
+			ctx.Write([]byte("hi, client"))
 		}).Sync()
 }
