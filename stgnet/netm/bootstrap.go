@@ -11,16 +11,16 @@ import (
 
 // Bootstrap 启动器
 type Bootstrap struct {
-	listener    net.Listener
-	mu          sync.Mutex
-	connTable   map[string]net.Conn
-	connTableMu sync.RWMutex
-	opts        *Options
-	optsMu      sync.RWMutex
-	handlers    []Handler
-	keepalive   bool
-	running     bool
-	grRunning   bool
+	listener         net.Listener
+	mu               sync.Mutex
+	contextTable     map[string]Context
+	contextTableLock sync.RWMutex
+	opts             *Options
+	optsMu           sync.RWMutex
+	handlers         []Handler
+	keepalive        bool
+	running          bool
+	grRunning        bool
 }
 
 // NewBootstrap 创建启动器
@@ -29,7 +29,8 @@ func NewBootstrap() *Bootstrap {
 		opts:      &Options{},
 		grRunning: true,
 	}
-	b.connTable = make(map[string]net.Conn)
+	b.contextTable = make(map[string]Context)
+
 	return b
 }
 
@@ -52,7 +53,7 @@ func (bootstrap *Bootstrap) Sync() {
 		bootstrap.Fatalf("Error listening on port: %s, %q", addr, e)
 		return
 	}
-	bootstrap.Noticef("Listening for client connections on %s",
+	bootstrap.Noticef("Listening for connections on %s",
 		net.JoinHostPort(opts.Host, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)))
 	bootstrap.Noticef("Bootstrap is ready")
 
@@ -105,13 +106,14 @@ func (bootstrap *Bootstrap) Sync() {
 
 		// 以客户端ip,port管理连接
 		remoteAddr := conn.RemoteAddr().String()
-		bootstrap.connTableMu.Lock()
-		bootstrap.connTable[remoteAddr] = conn
-		bootstrap.connTableMu.Unlock()
+		ctx := newDefaultContext(remoteAddr, conn)
+		bootstrap.contextTableLock.Lock()
+		bootstrap.contextTable[remoteAddr] = ctx
+		bootstrap.contextTableLock.Unlock()
 		bootstrap.Debugf("Client connection created %s", remoteAddr)
 
 		bootstrap.startGoRoutine(func() {
-			bootstrap.handleConn(remoteAddr, conn)
+			bootstrap.handleConn(remoteAddr, ctx)
 		})
 	}
 
@@ -132,34 +134,35 @@ func (bootstrap *Bootstrap) ConnectJoinAddr(addr string) error {
 }
 
 // Connect 使用指定地址、端口的连接字符串进行连接并返回连接
-func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (net.Conn, error) {
-	bootstrap.connTableMu.RLock()
-	conn, ok := bootstrap.connTable[addr]
-	bootstrap.connTableMu.RUnlock()
+func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, error) {
+	bootstrap.contextTableLock.RLock()
+	ctx, ok := bootstrap.contextTable[addr]
+	bootstrap.contextTableLock.RUnlock()
 	if ok {
-		return conn, nil
+		return ctx, nil
 	}
 
-	nconn, e := bootstrap.connect(addr)
+	nctx, e := bootstrap.connect(addr)
 	if e != nil {
 		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
 		return nil, errors.Wrap(e, 0)
 	}
 
-	bootstrap.connTableMu.Lock()
-	bootstrap.connTable[addr] = nconn
-	bootstrap.connTableMu.Unlock()
+	bootstrap.contextTableLock.Lock()
+	bootstrap.contextTable[addr] = nctx
+	bootstrap.contextTableLock.Unlock()
 	bootstrap.Noticef("Connect listening on port: %s", addr)
-	bootstrap.Noticef("client connections on %s", nconn.LocalAddr().String())
+	bootstrap.Noticef("client connections on %s", nctx.LocalAddr().String())
 
 	bootstrap.startGoRoutine(func() {
-		bootstrap.handleConn(addr, nconn)
+		bootstrap.handleConn(addr, nctx)
 	})
 
-	return nconn, nil
+	return nctx, nil
 }
 
-func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
+// 创建新连接
+func (bootstrap *Bootstrap) connect(addr string) (Context, error) {
 	conn, e := net.Dial("tcp", addr)
 	if e != nil {
 		return nil, errors.Wrap(e, 0)
@@ -170,14 +173,15 @@ func (bootstrap *Bootstrap) connect(addr string) (net.Conn, error) {
 		return nil, e
 	}
 
-	return conn, nil
+	ctx := newDefaultContext(addr, conn)
+	return ctx, nil
 }
 
 // HasConnect find connect by addr, return bool
 func (bootstrap *Bootstrap) HasConnect(addr string) bool {
-	bootstrap.connTableMu.RLock()
-	_, ok := bootstrap.connTable[addr]
-	bootstrap.connTableMu.RUnlock()
+	bootstrap.contextTableLock.RLock()
+	_, ok := bootstrap.contextTable[addr]
+	bootstrap.contextTableLock.RUnlock()
 	if !ok {
 		return false
 	}
@@ -187,19 +191,20 @@ func (bootstrap *Bootstrap) HasConnect(addr string) bool {
 
 // Disconnect 关闭指定连接
 func (bootstrap *Bootstrap) Disconnect(addr string) {
-	bootstrap.connTableMu.RLock()
-	conn, ok := bootstrap.connTable[addr]
-	bootstrap.connTableMu.RUnlock()
+	bootstrap.contextTableLock.RLock()
+	ctx, ok := bootstrap.contextTable[addr]
+	bootstrap.contextTableLock.RUnlock()
 	if ok {
-		bootstrap.disconnect(addr, conn)
+		bootstrap.disconnect(addr, ctx)
 	}
 }
 
-func (bootstrap *Bootstrap) disconnect(addr string, conn net.Conn) {
-	conn.Close()
-	bootstrap.connTableMu.Lock()
-	delete(bootstrap.connTable, addr)
-	bootstrap.connTableMu.Unlock()
+// 关闭连接
+func (bootstrap *Bootstrap) disconnect(addr string, ctx Context) {
+	ctx.Close()
+	bootstrap.contextTableLock.Lock()
+	delete(bootstrap.contextTable, addr)
+	bootstrap.contextTableLock.Unlock()
 }
 
 // Shutdown 关闭bootstrap
@@ -209,32 +214,28 @@ func (bootstrap *Bootstrap) Shutdown() {
 	bootstrap.mu.Unlock()
 
 	// 关闭所有连接
-	bootstrap.connTableMu.Lock()
-	for addr, conn := range bootstrap.connTable {
-		conn.Close()
-		delete(bootstrap.connTable, addr)
+	bootstrap.contextTableLock.Lock()
+	for addr, ctx := range bootstrap.contextTable {
+		ctx.Close()
+		delete(bootstrap.contextTable, addr)
 	}
-	bootstrap.connTableMu.Unlock()
+	bootstrap.contextTableLock.Unlock()
 }
 
 // Write 发送消息
-func (bootstrap *Bootstrap) Write(addr string, buffer []byte) (n int, err error) {
-	bootstrap.connTableMu.RLock()
-	conn, ok := bootstrap.connTable[addr]
-	bootstrap.connTableMu.RUnlock()
+func (bootstrap *Bootstrap) Write(addr string, buffer []byte) (n int, e error) {
+	bootstrap.contextTableLock.RLock()
+	ctx, ok := bootstrap.contextTable[addr]
+	bootstrap.contextTableLock.RUnlock()
 	if !ok {
 		bootstrap.Fatalf("not found connect: %s", addr)
-		err = errors.Errorf("not found connect %s", addr)
+		e = errors.Errorf("not found connect %s", addr)
 		return
 	}
 
-	return bootstrap.write(addr, conn, buffer)
-}
-
-func (bootstrap *Bootstrap) write(addr string, conn net.Conn, buffer []byte) (n int, e error) {
-	n, e = conn.Write(buffer)
+	n, e = ctx.Write(buffer)
 	if e != nil {
-		bootstrap.disconnect(addr, conn)
+		bootstrap.disconnect(addr, ctx)
 		e = errors.Wrap(e, 0)
 	}
 
@@ -247,18 +248,19 @@ func (bootstrap *Bootstrap) RegisterHandler(fns ...Handler) *Bootstrap {
 	return bootstrap
 }
 
-func (bootstrap *Bootstrap) handleConn(addr string, conn net.Conn) {
+// 接收数据
+func (bootstrap *Bootstrap) handleConn(addr string, ctx Context) {
 	b := make([]byte, 1024)
 	for {
-		n, err := conn.Read(b)
+		n, err := ctx.Read(b)
 		if err != nil {
-			bootstrap.disconnect(addr, conn)
+			bootstrap.disconnect(addr, ctx)
 			bootstrap.Fatalf("failed handle connect: %s %s", addr, err)
 			return
 		}
 
 		for _, fn := range bootstrap.handlers {
-			fn(b[:n], addr, conn)
+			fn(b[:n], ctx)
 		}
 	}
 }
@@ -284,33 +286,33 @@ func (bootstrap *Bootstrap) getOpts() *Options {
 
 // Size 当前连接数
 func (bootstrap *Bootstrap) Size() int {
-	bootstrap.connTableMu.RLock()
-	defer bootstrap.connTableMu.RUnlock()
-	return len(bootstrap.connTable)
+	bootstrap.contextTableLock.RLock()
+	defer bootstrap.contextTableLock.RUnlock()
+	return len(bootstrap.contextTable)
 }
 
 // NewRandomConnect 连接指定地址、端口(客户端随机端口地址管理连接)。特殊业务使用
-func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (net.Conn, error) {
+func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (Context, error) {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
-	nconn, e := bootstrap.connect(addr)
+	nctx, e := bootstrap.connect(addr)
 	if e != nil {
 		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
 		return nil, errors.Wrap(e, 0)
 	}
 
-	localAddr := nconn.LocalAddr().String()
-	bootstrap.connTableMu.Lock()
-	bootstrap.connTable[localAddr] = nconn
-	bootstrap.connTableMu.Unlock()
+	localAddr := nctx.LocalAddr().String()
+	bootstrap.contextTableLock.Lock()
+	bootstrap.contextTable[localAddr] = nctx
+	bootstrap.contextTableLock.Unlock()
 	bootstrap.Noticef("Connect listening on port: %s", addr)
 	bootstrap.Noticef("client connections on %s", localAddr)
 
 	bootstrap.startGoRoutine(func() {
-		bootstrap.handleConn(addr, nconn)
+		bootstrap.handleConn(addr, nctx)
 	})
 
-	return nconn, nil
+	return nctx, nil
 }
 
 // SetKeepAlive 配置连接keepalive，default is false
