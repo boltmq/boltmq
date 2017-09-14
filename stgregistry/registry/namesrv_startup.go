@@ -11,9 +11,9 @@ import (
 	"os"
 )
 
-type NamesrvStartup struct {
-}
-
+// Startup 设置默认启动的控制器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func Startup() *DefaultNamesrvController {
 	controller := CreateNamesrvController()
 	if initResult := controller.initialize(); !initResult {

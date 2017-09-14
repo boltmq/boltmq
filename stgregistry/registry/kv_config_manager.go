@@ -37,7 +37,7 @@ func NewKVConfigManager(controller *DefaultNamesrvController) *KVConfigManager {
 func (self *KVConfigManager) printAllPeriodically() {
 	self.ReadWriteLock.RLock()
 	logger.Info("--------------------------------------------------------")
-	logger.Info("configTable SIZE: %d", len(self.ConfigTable))
+	logger.Info("configTable size: %d", len(self.ConfigTable))
 	if self.ConfigTable != nil {
 		for namespace, kvTable := range self.ConfigTable {
 			if kvTable != nil {
@@ -84,7 +84,6 @@ func (self *KVConfigManager) deleteKVConfigByValue(namespace, value string) {
 		}
 	}
 	self.ReadWriteLock.Unlock()
-
 	self.persist()
 }
 
@@ -106,7 +105,6 @@ func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string 
 		return buf.String()
 	}
 	self.ReadWriteLock.RUnlock()
-
 	return ""
 }
 
@@ -130,9 +128,9 @@ func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
-		tb := body.KVTable{}
+		tb := &body.KVTable{}
 		tb.Table = kvTable
-		return tb.CustomEncode(&tb)
+		return tb.CustomEncode(tb)
 	}
 	self.ReadWriteLock.RUnlock()
 
@@ -184,12 +182,16 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
+	logger.Info("kvConfigManager load start ... ")
 	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
+	logger.Info("get kvConfigPath = %s", kvConfigPath)
+
 	content, err := stgcommon.File2String(kvConfigPath)
 	if err != nil {
-		fmt.Printf("load kvConfigPath=%s error: %s\n", kvConfigPath, err.Error())
+		logger.Error("load kvConfigPath=%s error: %s", kvConfigPath, err.Error())
 		return err
 	}
+	logger.Info("read %s successful. content: %s", content)
 
 	if strings.TrimSpace(content) == "" {
 		buf := []byte(content)
@@ -204,5 +206,6 @@ func (self *KVConfigManager) load() error {
 			}
 		}
 	}
+	logger.Info("kvConfigManager load end ... ")
 	return nil
 }
