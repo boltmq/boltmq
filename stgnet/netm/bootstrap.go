@@ -11,17 +11,18 @@ import (
 
 // Bootstrap 启动器
 type Bootstrap struct {
-	listener         net.Listener
-	contextTable     map[string]Context
-	contextTableLock sync.RWMutex
-	contextListener  ContextListener
-	opts             *Options
-	optsMu           sync.RWMutex
-	handlers         []Handler
-	keepalive        bool
-	mu               sync.Mutex
-	running          bool
-	grRunning        bool
+	listener          net.Listener
+	contextTable      map[string]Context
+	contextTableLock  sync.RWMutex
+	contextListener   ContextListener
+	opts              *Options
+	optsMu            sync.RWMutex
+	handlers          []Handler
+	checkCtxIdleTimer *time.Timer
+	keepalive         bool
+	mu                sync.Mutex
+	running           bool
+	grRunning         bool
 }
 
 // NewBootstrap 创建启动器
@@ -238,6 +239,12 @@ func (bootstrap *Bootstrap) Shutdown() {
 		delete(bootstrap.contextTable, addr)
 	}
 	bootstrap.contextTableLock.Unlock()
+
+	// 关闭定时器
+	if bootstrap.checkCtxIdleTimer == nil {
+		bootstrap.checkCtxIdleTimer.Stop()
+		bootstrap.checkCtxIdleTimer = nil
+	}
 }
 
 // Write 发送消息
@@ -306,6 +313,16 @@ func (bootstrap *Bootstrap) getOpts() *Options {
 	opts := bootstrap.opts
 	bootstrap.optsMu.RUnlock()
 	return opts
+}
+
+// 设置空闲时间，单位秒
+func (bootstrap *Bootstrap) SetIdle(idle int) *Bootstrap {
+	bootstrap.optsMu.Lock()
+	bootstrap.opts.Idle = idle
+	bootstrap.optsMu.Unlock()
+	bootstrap.startScheduledCheckContextIdle()
+
+	return bootstrap
 }
 
 // Size 当前连接数
@@ -417,5 +434,55 @@ func (bootstrap *Bootstrap) onContextIdle(ctx Context) {
 	bootstrap.remove(ctx)
 	if bootstrap.contextListener != nil {
 		bootstrap.contextListener.OnContextIdle(ctx)
+	}
+}
+
+// 检查空闲连接
+func (bootstrap *Bootstrap) startScheduledCheckContextIdle() {
+	bootstrap.optsMu.RLock()
+	idle := bootstrap.opts.Idle
+	bootstrap.optsMu.RUnlock()
+
+	if idle <= 0 {
+		return
+	}
+
+	// 已经启动
+	if bootstrap.checkCtxIdleTimer != nil {
+		return
+	}
+
+	// 开启定时器检查
+	bootstrap.startGoRoutine(func() {
+		interval := idle / 2
+		if interval == 0 {
+			interval = idle
+		}
+		bootstrap.checkCtxIdleTimer = time.NewTimer(time.Duration(interval) * time.Second)
+		for {
+			<-bootstrap.checkCtxIdleTimer.C
+			bootstrap.scanIdleContextTable(idle)
+			bootstrap.checkCtxIdleTimer.Reset(time.Duration(interval) * time.Second)
+		}
+	})
+}
+
+// 扫描空闲连接
+func (bootstrap *Bootstrap) scanIdleContextTable(idle int) {
+	var contexts []Context
+
+	bootstrap.contextTableLock.RLock()
+	for _, ctx := range bootstrap.contextTable {
+		// 超时判断
+		ctxIdle := ctx.Idle().Seconds()
+		if int(ctxIdle) >= idle {
+			contexts = append(contexts, ctx)
+		}
+	}
+	bootstrap.contextTableLock.RUnlock()
+
+	for _, ctx := range contexts {
+		bootstrap.onContextIdle(ctx)
+		bootstrap.Fatalf("remove time out context %s, idle time: %s", ctx.Addr(), ctx.Idle())
 	}
 }

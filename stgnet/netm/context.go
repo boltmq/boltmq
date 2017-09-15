@@ -3,6 +3,7 @@ package netm
 import (
 	"io"
 	"net"
+	"time"
 )
 
 // Context the context of connection, like conn channel, not go chan.
@@ -12,16 +13,21 @@ type Context interface {
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
 	Close() error
+	IsClosed() bool
+	Idle() time.Duration
 	Addr() string
 }
 
 // DefaultContext default context
 type DefaultContext struct {
-	addr      string
-	conn      net.Conn
-	bootstrap *Bootstrap
+	addr        string
+	conn        net.Conn
+	bootstrap   *Bootstrap
+	lastOptTime time.Time
+	isClosed    bool
 }
 
+// 创建一个连接context
 func newDefaultContext(addr string, conn net.Conn, bootstrap *Bootstrap) *DefaultContext {
 	return &DefaultContext{
 		addr:      addr,
@@ -36,6 +42,7 @@ func (ctx *DefaultContext) Read(b []byte) (n int, e error) {
 	if e != nil {
 		ctx.onError(e)
 	}
+	ctx.lastOptTime = time.Now()
 
 	return
 }
@@ -46,14 +53,20 @@ func (ctx *DefaultContext) Write(b []byte) (n int, e error) {
 	if e != nil {
 		ctx.onError(e)
 	}
+	ctx.lastOptTime = time.Now()
 
 	return
 }
 
 // Close 关闭连接
 func (ctx *DefaultContext) Close() error {
+	if ctx.isClosed {
+		return nil
+	}
+
 	ctx.bootstrap.onContextClose(ctx)
 	e := ctx.conn.Close()
+	ctx.isClosed = true
 
 	return e
 }
@@ -73,6 +86,16 @@ func (ctx *DefaultContext) Addr() string {
 	return ctx.addr
 }
 
+// IsClosed 返回索引地址
+func (ctx *DefaultContext) IsClosed() bool {
+	return ctx.isClosed
+}
+
+// Idle 返回空闲时间
+func (ctx *DefaultContext) Idle() time.Duration {
+	return time.Since(ctx.lastOptTime)
+}
+
 // 错误通知
 func (ctx *DefaultContext) onError(e error) {
 	if e == io.EOF {
@@ -80,6 +103,7 @@ func (ctx *DefaultContext) onError(e error) {
 	} else {
 		ctx.bootstrap.onContextError(ctx)
 	}
+	ctx.isClosed = true
 
 	ctx.conn.Close()
 }
