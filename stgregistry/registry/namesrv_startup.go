@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
@@ -21,17 +20,11 @@ func Startup() *DefaultNamesrvController {
 	initResult := controller.initialize()
 	if !initResult {
 		controller.shutdown()
-		fmt.Println("controller initialize fail.")
-		logger.Info("controller initialize fail.")
-		os.Exit(-3)
+		logger.Info("the name server controller initialize failed.")
+		os.Exit(0)
 	}
-
 	controller.start()
-
-	tip := "The Name Server boot success."
-	logger.Info(tip)
-	fmt.Println(tip)
-
+	logger.Info("the name server boot success.")
 	return controller
 }
 
@@ -43,14 +36,14 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	cfg := namesrv.NewNamesrvConfig()
 	if cfg.GetSmartGoHome() == "" {
 		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
-		fmt.Printf(msg, stgcommon.SMARTGO_HOME_ENV)
-		os.Exit(-2)
+		logger.Error(msg, stgcommon.SMARTGO_HOME_ENV)
+		os.Exit(0)
 	}
 
 	// 初始化NamesrvController
 	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
 	controller := NewNamesrvController(cfg, remotingServer)
 
-	logger.Info("createNamesrvController() end.")
+	logger.Info("create default namesrv controller success.")
 	return controller
 }
