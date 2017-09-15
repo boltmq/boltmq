@@ -183,16 +183,30 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
 	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
+	// 加载文件之前，如果文件不存在，则创建
+	if ok, err := stgcommon.ExistsFile(kvConfigPath); err != nil || !ok {
+		if ok, err := stgcommon.CreateDir(kvConfigPath); err != nil || !ok {
+			return fmt.Errorf("创建kvConfig配置文件异常. kvConfigPath=%s", kvConfigPath)
+		}
+	}
+
+	// 读取文件内容
 	content, err := stgcommon.File2String(kvConfigPath)
 	if err != nil {
-		logger.Error("load kvConfigPath=%s error: %s", kvConfigPath, err.Error())
+		logger.Error("kvConfigManager load error: %s \n\t%s", kvConfigPath, err.Error())
 		return err
 	}
 	values := strings.Split(kvConfigPath, "/")
 	kvConfigName := values[len(values)-1]
-	logger.Info("read %s successful. content: %s", kvConfigName, content)
 
-	if strings.TrimSpace(content) == "" {
+	logData := content
+	if logData == "" {
+		logData = "is empty"
+	}
+	logger.Info("read %s successful. content %s", kvConfigName, logData)
+
+	if strings.TrimSpace(content) != "" {
+		// 文件内容有数据，反序列化为KVConfigSerializeWrapper
 		buf := []byte(content)
 		var kvConfigSerializeWrapper *KVConfigSerializeWrapper
 		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)

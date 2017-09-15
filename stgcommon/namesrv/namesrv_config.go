@@ -4,50 +4,62 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"os"
+	"os/user"
 	"path/filepath"
-	"reflect"
 	"strings"
 )
 
 const (
-	separator               = string(os.PathSeparator)
-	smartgoKVConfigFileName = "kvConfig.json"
-	projectPath             = "/git.oschina.net/cloudzone/smartgo"
-	moduleName              = "/stgregistry/start/conf"
+	childDir  = "namesrv"
+	separator = string(os.PathSeparator)
+	cfgName   = "kvConfig.json"
 )
-
-// NamesrvConfig namesrv配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/6
-type NamesrvConfig interface {
-	GetSmartGoHome() string
-	GetKvConfigPath() string
-}
 
 // DefaultNamesrvConfig 默认Namesrv配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
-type DefaultNamesrvConfig struct {
-	SmartgoHome  string `json:"smartgoHome"`
-	KvConfigPath string `json:"kvConfigPath"`
+type NamesrvConfig struct {
+	SmartgoHome  string
+	KvConfigPath string
 }
 
-type generator struct {
-	Pkg    string
-	Name   string
-	Locale string
-}
-
-// NewNamesrvConfig 初始化
+// NewNamesrvConfig 初始化配置项
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
-func NewNamesrvConfig() NamesrvConfig {
-	namesrvConfig := &DefaultNamesrvConfig{
+func NewNamesrvConfig() *NamesrvConfig {
+	cfg := &NamesrvConfig{
 		SmartgoHome:  getSmartGoHome(),
-		KvConfigPath: GetKvConfigPath(),
+		KvConfigPath: getKvConfigPath(),
 	}
+	return cfg
+}
 
-	return namesrvConfig
+// GetSmartGoHome 获取SmartGoHome配置目录
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
+func (self *NamesrvConfig) GetSmartGoHome() string {
+	return self.SmartgoHome
+}
+
+// GetKvConfigPath 获取Namesrv配置文件的完整路径
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
+func (self *NamesrvConfig) GetKvConfigPath() string {
+	return self.KvConfigPath
+}
+
+// GetKvConfigDir 获取Namesrv配置文件完整路径
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
+func (self *NamesrvConfig) GetKvConfigDir() string {
+	return filepath.Dir(self.KvConfigPath)
+}
+
+// GetKvConfigName 获取Namesrv配置文件名
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
+func (self *NamesrvConfig) GetKvConfigName() string {
+	return cfgName
 }
 
 // getSmartGoHome 获得默认配置
@@ -61,65 +73,28 @@ func getSmartGoHome() string {
 	return smartGoHome
 }
 
-// GetKvConfigPath 获得KV配置文件路径
+// getKvConfigPath 获得KV配置文件路径
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
-func GetKvConfigPath() string {
-	// 获取程序运行路径
-	workDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	format := workDir + separator + smartgoKVConfigFileName
-	kvConfigPath := filepath.ToSlash(format) // 将workDir中平台相关的路径分隔符转换为'/'
-	if exists, _ := validateExists(kvConfigPath); !exists {
-		// 特别标注，配合IDE开发
-		kvConfigPath := os.Getenv("GOPATH") + "/src" + projectPath + moduleName + "/" + smartgoKVConfigFileName
-		fmt.Printf("ide.kvConfigPath=%s\n", kvConfigPath)
-		return kvConfigPath
+func getKvConfigPath() string {
+	rootDir, err := user.Current()
+	if err != nil {
+		msg := fmt.Sprintf("get rootDir err: %s \n", err.Error())
+		fmt.Printf(msg)
+		panic(msg)
 	}
+	kvConfigPath := filepath.ToSlash(rootDir.HomeDir + separator + childDir + separator + cfgName)
 	return kvConfigPath
-}
 
-// validateExists 校验文件或文件夹是否存在
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/13
-func validateExists(fileFullPath string) (bool, error) {
-	_, err := os.Stat(fileFullPath)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-// configPkg is the creator function, initiates kolpa with or without locale
-// setting. The default locale setting is "en_US".
-// Returns a generator type that will be used to call generator methods.
-// http://www.cnblogs.com/vikings-blog/p/7131618.html
-func configPkg(localeVar ...string) generator {
-	newGenerator := generator{}
-	if len(localeVar) > 0 {
-		newGenerator.Locale = localeVar[0]
-	} else {
-		newGenerator.Locale = "conf"
-	}
-
-	newGenerator.Pkg = reflect.TypeOf(newGenerator).PkgPath()
-	newGenerator.Locale = reflect.TypeOf(newGenerator).String()
-	newGenerator.Name = reflect.TypeOf(newGenerator).Name()
-	return newGenerator
-}
-
-// GetSmartGoHome 对外提供方法
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/6
-func (self *DefaultNamesrvConfig) GetSmartGoHome() string {
-	return self.SmartgoHome
-}
-
-// GetKvConfigPath 对外提供方法
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/8
-func (self *DefaultNamesrvConfig) GetKvConfigPath() string {
-	return self.KvConfigPath
+	//// 获取程序运行路径
+	//workDir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	//format := workDir + separator + smartgoKVConfigFileName
+	//kvConfigPath := filepath.ToSlash(format) // 将workDir中平台相关的路径分隔符转换为'/'
+	//if exists, _ := validateExists(kvConfigPath); !exists {
+	//	// 特别标注，配合IDE开发
+	//	kvConfigPath := os.Getenv("GOPATH") + "/src" + projectPath + moduleName + "/" + smartgoKVConfigFileName
+	//	fmt.Printf("ide.kvConfigPath=%s\n", kvConfigPath)
+	//	return kvConfigPath
+	//}
+	//return kvConfigPath
 }
