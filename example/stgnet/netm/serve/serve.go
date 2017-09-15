@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
@@ -14,6 +13,4 @@ func main() {
 			log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
 			ctx.Write([]byte("hi, client"))
 		}).Sync()
-
-	time.Sleep(2 * time.Second)
 }
