@@ -12,13 +12,14 @@ import (
 // Bootstrap 启动器
 type Bootstrap struct {
 	listener         net.Listener
-	mu               sync.Mutex
 	contextTable     map[string]Context
 	contextTableLock sync.RWMutex
+	contextListener  ContextListener
 	opts             *Options
 	optsMu           sync.RWMutex
 	handlers         []Handler
 	keepalive        bool
+	mu               sync.Mutex
 	running          bool
 	grRunning        bool
 }
@@ -30,7 +31,6 @@ func NewBootstrap() *Bootstrap {
 		grRunning: true,
 	}
 	b.contextTable = make(map[string]Context)
-
 	return b
 }
 
@@ -111,14 +111,19 @@ func (bootstrap *Bootstrap) Sync() {
 
 		// 以客户端ip,port管理连接
 		remoteAddr := conn.RemoteAddr().String()
-		ctx := newDefaultContext(remoteAddr, conn)
+		ctx := newDefaultContext(remoteAddr, conn, bootstrap)
 		bootstrap.contextTableLock.Lock()
 		bootstrap.contextTable[remoteAddr] = ctx
 		bootstrap.contextTableLock.Unlock()
 		bootstrap.Debugf("Client connection created %s", remoteAddr)
 
 		bootstrap.startGoRoutine(func() {
-			bootstrap.handleConn(remoteAddr, ctx)
+			bootstrap.handleConn(ctx)
+		})
+
+		// 通知连接创建
+		bootstrap.startGoRoutine(func() {
+			bootstrap.onContextConnect(ctx)
 		})
 	}
 
@@ -160,7 +165,12 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 	bootstrap.Noticef("client connections on %s", nctx.LocalAddr().String())
 
 	bootstrap.startGoRoutine(func() {
-		bootstrap.handleConn(addr, nctx)
+		bootstrap.handleConn(nctx)
+	})
+
+	// 通知连接创建
+	bootstrap.startGoRoutine(func() {
+		bootstrap.onContextConnect(ctx)
 	})
 
 	return nctx, nil
@@ -178,7 +188,7 @@ func (bootstrap *Bootstrap) connect(addr string) (Context, error) {
 		return nil, e
 	}
 
-	ctx := newDefaultContext(addr, conn)
+	ctx := newDefaultContext(addr, conn, bootstrap)
 	return ctx, nil
 }
 
@@ -200,13 +210,13 @@ func (bootstrap *Bootstrap) Disconnect(addr string) {
 	ctx, ok := bootstrap.contextTable[addr]
 	bootstrap.contextTableLock.RUnlock()
 	if ok {
-		bootstrap.disconnect(addr, ctx)
+		ctx.Close()
 	}
 }
 
-// 关闭连接
-func (bootstrap *Bootstrap) disconnect(addr string, ctx Context) {
-	ctx.Close()
+// 移除连接
+func (bootstrap *Bootstrap) remove(ctx Context) {
+	addr := ctx.Addr()
 	bootstrap.contextTableLock.Lock()
 	delete(bootstrap.contextTable, addr)
 	bootstrap.contextTableLock.Unlock()
@@ -243,7 +253,6 @@ func (bootstrap *Bootstrap) Write(addr string, buffer []byte) (n int, e error) {
 
 	n, e = ctx.Write(buffer)
 	if e != nil {
-		bootstrap.disconnect(addr, ctx)
 		e = errors.Wrap(e, 0)
 	}
 
@@ -257,13 +266,12 @@ func (bootstrap *Bootstrap) RegisterHandler(fns ...Handler) *Bootstrap {
 }
 
 // 接收数据
-func (bootstrap *Bootstrap) handleConn(addr string, ctx Context) {
+func (bootstrap *Bootstrap) handleConn(ctx Context) {
 	b := make([]byte, 1024)
 	for {
 		n, err := ctx.Read(b)
 		if err != nil {
-			bootstrap.disconnect(addr, ctx)
-			bootstrap.Fatalf("failed handle connect: %s %s", addr, err)
+			bootstrap.Fatalf("failed handle connect: %s %s", ctx.Addr(), err)
 			break
 		}
 
@@ -272,7 +280,7 @@ func (bootstrap *Bootstrap) handleConn(addr string, ctx Context) {
 		}
 	}
 
-	bootstrap.Noticef("Connect[%s] Exiting..", addr)
+	bootstrap.Debugf("Connect[%s] Exiting..", ctx.Addr())
 }
 
 func (bootstrap *Bootstrap) startGoRoutine(fn func()) {
@@ -319,7 +327,12 @@ func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (Context, er
 	bootstrap.Noticef("client connections on %s", localAddr)
 
 	bootstrap.startGoRoutine(func() {
-		bootstrap.handleConn(addr, nctx)
+		bootstrap.handleConn(nctx)
+	})
+
+	// 通知连接创建
+	bootstrap.startGoRoutine(func() {
+		bootstrap.onContextConnect(nctx)
 	})
 
 	return nctx, nil
@@ -353,4 +366,38 @@ func (bootstrap *Bootstrap) Contexts() []Context {
 	bootstrap.contextTableLock.RUnlock()
 
 	return contexts
+}
+
+// 创建连接时进行通知
+func (bootstrap *Bootstrap) onContextConnect(ctx Context) {
+	if bootstrap.contextListener != nil {
+		bootstrap.contextListener.OnContextConnect(ctx)
+	}
+}
+
+// 关闭连接时进行通知
+func (bootstrap *Bootstrap) onContextClose(ctx Context) {
+	// 删除连接
+	bootstrap.remove(ctx)
+	if bootstrap.contextListener != nil {
+		bootstrap.contextListener.OnContextClose(ctx)
+	}
+}
+
+// 连接异常时进行通知
+func (bootstrap *Bootstrap) onContextError(ctx Context) {
+	// 删除连接
+	bootstrap.remove(ctx)
+	if bootstrap.contextListener != nil {
+		bootstrap.contextListener.OnContextError(ctx)
+	}
+}
+
+// 连接空闲时进行通知
+func (bootstrap *Bootstrap) onContextIdle(ctx Context) {
+	// 删除连接
+	bootstrap.remove(ctx)
+	if bootstrap.contextListener != nil {
+		bootstrap.contextListener.OnContextIdle(ctx)
+	}
 }
