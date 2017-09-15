@@ -1,5 +1,11 @@
 package stgstorelog
 
+import (
+	"time"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+)
+
 var (
 	HASH_SLOT_SIZE int32 = 4
 	INDEX_SIZE     int32 = 20
@@ -25,20 +31,21 @@ func NewIndexFile(fileName string, hashSlotNum, indexNum int32, endPhyOffset, en
 	}
 
 	indexFile.mapedFile = mapedFile
-	// TODO this.fileChannel = this.mapedFile.getFileChannel()
 	indexFile.mappedByteBuffer = indexFile.mapedFile.mappedByteBuffer
 	indexFile.hashSlotNum = hashSlotNum
 	indexFile.indexNum = indexNum
 
 	byteBuffer := indexFile.mappedByteBuffer.slice()
-	indexFile.indexHeader = NewIndexHeader(byteBuffer)
+	indexFile.indexHeader = NewIndexHeader(NewMappedByteBuffer(byteBuffer.Bytes()))
 
 	if endPhyOffset > 0 {
-		// TODO
+		indexFile.indexHeader.setBeginPhyOffset(endPhyOffset)
+		indexFile.indexHeader.setEndPhyOffset(endPhyOffset)
 	}
 
 	if endTimestamp > 0 {
-		// TODO
+		indexFile.indexHeader.setBeginTimestamp(endTimestamp)
+		indexFile.indexHeader.setEndTimestamp(endTimestamp)
 	}
 
 	return indexFile
@@ -46,4 +53,24 @@ func NewIndexFile(fileName string, hashSlotNum, indexNum int32, endPhyOffset, en
 
 func (self *IndexFile) load() {
 	self.indexHeader.load()
+}
+
+func (self *IndexFile) flush() {
+	beginTime := time.Now().Unix()
+	self.indexHeader.updateByteBuffer()
+	self.mappedByteBuffer.flush()
+	self.mapedFile.release()
+	logger.Info("flush index file eclipse time(ms) ", (time.Now().Unix() - beginTime))
+}
+
+func (self *IndexFile) isWriteFull() bool {
+	return self.indexHeader.indexCount >= self.indexNum
+}
+
+func (self *IndexFile) getEndPhyOffset() int64 {
+	return self.indexHeader.endPhyOffset
+}
+
+func (self *IndexFile) getEndTimestamp() int64 {
+	return self.indexHeader.endTimestamp
 }

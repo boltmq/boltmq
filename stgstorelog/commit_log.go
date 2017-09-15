@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
 
@@ -58,14 +59,9 @@ func (self *CommitLog) Start() {
 }
 
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
-	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
+	msg.StoreTimestamp = time.Now().Unix()
 	// TOD0 crc32
 	msg.BodyCRC = 0
-
-	// storeStatesService := self.DefaultMessageStore.StoreStatsService
-	// topic := msg.Topic
-	// queueId := msg.QueueId
-	// tagsCode := msg.TagsCode
 
 	// TODO 事务消息处理
 	self.mutex.Lock()
@@ -87,15 +83,62 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 	switch result.Status {
 	case APPENDMESSAGE_PUT_OK:
 		break
-		// TODO
+	case END_OF_FILE:
+		mapedFile, err = self.MapedFileQueue.getLastMapedFile(int64(0))
+		if err != nil {
+			logger.Error(err.Error())
+			return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED, AppendMessageResult: result}
+		}
+
+		if mapedFile == nil {
+			logger.Errorf("create maped file2 error, topic:%s clientAddr:%s", msg.Topic, msg.BornHost)
+			return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED, AppendMessageResult: result}
+		}
+
+		result = mapedFile.AppendMessageWithCallBack(msg, self.AppendMessageCallback)
+		break
+	case MESSAGE_SIZE_EXCEEDED:
+		return &PutMessageResult{PutMessageStatus: MESSAGE_ILLEGAL, AppendMessageResult: result}
+	default:
+		return &PutMessageResult{PutMessageStatus: PUTMESSAGE_UNKNOWN_ERROR, AppendMessageResult: result}
 	}
 
-	// TODO DispatchRequest
+	// DispatchRequest
+	dispatchRequest := &DispatchRequest{
+		topic:                     msg.Topic,
+		queueId:                   msg.QueueId,
+		commitLogOffset:           result.WroteOffset,
+		msgSize:                   result.WroteBytes,
+		tagsCode:                  msg.TagsCode,
+		storeTimestamp:            msg.StoreTimestamp,
+		consumeQueueOffset:        result.LogicsOffset,
+		keys:                      msg.GetKeys(),
+		sysFlag:                   msg.SysFlag,
+		tranStateTableOffset:      msg.QueueOffset,
+		preparedTransactionOffset: msg.PreparedTransactionOffset,
+		producerGroup:             message.PROPERTY_PRODUCER_GROUP,
+	}
+
+	self.DefaultMessageStore.DispatchMessageService.putRequest(dispatchRequest)
+
+	eclipseTimeInLock := time.Now().Unix() - beginLockTimestamp
 	self.mutex.Unlock()
+
+	if eclipseTimeInLock > 1000 {
+		logger.Warn("putMessage in lock eclipse time(ms) ", eclipseTimeInLock)
+	}
 
 	putMessageResult := &PutMessageResult{PutMessageStatus: PUTMESSAGE_PUT_OK, AppendMessageResult: result}
 
+	// TODO self.DefaultMessageStore.StoreStatsService
 	// TODO
+
+	// Synchronization flush
+	if config.SYNC_FLUSH == self.DefaultMessageStore.MessageStoreConfig.FlushDiskType {
+		// TODO
+	} else {
+		//self.FlushCommitLogService
+	}
 
 	return putMessageResult
 }

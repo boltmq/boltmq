@@ -20,12 +20,11 @@ func Test_write_read(t *testing.T) {
 	messageBody := []byte(storeMessage)
 
 	messageStoreConfig := NewMessageStoreConfig()
-	/*
+
 	messageStoreConfig.MapedFileSizeCommitLog = 1024 * 8
 	messageStoreConfig.MapedFileSizeConsumeQueue = 1024 * 4
 	messageStoreConfig.MaxHashSlotNum = 100
 	messageStoreConfig.MaxIndexNum = 100 * 10
-	*/
 
 	master := NewDefaultMessageStore(messageStoreConfig, nil)
 
@@ -44,13 +43,13 @@ func Test_write_read(t *testing.T) {
 	}
 
 	for i := 0; i < totalMessages; i++ {
-		result := master.GetMessage("GROUP_A", "TOPIC_A", 0, int64(i), 1024*1024, nil)
+		result := master.GetMessage("GROUP_A", "test", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
 		}
 
 		// result.relase()
-		fmt.Printf("read %d ok \r\n", i)
+		fmt.Printf("read %d ok %#v \r\n", i, result)
 	}
 
 	master.Shutdown()

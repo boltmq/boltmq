@@ -109,3 +109,12 @@ func (self *ConsumeQueue) getMinOffsetInQueque() int64 {
 func (self *ConsumeQueue) getMaxOffsetInQueque() int64 {
 	return self.mapedFileQueue.getMaxOffset() / CQStoreUnitSize
 }
+
+func (self *ConsumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset int64) {
+	// maxRetries := 5
+	// canWrite := self.defaultMessageStore.RunningFlags
+}
+
+func (self *ConsumeQueue) commit(flushLeastPages int32) bool {
+	return self.mapedFileQueue.commit(flushLeastPages)
+}

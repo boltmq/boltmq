@@ -1,11 +1,9 @@
 package stgstorelog
 
-import "sync"
-
 type AllocateRequest struct {
 	filePath  string
 	fileSize  int64
-	waitGroup sync.WaitGroup
+	syncChan  chan bool
 	mapedFile *MapedFile
 }
 
@@ -13,8 +11,7 @@ func NewAllocateRequest(filePath string, fileSize int64) *AllocateRequest {
 	request := new(AllocateRequest)
 	request.filePath = filePath
 	request.fileSize = fileSize
-	request.waitGroup = sync.WaitGroup{}
-	request.waitGroup.Add(1)
+	request.syncChan = make(chan bool, 1)
 
 	return request
 }
