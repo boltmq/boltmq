@@ -96,7 +96,7 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		return &AppendMessageResult{
 			Status:         END_OF_FILE,
 			WroteOffset:    wroteOffset,
-			WroteBytes:     int(maxBlank),
+			WroteBytes:     int64(maxBlank),
 			MsgId:          msgId,
 			StoreTimestamp: msgInner.StoreTimestamp,
 			LogicsOffset:   queryOffset}
@@ -134,12 +134,13 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		self.msgStoreItemMemory.Write(propertiesData)
 	}
 
+	logger.Info(string(self.msgStoreItemMemory.Bytes()))
 	mappedByteBuffer.Write(self.msgStoreItemMemory.Bytes())
 
 	result := &AppendMessageResult{
 		Status:         APPENDMESSAGE_PUT_OK,
 		WroteOffset:    wroteOffset,
-		WroteBytes:     int(msgLen),
+		WroteBytes:     int64(msgLen),
 		MsgId:          msgId,
 		StoreTimestamp: msgInner.StoreTimestamp,
 		LogicsOffset:   queryOffset}
@@ -150,5 +151,5 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 }
 
 func (self *DefaultAppendMessageCallback) resetMsgStoreItemMemory(length int32) {
-	// TODO
+	// TODO 初始化数据
 }

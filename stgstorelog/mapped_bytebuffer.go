@@ -73,6 +73,13 @@ func (self *MappedByteBuffer) ReadInt32() (i int32) {
 	return i
 }
 
+func (self *MappedByteBuffer) ReadInt64() (i int64) {
+	int64bytes := make([]byte, 8)
+	self.Read(int64bytes)
+	i = byteutil.BytesToInt64(int64bytes)
+	return i
+}
+
 // slice 返回当前MappedByteBuffer.byteBuffer中从开始位置到len的分片buffer
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
