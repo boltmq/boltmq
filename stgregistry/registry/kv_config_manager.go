@@ -158,21 +158,19 @@ func (self *KVConfigManager) deleteKVConfig(namespace, key string) {
 // Since: 2017/9/6
 func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 	self.ReadWriteLock.Lock()
-	if kvTable, ok := self.ConfigTable[namespace]; ok {
-		if kvTable == nil {
-			kvTable = make(map[string]string)
-			self.ConfigTable[namespace] = kvTable
-		}
-
-		// 检查是否存在oldValue
-		format := "putKVConfig update config item, Namespace: %s Key: %s Value: %s"
-		if oldValue, ok := kvTable[key]; ok && oldValue == "" {
-			// String prev = kvTable.put(key, value) && prev == null
-			format = "putKVConfig create new config item, Namespace: %s Key: %s Value: %s"
-		}
-		logger.Info(format, namespace, key, value)
-		kvTable[key] = value
+	kvTable, ok := self.ConfigTable[namespace]
+	if !ok || kvTable == nil {
+		kvTable = make(map[string]string)
+		self.ConfigTable[namespace] = kvTable
 	}
+
+	// 检查key是否已存在
+	format := "putKVConfig update config item, Namespace: %s Key: %s Value: %s"
+	if _, ok := kvTable[key]; !ok {
+		format = "putKVConfig create new config item, Namespace: %s Key: %s Value: %s"
+	}
+	logger.Info(format, namespace, key, value)
+	kvTable[key] = value
 	self.ReadWriteLock.Unlock()
 
 	self.persist()
@@ -182,36 +180,39 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
-	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
-	// 加载文件之前，如果文件不存在，则创建
-	if ok, err := stgcommon.ExistsFile(kvConfigPath); err != nil || !ok {
-		if ok, err := stgcommon.CreateDir(kvConfigPath); err != nil || !ok {
-			return fmt.Errorf("创建kvConfig配置文件异常. kvConfigPath=%s", kvConfigPath)
+	// 如果kvConfig.json文件不存在，则创建
+	cfgPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
+	logger.Info("get kvConfigPath = %s", cfgPath)
+	cfgName := self.NamesrvController.NamesrvConfig.GetKvConfigName()
+	if ok, err := stgcommon.ExistsFile(cfgPath); err != nil || !ok {
+		ok, err := stgcommon.CreateFile(cfgPath)
+		if err != nil {
+			return fmt.Errorf("create %s failed. err: %s", cfgName, err.Error())
 		}
+		if !ok {
+			return fmt.Errorf("create %s failed, but err is nil", cfgName)
+		}
+		logger.Info("create %s successful.", cfgName)
 	}
 
-	// 读取文件内容
-	content, err := stgcommon.File2String(kvConfigPath)
+	// 读取kvConfig.json文件内容，并打印日志
+	content, err := stgcommon.File2String(cfgPath)
 	if err != nil {
-		logger.Error("kvConfigManager load error: %s \n\t%s", kvConfigPath, err.Error())
-		return err
+		return fmt.Errorf("load %s error: %s", cfgName, err.Error())
 	}
-	values := strings.Split(kvConfigPath, "/")
-	kvConfigName := values[len(values)-1]
-
-	logData := content
-	if logData == "" {
-		logData = "is empty"
+	val := content
+	if val == "" {
+		val = "is empty"
 	}
-	logger.Info("read %s successful. content %s", kvConfigName, logData)
+	logger.Info("read %s successful. content %s", cfgName, val)
 
 	if strings.TrimSpace(content) != "" {
-		// 文件内容有数据，反序列化为KVConfigSerializeWrapper
-		buf := []byte(content)
-		var kvConfigSerializeWrapper *KVConfigSerializeWrapper
+		// kvConfig.json文件内容有数据，则反序列化为KVConfigSerializeWrapper
+		buf := []byte(strings.TrimSpace(content))
+		kvConfigSerializeWrapper := new(KVConfigSerializeWrapper)
 		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)
 		if err != nil {
-			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s", err.Error())
+			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s \n\t %s", err.Error(), content)
 		}
 		if kvConfigSerializeWrapper != nil && kvConfigSerializeWrapper.ConfigTable != nil {
 			for k, v := range kvConfigSerializeWrapper.ConfigTable {
@@ -219,6 +220,6 @@ func (self *KVConfigManager) load() error {
 			}
 		}
 	}
-	logger.Info("kvConfigManager load end ... ")
+	logger.Info("kvConfigManager load successful.")
 	return nil
 }

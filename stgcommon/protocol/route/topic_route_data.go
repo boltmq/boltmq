@@ -349,7 +349,7 @@ func (self *QueueData) ToString() string {
 
 func (self *BrokerData) ToString() string {
 	brokerAddrs := make([]string, 0, len(self.BrokerAddrs))
-	if self.BrokerAddrs != nil && len(self.BrokerAddrs) == 0 {
+	if self.BrokerAddrs != nil && len(self.BrokerAddrs) > 0 {
 		for k, v := range self.BrokerAddrs {
 			brokerAddr := fmt.Sprintf("[brokerId=%d, brokerAddr=%s]", k, v)
 			brokerAddrs = append(brokerAddrs, brokerAddr)

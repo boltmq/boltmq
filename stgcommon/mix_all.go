@@ -140,7 +140,7 @@ func file2String(filePath string) (bf []byte, err error) {
 
 func CreateDir(dir string) (bool, error) {
 	if err := os.MkdirAll(dir, os.FileMode(os.O_CREATE)); err != nil {
-		return false, fmt.Errorf("create dir error. dir=%s, err: %s", dir, err.Error())
+		return false, err
 	}
 
 	return true, nil
@@ -148,12 +148,14 @@ func CreateDir(dir string) (bool, error) {
 
 func CreateFile(fileFullName string) (bool, error) {
 	parentDir := filepath.Dir(fileFullName)
-	if ok, err := CreateDir(parentDir); err != nil || !ok {
+	_, err := CreateDir(parentDir)
+	if err != nil {
 		return false, err
 	}
 
-	if _, err := os.Create(fileFullName); err != nil {
-		return false, fmt.Errorf("create file error. filePath=%s, err: %s", fileFullName, err.Error())
+	_, err = os.Create(fileFullName)
+	if err != nil {
+		return false, err
 	}
 
 	return true, nil
@@ -174,7 +176,7 @@ func ExistsDir(fileFullPath string) (bool, error) {
 	return false, err // 不确定是否在存在
 }
 
-// FileExists 校验文件是否存在
+// ExistsFile 校验文件是否存在
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/15
 func ExistsFile(fileFullPath string) (bool, error) {

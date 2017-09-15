@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
-	namesrvUtil "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
@@ -14,6 +13,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"net"
 	"strings"
 )
@@ -28,9 +28,9 @@ type DefaultRequestProcessor struct {
 // NewDefaultRequestProcessor 初始化NameServer网络请求处理
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewDefaultRequestProcessor(namesrvController *DefaultNamesrvController) remoting.RequestProcessor {
+func NewDefaultRequestProcessor(controller *DefaultNamesrvController) remoting.RequestProcessor {
 	requestProcessor := &DefaultRequestProcessor{
-		NamesrvController: namesrvController,
+		NamesrvController: controller,
 	}
 	return requestProcessor
 }
@@ -161,7 +161,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
 	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -283,7 +283,7 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request 
 	topic := requestHeader.Topic
 	topicRouteData := self.NamesrvController.RouteInfoManager.pickupTopicRouteData(topic)
 	if topicRouteData != nil {
-		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
+		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(util.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
 		topicRouteData.OrderTopicConf = orderTopicConf
 
 		var content []byte
@@ -419,7 +419,7 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
-	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(namesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG)
+	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
 	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""

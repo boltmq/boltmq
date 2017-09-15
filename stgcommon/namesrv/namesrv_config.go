@@ -19,8 +19,8 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 type NamesrvConfig struct {
-	SmartgoHome  string
-	KvConfigPath string
+	smartgoHome  string
+	kvConfigPath string
 }
 
 // NewNamesrvConfig 初始化配置项
@@ -28,8 +28,8 @@ type NamesrvConfig struct {
 // Since: 2017/9/8
 func NewNamesrvConfig() *NamesrvConfig {
 	cfg := &NamesrvConfig{
-		SmartgoHome:  getSmartGoHome(),
-		KvConfigPath: getKvConfigPath(),
+		smartgoHome:  getSmartGoHome(),
+		kvConfigPath: getKvConfigPath(),
 	}
 	return cfg
 }
@@ -38,21 +38,21 @@ func NewNamesrvConfig() *NamesrvConfig {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *NamesrvConfig) GetSmartGoHome() string {
-	return self.SmartgoHome
+	return self.smartgoHome
 }
 
 // GetKvConfigPath 获取Namesrv配置文件的完整路径
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 func (self *NamesrvConfig) GetKvConfigPath() string {
-	return self.KvConfigPath
+	return self.kvConfigPath
 }
 
 // GetKvConfigDir 获取Namesrv配置文件完整路径
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 func (self *NamesrvConfig) GetKvConfigDir() string {
-	return filepath.Dir(self.KvConfigPath)
+	return filepath.Dir(self.kvConfigPath)
 }
 
 // GetKvConfigName 获取Namesrv配置文件名
