@@ -170,7 +170,7 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 
 	// 通知连接创建
 	bootstrap.startGoRoutine(func() {
-		bootstrap.onContextConnect(ctx)
+		bootstrap.onContextConnect(nctx)
 	})
 
 	return nctx, nil
@@ -265,6 +265,12 @@ func (bootstrap *Bootstrap) RegisterHandler(fns ...Handler) *Bootstrap {
 	return bootstrap
 }
 
+// RegisterContextListener 注册连接的监听接口
+func (bootstrap *Bootstrap) RegisterContextListener(contextListener ContextListener) *Bootstrap {
+	bootstrap.contextListener = contextListener
+	return bootstrap
+}
+
 // 接收数据
 func (bootstrap *Bootstrap) handleConn(ctx Context) {
 	b := make([]byte, 1024)
@@ -353,6 +359,18 @@ func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
 	}
 
 	return nil
+}
+
+// Contexts 返回指定context
+func (bootstrap *Bootstrap) Context(addr string) Context {
+	bootstrap.contextTableLock.RLock()
+	ctx, ok := bootstrap.contextTable[addr]
+	bootstrap.contextTableLock.RUnlock()
+	if !ok {
+		return nil
+	}
+
+	return ctx
 }
 
 // Contexts 返回context
