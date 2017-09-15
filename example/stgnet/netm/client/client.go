@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sync"
+	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
@@ -28,7 +29,8 @@ func (listener *ClientContextListener) OnContextIdle(ctx netm.Context) {
 
 func main() {
 	var wg sync.WaitGroup
-	b := netm.NewBootstrap().RegisterContextListener(&ClientContextListener{})
+	b := netm.NewBootstrap().SetIdle(20).
+		RegisterContextListener(&ClientContextListener{})
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
 		log.Printf("client receive msg form %s, local[%s]. msg: %s\n", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
 		wg.Done()
@@ -44,5 +46,7 @@ func main() {
 	// or b.Write("10.122.1.200:8000", []byte(msg))
 
 	wg.Wait()
-	ctx.Close()
+	// wait 20 s
+	time.Sleep(30 * time.Second)
+	//ctx.Close()
 }

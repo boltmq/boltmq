@@ -26,7 +26,7 @@ func (listener *DemoContextListener) OnContextIdle(ctx netm.Context) {
 }
 
 func main() {
-	b := netm.NewBootstrap().RegisterContextListener(&DemoContextListener{})
+	b := netm.NewBootstrap().SetIdle(10).RegisterContextListener(&DemoContextListener{})
 	b.SetKeepAlive(false).Bind("0.0.0.0", 8000).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
 			log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
