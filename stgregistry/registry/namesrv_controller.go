@@ -2,10 +2,10 @@ package registry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"time"
 )
 
@@ -18,7 +18,7 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type DefaultNamesrvController struct {
-	NamesrvConfig             namesrv.NamesrvConfig           // namesrv配置项
+	NamesrvConfig             *namesrv.NamesrvConfig          // namesrv配置项
 	RemotingServer            *remoting.DefalutRemotingServer // 远程请求server端
 	RouteInfoManager          *RouteInfoManager               // topic路由管理器
 	KvConfigManager           *KVConfigManager                // kv管理器
@@ -31,7 +31,7 @@ type DefaultNamesrvController struct {
 // NewNamesrvController 初始化默认的NamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/12
-func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
+func NewNamesrvController(namesrvConfig *namesrv.NamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
 	controller := &DefaultNamesrvController{
 		scanBrokerTicker:   timeutil.NewTicker(5*second, 10*second),
 		printNamesrvTicker: timeutil.NewTicker(1*minute, 10*minute),
