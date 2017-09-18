@@ -1,6 +1,7 @@
 package netm
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -16,6 +17,7 @@ type Context interface {
 	IsClosed() bool
 	Idle() time.Duration
 	Addr() string
+	ToString() string
 }
 
 // DefaultContext default context
@@ -106,4 +108,10 @@ func (ctx *DefaultContext) onError(e error) {
 	ctx.isClosed = true
 
 	ctx.conn.Close()
+}
+
+// ToString 打印net.Conn的基本参数
+func (ctx *DefaultContext) ToString() string {
+	format := "net conn[localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
+	return fmt.Sprintf(format, ctx.conn.LocalAddr().String(), ctx.conn.RemoteAddr().String(), ctx.addr, ctx.isClosed)
 }

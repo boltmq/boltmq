@@ -38,9 +38,7 @@ func NewDefaultRequestProcessor(controller *DefaultNamesrvController) remoting.R
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	//remoteAddr := remotingUtil.ParseChannelRemoteAddr(conn)
-	format := "receive request. code=%d, remoteAddr=%s, content=%s"
-	logger.Info(format, request.Code, ctx.RemoteAddr().String(), request.ToString())
+	logger.Info("receive request. %s %s", ctx.ToString(), request.ToString())
 
 	switch request.Code {
 	case code.PUT_KV_CONFIG:
@@ -244,7 +242,7 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, req
 
 	wipeTopicCount := self.NamesrvController.RouteInfoManager.wipeWritePermOfBrokerByLock(requestHeader.BrokerName)
 	format := "wipe write perm of broker[%s], client: %s, %d"
-	remoteAddr := ctx.RemoteAddr().String() // remotingUtil.ParseChannelRemoteAddr(conn)
+	remoteAddr := ctx.RemoteAddr().String()
 	logger.Info(format, requestHeader.BrokerName, remoteAddr, wipeTopicCount)
 
 	responseHeader.WipeTopicCount = wipeTopicCount

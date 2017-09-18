@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv/routeinfo"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	set "github.com/deckarep/golang-set"
@@ -179,7 +180,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 // Since: 2017/9/6
 func (self *RouteInfoManager) isBrokerTopicConfigChanged(brokerAddr string, dataVersion *stgcommon.DataVersion) bool {
 	if prev, ok := self.BrokerLiveTable[brokerAddr]; ok {
-		if prev == nil || prev.DataVersion.EqualDataVersion(dataVersion) {
+		if prev == nil || !prev.DataVersion.Equal(dataVersion) {
 			return true
 		}
 	}
@@ -196,11 +197,11 @@ func (self *RouteInfoManager) isBrokerTopicConfigChanged(brokerAddr string, data
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) wipeWritePermOfBrokerByLock(brokerName string) int {
-	wipeTopicCnt := 0
+	wipeTopicCount := 0
 	self.ReadWriteLock.Lock()
-	wipeTopicCnt = self.wipeWritePermOfBroker(brokerName)
+	wipeTopicCount = self.wipeWritePermOfBroker(brokerName)
 	self.ReadWriteLock.Unlock()
-	return wipeTopicCnt
+	return wipeTopicCount
 }
 
 // wipeWritePermOfBroker 优雅更新Broker写操作
@@ -213,7 +214,7 @@ func (self *RouteInfoManager) wipeWritePermOfBrokerByLock(brokerName string) int
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) wipeWritePermOfBroker(brokerName string) int {
-	wipeTopicCnt := 0
+	wipeTopicCount := 0
 	if self.TopicQueueTable != nil {
 		for _, queueDataList := range self.TopicQueueTable {
 			if queueDataList != nil {
@@ -222,13 +223,13 @@ func (self *RouteInfoManager) wipeWritePermOfBroker(brokerName string) int {
 						perm := queteData.Perm
 						perm &= 0xFFFFFFFF ^ constant.PERM_WRITE // 等效于java代码： perm &= ~PermName.PERM_WRITE
 						queteData.Perm = perm
-						wipeTopicCnt++
+						wipeTopicCount++
 					}
 				}
 			}
 		}
 	}
-	return wipeTopicCnt
+	return wipeTopicCount
 }
 
 // createAndUpdateQueueData 创建或更新Topic的队列数据
@@ -369,7 +370,7 @@ func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
 	}
 }
 
-// pickupTopicRouteData 根据Topic收集路由数据
+// pickupTopicRouteData 收集Topic路由数据
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRouteData {
@@ -431,23 +432,25 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 // Since: 2017/9/6
 func (self *RouteInfoManager) scanNotActiveBroker() {
 	if self.BrokerLiveTable != nil {
-		for remoteAddr, brokerLiveInfo := range self.BrokerLiveTable {
+		for brokerAddr, brokerLiveInfo := range self.BrokerLiveTable {
 			lastTimestamp := brokerLiveInfo.LastUpdateTimestamp + brokerChannelExpiredTime
-			currentTimeMillis := stgcommon.GetCurrentTimeMillis()
-			if lastTimestamp < currentTimeMillis {
-				// 主动关闭 Channel通道，关闭后通过 channel.close().addListener()事件来通知其他模块
-				//TODO: RemotingUtil.closeChannel(brokerLiveInfo.getChannel());
-				brokerLiveInfo.Context.Close()
+			currentTime := stgcommon.GetCurrentTimeMillis()
+			format := "scanNotActiveBroker[lastTimestamp=%d, currentTimeMillis=%s]"
+			logger.Info(format, stgcommon.FormatTimestamp(lastTimestamp), stgcommon.FormatTimestamp(currentTime))
+
+			if lastTimestamp < currentTime {
+				// 主动关闭Channel通道，关闭后打印日志
+				remotingUtil.CloseChannel(brokerLiveInfo.Context)
 
 				// 删除无效Broker列表
 				self.ReadWriteLock.RLock()
-				delete(self.BrokerLiveTable, remoteAddr)
+				delete(self.BrokerLiveTable, brokerAddr)
 				self.ReadWriteLock.RUnlock()
 
 				// 关闭Channel通道
-				format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
-				logger.Info(format, remoteAddr, currentTimeMillis, lastTimestamp, brokerChannelExpiredTime)
-				self.onChannelDestroy(remoteAddr, brokerLiveInfo.Context)
+				format = "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
+				logger.Info(format, brokerAddr, currentTime, lastTimestamp, brokerChannelExpiredTime)
+				self.onChannelDestroy(brokerAddr, brokerLiveInfo.Context)
 			}
 		}
 	}
@@ -456,8 +459,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Context) {
-
+func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Context) {
 	// 加读锁，寻找断开连接的Broker
 	queryBroker := false
 	brokerAddrFound := ""
@@ -473,7 +475,7 @@ func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 	}
 
 	if !queryBroker {
-		brokerAddrFound = remoteAddr
+		brokerAddrFound = brokerAddr
 	} else {
 		logger.Info("the broker's channel destroyed, %s, clean it's data structure at once", brokerAddrFound)
 	}

@@ -1,9 +1,9 @@
 package registry
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"time"
@@ -22,7 +22,7 @@ type DefaultNamesrvController struct {
 	RemotingServer            *remoting.DefalutRemotingServer // 远程请求server端
 	RouteInfoManager          *RouteInfoManager               // topic路由管理器
 	KvConfigManager           *KVConfigManager                // kv管理器
-	BrokerHousekeepingService client.ChannelEventListener     // 扫描不活跃broker
+	BrokerHousekeepingService netm.ContextListener            // 扫描不活跃broker
 	scanBrokerTicker          *timeutil.Ticker                // 扫描2分钟不活跃broker的定时器
 	printNamesrvTicker        *timeutil.Ticker                // 周期性打印namesrv数据的定时器
 	RequestProcessor          remoting.RequestProcessor       // 默认请求处理器
@@ -58,12 +58,15 @@ func (self *DefaultNamesrvController) initialize() bool {
 	// (2)注册默认DefaultRequestProcessor，只要start启动就开始处理请求
 	self.registerProcessor()
 
-	// (3)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
+	// (3)注册broker连接的监听器
+	self.registerContextListener()
+
+	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
 	go func() {
 		self.startScanNotActiveBroker()
 	}()
 
-	// (4)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
+	// (5)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
 	go func() {
 		self.startPrintAllPeriodically()
 	}()
@@ -119,4 +122,11 @@ func (self *DefaultNamesrvController) startPrintAllPeriodically() {
 	self.printNamesrvTicker.Do(func(tm time.Time) {
 		self.KvConfigManager.printAllPeriodically()
 	})
+}
+
+// registerContextListener 注册监听器，监听broker对应的net.conn连接的Close()、Idel()、Error()等状态变化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/18
+func (self *DefaultNamesrvController) registerContextListener() {
+	self.RemotingServer.RegisterContextListener(&BrokerHousekeepingService{})
 }

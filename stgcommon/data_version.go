@@ -25,7 +25,7 @@ func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
 	self.Counter = dataVersion.Counter
 }
 
-func (self *DataVersion) EqualDataVersion(dataVersion *DataVersion) bool {
+func (self *DataVersion) Equal(dataVersion *DataVersion) bool {
 	if dataVersion == nil {
 		return false
 	}

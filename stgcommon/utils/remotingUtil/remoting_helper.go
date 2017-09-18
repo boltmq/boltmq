@@ -1,6 +1,7 @@
 package remotingUtil
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"strings"
 )
@@ -23,4 +24,22 @@ func ParseChannelRemoteAddr(conn netm.Context) string {
 	}
 
 	return remoteAddr
+}
+
+// 关闭指定的Channel通道，关闭完成后打印日志
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/18
+func CloseChannel(ctx netm.Context) {
+	if ctx == nil {
+		logger.Info("ctx is nil, not need to close")
+		return
+	}
+
+	addrRemote := ctx.RemoteAddr().String()
+	success := true
+	if err := ctx.Close(); err != nil {
+		success = false
+	}
+	cloueMsg := "closeChannel: close the connection to remote address[%s] result: %s"
+	logger.Info(cloueMsg, addrRemote, success)
 }

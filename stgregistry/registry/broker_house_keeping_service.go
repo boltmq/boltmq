@@ -1,14 +1,13 @@
 package registry
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 // BrokerHousekeepingServices Broker活动检测服务
 //
-// (1)ChannelEventListener是RocketMQ封装Netty向外暴露的一个接口层
-// (2)NameSrv监测Broker的死亡：当Broker和NameSrv之间的长连接断掉之后，后续的ChannelEventListener里面的函数就会被回调，从而触发NameServer的路由信息更新
+// (1)ContextListener是smartnet模块封装接口
+// (2)NameSrv监测Broker的死亡：当Broker和NameSrv之间的长连接断掉之后，回调ContextListener对应的函数，从而触发NameServer的路由信息更新
 //
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
@@ -19,37 +18,37 @@ type BrokerHousekeepingService struct {
 // NewBrokerHousekeepingService 初始化Broker活动检测服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func NewBrokerHousekeepingService(controller *DefaultNamesrvController) client.ChannelEventListener {
+func NewBrokerHousekeepingService(controller *DefaultNamesrvController) netm.ContextListener {
 	brokerHousekeepingService := &BrokerHousekeepingService{
 		NamesrvController: controller,
 	}
 	return brokerHousekeepingService
 }
 
-// onChannelConnect
+// OnContextConnect 创建Channel连接
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelConnect(ctx netm.Context) {
+func (self *BrokerHousekeepingService) OnContextConnect(ctx netm.Context) {
 
 }
 
-// onChannelClose Channel被关闭,通知Topic路由管理器，清除无效Broker
+// OnContextClose 关闭Channel,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelClose(ctx netm.Context) {
+func (self *BrokerHousekeepingService) OnContextClose(ctx netm.Context) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
-// onChannelException Channel出现异常,通知Topic路由管理器，清除无效Broker
+// OnContextError Channel出现异常,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelException(ctx netm.Context) {
+func (self *BrokerHousekeepingService) OnContextError(ctx netm.Context) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
-// onChannelIdle Channe的Idle时间超时,通知Topic路由管理器，清除无效Brokers
+// OnContextIdle Channe的Idle时间超时,通知Topic路由管理器，清除无效Brokers
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelIdle(ctx netm.Context) {
+func (self *BrokerHousekeepingService) OnContextIdle(ctx netm.Context) {
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
