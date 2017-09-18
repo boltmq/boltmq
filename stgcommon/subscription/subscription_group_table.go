@@ -1,12 +1,13 @@
 package subscription
 
 import (
+	syncmap "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"sync"
 )
 
 type SubscriptionGroupTable struct {
 	SubscriptionGroupTable map[string]*SubscriptionGroupConfig `json:"subscriptionGroupTable"`
-	sync.RWMutex `json:"-"`
+	sync.RWMutex           `json:"-"`
 }
 
 func NewSubscriptionGroupTable() *SubscriptionGroupTable {
@@ -60,5 +61,40 @@ func (table *SubscriptionGroupTable) Foreach(fn func(k string, v *SubscriptionGr
 
 	for k, v := range table.SubscriptionGroupTable {
 		fn(k, v)
+	}
+}
+
+// Clear 清空
+// Author rongzhihong
+// Since 2017/9/18
+func (table *SubscriptionGroupTable) Clear() {
+	table.RLock()
+	defer table.RUnlock()
+
+	table.SubscriptionGroupTable = make(map[string]*SubscriptionGroupConfig)
+}
+
+// syncTopicConfig 同步Topic配置文件
+// Author rongzhihong
+// Since 2017/9/18
+func (table *SubscriptionGroupTable) PutAll(offsetMap *syncmap.Map) {
+	table.Lock()
+	defer table.Unlock()
+
+	iterator := offsetMap.Iterator()
+	for iterator.HasNext() {
+		kItem, vItem, _ := iterator.Next()
+		var (
+			k  = ""
+			ok = false
+		)
+
+		if k, ok = kItem.(string); !ok {
+			continue
+		}
+
+		if v, vok := vItem.(*SubscriptionGroupConfig); vok {
+			table.SubscriptionGroupTable[k] = v
+		}
 	}
 }

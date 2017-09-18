@@ -13,14 +13,19 @@ type DefaultTransactionCheckExecuter struct {
 	brokerController *BrokerController
 }
 
+// NewDefaultTransactionCheckExecuter 初始化事务
+// Author rongzhihong
+// Since 2017/9/17
 func NewDefaultTransactionCheckExecuter(brokerController *BrokerController) *DefaultTransactionCheckExecuter {
 	trans := new(DefaultTransactionCheckExecuter)
 	trans.brokerController = brokerController
 	return trans
 }
 
-func (trans *DefaultTransactionCheckExecuter) GotoCheck(producerGroupHashCode int, tranStateTableOffset,
-	commitLogOffset int64, msgSize int) {
+// GotoCheck 回调检查方法
+// Author rongzhihong
+// Since 2017/9/17
+func (trans *DefaultTransactionCheckExecuter) GotoCheck(producerGroupHashCode int, tranStateTableOffset, commitLogOffset int64, msgSize int) {
 	// 第一步、查询Producer
 	clientChannelInfo := trans.brokerController.ProducerManager.PickProducerChannelRandomly(producerGroupHashCode)
 	if clientChannelInfo == nil {

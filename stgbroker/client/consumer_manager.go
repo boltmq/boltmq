@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
+	set2 "github.com/toolkits/container/set"
 )
 
 // ConsumerManager 消费者管理
@@ -68,18 +69,34 @@ func (cm *ConsumerManager) RegisterConsumer(group string, ctx netm.Context, cons
 			}
 		}
 	}
+	// TODO
 	r1 := consumerGroupInfo.UpdateChannel(ctx, consumeType, messageModel, consumeFromWhere)
 	r2 := consumerGroupInfo.UpdateSubscription(subList)
 
 	if r1 || r2 {
-		cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())
+		cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.GetAllChannel())
 	}
 
 	return r1 || r2
 }
 
+// UnregisterConsumer 注销消费者
+// Author rongzhihong
+// Since 2017/9/18
 func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *ChannelInfo) {
-
+	consumerGroupInfo, _ := cm.consumerTable.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			info.UnregisterChannel(channelInfo)
+			if info.ConnTable.IsEmpty() {
+				remove, _ := cm.consumerTable.Remove(group)
+				if remove != nil {
+					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+				}
+			}
+			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, info.GetAllChannel())
+		}
+	}
 }
 
 // ScanNotActiveChannel 扫描不活跃的通道
@@ -148,7 +165,53 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}
-			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())
+			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.GetAllChannel())
 		}
 	}
+}
+
+// FindSubscriptionDataCount 根据group查找订阅数量
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) FindSubscriptionDataCount(group string) int32 {
+	consumerGroupInfo, _ := cm.consumerTable.ConcurrentMap.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			return info.SubscriptionTable.Size()
+		}
+	}
+	return 0
+}
+
+// QueryTopicConsumeByWho 根据topic查找消费者
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) *set2.StringSet {
+	groups := set2.NewStringSet()
+	iterator := cm.consumerTable.Iterator()
+	for iterator.HasNext() {
+		group, value, _ := iterator.Next()
+		if info, ok := value.(*ConsumerGroupInfo); ok {
+			subscriptionTable := info.SubscriptionTable
+			if found, _ := subscriptionTable.ContainsKey(topic); found {
+				if k, ok := group.(string); ok {
+					groups.Add(k)
+				}
+			}
+		}
+	}
+	return groups
+}
+
+// FindChannel 获得某个组某个消费Id对应的通道
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) FindChannel(group, clientId string) *ChannelInfo {
+	consumerGroupInfo, _ := cm.consumerTable.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			return info.FindChannel(clientId)
+		}
+	}
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"sync"
 )
 
 type ConfigManager interface {
@@ -16,6 +17,7 @@ type ConfigManager interface {
 
 type ConfigManagerExt struct {
 	ConfigManager ConfigManager
+	configLock    *sync.RWMutex
 }
 
 func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
@@ -39,6 +41,8 @@ func (cme *ConfigManagerExt) Persist() {
 	jsonString := cme.ConfigManager.Encode(true)
 	if jsonString != "" {
 		fileName := cme.ConfigManager.ConfigFilePath()
-		stgcommon.String2File([]byte(jsonString),fileName)
+		cme.configLock.Lock()
+		stgcommon.String2File([]byte(jsonString), fileName)
+		cme.configLock.Unlock()
 	}
 }

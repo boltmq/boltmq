@@ -10,7 +10,7 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type SubscriptionGroupWrapper struct {
-	subscriptionGroupTable *sync.Map
-	dataVersion            stgcommon.DataVersion
+	SubscriptionGroupTable *sync.Map
+	DataVersion            stgcommon.DataVersion
 	*protocol.RemotingSerializable
 }

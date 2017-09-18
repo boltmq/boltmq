@@ -35,6 +35,19 @@ func (pm *ProducerManager) generateRandmonNum() int {
 	return pm.Rand.Int()
 }
 
+// GetGroupChannelTable 获得组通道
+// Author gaoyanlei
+// Since 2017/8/24
+func (pm *ProducerManager) GetGroupChannelTable() {
+	newGroupChannelTable := make(map[string]map[netm.Context]*ChannelInfo)
+	pm.GroupChannelLock.Lock()
+	defer pm.GroupChannelLock.Unlock()
+
+	pm.GroupChannelTable.foreach(func(k string, v map[netm.Context]*ChannelInfo) {
+		newGroupChannelTable[k] = v
+	})
+}
+
 // registerProducer producer注册
 // Author gaoyanlei
 // Since 2017/8/24

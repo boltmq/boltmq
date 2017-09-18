@@ -1,13 +1,19 @@
 package stgbroker
 
 import (
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	body2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"strconv"
 )
 
 // Broker2Client Broker主动调用客户端接口
@@ -62,4 +68,104 @@ func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, re
 			}
 		}
 	});*/
+}
+
+// CallClient 调用客户端
+// Author rongzhihong
+// Since 2017/9/18
+func (b2c *Broker2Client) CallClient(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	return b2c.BrokerController.RemotingServer.InvokeSync(ctx, request, 10000)
+}
+
+// ResetOffset 重置偏移量
+// Author rongzhihong
+// Since 2017/9/18
+func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isForce bool) *protocol.RemotingCommand {
+	response := protocol.CreateDefaultResponseCommand(nil)
+	topicConfig := b2c.BrokerController.TopicConfigManager.selectTopicConfig(topic)
+	if topicConfig == nil {
+		logger.Errorf("[reset-offset] reset offset failed, no topic in this broker. topic=%s", topic)
+		response.Code = protocol.SYSTEM_ERROR
+		response.Remark = fmt.Sprintf("[reset-offset] reset offset failed, no topic in this broker. topic=" + topic)
+		return response
+	}
+
+	offsetTable := make(map[*message.MessageQueue]int64)
+	writeQueueNums, _ := strconv.Atoi(fmt.Sprintf("%s", topicConfig.WriteQueueNums))
+	for i := 0; i < writeQueueNums; i++ {
+		mq := &message.MessageQueue{}
+		mq.BrokerName = b2c.BrokerController.BrokerConfig.BrokerName
+		mq.Topic = topic
+		mq.QueueId = i
+
+		consumerOffset := b2c.BrokerController.ConsumerOffsetManager.queryOffset(group, topic, i)
+		if -1 == consumerOffset {
+			response.Code = protocol.SYSTEM_ERROR
+			response.Remark = fmt.Sprintf("THe consumer group <%s> not exist", group)
+			return response
+		}
+
+		// TODO timeStampOffset := b2c.BrokerController.MessageStore.getOffsetInQueueByTime(topic, i, timeStamp)
+		timeStampOffset := int64(0)
+		if isForce || timeStampOffset < consumerOffset {
+			offsetTable[mq] = timeStampOffset
+		} else {
+			offsetTable[mq] = consumerOffset
+		}
+	}
+
+	requestHeader := &header.ResetOffsetRequestHeader{}
+	requestHeader.Topic = topic
+	requestHeader.Group = group
+	requestHeader.IsForce = isForce
+
+	request := protocol.CreateRequestCommand(commonprotocol.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
+	body := body2.NewResetOffsetBody()
+	body.OffsetTable = offsetTable
+	request.Body = body.Encode()
+
+	consumerGroupInfo := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group)
+	// Consumer在线
+	if consumerGroupInfo != nil && len(consumerGroupInfo.GetAllChannel()) > 0 {
+		channelInfoTable := consumerGroupInfo.ConnTable
+		iterator := channelInfoTable.Iterator()
+		for iterator.HasNext() {
+			_, val, _ := iterator.Next()
+			if channelInfo, ok := val.(*client.ChannelInfo); ok {
+				version := channelInfo.Version
+				if version > mqversion.V3_0_7_SNAPSHOT {
+					b2c.BrokerController.RemotingServer.InvokeSync(channelInfo.Context, request, 5000)
+
+					logger.Infof("[reset-offset] reset offset success. topic=%s, group=%s, clientId=%d",
+						topic, group, channelInfo.ClientId)
+				} else {
+
+					// 如果有一个客户端是不支持该功能的，则直接返回错误，需要应用方升级。
+					response.Code = protocol.SYSTEM_ERROR
+					response.Remark = fmt.Sprintf("the client does not support this feature. version=%s",
+						mqversion.GetVersionDesc(int(version)))
+
+					logger.Warnf("[reset-offset] the client does not support this feature. remoteAdd=%s, version=%s",
+						channelInfo.Addr, mqversion.GetVersionDesc(int(version)))
+
+					return response
+				}
+			}
+		}
+
+	} else {
+		// Consumer不在线
+		errorInfo := fmt.Sprintf("Consumer not online, so can not reset offset, Group: %s Topic: %s Timestamp: %d",
+			requestHeader.Group, requestHeader.Topic, requestHeader.Timestamp)
+		logger.Error(errorInfo)
+		response.Code = commonprotocol.CONSUMER_NOT_ONLINE
+		response.Remark = errorInfo
+		return response
+	}
+
+	response.Code = commonprotocol.SUCCESS
+	resBody := body2.NewResetOffsetBody()
+	resBody.OffsetTable = offsetTable
+	response.Body = resBody.Encode()
+	return response
 }

@@ -122,9 +122,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)
 
 	suspendTimeoutMillisLong := requestHeader.SuspendTimeoutMillis
-	// START: test data Add:rongzhihong
-	//hasSuspendFlag = true
-	// END: test data
 	if hasSuspendFlag == false {
 		suspendTimeoutMillisLong = 0
 	}
@@ -198,9 +195,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
-	// START: test data Add:rongzhihong
-	//getMessageResult.Status = stgstorelog.NO_MESSAGE_IN_QUEUE
-	// END: test data
 
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()

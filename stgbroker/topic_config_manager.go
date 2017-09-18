@@ -19,6 +19,7 @@ type TopicConfigManager struct {
 	TopicConfigSerializeWrapper *body.TopicConfigSerializeWrapper
 	SystemTopicList             mapset.Set
 	configManagerExt            *ConfigManagerExt
+	DataVersion                 *stgcommon.DataVersion
 }
 
 // NewTopicConfigManager 初始化TopicConfigManager
@@ -30,6 +31,7 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	topicConfigManager.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper()
 	topicConfigManager.init()
 	topicConfigManager.configManagerExt = NewConfigManagerExt(topicConfigManager)
+	topicConfigManager.DataVersion = stgcommon.NewDataVersion()
 	return topicConfigManager
 }
 
@@ -141,7 +143,7 @@ func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicC
 // Author gaoyanlei
 // Since 2017/8/10
 func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
-	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
 	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)

@@ -9,7 +9,6 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type ConsumerOffsetSerializeWrapper struct {
-	offsetTable *sync.Map
+	OffsetTable *sync.Map
 	*protocol.RemotingSerializable
 }
-

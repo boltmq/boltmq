@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	"github.com/pquerna/ffjson/ffjson"
 	"os/user"
@@ -58,7 +59,7 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 // Author gaoyanlei
 // Since 2017/8/17
 func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
-	subscriptionGroupConfig:= sgm.SubscriptionGroupTable.Get(group)
+	subscriptionGroupConfig := sgm.SubscriptionGroupTable.Get(group)
 	if subscriptionGroupConfig == nil {
 		if sgm.BrokerController.BrokerConfig.AutoCreateSubscriptionGroup {
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
@@ -93,6 +94,36 @@ func (sgm *SubscriptionGroupManager) Decode(jsonString []byte) {
 }
 
 func (sgm *SubscriptionGroupManager) ConfigFilePath() string {
-	user, _ := user.Current()
-	return GetSubscriptionGroupPath(user.HomeDir)
+	currentUser, _ := user.Current()
+	return GetSubscriptionGroupPath(currentUser.HomeDir)
+}
+
+// UpdateSubscriptionGroupConfig 更新订阅组配置
+// Author rongzhihong
+// Since 2017/9/18
+func (sgm *SubscriptionGroupManager) UpdateSubscriptionGroupConfig(config *subscription.SubscriptionGroupConfig) {
+	old := sgm.SubscriptionGroupTable.Put(config.GroupName, config)
+	if old != nil {
+		logger.Infof("update subscription group config, old: %v, new: %v", old, config)
+	} else {
+		logger.Infof("create new subscription group:%v", config)
+	}
+
+	sgm.DataVersion.NextVersion()
+
+	sgm.configManagerExt.Persist()
+}
+
+// deleteSubscriptionGroupConfig 删除某个订阅组的配置
+// Author rongzhihong
+// Since 2017/9/18
+func (sgm *SubscriptionGroupManager) deleteSubscriptionGroupConfig(groupName string) {
+	old := sgm.SubscriptionGroupTable.Remove(groupName)
+	if old != nil {
+		logger.Infof("delete subscription group OK, subscription group: %v", old)
+		sgm.DataVersion.NextVersion()
+		sgm.configManagerExt.Persist()
+	} else {
+		logger.Warnf("delete subscription group failed, subscription group: %v not exist", old)
+	}
 }
