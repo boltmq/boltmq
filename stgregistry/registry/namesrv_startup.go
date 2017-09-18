@@ -43,7 +43,6 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	// 初始化NamesrvController
 	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
 	controller := NewNamesrvController(cfg, remotingServer)
-	//controller.registerContextListener()
 
 	logger.Info("create default namesrv controller success.")
 	return controller
