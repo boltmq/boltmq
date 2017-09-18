@@ -2,8 +2,6 @@ package process
 
 import (
 	"errors"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -17,12 +15,12 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"strings"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
 // Author: yintongqiang
 // Since:  2017/8/8
-
 type MQClientAPIImpl struct {
 	DefalutRemotingClient   remoting.RemotingClient
 	ClientRemotingProcessor *ClientRemotingProcessor
@@ -89,7 +87,7 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 }
 
 func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
-	requestHeader := header.GetRouteInfoRequestHeader{Topic: topic}
+	requestHeader := namesrv.GetRouteInfoRequestHeader{Topic: topic}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil && err == nil {
@@ -117,7 +115,7 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	requestHeader := &header.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
+	requestHeader := &namesrv.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil {

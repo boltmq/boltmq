@@ -414,7 +414,7 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 		}
 	}
 	self.ReadWriteLock.RUnlock()
-	logger.Info("pickupTopicRouteData: %s %s", topic, topicRouteData.ToString())
+	logger.Info("pickupTopicRouteData[topic:%s], %s", topic, topicRouteData.ToString())
 
 	if foundBrokerData && foundQueueData {
 		return topicRouteData
