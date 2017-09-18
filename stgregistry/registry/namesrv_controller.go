@@ -59,7 +59,7 @@ func (self *DefaultNamesrvController) initialize() bool {
 	self.registerProcessor()
 
 	// (3)注册broker连接的监听器
-	self.registerContextListener()
+	//self.registerContextListener()
 
 	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
 	go func() {

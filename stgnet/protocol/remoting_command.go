@@ -35,7 +35,7 @@ type RemotingCommand struct {
 	Remark       string              `json:"remark"`
 	ExtFields    map[string]string   `json:"extFields"` // 请求拓展字段
 	CustomHeader CommandCustomHeader `json:"-"`         // 修改字段类型,"CustomHeader"字段不序列化 2017/8/24 Modify by jerrylou, <gunsluo@gmail.com>
-	Body         []byte              `json:"-"`         // body
+	Body         []byte              `json:"-"`         // body字段不序列化
 }
 
 // CreateResponseCommand 只有通信层内部会调用，业务不会调用
@@ -51,8 +51,9 @@ func CreateDefaultResponseCommand(customHeader ...CommandCustomHeader) *Remoting
 // CreateResponseCommand
 func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 	cmd := &RemotingCommand{
-		Code:   code,
-		Remark: remark,
+		Code:      code,
+		Remark:    remark,
+		ExtFields: make(map[string]string),
 	}
 	// 设置为响应报文
 	cmd.MarkResponseType()

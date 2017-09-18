@@ -9,6 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"strings"
 )
 
 var (
@@ -32,7 +33,7 @@ func main() {
 		response *protocol.RemotingCommand
 		err      error
 		key      = "jcpt-example-200"
-		value    = "broker-a:8"
+		value    = strings.Join([]string{"jcpt-example-200"}, ";") // 多个value值通过分号;连接
 	)
 
 	// 请求的custom header
@@ -48,7 +49,7 @@ func main() {
 	if namesrvAddrs != nil && len(namesrvAddrs) > 0 {
 		for _, namesrvAddr := range namesrvAddrs {
 			// 同步发送请求
-			response, err = cmd.InvokeSync(namesrvAddr, request, 3000)
+			response, err = cmd.InvokeSync(namesrvAddr, request, client.DEFAULT_TIMEOUT)
 			if err != nil {
 				logger.Error("sync response PUT_KV_CONFIG failed. err: %s", err.Error())
 				return
@@ -57,9 +58,8 @@ func main() {
 				logger.Error("sync response PUT_KV_CONFIG failed. err: response is nil")
 				return
 			}
-
 			if response.Code == code.SUCCESS {
-				logger.Info("sync response PUT_KV_CONFIG success. body=%s", string(response.Body))
+				logger.Info("sync response PUT_KV_CONFIG success.")
 				return
 			}
 			format := "sync handle PUT_KV_CONFIG failed. code=%d, remark=%s"
@@ -84,7 +84,7 @@ func main() {
 			//	}
 			//
 			//	if response.Code == code.SUCCESS {
-			//		logger.Info("async response PUT_KV_CONFIG success. body=%s", string(response.Body))
+			//		logger.Info("async response PUT_KV_CONFIG success.")
 			//		return
 			//	}
 			//
