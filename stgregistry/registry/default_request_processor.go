@@ -38,7 +38,7 @@ func NewDefaultRequestProcessor(controller *DefaultNamesrvController) remoting.R
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	logger.Info("receive request. %s %s", ctx.ToString(), request.ToString())
+	logger.Info("receive request. %s,  %s", ctx.ToString(), request.ToString())
 
 	switch request.Code {
 	case code.PUT_KV_CONFIG:

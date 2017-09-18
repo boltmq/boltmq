@@ -4,8 +4,8 @@ package namesrv
 // Author: yintongqiang
 // Since:  2017/8/23
 type GetKVConfigRequestHeader struct {
-	Namespace string
-	Key       string
+	Namespace string `json:"namespace"`
+	Key       string `json:"key"`
 }
 
 func (header *GetKVConfigRequestHeader) CheckFields() error {

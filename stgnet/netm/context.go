@@ -112,6 +112,6 @@ func (ctx *DefaultContext) onError(e error) {
 
 // ToString 打印net.Conn的基本参数
 func (ctx *DefaultContext) ToString() string {
-	format := "net conn[localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
+	format := "net.conn[localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
 	return fmt.Sprintf(format, ctx.conn.LocalAddr().String(), ctx.conn.RemoteAddr().String(), ctx.addr, ctx.isClosed)
 }

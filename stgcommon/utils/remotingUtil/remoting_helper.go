@@ -35,11 +35,9 @@ func CloseChannel(ctx netm.Context) {
 		return
 	}
 
-	addrRemote := ctx.RemoteAddr().String()
 	success := true
 	if err := ctx.Close(); err != nil {
 		success = false
 	}
-	cloueMsg := "closeChannel: close the connection to remote address[%s] result: %s"
-	logger.Info(cloueMsg, addrRemote, success)
+	logger.Info("closeChannel: close ctx %s, result: %s", ctx.ToString(), success)
 }
