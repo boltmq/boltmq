@@ -5,9 +5,9 @@ import (
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
-	protocol "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
-	"net"
 )
 
 // Broker2Client Broker主动调用客户端接口
@@ -29,7 +29,7 @@ func NewBroker2Clientr(brokerController *BrokerController) *Broker2Client {
 // notifyConsumerIdsChanged 消费Id 列表改变通知
 // Author rongzhihong
 // Since 2017/9/11
-func (b2c *Broker2Client) notifyConsumerIdsChanged(conn net.Conn, consumerGroup string) {
+func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGroup string) {
 	defer utils.RecoveredFn()
 	if "" == consumerGroup {
 		logger.Error("notifyConsumerIdsChanged consumerGroup is null")
@@ -38,13 +38,13 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(conn net.Conn, consumerGroup 
 
 	requestHeader := &header.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
 	request := protocol.CreateRequestCommand(commonprotocol.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
-	b2c.BrokerController.RemotingServer.InvokeOneway(conn, request, 10)
+	b2c.BrokerController.RemotingServer.InvokeOneway(ctx, request, 10)
 }
 
 // CheckProducerTransactionState Broker主动回查Producer事务状态，Oneway
 // Author rongzhihong
 // Since 2017/9/11
-func (b2c *Broker2Client) CheckProducerTransactionState(channel net.Conn, requestHeader *header.CheckTransactionStateRequestHeader,
+func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, requestHeader *header.CheckTransactionStateRequestHeader,
 	selectMapedBufferResult *stgstorelog.SelectMapedBufferResult) {
 	request := protocol.CreateRequestCommand(commonprotocol.CHECK_TRANSACTION_STATE, requestHeader)
 	request.MarkOnewayRPC()

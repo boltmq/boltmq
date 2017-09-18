@@ -6,8 +6,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
-	"net"
 )
 
 // ConsumerManager 消费者管理
@@ -54,7 +54,7 @@ func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.
 // registerConsumer 注册Consumer
 // Author gaoyanlei
 // Since 2017/8/24
-func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consumeType heartbeat.ConsumeType,
+func (cm *ConsumerManager) RegisterConsumer(group string, ctx netm.Context, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
@@ -68,7 +68,7 @@ func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consume
 			}
 		}
 	}
-	r1 := consumerGroupInfo.UpdateChannel(conn, consumeType, messageModel, consumeFromWhere)
+	r1 := consumerGroupInfo.UpdateChannel(ctx, consumeType, messageModel, consumeFromWhere)
 	r2 := consumerGroupInfo.UpdateSubscription(subList)
 
 	if r1 || r2 {
@@ -109,7 +109,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 			if diff > cm.ChannelExpiredTimeout {
 				logger.Warnf("SCAN: remove expired channel from ConsumerManager consumerTable. channel=%s, consumerGroup=%s",
 					channelInfo.Addr, group)
-				channelInfo.Conn.Close()
+				channelInfo.Context.Close()
 				chanIterator.Remove()
 			}
 		}
@@ -124,7 +124,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 // ScanNotActiveChannel 扫描不活跃的通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn) {
+func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Context) {
 	iterator := cm.consumerTable.Iterator()
 	for iterator.HasNext() {
 		key, value, _ := iterator.Next()
@@ -136,7 +136,7 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn)
 		if !ok {
 			continue
 		}
-		isRemoved := consumerGroupInfo.doChannelCloseEvent(remoteAddr, conn)
+		isRemoved := consumerGroupInfo.doChannelCloseEvent(remoteAddr, ctx)
 		if isRemoved {
 			if consumerGroupInfo.ConnTable.IsEmpty() {
 				remove, err := cm.consumerTable.Remove(group)

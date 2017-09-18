@@ -117,14 +117,14 @@ func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId 
 		for _, pullRequest := range requestList {
 			// 查看是否offset OK
 			if maxOffset > pullRequest.PullFromThisOffset {
-				serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Connection, pullRequest.RequestCommand)
+				serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Context, pullRequest.RequestCommand)
 				continue
 			} else {
 				// 尝试取最新Offset
 				// TODO newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId)
 				newestOffset := int64(1)
 				if newestOffset > pullRequest.PullFromThisOffset {
-					serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Connection, pullRequest.RequestCommand)
+					serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Context, pullRequest.RequestCommand)
 					continue
 				}
 			}
@@ -132,7 +132,7 @@ func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId 
 			currentTimeMillis := timeutil.CurrentTimeMillis()
 			// 查看是否超时
 			if currentTimeMillis >= (pullRequest.SuspendTimestamp + pullRequest.TimeoutMillis) {
-				serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Connection, pullRequest.RequestCommand)
+				serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Context, pullRequest.RequestCommand)
 				continue
 			}
 

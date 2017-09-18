@@ -3,7 +3,6 @@ package stgbroker
 import (
 	"fmt"
 	"math/rand"
-	"net"
 	"strings"
 
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
@@ -14,6 +13,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
@@ -62,12 +62,12 @@ func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.R
 	return requestHeader
 }
 
-func (asmp *AbstractSendMessageProcessor) buildMsgContext(conn net.Conn, requestHeader *header.SendMessageRequestHeader) *mqtrace.SendMessageContext {
+func (asmp *AbstractSendMessageProcessor) buildMsgContext(ctx netm.Context, requestHeader *header.SendMessageRequestHeader) *mqtrace.SendMessageContext {
 	mqtraceContext := &mqtrace.SendMessageContext{}
 	mqtraceContext.ProducerGroup = requestHeader.ProducerGroup
 	mqtraceContext.Topic = requestHeader.Topic
 	mqtraceContext.MsgProps = requestHeader.Properties
-	mqtraceContext.BornHost = conn.LocalAddr().String()
+	mqtraceContext.BornHost = ctx.LocalAddr().String()
 	mqtraceContext.BrokerAddr = asmp.BrokerController.GetBrokerAddr()
 	return mqtraceContext
 }
@@ -75,7 +75,7 @@ func (asmp *AbstractSendMessageProcessor) buildMsgContext(conn net.Conn, request
 // msgCheck 校验msg
 // Author gaoyanlei
 // Since 2017/8/16
-func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
+func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if constant.IsWriteable(asmp.BrokerController.BrokerConfig.BrokerPermission) &&
 		asmp.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
@@ -102,7 +102,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 		}
 
 		topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
-			conn.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
+			ctx.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
 				topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(requestHeader.Topic,
@@ -127,9 +127,9 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 
 	if queueIdInt >= idValid {
 		errorInfo := fmt.Sprintf("request queueId[%d] is illagal, %s producer: %s", //
-			queueIdInt,             //
+			queueIdInt,                                                             //
 			topicConfig.ToString()) //
-		conn.LocalAddr().String()
+		ctx.LocalAddr().String()
 		response.Remark = errorInfo
 		response.Code = commonprotocol.SYSTEM_ERROR
 		return response
@@ -137,10 +137,10 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 	return response
 }
 
-func DoResponse( //ChannelHandlerContext ctx,
+func DoResponse(ctx netm.Context,
 	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
-		// TODO ctx.writeAndFlush(response);
+		ctx.Write([]byte(response.ToString()))
 	}
 }
 
@@ -161,7 +161,7 @@ func (asmp *AbstractSendMessageProcessor) RegisterSendMessageHook(sendMessageHoo
 // ExecuteSendMessageHookBefore 发送消息前执行回调函数
 // Author rongzhihong
 // Since 2017/9/11
-func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore(conn net.Conn, request *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
+func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore(ctx netm.Context, request *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
 	defer utils.RecoveredFn()
 
 	if asmp.HasSendMessageHook() {
@@ -177,7 +177,7 @@ func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore(conn net.
 			context.Topic = requestHeader.Topic
 			context.BodyLength = len(request.Body)
 			context.MsgProps = requestHeader.Properties
-			context.BornHost = conn.RemoteAddr().String()
+			context.BornHost = ctx.RemoteAddr().String()
 			context.BrokerAddr = asmp.BrokerController.GetBrokerAddr()
 			context.QueueId = requestHeader.QueueId
 

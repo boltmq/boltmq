@@ -5,8 +5,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
-	"net"
 	"strings"
 )
 
@@ -48,7 +48,7 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 	return nil
 }
 
-func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbeat.ConsumeType,
+func (cg *ConsumerGroupInfo) UpdateChannel(infoNew netm.Context, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
 	updated := false
 	cg.ConsumeType = consumeType
@@ -64,7 +64,7 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 		}
 		infoOld = infoNew
 	} else {
-		if infoold, ok := infoOld.(net.Conn); ok {
+		if infoold, ok := infoOld.(netm.Context); ok {
 			if !strings.EqualFold(infoNew.LocalAddr().String(), infoold.LocalAddr().String()) {
 				logger.Errorf(
 					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
@@ -84,8 +84,8 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 // doChannelCloseEvent 关闭通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Conn) bool {
-	info, err := cg.ConnTable.Remove(conn)
+func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Context) bool {
+	info, err := cg.ConnTable.Remove(ctx)
 	if err != nil {
 		logger.Error(err)
 		return false
@@ -101,12 +101,12 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Con
 // getAllChannel 获得所有通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cg *ConsumerGroupInfo) getAllChannel() []net.Conn {
-	result := []net.Conn{}
+func (cg *ConsumerGroupInfo) getAllChannel() []netm.Context {
+	result := []netm.Context{}
 	iterator := cg.ConnTable.Iterator()
 	for iterator.HasNext() {
 		key, _, _ := iterator.Next()
-		if channel, ok := key.(net.Conn); ok {
+		if channel, ok := key.(netm.Context); ok {
 			result = append(result, channel)
 		}
 	}
