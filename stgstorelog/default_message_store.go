@@ -53,17 +53,17 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
 	ms.TransactionCheckExecuter = nil
-	ms.AllocateMapedFileService = nil
+	ms.AllocateMapedFileService = NewAllocateMapedFileService()
 	ms.CommitLog = NewCommitLog(ms)
 	ms.ConsumeQueueTable = concurrent.NewConcurrentMap(32)
-	ms.FlushConsumeQueueService = new(FlushConsumeQueueService)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
 	ms.CleanConsumeQueueService = new(CleanConsumeQueueService)
-	ms.DispatchMessageService = NewDispatchMessageService(ms.MessageStoreConfig.PutMsgIndexHightWater)
 	ms.StoreStatsService = new(StoreStatsService)
 	ms.IndexService = new(IndexService)
 	ms.HAService = NewHAService(ms)
+	ms.DispatchMessageService = NewDispatchMessageService(ms.MessageStoreConfig.PutMsgIndexHightWater, ms)
 	ms.TransactionStateService = NewTransactionStateService(ms)
+	ms.FlushConsumeQueueService = NewFlushConsumeQueueService(ms)
 
 	switch ms.MessageStoreConfig.BrokerRole {
 	case config.SLAVE:
@@ -82,11 +82,11 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	}
 
 	// load过程依赖此服务，所以提前启动
-	go ms.AllocateMapedFileService.run()
-	go ms.DispatchMessageService.run()
+	go ms.AllocateMapedFileService.Start()
+	go ms.DispatchMessageService.Start()
 
 	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
-	go ms.IndexService.run()
+	go ms.IndexService.Start()
 
 	return ms
 }
@@ -94,7 +94,8 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 func (self *DefaultMessageStore) Load() bool {
 	result := true
 
-	if lastExitOk := !self.isTempFileExist(); lastExitOk {
+	var lastExitOk bool
+	if lastExitOk = !self.isTempFileExist(); lastExitOk {
 		logger.Info("last shutdown normally")
 	} else {
 		logger.Info("last shutdown abnormally")
@@ -114,6 +115,15 @@ func (self *DefaultMessageStore) Load() bool {
 	result = result && self.loadConsumeQueue()
 
 	// TODO load 事务模块
+
+	var err error
+	self.StoreCheckpoint, err = NewStoreCheckpoint(config.GetStoreCheckpoint(self.MessageStoreConfig.StorePathRootDir))
+	if err != nil {
+		logger.Error("load exception", err.Error())
+		result = false
+	}
+
+	self.IndexService.Load(lastExitOk)
 
 	return result
 }
@@ -404,6 +414,12 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 	}
 
 	return logicCQ
+}
+
+func (self *DefaultMessageStore) putMessagePostionInfo(topic string, queueId int32, offset int64, size int64,
+	tagsCode, storeTimestamp, logicOffset int64) {
+	cq := self.findConsumeQueue(topic, queueId)
+	cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
 }
 
 func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {

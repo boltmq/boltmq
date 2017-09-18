@@ -102,7 +102,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 			}
 			diff := timeutil.CurrentTimeMillis() - channelInfo.LastUpdateTimestamp
 			if diff > cm.ChannelExpiredTimeout {
-				logger.Warn("SCAN: remove expired channel from ConsumerManager consumerTable. channel=%s, consumerGroup=%s",
+				logger.Warnf("SCAN: remove expired channel from ConsumerManager consumerTable. channel=%s, consumerGroup=%s",
 					channelInfo.Addr, group)
 				channelInfo.Conn.Close()
 				chanIterator.Remove()
@@ -110,7 +110,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 		}
 
 		if channelInfoTable.IsEmpty() {
-			logger.Warn("SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup=%s", group)
+			logger.Warnf("SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup=%s", group)
 			iterator.Remove()
 		}
 	}
@@ -140,7 +140,7 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn)
 					continue
 				}
 				if remove != nil {
-					logger.Info("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}
 			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())

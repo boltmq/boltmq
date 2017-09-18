@@ -153,7 +153,7 @@ func (asmp *AbstractSendMessageProcessor) RegisterSendMessageHook(sendMessageHoo
 // ExecuteSendMessageHookBefore 发送消息前执行回调函数
 // Author rongzhihong
 // Since 2017/9/11
-func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore( /*ctx ChannelHandlerContext, */ request *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
+func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore(conn net.Conn, request *protocol.RemotingCommand, context *mqtrace.SendMessageContext) {
 	defer utils.RecoveredFn()
 
 	if asmp.HasSendMessageHook() {
@@ -169,7 +169,7 @@ func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookBefore( /*ctx Ch
 			context.Topic = requestHeader.Topic
 			context.BodyLength = len(request.Body)
 			context.MsgProps = requestHeader.Properties
-			// TODO context.BornHost = RemotingHelper.parseChannelRemoteAddr(ctx.channel())
+			context.BornHost = conn.RemoteAddr().String()
 			context.BrokerAddr = asmp.BrokerController.GetBrokerAddr()
 			context.QueueId = requestHeader.QueueId
 
@@ -187,19 +187,20 @@ func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookAfter(response *
 
 	if asmp.HasSendMessageHook() {
 		for _, hook := range asmp.sendMessageHookList {
-
-			responseHeader := new(header.SendMessageResponseHeader)
-			err := response.DecodeCommandCustomHeader(responseHeader)
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-			if responseHeader != nil {
-				context.MsgId = responseHeader.MsgId
-				context.QueueId = responseHeader.QueueId
-				context.QueueOffset = responseHeader.QueueOffset
-				context.Code = int(response.Code)
-				context.ErrorMsg = response.Remark
+			if response != nil{
+				responseHeader := new(header.SendMessageResponseHeader)
+				err := response.DecodeCommandCustomHeader(responseHeader)
+				if err != nil {
+					logger.Error(err)
+					continue
+				}
+				if responseHeader != nil {
+					context.MsgId = responseHeader.MsgId
+					context.QueueId = responseHeader.QueueId
+					context.QueueOffset = responseHeader.QueueOffset
+					context.Code = int(response.Code)
+					context.ErrorMsg = response.Remark
+				}
 			}
 			hook.SendMessageAfter(context)
 		}

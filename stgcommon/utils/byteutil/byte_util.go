@@ -35,3 +35,10 @@ func BytesToInt32(b []byte) int32 {
 	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
 	return tmp
 }
+
+func BytesToInt64(b []byte) int64 {
+	bytesBuffer := bytes.NewBuffer(b)
+	var tmp int64
+	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
+	return tmp
+}

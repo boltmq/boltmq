@@ -228,12 +228,15 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 			}
 		}
 
-		self.rwLock.Lock()
-		if self.mapedFiles.Len() == 0 {
-			mapedFile.firstCreateInQueue = true
+		if mapedFile != nil {
+			self.rwLock.Lock()
+			if self.mapedFiles.Len() == 0 {
+				mapedFile.firstCreateInQueue = true
+			}
+			self.mapedFiles.PushBack(mapedFile)
+			self.rwLock.Unlock()
 		}
-		self.mapedFiles.PushBack(mapedFile)
-		self.rwLock.Unlock()
+
 		return mapedFile, nil
 	}
 
@@ -339,20 +342,79 @@ func (self *MapedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int
 	return deleteCount
 }
 
-func (self *MapedFileQueue) commit(flushLeastPages int) {
-	// TODO:
+func (self *MapedFileQueue) commit(flushLeastPages int32) bool {
+	result := true
+
+	mapedFile := self.findMapedFileByOffset(self.committedWhere, true)
+	if mapedFile != nil {
+		tmpTimeStamp := mapedFile.storeTimestamp
+		offset := mapedFile.Commit(flushLeastPages)
+		where := mapedFile.fileFromOffset + offset
+		result = (where == self.committedWhere)
+		self.committedWhere = where
+
+		if 0 == flushLeastPages {
+			self.storeTimestamp = tmpTimeStamp
+		}
+	}
+
+	return result
 }
 
-func (self *MapedFileQueue) findMapedFileByOffset() *MapedFile {
-	return &MapedFile{}
+func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNotFound bool) *MapedFile {
+	self.rwLock.RLock()
+	defer self.rwLock.RUnlock()
+
+	mapedFile := self.getFirstMapedFile()
+	if mapedFile != nil {
+		index := (offset / self.mapedFileSize) - (mapedFile.fileFromOffset / self.mapedFileSize)
+		if index < 0 || index >= int64(self.mapedFiles.Len()) {
+			logger.Warnf("findMapedFileByOffset offset not matched, request Offset: %d, index: %d, mapedFileSize: %d, mapedFiles count: %d",
+				offset, index, self.mapedFileSize, self.mapedFiles.Len())
+		}
+
+		if int(index) < (self.mapedFiles.Len() / 2) {
+			i := 0
+			for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
+				if i == int(index) {
+					return e.Value.(*MapedFile)
+				}
+				i++
+			}
+		} else {
+			i := self.mapedFiles.Len() - 1
+			for e := self.mapedFiles.Back(); e != nil; e = e.Prev() {
+				if i == int(index) {
+					return e.Value.(*MapedFile)
+				}
+				i--
+			}
+		}
+	}
+
+	return nil
 }
 
 func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {
-	return &MapedFile{}
+	if self.mapedFiles.Len() == 0 {
+		return nil
+	}
+
+	element := self.mapedFiles.Front()
+	result := element.Value.(*MapedFile)
+
+	return result
 }
 
 func (self *MapedFileQueue) getLastAndLastMapedFile() *MapedFile {
-	return &MapedFile{}
+	if self.mapedFiles.Len() == 0 {
+		return nil
+	}
+
+	element := self.mapedFiles.Back()
+	result := element.Value.(*MapedFile)
+
+	return result
 }
 
 func (self *MapedFileQueue) getMapedMemorySize() int64 {

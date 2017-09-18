@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 )
@@ -135,4 +136,56 @@ func file2String(filePath string) (bf []byte, err error) {
 	}
 
 	return bf, nil
+}
+
+func CreateDir(dir string) (bool, error) {
+	if err := os.MkdirAll(dir, os.FileMode(os.O_CREATE)); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func CreateFile(fileFullName string) (bool, error) {
+	parentDir := filepath.Dir(fileFullName)
+	_, err := CreateDir(parentDir)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = os.Create(fileFullName)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// ExistsDir 校验文件是否存在
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/15
+func ExistsDir(fileFullPath string) (bool, error) {
+	fileinfo, err := os.Stat(fileFullPath)
+	if err == nil {
+		return fileinfo.IsDir(), nil // 文件夹存在
+	}
+	if os.IsNotExist(err) {
+		return false, nil // 使用os.IsNotExist()判断为true,说明文件或文件夹不存在
+	}
+
+	return false, err // 不确定是否在存在
+}
+
+// ExistsFile 校验文件是否存在
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/15
+func ExistsFile(fileFullPath string) (bool, error) {
+	fileinfo, err := os.Stat(fileFullPath)
+	if err == nil {
+		return !fileinfo.IsDir(), nil // 文件是否存在
+	}
+	if os.IsNotExist(err) {
+		return false, nil // 使用os.IsNotExist()判断为true,说明文件或文件夹不存在
+	}
+	return false, err // 不确定是否在存在
 }

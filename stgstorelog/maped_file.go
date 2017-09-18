@@ -95,7 +95,7 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
 	if err != nil {
 		logger.Error(err.Error())
-		return nil, err
+		//return nil, err
 	}
 
 	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
@@ -227,6 +227,14 @@ func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	}
 
 	return nil
+}
+
+func (self *MapedFile) release() {
+	if self.committedPosition < self.wrotePostion {
+		return
+	}
+
+	// TODO
 }
 
 func ensureDirOK(dirName string) error {

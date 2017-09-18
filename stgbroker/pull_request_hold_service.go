@@ -83,7 +83,7 @@ func (serv *PullRequestHoldService) checkHoldRequest() {
 				topic := kArray[0]
 				queueId, err := strconv.Atoi(kArray[1])
 				if err != nil {
-					logger.Error(fmt.Sprintf("queueId=%s: string to int fail.", kArray[1]))
+					logger.Errorf("queueId=%s: string to int fail.", kArray[1])
 				}
 				// TODO long offset =  this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId);
 				offset := int64(0)

@@ -67,9 +67,16 @@ func (rs *DefalutRemotingServer) InvokeOneway(conn net.Conn, request *protocol.R
 	return rs.invokeOneway(addr, conn, request, timeoutMillis)
 }
 
-// GetListenPort 获得监听端口
+// GetListenPort 获得监听端口字符串
 // Author rongzhihong
 // Since 2017/9/5
 func (rs *DefalutRemotingServer) GetListenPort() string {
 	return strconv.Itoa(rs.port)
+}
+
+// Port 获得监听端口
+// Author rongzhihong
+// Since 2017/9/5
+func (rs *DefalutRemotingServer) Port() int32 {
+	return int32(rs.port)
 }

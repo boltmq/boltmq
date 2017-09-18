@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 func identifyPanic() string {
@@ -45,4 +46,8 @@ func RecoveredFn(cbs ...func()) {
 			cb()
 		}
 	}
+}
+
+func TimeMillisecondToHumanString(t time.Time) string {
+	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
 }
