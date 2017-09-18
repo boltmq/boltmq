@@ -2,7 +2,7 @@ package registry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 // BrokerHousekeepingServices Broker活动检测服务
@@ -29,27 +29,27 @@ func NewBrokerHousekeepingService(controller *DefaultNamesrvController) client.C
 // onChannelConnect
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelConnect(remoteAddr string, conn net.Conn) {
+func (self *BrokerHousekeepingService) OnChannelConnect(ctx netm.Context) {
 
 }
 
 // onChannelClose Channel被关闭,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelClose(remoteAddr string, conn net.Conn) {
-	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
+func (self *BrokerHousekeepingService) OnChannelClose(ctx netm.Context) {
+	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
 // onChannelException Channel出现异常,通知Topic路由管理器，清除无效Broker
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelException(remoteAddr string, conn net.Conn) {
-	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
+func (self *BrokerHousekeepingService) OnChannelException(ctx netm.Context) {
+	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
 // onChannelIdle Channe的Idle时间超时,通知Topic路由管理器，清除无效Brokers
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *BrokerHousekeepingService) OnChannelIdle(remoteAddr string, conn net.Conn) {
-	self.NamesrvController.RouteInfoManager.onChannelDestroy(remoteAddr, conn)
+func (self *BrokerHousekeepingService) OnChannelIdle(ctx netm.Context) {
+	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
