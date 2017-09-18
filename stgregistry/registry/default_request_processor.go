@@ -261,7 +261,7 @@ func (self *DefaultRequestProcessor) getBrokerClusterInfo(ctx netm.Context, requ
 func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetRouteInfoRequestHeader{}
+	requestHeader := &namesrv.GetRouteInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
@@ -273,24 +273,21 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 	if topicRouteData != nil {
 		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(util.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
 		topicRouteData.OrderTopicConf = orderTopicConf
-
-		var content []byte
-		err = topicRouteData.Decode(content)
+		content, err := topicRouteData.Encode()
 		if err != nil {
-			fmt.Printf("topicRouteData.Decode() err: %s\n", err.Error())
+			fmt.Printf("topicRouteData.Encode() err: %s\n", err.Error())
 			return nil, err
 		}
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response, nil
-
 	}
 
 	response.Code = code.TOPIC_NOT_EXIST
-	remark := "No topic route info in name server for the topic: %s, faq: %s"
+	remark := "[No topic route info in name server for the topic: %s], faq: %s"
 	response.Remark = fmt.Sprintf(remark, topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
-	return nil, nil
+	return response, nil
 }
 
 // putKVConfig 向Namesrv追加KV配置
