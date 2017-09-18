@@ -13,8 +13,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"net"
 )
 
 type ClientManageProcessor struct {
@@ -31,18 +31,18 @@ func NewClientManageProcessor(brokerController *BrokerController) *ClientManageP
 	return clientManageProcessor
 }
 
-func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
 	case protocol2.HEART_BEAT:
-		return cmp.heartBeat(addr, conn, request)
+		return cmp.heartBeat(ctx, request)
 	case protocol2.UNREGISTER_CLIENT:
-		return cmp.unregisterClient(addr, conn, request)
+		return cmp.unregisterClient(ctx, request)
 	case protocol2.GET_CONSUMER_LIST_BY_GROUP:
-		return cmp.getConsumerListByGroup(addr, conn, request)
+		return cmp.getConsumerListByGroup(ctx, request)
 	case protocol2.QUERY_CONSUMER_OFFSET:
-		return cmp.queryConsumerOffset(addr, conn, request)
+		return cmp.queryConsumerOffset(ctx, request)
 	case protocol2.UPDATE_CONSUMER_OFFSET:
-		return cmp.updateConsumerOffset(addr, conn, request)
+		return cmp.updateConsumerOffset(ctx, request)
 	}
 	return nil, nil
 }
@@ -50,14 +50,14 @@ func (cmp *ClientManageProcessor) ProcessRequest(addr string, conn net.Conn, req
 // heartBeat 心跳服务
 // Author gaoyanlei
 // Since 2017/8/23
-func (cmp *ClientManageProcessor) heartBeat(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 
 	heartbeatData := &heartbeat.HeartbeatData{}
 	heartbeatData.Decode(request.Body)
 	consumerDataSet := heartbeatData.ConsumerDataSet
 
-	channelInfo := client.NewClientChannelInfo(conn, heartbeatData.ClientID, request.Language, conn.LocalAddr().String(), request.Version)
+	channelInfo := client.NewClientChannelInfo(ctx, heartbeatData.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
 
 	for value := range consumerDataSet.Iterator().C {
 		if consumerData, ok := value.(*heartbeat.ConsumerData); ok {
@@ -77,10 +77,10 @@ func (cmp *ClientManageProcessor) heartBeat(addr string, conn net.Conn, request 
 					constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
 			}
 
-			changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, conn,
+			changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, ctx,
 				consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
 			if changed {
-				logger.Infof("registerConsumer info changed {} %s", consumerData.ToString(), conn.RemoteAddr().String())
+				logger.Infof("registerConsumer info changed {} %s", consumerData.ToString(), ctx.RemoteAddr().String())
 			}
 		}
 	}
@@ -100,7 +100,7 @@ func (cmp *ClientManageProcessor) heartBeat(addr string, conn net.Conn, request 
 // unregisterClient 注销客户端
 // Author gaoyanlei
 // Since 2017/8/24
-func (cmp *ClientManageProcessor) unregisterClient(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) unregisterClient(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 
 	requestHeader := &header.UnregisterClientRequestHeader{}
@@ -109,7 +109,7 @@ func (cmp *ClientManageProcessor) unregisterClient(addr string, conn net.Conn, r
 		logger.Error(err)
 	}
 
-	channelInfo := client.NewClientChannelInfo(conn, requestHeader.ClientID, request.Language, conn.LocalAddr().String(), request.Version)
+	channelInfo := client.NewClientChannelInfo(ctx, requestHeader.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
 
 	// 注销Producer
 	{
@@ -135,7 +135,7 @@ func (cmp *ClientManageProcessor) unregisterClient(addr string, conn net.Conn, r
 // queryConsumerOffset  查询Consumer的偏移量
 // Author rongzhihong
 // Since 2017/9/14
-func (cmp *ClientManageProcessor) queryConsumerOffset(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.QueryConsumerOffsetResponseHeader{}
 	response.CustomHeader = responseHeader
@@ -177,7 +177,7 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(addr string, conn net.Conn
 // updateConsumerOffset 更新消费者offset
 // Author gaoyanlei
 // Since 2017/8/25
-func (cmp *ClientManageProcessor) updateConsumerOffset(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 
 	requestHeader := &header.UpdateConsumerOffsetRequestHeader{}
@@ -192,7 +192,7 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(addr string, conn net.Con
 		context := &mqtrace.ConsumeMessageContext{}
 		context.ConsumerGroup = requestHeader.ConsumerGroup
 		context.Topic = requestHeader.Topic
-		context.ClientHost = conn.LocalAddr().String()
+		context.ClientHost = ctx.LocalAddr().String()
 		context.Success = true
 		context.Status = listener.CONSUME_SUCCESS.String()
 
@@ -220,7 +220,7 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(addr string, conn net.Con
 // getConsumerListByGroup 通过Group获得消费列表
 // Author gaoyanlei
 // Since 2017/8/25
-func (cmp *ClientManageProcessor) getConsumerListByGroup(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (cmp *ClientManageProcessor) getConsumerListByGroup(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := &header.GetConsumerListByGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -242,7 +242,7 @@ func (cmp *ClientManageProcessor) getConsumerListByGroup(addr string, conn net.C
 		}
 
 	} else {
-		logger.Warnf("getConsumerGroupInfo failed, %s %s", requestHeader.ConsumerGroup, conn.RemoteAddr().String())
+		logger.Warnf("getConsumerGroupInfo failed, %s %s", requestHeader.ConsumerGroup, ctx.RemoteAddr().String())
 	}
 
 	response.Code = code.SYSTEM_ERROR

@@ -43,5 +43,5 @@ func (trans *DefaultTransactionCheckExecuter) GotoCheck(producerGroupHashCode in
 	requestHeader.CommitLogOffset = commitLogOffset
 	requestHeader.TranStateTableOffset = tranStateTableOffset
 
-	trans.brokerController.Broker2Client.CheckProducerTransactionState(clientChannelInfo.Conn, requestHeader, selectMapedBufferResult)
+	trans.brokerController.Broker2Client.CheckProducerTransactionState(clientChannelInfo.Context, requestHeader, selectMapedBufferResult)
 }

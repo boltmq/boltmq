@@ -1,11 +1,11 @@
 package remotingUtil
 
 import (
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"strings"
 )
 
-func ParseChannelRemoteAddr(conn net.Conn) string {
+func ParseChannelRemoteAddr(conn netm.Context) string {
 	if conn == nil {
 		return ""
 	}

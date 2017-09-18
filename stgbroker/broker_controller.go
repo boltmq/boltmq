@@ -56,8 +56,7 @@ type BrokerController struct {
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConfig NettyServerConfig,
-	   nettyClientConfig NettyClientConfig , //*/
+func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 	messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig

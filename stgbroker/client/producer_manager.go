@@ -5,8 +5,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"math/rand"
-	"net"
 	"sync"
 	"time"
 )
@@ -43,13 +43,13 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 
 	connTable := pm.GroupChannelTable.get(group)
 	if nil == connTable {
-		channelTable := make(map[net.Conn]*ChannelInfo)
+		channelTable := make(map[netm.Context]*ChannelInfo)
 		pm.GroupChannelTable.put(group, channelTable)
 	}
 
-	clientChannelInfoFound, ok := connTable[channelInfo.Conn]
+	clientChannelInfoFound, ok := connTable[channelInfo.Context]
 	if !ok || nil == clientChannelInfoFound {
-		connTable[channelInfo.Conn] = channelInfo
+		connTable[channelInfo.Context] = channelInfo
 		logger.Infof("new producer connected, group: %s channel: %s", group, channelInfo.Addr)
 	}
 
@@ -93,7 +93,7 @@ func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *Channel
 
 	connTable := pm.GroupChannelTable.get(group)
 	if nil != connTable {
-		delete(connTable, channelInfo.Conn)
+		delete(connTable, channelInfo.Context)
 		logger.Infof("unregister a producer %s from groupChannelTable %s", group, channelInfo.Addr)
 
 		if pm.GroupChannelTable.size() <= 0 {
@@ -137,8 +137,8 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 			if diff > pm.ChannelExpiredTimeout {
 				delete(chlMap, key)
 				logger.Warnf("SCAN: remove expired channel[%s] from ProducerManager groupChannelTable, producer group name: %s",
-					info.Conn.RemoteAddr(), group)
-				// TODO RemotingUtil.closeChannel(info.getChannel());
+					info.Context.RemoteAddr(), group)
+				info.Context.Close()
 			}
 		}
 	}
@@ -147,12 +147,12 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 // DoChannelCloseEvent 通道关闭事件
 // Author rongzhihong
 // Since 2017/9/17
-func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn) {
+func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Context) {
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
 
 	for group, clientChannelInfoTable := range pm.GroupChannelTable.GroupChannelTable {
-		delete(clientChannelInfoTable, conn)
+		delete(clientChannelInfoTable, ctx)
 		logger.Infof("NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s",
 			remoteAddr, group)
 	}

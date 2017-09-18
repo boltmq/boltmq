@@ -18,10 +18,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"net"
 	"strconv"
 )
 
@@ -42,17 +42,17 @@ func NewPullMessageProcessor(brokerController *BrokerController) *PullMessagePro
 	return pullMessageProcessor
 }
 
-func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
-	return pull.processRequest(request, conn, true)
+	return pull.processRequest(request, ctx, true)
 }
 
 // ExecuteRequestWhenWakeup  唤醒拉取消息的请求
 // Author rongzhihong
 // Since 2017/9/5
-func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, request *protocol.RemotingCommand) {
+func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
-		response, err := pull.processRequest(request, conn, false)
+		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
 			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
 			return
@@ -77,7 +77,7 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, reques
 	}()
 }
 
-func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
+func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, ctx netm.Context, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
 	responseHeader := &header.PullMessageResponseHeader{}
 
@@ -225,7 +225,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context := new(mqtrace.ConsumeMessageContext)
 				context.ConsumerGroup = requestHeader.ConsumerGroup
 				context.Topic = requestHeader.Topic
-				context.ClientHost = conn.LocalAddr().String()
+				context.ClientHost = ctx.LocalAddr().String()
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
@@ -263,12 +263,12 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_OVERFLOW_BADLY:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, ctx.LocalAddr().String())
 		case stgstorelog.OFFSET_OVERFLOW_ONE:
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_TOO_SMALL:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, ctx.LocalAddr().String())
 		default:
 		}
 
@@ -307,7 +307,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
 				suspendTimestamp := timeutil.CurrentTimeMillis()
-				pullRequest := longpolling.NewPullRequest(request, conn, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
+				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil
 			}

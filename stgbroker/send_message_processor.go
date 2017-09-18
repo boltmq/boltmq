@@ -10,10 +10,10 @@ import (
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"net"
 )
 
 // SendMessageProcessor 处理客户端发送消息的请求
@@ -33,10 +33,10 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 	return sendMessageProcessor
 }
 
-func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(conn, request), nil
+		return smp.consumerSendMsgBack(ctx, request), nil
 	}
 
 	requestHeader := smp.abstractSendMessageProcessor.parseRequestHeader(request)
@@ -44,9 +44,9 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 		return nil, nil
 	}
 
-	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(conn, requestHeader)
-	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(conn, request, mqtraceContext)
-	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
+	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(ctx, requestHeader)
+	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(ctx, request, mqtraceContext)
+	response := smp.sendMessage(ctx, request, mqtraceContext, requestHeader)
 	smp.abstractSendMessageProcessor.ExecuteSendMessageHookAfter(response, mqtraceContext)
 	return response, nil
 }
@@ -54,7 +54,7 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 // consumerSendMsgBack 客户端返回未消费消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
+func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
@@ -231,7 +231,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand,
+func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.SendMessageResponseHeader{})
 	responseHeader := new(header.SendMessageResponseHeader)
@@ -242,7 +242,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 
 	response.Opaque = request.Opaque
 	response.Code = -1
-	smp.abstractSendMessageProcessor.msgCheck(conn, requestHeader, response)
+	smp.abstractSendMessageProcessor.msgCheck(ctx, requestHeader, response)
 	if response.Code != -1 {
 		return response
 	}
@@ -277,7 +277,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
-	msgInner.BornHost = conn.LocalAddr().String()
+	msgInner.BornHost = ctx.LocalAddr().String()
 	msgInner.StoreHost = smp.abstractSendMessageProcessor.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
@@ -338,8 +338,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
 
-			DoResponse( // TODO  ctx
-				request, response)
+			DoResponse(ctx, request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
 					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
@@ -351,8 +350,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 				mqtraceContext.QueueId = responseHeader.QueueId
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
-			// TODO return nil
-			return response
+			return nil
 		}
 
 	} else {
