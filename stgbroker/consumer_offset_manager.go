@@ -6,12 +6,18 @@ import (
 	"strings"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/pquerna/ffjson/ffjson"
+	"github.com/toolkits/container/set"
+	"regexp"
 	"sync"
 )
 
-const TOPIC_GROUP_SEPARATOR = "@"
+const (
+	TOPIC_GROUP_SEPARATOR = "@"
+	MAX_VALUE             = 0x7fffffffffffffff
+)
 
 // ConsumerOffsetManager Consumer消费管理
 // Author gaoyanlei
@@ -85,10 +91,11 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
 			topic := arrays[0]
-			fmt.Println(topic)
 			group := arrays[1]
-			if nil == com.BrokerController.ConsumerManager.FindSubscriptionData(group, topic) {
-				//it.Remove()
+			if nil == com.BrokerController.ConsumerManager.FindSubscriptionData(group, topic) &&
+				com.offsetBehindMuchThanData(topic, v) {
+				com.Offsets.remove(k)
+				logger.Warnf("remove topic offset, %s", topic)
 			}
 		}
 	})
@@ -138,4 +145,117 @@ func (com *ConsumerOffsetManager) persist() {
 
 		stgcommon.String2File([]byte(jsonString), fileName)
 	}
+}
+
+// offsetBehindMuchThanData 检查偏移量与数据是否相差很大
+// Author rongzhihong
+// Since 2017/9/12
+func (com *ConsumerOffsetManager) offsetBehindMuchThanData(topic string, offsetTable map[int]int64) bool {
+	result := len(offsetTable) > 0
+
+	for key, offsetInPersist := range offsetTable {
+		// TODO minOffsetInStore := com.BrokerController.MessageStore.getMinOffsetInQuque(topic, key)
+		minOffsetInStore := int64(0)
+		fmt.Println(key)
+		if offsetInPersist > minOffsetInStore {
+			result = false
+			break
+		}
+	}
+
+	return result
+}
+
+// WhichTopicByConsumer 获得消费者的Topic
+// Author rongzhihong
+// Since 2017/9/18
+func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) *set.StringSet {
+	topics := set.NewStringSet()
+	for topicAtGroup := range com.Offsets.Offsets {
+		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+		if arrays != nil && len(arrays) == 2 {
+			if strings.EqualFold(group, arrays[1]) {
+				topics.Add(arrays[0])
+			}
+		}
+	}
+
+	return topics
+}
+
+// WhichGroupByTopic 获得Topic的消费者
+// Author rongzhihong
+// Since 2017/9/18
+func (com *ConsumerOffsetManager) WhichGroupByTopic(topic string) *set.StringSet {
+	groups := set.NewStringSet()
+	for topicAtGroup := range com.Offsets.Offsets {
+		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+		if arrays != nil && len(arrays) == 2 {
+			if strings.EqualFold(topic, arrays[0]) {
+				groups.Add(arrays[1])
+			}
+		}
+	}
+
+	return groups
+}
+
+// CloneOffset 克隆偏移量
+// Author rongzhihong
+// Since 2017/9/18
+func (com *ConsumerOffsetManager) CloneOffset(srcGroup, destGroup, topic string) {
+	offsets := com.Offsets.get(topic + TOPIC_GROUP_SEPARATOR + srcGroup)
+	if offsets != nil {
+		com.Offsets.put(topic+TOPIC_GROUP_SEPARATOR+destGroup, offsets)
+	}
+}
+
+// QueryMinOffsetInAllGroup 查询所有组中最小偏移量
+// Author rongzhihong
+// Since 2017/9/18
+func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups string) {
+	queueMinOffset := make(map[int]int64)
+
+	reg := regexp.MustCompile(`\S+?`)
+	if reg.FindString(filterGroups) != "" {
+		for _, group := range strings.Split(filterGroups, ",") {
+			for groupName := range com.Offsets.Offsets {
+				if strings.EqualFold(group, strings.Split(groupName, TOPIC_GROUP_SEPARATOR)[1]) {
+					com.Offsets.remove(groupName)
+				}
+			}
+		}
+	}
+
+	for topicGroup := range com.Offsets.Offsets {
+		topicGroupArr := strings.Split(topicGroup, TOPIC_GROUP_SEPARATOR)
+		if strings.EqualFold(topic, topicGroupArr[0]) {
+			offsetTable := com.Offsets.get(topicGroup)
+			if offsetTable == nil {
+				continue
+			}
+			for k, v := range offsetTable {
+				// TODO minOffset := com.BrokerController.MessageStore.getMinOffsetInQuque(topic, k)
+				minOffset := int64(0)
+				if v >= minOffset {
+					offset, ok := queueMinOffset[k]
+					if !ok {
+						queueMinOffset[k] = min(MAX_VALUE, v)
+					} else {
+						queueMinOffset[k] = min(v, offset)
+					}
+				}
+			}
+		}
+	}
+}
+
+// min int64 的最小值
+// Author rongzhihong
+// Since 2017/9/18
+func min(a, b int64) int64 {
+	if a >= b {
+		return b
+	}
+	return a
 }

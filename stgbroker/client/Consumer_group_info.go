@@ -50,6 +50,7 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 
 func (cg *ConsumerGroupInfo) UpdateChannel(infoNew netm.Context, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
+	// TODO; key - value不統一
 	updated := false
 	cg.ConsumeType = consumeType
 	cg.MessageModel = messageModel
@@ -101,7 +102,7 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Con
 // getAllChannel 获得所有通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cg *ConsumerGroupInfo) getAllChannel() []netm.Context {
+func (cg *ConsumerGroupInfo) GetAllChannel() []netm.Context {
 	result := []netm.Context{}
 	iterator := cg.ConnTable.Iterator()
 	for iterator.HasNext() {
@@ -128,6 +129,16 @@ func (cg *ConsumerGroupInfo) GetAllClientId() []string {
 	}
 
 	return result
+}
+
+// UnregisterChannel 注销通道
+// Author rongzhihong
+// Since 2017/9/14
+func (cg *ConsumerGroupInfo) UnregisterChannel(clientChannelInfo *ChannelInfo) {
+	old, _ := cg.ConnTable.Remove(clientChannelInfo.Context)
+	if old != nil {
+		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v", cg.GroupName, old)
+	}
 }
 
 // UpdateSubscription 更新订阅
@@ -185,4 +196,20 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList set.Set) bool {
 
 	cg.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
 	return updated
+}
+
+// FindChannel 根据clientId获得通道
+// Author rongzhihong
+// Since 2017/9/17
+func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
+	iterator := cg.ConnTable.Iterator()
+	for iterator.HasNext() {
+		_, value, _ := iterator.Next()
+		if info, ok := value.(*ChannelInfo); ok {
+			if strings.EqualFold(info.ClientId, clientId) {
+				return info
+			}
+		}
+	}
+	return nil
 }

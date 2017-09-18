@@ -24,7 +24,7 @@ type BrokerOuterAPI struct {
 // NewBrokerOuterAPI 初始化
 // @author gaoyanlei
 // @since 2017/8/9
-func NewBrokerOuterAPI( /** NettyClientConfig nettyClientConfig */) *BrokerOuterAPI {
+func NewBrokerOuterAPI( /** NettyClientConfig nettyClientConfig */ ) *BrokerOuterAPI {
 	var brokerController = new(BrokerOuterAPI)
 	brokerController.remotingClient = remoting.NewDefalutRemotingClient()
 	return brokerController
@@ -74,7 +74,7 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
-haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
 	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{}
@@ -126,7 +126,7 @@ haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSeriali
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	registerBrokerResult := &namesrv.RegisterBrokerResult{}
 
@@ -163,6 +163,7 @@ func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAdd
 	default:
 		break
 	}
+	return
 }
 
 // UnregisterBrokerAll 注销全部Broker
@@ -181,7 +182,7 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 // getAllTopicConfig 获取全部topic信息
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
@@ -203,7 +204,7 @@ func (self *BrokerOuterAPI) getAllTopicConfig(namesrvAddr string) *body.TopicCon
 // getAllConsumerOffset 获取所有Consumer Offset
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
@@ -225,7 +226,7 @@ func (self *BrokerOuterAPI) getAllConsumerOffset(namesrvAddr string) *body.Consu
 // getAllDelayOffset 获取所有定时进度
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllDelayOffset(namesrvAddr string) string {
+func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
@@ -242,7 +243,7 @@ func (self *BrokerOuterAPI) getAllDelayOffset(namesrvAddr string) string {
 // getAllSubscriptionGroupConfig 获取订阅组配置
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
+func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
