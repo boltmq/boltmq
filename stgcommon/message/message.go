@@ -53,3 +53,11 @@ func (self *Message) SetWaitStoreMsgOK(waitStoreMsgOK bool) {
 func (self *Message) SetDelayTimeLevel(level int) {
 	self.PutProperty(PROPERTY_DELAY_TIME_LEVEL, strconv.Itoa(level))
 }
+
+func (self *Message) GetKeys() string {
+	return self.GetProperty(PROPERTY_KEYS)
+}
+
+func (self *Message) SetKeys(keys string) {
+	self.PutProperty(PROPERTY_KEYS, keys)
+}

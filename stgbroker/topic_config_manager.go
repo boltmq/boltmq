@@ -243,9 +243,9 @@ func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicConfig) {
 	old := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if old != nil {
-		logger.Info("update topic config, old:%s,new:%s", old, topicConfig)
+		logger.Infof("update topic config, old:%v,new:%v", old, topicConfig)
 	}
-	logger.Info("create new topic :%s", topicConfig)
+	logger.Infof("create new topic :%v", topicConfig)
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 	tcm.configManagerExt.Persist()
 }
@@ -305,7 +305,7 @@ func (tcm *TopicConfigManager) deleteTopicConfig(topic string) {
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 		tcm.configManagerExt.Persist()
 	} else {
-		logger.Info("delete topic config failed, topic: %s not exist", topic)
+		logger.Infof("delete topic config failed, topic: %s not exist", topic)
 	}
 }
 

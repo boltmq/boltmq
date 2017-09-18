@@ -1,53 +1,49 @@
 package registry
 
 import (
-	"flag"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"os"
 )
 
-type NamesrvStartup struct {
-}
+const (
+	port = 9876
+)
 
+// Startup 启动Namesrv控制器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func Startup() *DefaultNamesrvController {
 	controller := CreateNamesrvController()
-	if initResult := controller.initialize(); !initResult {
+	initResult := controller.initialize()
+	if !initResult {
 		controller.shutdown()
-		fmt.Println("controller initialize fail.")
-		logger.Info("controller initialize fail.")
-		os.Exit(-3)
+		logger.Info("the name server controller initialize failed.")
+		os.Exit(0)
 	}
-
-	//TODO:设置JVM关闭钩子，当JVM关闭之前，执行controller.shutdown()来关闭Namesrv服务控制，然后再关闭JVM
 	controller.start()
-
-	tip := "The Name Server boot success."
-	logger.Info("tip")
-	fmt.Println(tip)
-
+	logger.Info("the name server boot success.")
 	return controller
 }
 
+// CreateNamesrvController 创建默认Namesrv控制器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/15
 func CreateNamesrvController() *DefaultNamesrvController {
-	// 加载配置文件
-	var namesrvCfg *namesrv.DefaultNamesrvConfig
-	kvConfigPath := flag.String("c", namesrv.GetKvConfigPath(), "")
-	flag.Parse()
-	parseutil.ParseConf(*kvConfigPath, &namesrvCfg)
-	if namesrvCfg.GetSmartGoHome() == "" {
+	// 初始化配置文件
+	cfg := namesrv.NewNamesrvConfig()
+	if cfg.GetSmartGoHome() == "" {
 		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
-		fmt.Printf(msg, stgcommon.SMARTGO_HOME_ENV)
-		os.Exit(-2)
+		logger.Error(msg, stgcommon.SMARTGO_HOME_ENV)
+		os.Exit(0)
 	}
 
 	// 初始化NamesrvController
-	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
-	controller := NewNamesrvController(namesrvCfg, remotingServer)
+	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
+	controller := NewNamesrvController(cfg, remotingServer)
 
+	logger.Info("create default namesrv controller success.")
 	return controller
 }

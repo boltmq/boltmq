@@ -6,7 +6,7 @@ package stgstorelog
 type AppendMessageResult struct {
 	Status         AppendMessageStatus
 	WroteOffset    int64
-	WroteBytes     int
+	WroteBytes     int64
 	MsgId          string
 	StoreTimestamp int64
 	LogicsOffset   int64

@@ -136,7 +136,7 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 			if result != nil {
 				registerBrokerResult = result
 			}
-			logger.Info("register broker to name server {} OK", namesrvAddr)
+			logger.Infof("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 	return registerBrokerResult
@@ -171,7 +171,7 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
 		for _, namesrvAddr := range nameServerAddressList {
 			self.UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-			logger.Info("register broker to name server {} OK", namesrvAddr)
+			logger.Infof("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 }

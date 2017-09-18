@@ -6,10 +6,8 @@ package stgcommon
 type TopicFilterType int
 
 const (
-	// 每个消息只能有一个Tag
-	SINGLE_TAG TopicFilterType = iota
-	// 多个消息
-	MULTI_TAG
+	SINGLE_TAG TopicFilterType = iota // 每个消息只能有一个Tag
+	MULTI_TAG                         // 多个消息
 )
 
 func (self TopicFilterType) String() string {

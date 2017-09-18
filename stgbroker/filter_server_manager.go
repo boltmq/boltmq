@@ -40,7 +40,7 @@ type FilterServerInfo struct {
 func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 	fsm := new(FilterServerManager)
 	fsm.brokerController = bc
-	fsm.ticker = timeutil.NewTicker(30, 5)
+	fsm.ticker = timeutil.NewTicker(1000 * 30, 1000 * 5)
 	fsm.FilterServerMaxIdleTimeMills = 30000
 	fsm.filterServerTable = sync.NewMap()
 	return fsm
@@ -50,7 +50,7 @@ func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 // Author rongzhihong
 // Since 2017/9/8
 func (fsm *FilterServerManager) Start() {
-	fsm.ticker.Do(func(tm time.Time) {
+	go fsm.ticker.Do(func(tm time.Time) {
 		fsm.createFilterServer()
 	})
 }
@@ -113,7 +113,7 @@ func (fsm *FilterServerManager) RegisterFilterServer(conn net.Conn, filterServer
 		filterServerInfo.filterServerAddr = filterServerAddr
 		filterServerInfo.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
 		fsm.filterServerTable.Put(conn, filterServerInfo)
-		logger.Info("Receive a New Filter Server<%v>", filterServerAddr)
+		logger.Infof("Receive a New Filter Server %v", filterServerAddr)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (fsm *FilterServerManager) ScanNotActiveChannel() {
 
 		currentTimeMillis := timeutil.CurrentTimeMillis()
 		if (currentTimeMillis - timestamp) > fsm.FilterServerMaxIdleTimeMills {
-			logger.Info("The Filter Server<%v> expired, remove it", key)
+			logger.Infof("The Filter Server %v expired, remove it", key)
 			it.Remove()
 			if channel, ok := key.(net.Conn); ok {
 				channel.Close()
@@ -154,11 +154,11 @@ func (fsm *FilterServerManager) ScanNotActiveChannel() {
 func (fsm *FilterServerManager) doChannelCloseEvent(remoteAddr string, conn net.Conn) {
 	old, err := fsm.filterServerTable.Remove(conn)
 	if err != nil {
-		logger.Error(fmt.Sprintf("The Filter Server Remove conn, throw:%s", err.Error()))
+		logger.Errorf("The Filter Server Remove conn, throw:%s", err.Error())
 	}
 
 	if value, ok := old.(*FilterServerInfo); ok {
-		logger.Warn("The Filter Server<%s> connection<%s> closed, remove it", value.filterServerAddr, remoteAddr)
+		logger.Warnf("The Filter Server %s connection %s closed, remove it", value.filterServerAddr, remoteAddr)
 	}
 }
 

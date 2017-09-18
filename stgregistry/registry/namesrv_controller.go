@@ -2,10 +2,10 @@ package registry
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"time"
 )
 
@@ -18,7 +18,7 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 type DefaultNamesrvController struct {
-	NamesrvConfig             namesrv.NamesrvConfig           // namesrv配置项
+	NamesrvConfig             *namesrv.NamesrvConfig          // namesrv配置项
 	RemotingServer            *remoting.DefalutRemotingServer // 远程请求server端
 	RouteInfoManager          *RouteInfoManager               // topic路由管理器
 	KvConfigManager           *KVConfigManager                // kv管理器
@@ -31,7 +31,7 @@ type DefaultNamesrvController struct {
 // NewNamesrvController 初始化默认的NamesrvController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/12
-func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
+func NewNamesrvController(namesrvConfig *namesrv.NamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
 	controller := &DefaultNamesrvController{
 		scanBrokerTicker:   timeutil.NewTicker(5*second, 10*second),
 		printNamesrvTicker: timeutil.NewTicker(1*minute, 10*minute),
@@ -44,27 +44,26 @@ func NewNamesrvController(namesrvConfig *namesrv.DefaultNamesrvConfig, remotingS
 	return controller
 }
 
+// initialize 初始化NamesrvController必要的资源
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) initialize() bool {
 	// (1)加载kvConfig.json至KVConfigManager的configTable，即持久化转移到内存
 	err := self.KvConfigManager.load()
 	if err != nil {
-		logger.Info("KvConfigManager.load() err: %s", err.Error())
+		logger.Info("%s", err.Error())
 		return false
 	}
 
-	// this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService)
-	// (2)TODO:将namesrv作为一个netty server启动，即初始化通信层
-	// remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", 9876)
-
-	// (3)注册默认DefaultRequestProcessor，只要start启动就开始处理请求
+	// (2)注册默认DefaultRequestProcessor，只要start启动就开始处理请求
 	self.registerProcessor()
 
-	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
+	// (3)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
 	go func() {
 		self.startScanNotActiveBroker()
 	}()
 
-	// (5)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
+	// (4)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
 	go func() {
 		self.startPrintAllPeriodically()
 	}()
@@ -72,6 +71,9 @@ func (self *DefaultNamesrvController) initialize() bool {
 	return true
 }
 
+// shutdown 关闭NamesrvController控制器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) shutdown() {
 	if self.scanBrokerTicker != nil {
 		self.scanBrokerTicker.Stop()
@@ -79,26 +81,40 @@ func (self *DefaultNamesrvController) shutdown() {
 	if self.printNamesrvTicker != nil {
 		self.printNamesrvTicker.Stop()
 	}
-	self.RemotingServer.Shutdown()
+	if self.RemotingServer != nil {
+		self.RemotingServer.Shutdown()
+	}
 }
 
+// start 启动Namesrv控制服务
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) start() error {
 	self.RemotingServer.Start()
 	return nil
 }
 
+// registerProcessor 注册默认的请求处理器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) registerProcessor() error {
 	processor := NewDefaultRequestProcessor(self)
 	self.RemotingServer.RegisterDefaultProcessor(processor)
 	return nil
 }
 
+// startScanNotActiveBroker 启动任务：扫描2分钟内不活跃的Broker
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) startScanNotActiveBroker() {
 	self.scanBrokerTicker.Do(func(tm time.Time) {
 		self.RouteInfoManager.scanNotActiveBroker()
 	})
 }
 
+// startPrintAllPeriodically 启动任务：每个10秒打印namesrv全局配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/14
 func (self *DefaultNamesrvController) startPrintAllPeriodically() {
 	self.printNamesrvTicker.Do(func(tm time.Time) {
 		self.KvConfigManager.printAllPeriodically()

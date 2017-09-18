@@ -1,9 +1,9 @@
 #smartgo
-<img src="https://gitee.com/cloudzone/smartgo/raw/dev/docs/static/goland.png" width="" height="" alt="SmartGo" align=center />
+<img src="https://git.oschina.net/uploads/images/2017/0915/133220_def37898_859722.png" width="" height="" alt="SmartGo" align="center" />
 
 
 ### smartgo整体架构图
-![](https://gitee.com/cloudzone/smartgo/raw/dev/docs/static/stgarch.png)
+![](https://git.oschina.net/uploads/images/2017/0915/124147_d695d6e8_859722.png)
 
 
 ### smartgo是什么？
@@ -17,9 +17,9 @@ SmartGo是什么是参考AMQP、JMS、Mqtt协议、Kafka，RocketMQ，RabbitMq�
 * 亿级消息堆积能力
 * 比较友好的分布式特性
 
-当前最新版本功能支持：
-* 1、将整个项目命名为smartgo-1.0.0
-* 2、将项目中所有子工程命名为smg-*
+当前最新版本功能支持：     
+1. 将整个项目命名为smartgo-1.0.0    
+2. 将项目中所有子工程命名为stg-*    
 
 
 ----------
@@ -40,9 +40,24 @@ SmartGo是什么是参考AMQP、JMS、Mqtt协议、Kafka，RocketMQ，RabbitMq�
 * 正常组内开发人员提交代码，需要经过经过审核后方可提交（且需要有统一格式注释，参照注释类型3）
   
 ### 包管理`必读`
-* 包管理工具使用[glide](https://github.com/Masterminds/glide)
- 1. 安装`go get -u github.com/kardianos/govendor`
- 2. 下载依赖包`govendor sync`
+* 包管理工具使用[govendor](https://github.com/kardianos/govendor)
+
+```bash
+# 下载并安装包管理工具
+go get -u github.com/kardianos/govendor   # 下载govendor源码
+go install github.com/kardianos/govendor  # 安装govendor依赖工具
+
+# 同步包
+govendor sync  # 基于vendor.json文件下载依赖包
+
+# 更改包依赖
+govendor update # 从 $GOPATH 更新包依赖到vendor目录
+
+# 重新做包依赖
+govendor init   # 初始化vendor目录
+govendor add +external # 添加所有外部包到vendor目录
+```
+
 
 
 ### 注释规范

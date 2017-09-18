@@ -5,7 +5,6 @@ import (
 )
 
 func main() {
-
 	registry.Startup()
 	select {}
 }
