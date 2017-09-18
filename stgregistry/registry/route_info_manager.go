@@ -3,14 +3,14 @@ package registry
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv/routeinfo"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	set "github.com/deckarep/golang-set"
-	"net"
 	"strings"
 	"sync"
 )
@@ -92,7 +92,7 @@ func (self *RouteInfoManager) getAllTopicList() []byte {
 //
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64, haServerAddr string, topicConfigWrapper *body.TopicConfigSerializeWrapper, filterServerList []string, channel net.Conn) *namesrv.RegisterBrokerResult {
+func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64, haServerAddr string, topicConfigWrapper *body.TopicConfigSerializeWrapper, filterServerList []string, ctx netm.Context) *namesrv.RegisterBrokerResult {
 	result := &namesrv.RegisterBrokerResult{}
 	self.ReadWriteLock.Lock()
 	if brokerNames, ok := self.ClusterAddrTable[clusterName]; ok {
@@ -143,7 +143,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 			}
 
 			// 更新最后变更时间: 初始化BrokerLiveInfo对象并以broker地址为key值存入brokerLiveTable变量中
-			brokerLiveInfo := routeinfo.NewBrokerLiveInfo(topicConfigWrapper.DataVersion, haServerAddr, channel)
+			brokerLiveInfo := routeinfo.NewBrokerLiveInfo(topicConfigWrapper.DataVersion, haServerAddr, ctx)
 			if prevBrokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; ok && prevBrokerLiveInfo == nil {
 				logger.Info("new broker registerd, %s HAServer: %s", brokerAddr, haServerAddr)
 			}
@@ -437,7 +437,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 			if lastTimestamp < currentTimeMillis {
 				// 主动关闭 Channel通道，关闭后通过 channel.close().addListener()事件来通知其他模块
 				//TODO: RemotingUtil.closeChannel(brokerLiveInfo.getChannel());
-				brokerLiveInfo.Conn.Close()
+				brokerLiveInfo.Context.Close()
 
 				// 删除无效Broker列表
 				self.ReadWriteLock.RLock()
@@ -447,7 +447,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 				// 关闭Channel通道
 				format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
 				logger.Info(format, remoteAddr, currentTimeMillis, lastTimestamp, brokerChannelExpiredTime)
-				self.onChannelDestroy(remoteAddr, brokerLiveInfo.Conn)
+				self.onChannelDestroy(remoteAddr, brokerLiveInfo.Context)
 			}
 		}
 	}
@@ -456,15 +456,15 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, conn net.Conn) {
+func (this *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Context) {
 
 	// 加读锁，寻找断开连接的Broker
 	queryBroker := false
 	brokerAddrFound := ""
-	if conn != nil {
+	if ctx != nil {
 		this.ReadWriteLock.RLock()
 		for k, v := range this.BrokerLiveTable {
-			if v != nil && v.Conn == conn {
+			if v != nil && v.Context == ctx {
 				brokerAddrFound = k
 				queryBroker = true
 			}
