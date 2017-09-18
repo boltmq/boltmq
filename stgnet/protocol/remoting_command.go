@@ -50,28 +50,28 @@ func CreateDefaultResponseCommand(customHeader ...CommandCustomHeader) *Remoting
 
 // CreateResponseCommand
 func CreateResponseCommand(code int32, remark string) *RemotingCommand {
-	remotingClient := &RemotingCommand{
+	cmd := &RemotingCommand{
 		Code:   code,
 		Remark: remark,
 	}
 	// 设置为响应报文
-	remotingClient.MarkResponseType()
+	cmd.MarkResponseType()
 	// 设置版本信息
-	remotingClient.setCMDVersion()
+	cmd.setCMDVersion()
 
-	return remotingClient
+	return cmd
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang
 func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *RemotingCommand {
-	remotingClient := &RemotingCommand{
+	cmd := &RemotingCommand{
 		Code:         code,
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
 	}
-	remotingClient.Opaque = inrcOpaque() // 标识自增，请求唯一标识
-	remotingClient.setCMDVersion()       // 设置版本信息
-	return remotingClient
+	cmd.Opaque = inrcOpaque() // 标识自增，请求唯一标识
+	cmd.setCMDVersion()       // 设置版本信息
+	return cmd
 }
 
 // Author: jerrylou, <gunsluo@gmail.com>
@@ -255,14 +255,14 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 }
 
 func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
-	remotingCommand := &RemotingCommand{}
-	remotingCommand.ExtFields = make(map[string]string)
-	err := ffjson.Unmarshal(header, remotingCommand)
+	cmd := &RemotingCommand{}
+	cmd.ExtFields = make(map[string]string)
+	err := ffjson.Unmarshal(header, cmd)
 	if err != nil {
 		return nil, err
 	}
-	remotingCommand.Body = body
-	return remotingCommand, nil
+	cmd.Body = body
+	return cmd, nil
 }
 
 // ToString 打印RemotingCommand对象数据

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -88,9 +89,42 @@ func HashCode(s string) int64 {
 }
 
 // GetCurrentTimeMillis 得到当前时间的毫秒数
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
 func GetCurrentTimeMillis() (currentTimeMillis int64) {
 	currentTimeMillis = time.Now().UnixNano() / int64(time.Millisecond)
 	return currentTimeMillis
+}
+
+// FormatTimestamp 转化时间戳为字符串(自动适配毫秒数)
+//
+// 使用示例
+// (1)FormatTimestamp(1505716870) 		==> 2017/9/18 14:41:10
+//
+// (2)FormatTimestamp(1505716870921) 	==> 2017/9/18 14:41:10.921
+//
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/18
+func FormatTimestamp(stamp int64) string {
+	// 普通日期转为秒级时间戳,长度10位(eg. 2017/9/18 14:41:10 ==> 1505716870)
+	// 普通日期转为毫秒时间戳,长度13位(eg. 2017/9/18 14:41:10.921 ==> 1505716870921)
+	if tmp := strconv.FormatInt(stamp, 10); len(tmp) == 10 {
+		stamp = stamp * 1000 // 如果当前时间戳是秒，那就转化为毫秒级的时间戳
+	}
+
+	sec := stamp / int64(time.Microsecond)
+	nsec := stamp % int64(time.Microsecond)
+
+	t := time.Unix(sec, nsec*int64(time.Millisecond))
+	if t.Year() == 1 {
+		return ""
+	}
+
+	timeLayout := "2006-01-02 15:04:05"
+	if nsec > 0 {
+		timeLayout = "2006-01-02 15:04:05.000"
+	}
+	return t.Format(timeLayout)
 }
 
 // 写文件 2017/8/28 Add by yintongjiang,windows"\\"需改成"/"
@@ -120,6 +154,8 @@ func createFile(data []byte, fileName string) {
 	file.Write(data)
 	defer file.Close()
 }
+
+// File2String 读取文件内容
 func File2String(filePath string) (data string, err error) {
 	bf, err := file2String(filePath)
 	if err != nil {
@@ -138,6 +174,7 @@ func file2String(filePath string) (bf []byte, err error) {
 	return bf, nil
 }
 
+// CreateDir 创建文件夹
 func CreateDir(dir string) (bool, error) {
 	if err := os.MkdirAll(dir, os.FileMode(os.O_CREATE)); err != nil {
 		return false, err
@@ -146,6 +183,7 @@ func CreateDir(dir string) (bool, error) {
 	return true, nil
 }
 
+// CreateFile 创建文件
 func CreateFile(fileFullName string) (bool, error) {
 	parentDir := filepath.Dir(fileFullName)
 	_, err := CreateDir(parentDir)
