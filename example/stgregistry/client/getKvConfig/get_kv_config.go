@@ -32,13 +32,9 @@ func main() {
 	// 初始化
 	initClient()
 
-	// 启动客户端
+	// 启动
 	cmd.Start()
 	fmt.Println("remoting client start success")
-
-	// 响应custom header
-	//response = protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
-	//response.DecodeCommandCustomHeader(&namesrv.GetKVConfigResponseHeader{})
 
 	// 请求custom header
 	requestHeader := &namesrv.GetKVConfigRequestHeader{
@@ -46,7 +42,6 @@ func main() {
 		Key:       key,
 	}
 	request = protocol.CreateRequestCommand(code.GET_KV_CONFIG, requestHeader)
-	request.Language = "79"
 
 	// 校验namesrvAddrs
 	namesrvAddrs := cmd.GetNameServerAddressList()
@@ -56,58 +51,60 @@ func main() {
 	}
 
 	// 同步发送请求
-	//response, err = cmd.InvokeSync(namesrvAddrs[0], request, 3000)
-	//if err != nil {
-	//	logger.Error("sync response GET_KV_CONFIG failed. err: %s", err.Error())
-	//	return
-	//}
-	//if response == nil {
-	//	logger.Error("sync response GET_KV_CONFIG failed. err: response is nil")
-	//	return
-	//}
-	//logger.Info("response ==> %s", response.ToString())
-	//
-	//if response.Code == code.SUCCESS {
-	//	format := "sync response GET_KV_CONFIG success. namespace=%s, key=%s, value=%s"
-	//	logger.Info(format, requestHeader.Namespace, requestHeader.Key, responseHeader.Value)
-	//	return
-	//}
-	//format := "sync handle GET_KV_CONFIG failed. code=%d, remark=%s"
-	//logger.Info(format, response.Code, response.Remark)
-
-	err = cmd.InvokeAsync(namesrvAddrs[0], request, client.DEFAULT_TIMEOUT, func(responseFuture *remoting.ResponseFuture) {
-		response = responseFuture.GetRemotingCommand()
-		if response == nil {
-			if responseFuture.IsSendRequestOK() {
-				logger.Error("async send GET_KV_CONFIG request failed. send unreachable")
-				return
-			}
-
-			if responseFuture.IsTimeout() {
-				logger.Error("async send GET_KV_CONFIG request failed. send timeout")
-				return
-			}
-
-			logger.Error("async send GET_KV_CONFIG request failed. unknown reason")
-			return
-		}
-
-		if response.Code == code.SUCCESS {
-			format := "async response GET_KV_CONFIG success. namespace=%s, key=%s, value=%s"
-			responseHeader := &namesrv.GetKVConfigResponseHeader{}
-			response.DecodeCommandCustomHeader(responseHeader)
-			logger.Info("responseHeader.value --> %s", responseHeader.Value)
-			logger.Info(format, requestHeader.Namespace, requestHeader.Key, responseHeader.Value)
-			return
-		}
-
-		format := "async handle GET_KV_CONFIG failed. code=%d, remark=%s"
-		err = fmt.Errorf(format, response.Code, response.Remark)
-		return
-	})
-
+	response, err = cmd.InvokeSync(namesrvAddrs[0], request, 3000)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Error("sync response GET_KV_CONFIG failed. err: %s", err.Error())
+		return
 	}
+	if response == nil {
+		logger.Error("sync response GET_KV_CONFIG failed. err: response is nil")
+		return
+	}
+
+	if response.Code == code.SUCCESS {
+		responseHeader := &namesrv.GetKVConfigResponseHeader{}
+		response.DecodeCommandCustomHeader(responseHeader)
+
+		format := "sync response GET_KV_CONFIG success. namespace=%s, key=%s, value=%s"
+		logger.Info(format, requestHeader.Namespace, requestHeader.Key, responseHeader.Value)
+		return
+	}
+	format := "sync handle GET_KV_CONFIG failed. code=%d, remark=%s"
+	logger.Info(format, response.Code, response.Remark)
+
+	//err = cmd.InvokeAsync(namesrvAddrs[0], request, client.DEFAULT_TIMEOUT, func(responseFuture *remoting.ResponseFuture) {
+	//	response = responseFuture.GetRemotingCommand()
+	//	if response == nil {
+	//		if responseFuture.IsSendRequestOK() {
+	//			logger.Error("async send GET_KV_CONFIG request failed. send unreachable")
+	//			return
+	//		}
+	//
+	//		if responseFuture.IsTimeout() {
+	//			logger.Error("async send GET_KV_CONFIG request failed. send timeout")
+	//			return
+	//		}
+	//
+	//		logger.Error("async send GET_KV_CONFIG request failed. unknown reason")
+	//		return
+	//	}
+	//
+	//	if response.Code == code.SUCCESS {
+	//		responseHeader := namesrv.GetKVConfigResponseHeader{}
+	//		response.DecodeCommandCustomHeader(&responseHeader)
+	//
+	//		format := "async response GET_KV_CONFIG success. namespace=%s, key=%s, value=%s"
+	//		logger.Info(format, requestHeader.Namespace, requestHeader.Key, responseHeader.Value)
+	//		return
+	//	}
+	//
+	//	format := "async handle GET_KV_CONFIG failed. code=%d, remark=%s"
+	//	err = fmt.Errorf(format, response.Code, response.Remark)
+	//	return
+	//})
+
+	//if err != nil {
+	//	logger.Error(err.Error())
+	//}
 	select {}
 }

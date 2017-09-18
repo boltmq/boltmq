@@ -114,15 +114,9 @@ func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *p
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -153,8 +147,10 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		ctx, // 8
 	)
 
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表
 	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
@@ -226,15 +222,8 @@ func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(ctx netm.Context
 func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.WipeWritePermOfBrokerResponseHeader{})
 
-	responseHeader := &namesrv.WipeWritePermOfBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.WipeWritePermOfBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -245,7 +234,10 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, req
 	remoteAddr := ctx.RemoteAddr().String()
 	logger.Info(format, requestHeader.BrokerName, remoteAddr, wipeTopicCount)
 
+	responseHeader := &namesrv.WipeWritePermOfBrokerResponseHeader{}
 	responseHeader.WipeTopicCount = wipeTopicCount
+	response.CustomHeader = responseHeader
+
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -323,16 +315,8 @@ func (self *DefaultRequestProcessor) putKVConfig(ctx netm.Context, request *prot
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
-
-	responseHeader := &namesrv.GetKVConfigResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -340,7 +324,9 @@ func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *prot
 
 	value := self.NamesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
 	if strings.TrimSpace(value) != "" {
+		responseHeader := &namesrv.GetKVConfigResponseHeader{}
 		responseHeader.Value = strings.TrimSpace(value)
+		response.CustomHeader = responseHeader
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response, nil
@@ -373,15 +359,9 @@ func (self *DefaultRequestProcessor) deleteKVConfig(ctx netm.Context, request *p
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -411,11 +391,15 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 		ctx,
 	)
 
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
 	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
+
+	// 设置response响应
+	response.CustomHeader = responseHeader
 	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -451,15 +435,8 @@ func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request 
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
-	responseHeader := &namesrv.GetKVConfigResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -467,7 +444,9 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, reques
 
 	value := self.NamesrvController.KvConfigManager.getKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
 	if value != "" {
+		responseHeader := &namesrv.GetKVConfigResponseHeader{}
 		responseHeader.Value = value
+		response.CustomHeader = responseHeader
 		response.Remark = ""
 		response.Code = code.SUCCESS
 		return response, nil
@@ -492,8 +471,8 @@ func (self *DefaultRequestProcessor) deleteKVConfigByValue(ctx netm.Context, req
 	}
 
 	self.NamesrvController.KvConfigManager.deleteKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
-	response.Remark = ""
 	response.Code = code.SUCCESS
+	response.Remark = ""
 	return response, nil
 }
 
@@ -510,9 +489,9 @@ func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, reques
 	}
 
 	body := self.NamesrvController.RouteInfoManager.getTopicsByCluster(requestHeader.Cluster)
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
@@ -523,9 +502,9 @@ func (self *DefaultRequestProcessor) getSystemTopicListFromNamesrv(ctx netm.Cont
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getSystemTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
@@ -536,9 +515,9 @@ func (self *DefaultRequestProcessor) getUnitTopicList(ctx netm.Context, request 
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getUnitTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
@@ -549,9 +528,9 @@ func (self *DefaultRequestProcessor) getHasUnitSubTopicList(ctx netm.Context, re
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getHasUnitSubTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
@@ -562,8 +541,8 @@ func (self *DefaultRequestProcessor) getHasUnitSubUnUnitTopicList(ctx netm.Conte
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getHasUnitSubUnUnitTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }

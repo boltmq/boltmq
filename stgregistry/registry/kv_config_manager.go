@@ -113,11 +113,8 @@ func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string 
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 	self.ReadWriteLock.RLock()
-	logger.Info("params[namespace=%s, key=%s], map:%s", namespace, key, self.ConfigTable)
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
-		logger.Info("kvTable --> %s", self.ConfigTable[namespace])
 		if value, ok := kvTable[key]; ok {
-			logger.Info("value --> %s", self.ConfigTable[namespace][key])
 			return value
 		}
 	}

@@ -51,7 +51,7 @@ func (self *DefaultNamesrvController) initialize() bool {
 	// (1)加载kvConfig.json至KVConfigManager的configTable，即持久化转移到内存
 	err := self.KvConfigManager.load()
 	if err != nil {
-		logger.Info("%s", err.Error())
+		logger.Error("%s", err.Error())
 		return false
 	}
 

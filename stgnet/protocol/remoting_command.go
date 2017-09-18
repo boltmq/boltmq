@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	configVersion int32 = -1
+	configVersion int32 = int32(GOLANG)
 )
 
 // RemotingCommand remoting command
@@ -54,6 +54,7 @@ func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 		Code:      code,
 		Remark:    remark,
 		ExtFields: make(map[string]string),
+		Language:  LanguageCode(GOLANG).ToString(),
 	}
 	// 设置为响应报文
 	cmd.MarkResponseType()
@@ -69,6 +70,7 @@ func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *Remotin
 		Code:         code,
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
+		Language:     LanguageCode(GOLANG).ToString(),
 	}
 	cmd.Opaque = inrcOpaque() // 标识自增，请求唯一标识
 	cmd.setCMDVersion()       // 设置版本信息
