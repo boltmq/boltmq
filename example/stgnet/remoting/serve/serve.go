@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
@@ -47,6 +48,25 @@ func (processor *OtherProcessor) ProcessRequest(ctx netm.Context,
 	return response, nil
 }
 
+type ServerContextListener struct {
+}
+
+func (listener *ServerContextListener) OnContextConnect(ctx netm.Context) {
+	log.Printf("one connection create: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextClose(ctx netm.Context) {
+	log.Printf("one connection close: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextError(ctx netm.Context) {
+	log.Printf("one connection error: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextIdle(ctx netm.Context) {
+	log.Printf("one connection idle: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
 func main() {
 	initServer()
 	remotingServer.Start()
@@ -65,4 +85,5 @@ func initServer() {
 	remotingServer.RegisterProcessor(cmprotocol.GET_ROUTEINTO_BY_TOPIC, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.UPDATE_AND_CREATE_TOPIC, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.GET_KV_CONFIG, &OtherProcessor{})
+	remotingServer.RegisterContextListener(&ServerContextListener{})
 }

@@ -13,6 +13,7 @@ type RemotingServer interface {
 	RegisterProcessor(requestCode int32, processor RequestProcessor)
 	RegisterDefaultProcessor(processor RequestProcessor)
 	RegisterRPCHook(rpcHook RPCHook)
+	RegisterContextListener(contextListener netm.ContextListener)
 	Start()
 	Shutdown()
 }
