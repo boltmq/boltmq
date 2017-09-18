@@ -1,6 +1,7 @@
 package remoting
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
@@ -13,6 +14,7 @@ type RemotingClient interface {
 	RegisterRPCHook(rpcHook RPCHook)
 	GetNameServerAddressList() []string
 	UpdateNameServerAddressList(addrs []string)
+	RegisterContextListener(contextListener netm.ContextListener)
 	Start()
 	Shutdown()
 }

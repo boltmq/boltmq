@@ -79,3 +79,8 @@ func (rs *DefalutRemotingServer) GetListenPort() string {
 func (rs *DefalutRemotingServer) Port() int32 {
 	return int32(rs.port)
 }
+
+// RegisterContextListener 注册context listener
+func (rs *DefalutRemotingServer) RegisterContextListener(contextListener netm.ContextListener) {
+	rs.bootstrap.RegisterContextListener(contextListener)
+}

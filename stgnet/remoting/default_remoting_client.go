@@ -172,3 +172,8 @@ func (rc *DefalutRemotingClient) chooseNameseverAddr() string {
 
 	return caddr
 }
+
+// RegisterContextListener 注册context listener
+func (rc *DefalutRemotingClient) RegisterContextListener(contextListener netm.ContextListener) {
+	rc.bootstrap.RegisterContextListener(contextListener)
+}
