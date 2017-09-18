@@ -59,7 +59,7 @@ func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consume
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
 		tmp := NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
-		prev, err := cm.consumerTable.Put(group, tmp)
+		prev, err := cm.consumerTable.PutIfAbsent(group, tmp)
 		if err != nil || prev == nil {
 			consumerGroupInfo = tmp
 		} else {
@@ -69,8 +69,13 @@ func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consume
 		}
 	}
 	r1 := consumerGroupInfo.UpdateChannel(conn, consumeType, messageModel, consumeFromWhere)
-	// TODO
-	return r1
+	r2 := consumerGroupInfo.UpdateSubscription(subList)
+
+	if r1 || r2 {
+		cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())
+	}
+
+	return r1 || r2
 }
 
 func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *ChannelInfo) {

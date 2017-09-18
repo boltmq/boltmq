@@ -42,6 +42,10 @@ func (self *Message) GetProperty(name string) string {
 	return self.Properties[name]
 }
 
+func (self *Message) SetTags(tags string) {
+	self.PutProperty(PROPERTY_TAGS, tags)
+}
+
 func (self *Message) GetTags() string {
 	return self.GetProperty(PROPERTY_TAGS)
 }

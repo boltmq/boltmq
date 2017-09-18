@@ -9,13 +9,12 @@ import (
 // Author gaoyanlei
 // Since 2017/8/16
 type MessageExtBrokerInner struct {
-	// TODO serialVersionUID
 	message.MessageExt
 	PropertiesString string
 	TagsCode         int64
 }
 
-func TagsString2tagsCode(filterType stgcommon.TopicFilterType, tags string) int64 {
+func TagsString2tagsCode(filterType *stgcommon.TopicFilterType, tags string) int64 {
 	if tags == "" || len(tags) == 0 {
 		return 0
 	}

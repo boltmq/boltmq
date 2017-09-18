@@ -4,6 +4,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	set "github.com/deckarep/golang-set"
 	"net"
 	"strings"
 )
@@ -109,4 +111,78 @@ func (cg *ConsumerGroupInfo) getAllChannel() []net.Conn {
 		}
 	}
 	return result
+}
+
+// getAllChannel 获得所有客户端ID
+// Author rongzhihong
+// Since 2017/9/14
+func (cg *ConsumerGroupInfo) GetAllClientId() []string {
+	result := []string{}
+
+	iterator := cg.ConnTable.Iterator()
+	for iterator.HasNext() {
+		_, value, _ := iterator.Next()
+		if channel, ok := value.(*ChannelInfo); ok {
+			result = append(result, channel.ClientId)
+		}
+	}
+
+	return result
+}
+
+// UpdateSubscription 更新订阅
+// Author rongzhihong
+// Since 2017/9/17
+func (cg *ConsumerGroupInfo) UpdateSubscription(subList set.Set) bool {
+	updated := false
+
+	// 增加新的订阅关系
+	iterator := subList.Iterator()
+	for item := range iterator.C {
+		if sub, ok := item.(*heartbeat.SubscriptionData); ok {
+			old, _ := cg.SubscriptionTable.Get(sub.Topic)
+			if old == nil {
+				prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
+				if prev == nil {
+					updated = true
+					logger.Infof("subscription changed, add new topic, group: %s %#v", cg.GroupName, sub)
+				}
+				continue
+			}
+
+			if oldSub, ok := old.(*heartbeat.SubscriptionData); ok {
+				if sub.SubVersion > oldSub.SubVersion {
+					if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
+						logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, old, sub)
+					}
+					cg.SubscriptionTable.Put(sub.Topic, sub)
+				}
+			}
+		}
+	}
+
+	// 删除老的订阅关系
+	subIt := cg.SubscriptionTable.Iterator()
+	for subIt.HasNext() {
+		exist := false
+		oldTopic, oldValue, _ := subIt.Next()
+
+		for subItem := range subList.Iterator().C {
+			if sub, ok := subItem.(*heartbeat.SubscriptionData); ok {
+				if oldTopic, ok := oldTopic.(string); ok && strings.EqualFold(sub.Topic, oldTopic) {
+					exist = true
+					break
+				}
+			}
+		}
+
+		if !exist {
+			logger.Warnf("subscription changed, group: %s remove topic %s %v", cg.GroupName, oldTopic, oldValue)
+			subIt.Remove()
+			updated = true
+		}
+	}
+
+	cg.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
+	return updated
 }

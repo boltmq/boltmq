@@ -29,7 +29,7 @@ func NewDefaultMQProducer(producerGroup string) *DefaultMQProducer {
 		ProducerGroup:                    producerGroup,
 		CreateTopicKey:                   stgcommon.DEFAULT_TOPIC,
 		DefaultTopicQueueNums:            4,
-		SendMsgTimeout:                   3000,
+		SendMsgTimeout:                   30000,
 		CompressMsgBodyOverHowmuch:       1024 * 4,
 		RetryTimesWhenSendFailed:         2,
 		RetryAnotherBrokerWhenNotStoreOK: false,

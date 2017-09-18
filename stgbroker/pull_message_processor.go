@@ -1,8 +1,12 @@
 package stgbroker
 
 import (
+	"bytes"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
@@ -225,8 +229,10 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
-				// TODO final SocketAddress storeHost =new InetSocketAddress(brokerController.getBrokerConfig().getBrokerIP1(), brokerController.getNettyServerConfig().getListenPort());
+				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
 				// TODO	messageIds :=pull.BrokerController.getMessageStore().getMessageIds(requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getQueueOffset() + getMessageResult.getMessageCount(), storeHost);
+				fmt.Println(storeHost)
+
 				messageIds := make(map[string]int64)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
@@ -268,21 +274,17 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		switch response.Code {
 		case commonprotocol.SUCCESS:
-			// TODO  统计
-			//this.brokerController.getBrokerStatsManager().incGroupGetNums(
-			//	requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-			//	getMessageResult.getMessageCount());
-			//
-			//this.brokerController.getBrokerStatsManager().incGroupGetSize(
-			//	requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-			//	getMessageResult.getBufferTotalSize());
-			//
-			//this.brokerController.getBrokerStatsManager().incBrokerGetNums(
-			//	getMessageResult.getMessageCount());
-			//
-			//	FileRegion fileRegion =
-			//	new ManyMessageTransfer(response.encodeHeader(getMessageResult
-			//	.getBufferTotalSize()), getMessageResult);
+			pull.BrokerController.brokerStatsManager.IncGroupGetNums(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.GetMessageCount())
+
+			pull.BrokerController.brokerStatsManager.IncGroupGetSize(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.BufferTotalSize)
+
+			pull.BrokerController.brokerStatsManager.IncBrokerGetNums(getMessageResult.GetMessageCount())
+
+			byteBufferHeader := bytes.NewBuffer(response.Body)
+			fileRegion := pagecache.NewManyMessageTransfer(byteBufferHeader, getMessageResult)
+			fmt.Println(fileRegion)
+
+			// TODO
 			//	channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
 			//	public void operationComplete(ChannelFuture future) throws Exception {
 			//	getMessageResult.release();
@@ -360,8 +362,30 @@ func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
 	return pull.ConsumeMessageHookList != nil && len(pull.ConsumeMessageHookList) > 0
 }
 
+// generateOffsetMovedEvent 偏移量移动事件
+// Author rongzhihong
+// Since 2017/9/17
 func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMovedEvent) {
-	// TODO
+	defer utils.RecoveredFn()
+
+	msgInner := new(stgstorelog.MessageExtBrokerInner)
+	msgInner.Topic = stgcommon.OFFSET_MOVED_EVENT
+	msgInner.SetTags(event.ConsumerGroup)
+	msgInner.SetDelayTimeLevel(0)
+	msgInner.SetKeys(event.ConsumerGroup)
+	msgInner.Body = event.Encode()
+	msgInner.Flag = 0
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgInner.GetTags())
+
+	msgInner.QueueId = int32(0)
+	msgInner.SysFlag = 0
+	msgInner.BornTimestamp = timeutil.CurrentTimeMillis()
+	msgInner.BornHost = pull.BrokerController.GetBrokerAddr()
+	msgInner.StoreHost = msgInner.BornHost
+
+	msgInner.ReconsumeTimes = 0
+
+	pull.BrokerController.MessageStore.PutMessage(msgInner)
 }
 
 // ConsumeMessageHook 消费消息回调
