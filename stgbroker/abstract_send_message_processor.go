@@ -41,15 +41,23 @@ func NewAbstractSendMessageProcessor(brokerController *BrokerController) *Abstra
 
 func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *header.SendMessageRequestHeader {
 	requestHeaderV2 := &header.SendMessageRequestHeaderV2{}
+
 	var requestHeader *header.SendMessageRequestHeader
+
 	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
-		err := request.DecodeCommandCustomHeader(requestHeaderV2) // TODO  requestHeaderV2 =(SendMessageRequestHeaderV2) request.decodeCommandCustomHeader(SendMessageRequestHeaderV2.class);
+		err := request.DecodeCommandCustomHeader(requestHeaderV2)
+		if err != nil {
+			fmt.Println("error")
+		}
+		requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
+
+	} else if request.Code == commonprotocol.SEND_MESSAGE {
+		requestHeader = &header.SendMessageRequestHeader{}
+		err := request.DecodeCommandCustomHeader(requestHeader)
 		if err != nil {
 			fmt.Println("error")
 		}
 	}
-
-	requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
 	return requestHeader
 }
@@ -129,7 +137,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(conn net.Conn, requestHeader 
 	return response
 }
 
-func DoResponse( //TODO ChannelHandlerContext ctx,
+func DoResponse( //ChannelHandlerContext ctx,
 	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
 		// TODO ctx.writeAndFlush(response);
@@ -187,7 +195,7 @@ func (asmp *AbstractSendMessageProcessor) ExecuteSendMessageHookAfter(response *
 
 	if asmp.HasSendMessageHook() {
 		for _, hook := range asmp.sendMessageHookList {
-			if response != nil{
+			if response != nil {
 				responseHeader := new(header.SendMessageResponseHeader)
 				err := response.DecodeCommandCustomHeader(responseHeader)
 				if err != nil {

@@ -50,8 +50,7 @@ func (chks *ClientHouseKeepingService) Shutdown() {
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) scanExceptionChannel() {
-	// TODO:
-	//chks.brokerController.ProducerManager.scanNotActiveChannel();
+	chks.brokerController.ProducerManager.ScanNotActiveChannel()
 	chks.brokerController.ConsumerManager.ScanNotActiveChannel()
 	chks.brokerController.FilterServerManager.ScanNotActiveChannel()
 }
@@ -67,8 +66,7 @@ func (chks *ClientHouseKeepingService) onChannelConnect(remoteAddr string, conn 
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }
@@ -77,8 +75,7 @@ func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string, conn ne
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }
@@ -87,8 +84,7 @@ func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string, con
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) onChannelIdle(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
 	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
 }

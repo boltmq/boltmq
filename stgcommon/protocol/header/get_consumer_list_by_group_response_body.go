@@ -16,3 +16,10 @@ func (header *GetConsumerListByGroupResponseBody) CheckFields() error {
 func (header *GetConsumerListByGroupResponseBody) Decode(data []byte) error {
 	return ffjson.Unmarshal(data, header)
 }
+
+// Encode: 获取消费者列表
+// Author: rongzhihong
+// Since:  2017/9/14
+func (header *GetConsumerListByGroupResponseBody) Encode() ([]byte, error) {
+	return ffjson.Marshal(header)
+}

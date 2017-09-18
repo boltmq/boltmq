@@ -2,11 +2,12 @@ package stgbroker
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
-	"net"
-	protocol "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	protocol "git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"net"
 )
 
 // Broker2Client Broker主动调用客户端接口
@@ -38,4 +39,27 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(conn net.Conn, consumerGroup 
 	requestHeader := &header.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
 	request := protocol.CreateRequestCommand(commonprotocol.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
 	b2c.BrokerController.RemotingServer.InvokeOneway(conn, request, 10)
+}
+
+// CheckProducerTransactionState Broker主动回查Producer事务状态，Oneway
+// Author rongzhihong
+// Since 2017/9/11
+func (b2c *Broker2Client) CheckProducerTransactionState(channel net.Conn, requestHeader *header.CheckTransactionStateRequestHeader,
+	selectMapedBufferResult *stgstorelog.SelectMapedBufferResult) {
+	request := protocol.CreateRequestCommand(commonprotocol.CHECK_TRANSACTION_STATE, requestHeader)
+	request.MarkOnewayRPC()
+
+	// TODO
+	/*FileRegion fileRegion =
+			new OneMessageTransfer(request.encodeHeader(selectMapedBufferResult.getSize()),
+			selectMapedBufferResult);
+		channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
+			@Override
+		public void operationComplete(ChannelFuture future) throws Exception {
+			selectMapedBufferResult.release();
+			if (!future.isSuccess()) {
+			log.error("invokeProducer failed,", future.cause());
+			}
+		}
+	});*/
 }

@@ -12,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"net"
 )
 
@@ -179,8 +180,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 	msgInner.Body = msgExt.Body
 	msgInner.Flag = msgExt.Flag
 	message.SetPropertiesMap(&msgInner.Message, msgExt.Properties)
-	// TODO msgInner.PropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
-	// TODO msgInner.TagsCode(MessageExtBrokerInner.tagsString2tagsCode(null, msgExt.getTags()));
+	msgInner.PropertiesString = message.MessageProperties2String(msgExt.Properties)
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgExt.GetTags())
 
 	msgInner.QueueId = int32(queueIdInt)
 	msgInner.SysFlag = msgExt.SysFlag
@@ -208,8 +209,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 			if correctTopic == "" || len(correctTopic) <= 0 {
 				backTopic = correctTopic
 			}
-			fmt.Println(backTopic)
-			// TODO smp.BrokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
+
+			smp.BrokerController.brokerStatsManager.IncSendBackNums(requestHeader.Group, backTopic)
 
 			response.Code = commonprotocol.SUCCESS
 			response.Remark = ""
@@ -272,7 +273,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(topicConfig.TopicFilterType, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(&topicConfig.TopicFilterType, msgInner.GetTags())
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
@@ -328,10 +329,10 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 		}
 
 		if sendOK {
-			//TODO   this.brokerController.getBrokerStatsManager().incTopicPutNums(msgInner.getTopic());
-			//TODO this.brokerController.getBrokerStatsManager().incTopicPutSize(msgInner.getTopic(),
-			//TODO 	putMessageResult.getAppendMessageResult().getWroteBytes());
-			//TODO this.brokerController.getBrokerStatsManager().incBrokerPutNums();
+			smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
+			smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
+			smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
+
 			response.Remark = ""
 			responseHeader.MsgId = putMessageResult.AppendMessageResult.MsgId
 			responseHeader.QueueId = queueIdInt
@@ -401,7 +402,21 @@ func (smp *SendMessageProcessor) ExecuteConsumeMessageHookAfter(context *mqtrace
 	}
 }
 
+// diskUtil 磁盘使用情况
+// Author rongzhihong
+// Since 2017/9/16
 func (smp *SendMessageProcessor) diskUtil() string {
-	// TODO
-	return ""
+	storePathPhysic := smp.BrokerController.MessageStoreConfig.StorePathCommitLog
+
+	physicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
+
+	storePathLogis := config.GetStorePathConsumeQueue(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
+
+	logisRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathLogis)
+
+	storePathIndex := config.GetStorePathConsumeQueue(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
+
+	indexRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathIndex)
+
+	return fmt.Sprintf("CL: %5.2f CQ: %5.2f INDEX: %5.2f", physicRatio, logisRatio, indexRatio)
 }
