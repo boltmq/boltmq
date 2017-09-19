@@ -55,13 +55,13 @@ func CreateBrokerController() *BrokerController {
 	}
 
 	// 检测Name Server地址设置是否正确 IP:PORT
-	namesrvAddr := brokerConfig.NamesrvAddr
-	if "" != namesrvAddr {
-		addrArray := strings.Split(namesrvAddr, ";")
+	nameSrvAddr := brokerConfig.NamesrvAddr
+	if "" != nameSrvAddr {
+		addrArray := strings.Split(nameSrvAddr, ";")
 		if addrArray != nil {
 			for _, value := range addrArray {
-				ipAndport := strings.Split(value, ":")
-				if ipAndport == nil {
+				ipAndPort := strings.Split(value, ":")
+				if ipAndPort == nil {
 					panic(errors.New("NameService is fail"))
 					os.Exit(-3)
 				}
