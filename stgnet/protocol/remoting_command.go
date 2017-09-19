@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
 	"os"
@@ -20,7 +21,7 @@ const (
 )
 
 var (
-	configVersion int32 = int32(GOLANG)
+	configVersion int32 = mqversion.CurrentVersion
 )
 
 // RemotingCommand remoting command
