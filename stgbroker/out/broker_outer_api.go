@@ -1,6 +1,9 @@
 package out
 
 import (
+	"fmt"
+	"strings"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -9,7 +12,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"github.com/pquerna/ffjson/ffjson"
-	"strings"
 )
 
 // BrokerOuterAPI Broker对外调用的API封装
@@ -98,7 +100,13 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 		return nil
 	}
 
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	if err != nil {
+		// TODO: err to log or print
+		fmt.Println("err->", err, request.Opaque, request.Code)
+		return nil
+	}
+
 	switch response.Code {
 	case code.SUCCESS:
 		{
