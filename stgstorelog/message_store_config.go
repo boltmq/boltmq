@@ -53,7 +53,7 @@ type MessageStoreConfig struct {
 	MaxTransferCountOnMessageInMemory      int32 // 最大被拉取的消息个数，消息在内存
 	MaxTransferBytesOnMessageInDisk        int32 // 最大被拉取的消息字节数，消息在磁盘
 	MaxTransferCountOnMessageInDisk        int32 // 最大被拉取的消息个数，消息在磁盘
-	AccessMessageInMemoryMaxRatio          int32 // 命中消息在内存的最大比例
+	AccessMessageInMemoryMaxRatio          int64 // 命中消息在内存的最大比例
 	MessageIndexEnable                     bool  // 是否开启消息索引功能
 	MaxHashSlotNum                         int32
 	MaxIndexNum                            int32

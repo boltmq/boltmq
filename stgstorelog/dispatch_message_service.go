@@ -32,7 +32,9 @@ func (self *DispatchMessageService) Start() {
 	for {
 		select {
 		case request := <-self.requestsChan:
+			logger.Infof("dispatch message: %#v \r\n", request)
 			self.doDispatch(request)
+			break
 		case <-self.closeChan:
 			self.destroy()
 			return

@@ -49,5 +49,6 @@ func RecoveredFn(cbs ...func()) {
 }
 
 func TimeMillisecondToHumanString(t time.Time) string {
-	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
+	millisecond := t.Nanosecond() / 1e6
+	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), millisecond)
 }

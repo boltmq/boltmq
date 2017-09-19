@@ -12,15 +12,23 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/fanliao/go-concurrentMap"
 
+	"sync/atomic"
+	"time"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+)
+
+const (
+	TotalPhysicalMemorySize = 1024 * 1024 * 1024 * 24
+	LongMinValue            = -9223372036854775808
 )
 
 // DefaultMessageStore 存储层对外提供的接口
 // Author zhoufei
 // Since 2017/9/6
 type DefaultMessageStore struct {
-	MessageFilter            *MessageFilter      // 消息过滤
-	MessageStoreConfig       *MessageStoreConfig // 存储配置
+	MessageFilter            *DefaultMessageFilter // 消息过滤
+	MessageStoreConfig       *MessageStoreConfig   // 存储配置
 	CommitLog                *CommitLog
 	ConsumeQueueTable        *concurrent.ConcurrentMap // TODO ConcurrentHashMap
 	FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
@@ -45,8 +53,8 @@ type DefaultMessageStore struct {
 func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsManager *stats.BrokerStatsManager) *DefaultMessageStore {
 	ms := &DefaultMessageStore{}
 	// TODO MessageFilter、RunningFlags
-	ms.MessageFilter = nil
-	ms.RunningFlags = nil
+	ms.MessageFilter = new(DefaultMessageFilter)
+	ms.RunningFlags = new(RunningFlags)
 	ms.SystemClock = new(stgcommon.SystemClock)
 	ms.ShutdownFlag = true
 
@@ -59,7 +67,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.CleanCommitLogService = new(CleanCommitLogService)
 	ms.CleanConsumeQueueService = new(CleanConsumeQueueService)
 	ms.StoreStatsService = new(StoreStatsService)
-	ms.IndexService = new(IndexService)
+	ms.IndexService = NewIndexService(ms)
 	ms.HAService = NewHAService(ms)
 	ms.DispatchMessageService = NewDispatchMessageService(ms.MessageStoreConfig.PutMsgIndexHightWater, ms)
 	ms.TransactionStateService = NewTransactionStateService(ms)
@@ -109,10 +117,10 @@ func (self *DefaultMessageStore) Load() bool {
 	}
 
 	// load commit log
-	result = result && self.CommitLog.Load()
+	self.CommitLog.Load()
 
 	// load consume queue
-	result = result && self.loadConsumeQueue()
+	self.loadConsumeQueue()
 
 	// TODO load 事务模块
 
@@ -183,9 +191,12 @@ func (self *DefaultMessageStore) putConsumeQueue(topic string, queueId int32, co
 		consumeQueueMap.Put(queueId, consumeQueue)
 		self.ConsumeQueueTable.Put(topic, consumeQueueMap)
 	} else {
-		consumeQueueMap := consumeQueueCon.(concurrent.ConcurrentMap)
+		consumeQueueMap := consumeQueueCon.(*concurrent.ConcurrentMap)
 		consumeQueueMap.Put(queueId, consumeQueue)
 	}
+	result, _ := self.ConsumeQueueTable.Get(topic)
+	r, _ := result.(*concurrent.ConcurrentMap).Get(queueId)
+	logger.Infof("ConsumeQueueTable %#v", r)
 
 }
 
@@ -309,7 +320,7 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 
 	// TODO 验证消息存储是否可读
 
-	// beginTime := time.Now()
+	beginTime := time.Now()
 	status := NO_MESSAGE_IN_QUEUE
 
 	// TODO
@@ -318,8 +329,6 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 	maxOffset := int64(0)
 
 	getResult := new(GetMessageResult)
-
-	// maxOffsetPy := self.CommitLog.MapedFileQueue.getMaxOffset()
 
 	consumeQueue := self.findConsumeQueue(topic, queueId)
 	if consumeQueue != nil {
@@ -344,7 +353,84 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 				nextBeginOffset = maxOffset
 			}
 		} else {
-			// TODO
+			bufferConsumeQueue := consumeQueue.getIndexBuffer(offset)
+			// TODO defer bufferConsumeQueue.release()
+			if bufferConsumeQueue != nil {
+				status = NO_MATCHED_MESSAGE
+				nextPhyFileStartOffset := int64(LongMinValue)
+				MaxFilterMessageCount := 16000
+
+				var (
+					i                   int
+					maxPhyOffsetPulling int64
+					diskFallRecorded    bool
+				)
+
+				for ; int32(i) < bufferConsumeQueue.Size && i < MaxFilterMessageCount; i += CQStoreUnitSize {
+					offsetPy := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
+					sizePy := bufferConsumeQueue.MappedByteBuffer.ReadInt32()
+					tagsCode := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
+
+					maxPhyOffsetPulling = offsetPy
+
+					// 说明物理文件正在被删除
+					if nextPhyFileStartOffset != LongMinValue {
+						if offsetPy < nextPhyFileStartOffset {
+							continue
+						}
+					}
+
+					// 判断是否拉磁盘数据
+					isInDisk := self.checkInDiskByCommitOffset(offsetPy, self.CommitLog.MapedFileQueue.getMaxOffset())
+					// 此批消息达到上限了
+					if self.isTheBatchFull(sizePy, maxMsgNums, int32(getResult.BufferTotalSize),
+						int32(getResult.GetMessageCount()), isInDisk) {
+						break
+					}
+
+					// 消息过滤
+					if self.MessageFilter.IsMessageMatched(subscriptionData, tagsCode) {
+						selectResult := self.CommitLog.getMessage(offsetPy, sizePy)
+						if selectResult != nil {
+							atomic.AddInt64(&self.StoreStatsService.getMessageTransferedMsgCount, 1)
+							getResult.addMessage(selectResult)
+							status = FOUND
+							nextPhyFileStartOffset = int64(LongMinValue)
+
+							// 统计读取磁盘落后情况
+							if diskFallRecorded {
+								diskFallRecorded = true
+								fallBehind := consumeQueue.maxPhysicOffset - offsetPy
+								self.BrokerStatsManager.RecordDiskFallBehind(group, topic, queueId, fallBehind)
+							}
+						} else {
+							if getResult.BufferTotalSize == 0 {
+								status = MESSAGE_WAS_REMOVING
+							}
+
+							// 物理文件正在被删除，尝试跳过
+							nextPhyFileStartOffset = self.CommitLog.rollNextFile(offsetPy)
+						}
+					} else {
+						if getResult.BufferTotalSize == 0 {
+							status = NO_MATCHED_MESSAGE
+						}
+
+						logger.Infof("message type not matched, client: %#v server: %d", subscriptionData, tagsCode)
+					}
+				}
+
+				nextBeginOffset = offset + (int64(i) / CQStoreUnitSize)
+
+				diff := self.CommitLog.MapedFileQueue.getMaxOffset() - maxPhyOffsetPulling
+				memory := int64(TotalPhysicalMemorySize * (self.MessageStoreConfig.AccessMessageInMemoryMaxRatio / 100.0))
+				getResult.SuggestPullingFromSlave = diff > memory
+			} else {
+				status = OFFSET_FOUND_NULL
+				nextBeginOffset = consumeQueue.rollNextFile(offset)
+				logger.Warnf("consumer request topic: %s offset: %d minOffset: %d maxOffset: %d , but access logic queue failed.",
+					topic, offset, minOffset, maxOffset)
+			}
 		}
 	} else {
 		status = NO_MATCHED_LOGIC_QUEUE
@@ -352,13 +438,18 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 	}
 
 	if FOUND == status {
-		// TODO self.StoreStatsService
+		atomic.AddInt64(&self.StoreStatsService.getMessageTimesTotalFound, 1)
 	} else {
+		atomic.AddInt64(&self.StoreStatsService.getMessageTimesTotalMiss, 1)
+	}
+
+	eclipseTime := time.Now().Sub(beginTime)
+	eclipseTimeNum, err := strconv.Atoi(eclipseTime.String())
+	if err != nil {
 		// TODO
 	}
 
-	// eclipseTime := time.Now().Sub(beginTime)
-	// self.StoreStatsService.MessageEntireTimeMax = eclipseTime
+	self.StoreStatsService.setGetMessageEntireTimeMax(int64(eclipseTimeNum))
 
 	getResult.Status = status
 	getResult.NextBeginOffset = nextBeginOffset
@@ -366,6 +457,41 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 	getResult.MinOffset = minOffset
 
 	return getResult
+}
+
+func (self *DefaultMessageStore) checkInDiskByCommitOffset(offsetPy, maxOffsetPy int64) bool {
+	memory := TotalPhysicalMemorySize * (self.MessageStoreConfig.AccessMessageInMemoryMaxRatio / 100.0)
+	return (maxOffsetPy - offsetPy) > int64(memory)
+}
+
+func (self *DefaultMessageStore) isTheBatchFull(sizePy, maxMsgNums, bufferTotal, messageTotal int32, isInDisk bool) bool {
+	if 0 == bufferTotal || 0 == messageTotal {
+		return false
+	}
+
+	if (messageTotal + 1) >= maxMsgNums {
+		return true
+	}
+
+	if isInDisk {
+		if (bufferTotal + sizePy) > self.MessageStoreConfig.MaxTransferBytesOnMessageInDisk {
+			return true
+		}
+
+		if (messageTotal + 1) > self.MessageStoreConfig.MaxTransferCountOnMessageInDisk {
+			return true
+		}
+	} else {
+		if (bufferTotal + sizePy) > self.MessageStoreConfig.MaxTransferBytesOnMessageInMemory {
+			return true
+		}
+
+		if (messageTotal + 1) > self.MessageStoreConfig.MaxTransferCountOnMessageInMemory {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *ConsumeQueue {
@@ -377,7 +503,7 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 	var consumeQueueConMap *concurrent.ConcurrentMap
 	if consumeQueueMap == nil {
 		newMap := concurrent.NewConcurrentMap(128)
-		oldMap, err := self.ConsumeQueueTable.PutIfAbsent(topic, newMap)
+		oldMap, err := self.ConsumeQueueTable.PutIfAbsent(topic, consumeQueueMap)
 		if err != nil {
 			// TODO
 		}
@@ -411,6 +537,8 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 		} else {
 			logicCQ = newLogic
 		}
+	} else {
+		logicCQ = logic.(*ConsumeQueue)
 	}
 
 	return logicCQ
@@ -419,7 +547,9 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 func (self *DefaultMessageStore) putMessagePostionInfo(topic string, queueId int32, offset int64, size int64,
 	tagsCode, storeTimestamp, logicOffset int64) {
 	cq := self.findConsumeQueue(topic, queueId)
-	cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
+	if cq != nil {
+		cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
+	}
 }
 
 func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {

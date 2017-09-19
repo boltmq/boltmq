@@ -152,4 +152,11 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 
 func (self *DefaultAppendMessageCallback) resetMsgStoreItemMemory(length int32) {
 	// TODO 初始化数据
+	self.msgStoreItemMemory.Limit = self.msgStoreItemMemory.WritePos
+	self.msgStoreItemMemory.WritePos = 0
+	self.msgStoreItemMemory.Limit = int(length)
+	if self.msgStoreItemMemory.WritePos > self.msgStoreItemMemory.Limit {
+		self.msgStoreItemMemory.WritePos = self.msgStoreItemMemory.Limit
+	}
+
 }
