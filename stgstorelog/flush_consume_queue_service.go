@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"github.com/fanliao/go-concurrentMap"
 )
 
 const (
@@ -43,11 +44,17 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 	times := int(retryTimes)
 
 	for iter.HasNext() {
-		result := false
-		for i := 0; i < times && !result; i++ {
-			_, value, _ := iter.Next()
-			consumeQueue := value.(ConsumeQueue)
-			consumeQueue.commit(flushConsumeQueueLeastPages)
+		_, value, _ := iter.Next()
+		consumeQueueMap := value.(*concurrent.ConcurrentMap)
+		mapIter := consumeQueueMap.Iterator()
+		for mapIter.HasNext() {
+			_, cvalue, _ := mapIter.Next()
+			cq := cvalue.(*ConsumeQueue)
+			result := false
+			for i := 0; i < times && !result; i++ {
+				logger.Infof("consumeQueue %#v \r\n", cq)
+				result = cq.commit(flushConsumeQueueLeastPages)
+			}
 		}
 	}
 

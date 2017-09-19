@@ -12,6 +12,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 
 type Files []os.FileInfo
@@ -34,7 +37,7 @@ type IndexService struct {
 	indexNum            int32
 	storePath           string
 	indexFileList       *list.List
-	readWriteLock       sync.RWMutex
+	readWriteLock       *sync.RWMutex
 	requestQueue        chan interface{}
 	closeChan           chan bool
 	stop                bool
@@ -49,6 +52,7 @@ func NewIndexService(messageStore *DefaultMessageStore) *IndexService {
 
 	service.indexFileList = list.New()
 	service.requestQueue = make(chan interface{}, 300000)
+	service.readWriteLock = new(sync.RWMutex)
 
 	return service
 }
@@ -80,6 +84,8 @@ func (self *IndexService) Load(lastExitOK bool) bool {
 }
 
 func (self *IndexService) Start() {
+	logger.Info("index service started")
+
 	for {
 		select {
 		case request := <-self.requestQueue:
@@ -88,10 +94,55 @@ func (self *IndexService) Start() {
 			}
 		}
 	}
+
+	logger.Info("index service end")
 }
 
 func (self *IndexService) buildIndex(request interface{}) {
-	// TODO indexFie := self.retryGetAndCreateIndexFile()
+	breakdown := false
+	indexFile := self.retryGetAndCreateIndexFile()
+	if indexFile != nil {
+		msg := request.(*DispatchRequest)
+		if msg.commitLogOffset < indexFile.getEndPhyOffset() {
+			return
+		}
+
+		tranType := sysflag.GetTransactionValue(int(msg.sysFlag))
+
+		if sysflag.TransactionPreparedType == tranType {
+			return
+		}
+		if sysflag.TransactionRollbackType == tranType {
+			return
+		}
+
+		if len(msg.keys) > 0 {
+			keySet := strings.Split(msg.keys, message.KEY_SEPARATOR)
+			for _, key := range keySet {
+				if len(key) > 0 {
+					for ok := indexFile.putKey(self.buildKey(msg.topic, key), msg.commitLogOffset, msg.storeTimestamp); !ok; {
+						logger.Warn("index file full, so create another one, ", indexFile.mapedFile.fileName)
+
+						indexFile = self.retryGetAndCreateIndexFile()
+						if indexFile == nil {
+							breakdown = true
+							return
+						}
+					}
+				}
+			}
+		}
+	} else {
+		breakdown = true
+	}
+
+	if breakdown {
+		logger.Error("build index error, stop building index")
+	}
+}
+
+func (self *IndexService) buildKey(topic, key string) string {
+	return topic + "#" + key
 }
 
 func (self *IndexService) retryGetAndCreateIndexFile() *IndexFile {
@@ -99,7 +150,7 @@ func (self *IndexService) retryGetAndCreateIndexFile() *IndexFile {
 
 	// 如果创建失败，尝试重建3次
 	for times := 0; times < 3; times++ {
-		indexFile := self.getAndCreateLastIndexFile()
+		indexFile = self.getAndCreateLastIndexFile()
 		if indexFile != nil {
 			break
 		}
@@ -127,7 +178,7 @@ func (self *IndexService) getAndCreateLastIndexFile() *IndexFile {
 	if self.indexFileList.Len() > 0 {
 		tmp := self.indexFileList.Back()
 		indexTemp := tmp.Value.(*IndexFile)
-		if !indexTemp.isWriteFull() {
+		if indexTemp != nil && !indexTemp.isWriteFull() {
 			indexFile = indexTemp
 		} else {
 			lastUpdateEndPhyOffset = indexTemp.getEndPhyOffset()
@@ -181,6 +232,6 @@ func (self *IndexService) flush(indexFile *IndexFile) {
 
 	if indexMsgTimestamp > 0 {
 		self.defaultMessageStore.StoreCheckpoint.indexMsgTimestamp = indexMsgTimestamp
-		
+
 	}
 }

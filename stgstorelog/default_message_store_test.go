@@ -43,6 +43,7 @@ func Test_write_read(t *testing.T) {
 	}
 
 	for i := 0; i < totalMessages; i++ {
+		//time.Sleep(time.Duration(10000 * time.Millisecond))
 		result := master.GetMessage("GROUP_A", "test", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
@@ -65,7 +66,7 @@ func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	msg.Body = messageBody
 	msg.Message.PutProperty("KEYS", string(time.Now().Unix()))
 	msg.QueueId = int32(math.Abs(float64(atomic.AddInt32(queueId, 1) / QUEUE_TOTAL)))
-	msg.SysFlag = int32(4)
+	msg.SysFlag = int32(8)
 	msg.BornTimestamp = time.Now().Unix()
 	msg.StoreHost = StoreHost
 	msg.BornHost = BornHost

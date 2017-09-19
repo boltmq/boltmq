@@ -59,8 +59,10 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mapedFile := new(MapedFile)
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
+	mapedFile.rwLock = new(sync.RWMutex)
 
 	commitRootDir := GetParentDirectory(filePath)
+	logger.Info(commitRootDir)
 	ensureDirOK(commitRootDir)
 
 	exist, err := PathExists(filePath)
@@ -223,7 +225,30 @@ func (self *MapedFile) destroy() bool {
 
 func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	if pos < self.wrotePostion && pos >= 0 {
-		self.mappedByteBuffer.slice()
+		logger.Info(string(self.mappedByteBuffer.MMapBuf))
+		byteBuffer := self.mappedByteBuffer.slice()
+		mmpBuffer := NewMappedByteBuffer(byteBuffer.Bytes())
+		mmpBuffer.ReadPos = int(pos)
+		size := mmpBuffer.WritePos - int(pos)
+		newByteBuffer := mmpBuffer.slice()
+		newMmpBuffer := NewMappedByteBuffer(newByteBuffer.Bytes())
+		newMmpBuffer.Limit = size
+		return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
+	}
+
+	return nil
+}
+
+func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
+	if (pos + int64(size)) <= self.wrotePostion {
+		byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[:self.mappedByteBuffer.ReadPos])
+		byteBufferNew := NewMappedByteBuffer(byteBuffer.MMapBuf[:pos])
+		byteBufferNew.Limit = int(size)
+		return &SelectMapedBufferResult{StartOffset: self.fileFromOffset + pos,
+			MappedByteBuffer: byteBuffer, Size: size, MapedFile: self}
+	} else {
+		logger.Warnf("selectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
+			pos, size, self.fileFromOffset)
 	}
 
 	return nil

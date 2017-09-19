@@ -27,7 +27,7 @@ type MapedFileQueue struct {
 	// 各个文件
 	mapedFiles list.List
 	// 读写锁（针对mapedFiles）
-	rwLock sync.RWMutex
+	rwLock *sync.RWMutex
 	// 预分配MapedFile对象服务
 	allocateMapedFileService *AllocateMapedFileService
 	// 刷盘刷到哪里
@@ -46,6 +46,7 @@ func NewMapedFileQueue(storePath string, mapedFileSize int64,
 	self.DeleteFilesBatchMax = 10
 	self.committedWhere = 0
 	self.storeTimestamp = 0
+	self.rwLock = new(sync.RWMutex)
 	return self
 }
 
@@ -153,7 +154,7 @@ func (self *MapedFileQueue) load() bool {
 				}
 
 				// 恢复队列
-				mapedFile, error := NewMapedFile(self.storePath, int64(self.mapedFileSize))
+				mapedFile, error := NewMapedFile(path, int64(self.mapedFileSize))
 				if error != nil {
 					logger.Error(error.Error())
 					return false
@@ -218,12 +219,14 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 			var err error
 			mapedFile, err = self.allocateMapedFileService.putRequestAndReturnMapedFile(nextPath, nextNextPath, self.mapedFileSize)
 			if err != nil {
+				logger.Errorf("put request and return maped file, error:%s ", err.Error())
 				return nil, err
 			}
 		} else {
 			var err error
 			mapedFile, err = NewMapedFile(nextPath, self.mapedFileSize)
 			if err != nil {
+				logger.Errorf("maped file create maped file error: %s", err.Error())
 				return nil, err
 			}
 		}
@@ -258,7 +261,7 @@ func (self *MapedFileQueue) getMaxOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
 	if self.mapedFiles.Len() > 0 {
-		mappedfile := self.mapedFiles.Back().Value.(MapedFile)
+		mappedfile := self.mapedFiles.Back().Value.(*MapedFile)
 		return mappedfile.fileFromOffset
 	}
 
@@ -269,7 +272,7 @@ func (self *MapedFileQueue) getMaxOffset() int64 {
 func (self *MapedFileQueue) deleteLastMapedFile() {
 	if self.mapedFiles.Len() != 0 {
 		last := self.mapedFiles.Back()
-		lastMapedFile := last.Value.(MapedFile)
+		lastMapedFile := last.Value.(*MapedFile)
 		lastMapedFile.destroy()
 		self.mapedFiles.Remove(last)
 		logger.Info("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
@@ -373,26 +376,20 @@ func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNot
 				offset, index, self.mapedFileSize, self.mapedFiles.Len())
 		}
 
-		if int(index) < (self.mapedFiles.Len() / 2) {
-			i := 0
-			for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
-				if i == int(index) {
-					return e.Value.(*MapedFile)
-				}
-				i++
+		i := 0
+		for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
+			if i == int(index) {
+				result := e.Value.(*MapedFile)
+				logger.Info("maped file queue find maped file by offset: %#v", result)
+
+				return result
 			}
-		} else {
-			i := self.mapedFiles.Len() - 1
-			for e := self.mapedFiles.Back(); e != nil; e = e.Prev() {
-				if i == int(index) {
-					return e.Value.(*MapedFile)
-				}
-				i--
-			}
+			i++
 		}
+
 	}
 
-	return nil
+	return mapedFile
 }
 
 func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {

@@ -20,7 +20,7 @@ type CommitLog struct {
 	FlushCommitLogService FlushCommitLogService
 	AppendMessageCallback AppendMessageCallback
 	TopicQueueTable       map[string]int64
-	mutex                 sync.Mutex
+	mutex                 *sync.Mutex
 }
 
 func NewCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
@@ -29,6 +29,7 @@ func NewCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
 		int64(defaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog),
 		defaultMessageStore.AllocateMapedFileService)
 	commitLog.DefaultMessageStore = defaultMessageStore
+	commitLog.mutex = new(sync.Mutex)
 
 	if config.SYNC_FLUSH == defaultMessageStore.MessageStoreConfig.FlushDiskType {
 		commitLog.FlushCommitLogService = new(GroupCommitService)
@@ -141,4 +142,27 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 	}
 
 	return putMessageResult
+}
+
+func (self *CommitLog) getMessage(offset int64, size int32) *SelectMapedBufferResult {
+	returnFirstOnNotFound := false
+	if 0 == offset {
+		returnFirstOnNotFound = true
+	}
+
+	mapedFile := self.MapedFileQueue.findMapedFileByOffset(offset, returnFirstOnNotFound)
+	if mapedFile != nil {
+		mapedFileSize := self.DefaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
+		pos := offset % int64(mapedFileSize)
+		result := mapedFile.selectMapedBufferByPosAndSize(pos, size)
+		return result
+	}
+
+	return nil
+}
+
+func (self *CommitLog) rollNextFile(offset int64) int64 {
+	mapedFileSize := self.DefaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
+	nextOffset := offset + int64(mapedFileSize) - offset%int64(mapedFileSize)
+	return nextOffset
 }

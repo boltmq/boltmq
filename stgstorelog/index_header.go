@@ -25,7 +25,9 @@ type IndexHeader struct {
 }
 
 func NewIndexHeader(mappedByteBuffer *MappedByteBuffer) *IndexHeader {
-	return &IndexHeader{mappedByteBuffer: mappedByteBuffer}
+	indexHeader := new(IndexHeader)
+	indexHeader.mappedByteBuffer = mappedByteBuffer
+	return indexHeader
 }
 
 func (self *IndexHeader) load() {
@@ -54,36 +56,30 @@ func (self *IndexHeader) updateByteBuffer() {
 
 func (self *IndexHeader) setBeginTimestamp(beginTimestamp int64) {
 	self.beginTimestamp = beginTimestamp
-	self.mappedByteBuffer.WritePos = int(BEGINTIMESTAMP_INDEX)
 	self.mappedByteBuffer.WriteInt64(beginTimestamp)
 }
 
 func (self *IndexHeader) setEndTimestamp(endTimestamp int64) {
 	self.endTimestamp = endTimestamp
-	self.mappedByteBuffer.WritePos = int(ENDTIMESTAMP_INDEX)
 	self.mappedByteBuffer.WriteInt64(endTimestamp)
 }
 
 func (self *IndexHeader) setBeginPhyOffset(beginPhyOffset int64) {
 	self.beginPhyOffset = beginPhyOffset
-	self.mappedByteBuffer.WritePos = int(BEGINPHYOFFSET_INDEX)
 	self.mappedByteBuffer.WriteInt64(beginPhyOffset)
 }
 
 func (self *IndexHeader) setEndPhyOffset(endPhyOffset int64) {
 	self.endPhyOffset = endPhyOffset
-	self.mappedByteBuffer.WritePos = int(ENDPHYOFFSET_INDEX)
 	self.mappedByteBuffer.WriteInt64(endPhyOffset)
 }
 
 func (self *IndexHeader) incHashSlotCount() {
 	value := atomic.AddInt32(&self.hashSlotCount, int32(1))
-	self.mappedByteBuffer.WritePos = int(HASHSLOTCOUNT_INDEX)
 	self.mappedByteBuffer.WriteInt32(value)
 }
 
 func (self *IndexHeader) incIndexCount() {
 	value := atomic.AddInt32(&self.indexCount, int32(1))
-	self.mappedByteBuffer.WritePos = int(INDEXCOUNT_INDEX)
 	self.mappedByteBuffer.WriteInt32(value)
 }

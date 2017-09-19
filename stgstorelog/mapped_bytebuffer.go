@@ -94,3 +94,15 @@ func (self *MappedByteBuffer) flush() {
 func (self *MappedByteBuffer) unmap() {
 	self.MMapBuf.Unmap()
 }
+
+func (self *MappedByteBuffer) flip() {
+	self.Limit = self.WritePos
+	self.WritePos = 0
+}
+
+func (self *MappedByteBuffer) limit(newLimit int) {
+	self.Limit = newLimit
+	if self.WritePos > self.Limit {
+		self.WritePos = newLimit
+	}
+}

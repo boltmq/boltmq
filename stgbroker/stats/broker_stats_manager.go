@@ -99,3 +99,7 @@ func (bsm *BrokerStatsManager) IncGroupGetSize(group, topic string, incValue int
 func (bsm *BrokerStatsManager) IncBrokerGetNums(incValue int) {
 	// TODO
 }
+
+func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {
+	// TODO
+}

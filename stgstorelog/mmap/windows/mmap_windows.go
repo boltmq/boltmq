@@ -42,7 +42,7 @@ type MemoryMap []byte
 // not a struct, so it's convenient to manipulate.
 
 // We keep this map so that we can get back the original handle from the memory address.
-var handleLock sync.Mutex
+var handleLock *sync.Mutex
 var handleMap = map[uintptr]syscall.Handle{}
 
 func Mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
@@ -81,6 +81,7 @@ func Mmap(len int, prot, flags, hfile uintptr, off int64) ([]byte, error) {
 	if addr == 0 {
 		return nil, os.NewSyscallError("MapViewOfFile", errno)
 	}
+	handleLock = new(sync.Mutex)
 	handleLock.Lock()
 	handleMap[addr] = h
 	handleLock.Unlock()
@@ -100,6 +101,7 @@ func Flush(addr, len uintptr) error {
 		return os.NewSyscallError("FlushViewOfFile", errno)
 	}
 
+	handleLock = new(sync.Mutex)
 	handleLock.Lock()
 	defer handleLock.Unlock()
 	handle, ok := handleMap[addr]
@@ -129,6 +131,8 @@ func Unmap(addr, len uintptr) error {
 	// same addr to another new map. We don't want another goroutine
 	// to insert and remove the same addr into handleMap while
 	// we're trying to remove our old addr/handle pair.
+
+	handleLock = new(sync.Mutex)
 	handleLock.Lock()
 	defer handleLock.Unlock()
 	err := syscall.UnmapViewOfFile(addr)

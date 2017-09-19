@@ -1,11 +1,14 @@
 package stgstorelog
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"bytes"
+	"encoding/binary"
+	"time"
+	"strconv"
 )
 
 // ConsumeQueue 消费队列实现
@@ -20,7 +23,7 @@ type ConsumeQueue struct {
 	mapedFileQueue      *MapedFileQueue      // 存储消息索引的队列
 	topic               string
 	queueId             int32
-	byteBufferIndex     *bytes.Buffer
+	byteBufferIndex     *MappedByteBuffer
 	storePath           string
 	mapedFileSize       int64
 	maxPhysicOffset     int64 // 最后一个消息对应的物理Offset
@@ -37,10 +40,10 @@ func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSiz
 
 	pathSeparator := filepath.FromSlash(string(os.PathSeparator))
 
-	queueDir := consumeQueue.storePath + pathSeparator + topic + pathSeparator + string(queueId)
+	queueDir := consumeQueue.storePath + pathSeparator + topic + pathSeparator + strconv.Itoa(int(queueId))
 
 	consumeQueue.mapedFileQueue = NewMapedFileQueue(queueDir, mapedFileSize, nil)
-	consumeQueue.byteBufferIndex = bytes.NewBuffer(make([]byte, CQStoreUnitSize))
+	consumeQueue.byteBufferIndex = NewMappedByteBuffer(make([]byte, CQStoreUnitSize))
 
 	return consumeQueue
 }
@@ -56,6 +59,26 @@ func (self *ConsumeQueue) load() bool {
 	logger.Infof("load consume queue %s-%d %s", self.topic, self.queueId, resultMsg)
 
 	return result
+}
+
+func (self *ConsumeQueue) getIndexBuffer(startIndex int64) *SelectMapedBufferResult {
+	offset := startIndex * int64(CQStoreUnitSize)
+
+	if offset >= self.minLogicOffset {
+		mapedFile := self.mapedFileQueue.findMapedFileByOffset(offset, false)
+		if mapedFile != nil {
+			result := mapedFile.selectMapedBuffer(offset % self.mapedFileSize)
+			return result
+		}
+	}
+
+	return nil
+}
+
+func (self *ConsumeQueue) rollNextFile(index int64) int64 {
+	totalUnitsInFile := self.mapedFileSize / CQStoreUnitSize
+	nextIndex := index + totalUnitsInFile - index%totalUnitsInFile
+	return nextIndex
 }
 
 func (self *ConsumeQueue) recover() {
@@ -111,8 +134,77 @@ func (self *ConsumeQueue) getMaxOffsetInQueque() int64 {
 }
 
 func (self *ConsumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset int64) {
-	// maxRetries := 5
-	// canWrite := self.defaultMessageStore.RunningFlags
+	maxRetries := 5
+	//canWrite := self.defaultMessageStore.RunningFlags.isWriteable()
+	for i := 0; i < maxRetries; i++ {
+		result := self.putMessagePostionInfo(offset, size, tagsCode, logicOffset)
+		if result {
+			self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp = storeTimestamp
+			return
+		} else {
+			logger.Warnf("put commit log postion info to %s : %d failed, retry %d times %d",
+				self.topic, self.queueId, offset, i)
+
+			time.After(time.Duration(time.Millisecond * 1000))
+		}
+	}
+
+	logger.Errorf("consume queue can not write %s %d", self.topic, self.queueId)
+	self.defaultMessageStore.RunningFlags.makeLogicsQueueError()
+}
+
+func (self *ConsumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset int64) bool {
+	if offset <= self.maxPhysicOffset {
+		return true
+	}
+
+	self.byteBufferIndex.flip()
+	self.byteBufferIndex.limit(CQStoreUnitSize)
+	self.byteBufferIndex.WriteInt64(offset)
+	self.byteBufferIndex.WriteInt32(int32(size))
+	self.byteBufferIndex.WriteInt64(tagsCode)
+
+	expectLogicOffset := cqOffset * CQStoreUnitSize
+	mapedFile, err := self.mapedFileQueue.getLastMapedFile(expectLogicOffset)
+	if err != nil {
+		logger.Errorf("consume queue get last maped file error: %s", err.Error())
+	}
+
+	if mapedFile != nil {
+		// 纠正MapedFile逻辑队列索引顺序
+		if mapedFile.firstCreateInQueue && cqOffset != 0 && mapedFile.wrotePostion == 0 {
+			self.minLogicOffset = expectLogicOffset
+			self.fillPreBlank(mapedFile, expectLogicOffset)
+			logger.Infof("fill pre blank space %s %d %d", mapedFile.fileName, expectLogicOffset, mapedFile.wrotePostion)
+		}
+
+		if cqOffset != 0 {
+			currentLogicOffset := mapedFile.wrotePostion + mapedFile.fileFromOffset
+			if expectLogicOffset != currentLogicOffset {
+				logger.Warnf("logic queue order maybe wrong, expectLogicOffset: %d currentLogicOffset: %d Topic: %s QID: %d Diff: %d",
+					expectLogicOffset, currentLogicOffset, self.topic, self.queueId, expectLogicOffset-currentLogicOffset)
+			}
+		}
+
+		// 记录物理队列最大offset
+		self.maxPhysicOffset = offset
+		byteBuffers := self.byteBufferIndex.MMapBuf[:]
+		return mapedFile.appendMessage(byteBuffers)
+	}
+
+	return false
+}
+
+func (self *ConsumeQueue) fillPreBlank(mapedFile *MapedFile, untilWhere int64) {
+	byteBuffer := bytes.NewBuffer(make([]byte, CQStoreUnitSize))
+	binary.Write(byteBuffer, binary.BigEndian, int64(0))
+	binary.Write(byteBuffer, binary.BigEndian, int32(0x7fffffff))
+	binary.Write(byteBuffer, binary.BigEndian, int64(0))
+
+	until := int(untilWhere % self.mapedFileQueue.mapedFileSize)
+	for i := 0; i < until; i++ {
+		mapedFile.appendMessage(byteBuffer.Bytes())
+	}
 }
 
 func (self *ConsumeQueue) commit(flushLeastPages int32) bool {
