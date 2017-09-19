@@ -31,7 +31,7 @@ func main() {
 		haServerAddr       = "10.122.2.28:10912"
 		clusterName        = "DefaultCluster"
 		brokerId           = 0
-		topicConfigWrapper *body.TopicConfigSerializeWrapper // = // new(body.TopicConfigSerializeWrapper)
+		topicConfigWrapper = new(body.TopicConfigSerializeWrapper)
 		filterServerList   []string
 		oneway             = false
 	)

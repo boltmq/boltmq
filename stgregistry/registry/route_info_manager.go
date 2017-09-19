@@ -177,6 +177,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 			}
 		}
 	}
+	logger.Info("routeInfoManager.registerBroker() end ...")
 	self.ReadWriteLock.Unlock()
 	return result
 }
