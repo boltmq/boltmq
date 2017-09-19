@@ -14,13 +14,13 @@ import (
 )
 
 type MappedByteBuffer struct {
-	MMapBuf  mmap.MemoryMap
+	MMapBuf  mmap.MMap
 	ReadPos  int // read at &buf[ReadPos]
 	WritePos int // write at &buf[WritePos]
 	Limit    int // MMapBuf's max Size
 }
 
-func NewMappedByteBuffer(mMap mmap.MemoryMap) *MappedByteBuffer {
+func NewMappedByteBuffer(mMap mmap.MMap) *MappedByteBuffer {
 	mappedByteBuffer := &MappedByteBuffer{}
 	mappedByteBuffer.MMapBuf = mMap
 	mappedByteBuffer.ReadPos = 0
