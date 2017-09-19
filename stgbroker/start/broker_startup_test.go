@@ -1,4 +1,4 @@
-package stgbroker
+package main
 
 import (
 	"testing"
