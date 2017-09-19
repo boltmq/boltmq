@@ -4,7 +4,7 @@ package namesrv
 // Author: yintongqiang
 // Since:  2017/8/23
 type GetKVConfigResponseHeader struct {
-	Value string
+	Value string `json:"value"`
 }
 
 func (header *GetKVConfigResponseHeader) CheckFields() error {

@@ -1,6 +1,11 @@
 package stgbroker
 
-import "sync"
+import (
+	syncmap "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"sync"
+)
+
+// import
 
 type OffsetTable struct {
 	Offsets      map[string]map[int]int64 `json:"offsets"`
@@ -57,5 +62,29 @@ func (table *OffsetTable) foreach(fn func(k string, v map[int]int64)) {
 
 	for k, v := range table.Offsets {
 		fn(k, v)
+	}
+}
+
+// syncTopicConfig 同步Topic配置文件
+// Author rongzhihong
+// Since 2017/9/18
+func (table *OffsetTable) PutAll(offsetMap *syncmap.Map) {
+	table.Lock()
+	defer table.Unlock()
+	iterator := offsetMap.Iterator()
+	for iterator.HasNext() {
+		kItem, vItem, _ := iterator.Next()
+		var (
+			k  = ""
+			ok = false
+		)
+
+		if k, ok = kItem.(string); !ok {
+			continue
+		}
+
+		if v, vok := vItem.(map[int]int64); vok {
+			table.Offsets[k] = v
+		}
 	}
 }

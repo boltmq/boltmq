@@ -22,22 +22,19 @@ import (
 )
 
 type BrokerController struct {
-	BrokerConfig stgcommon.BrokerConfig
-	// TODO
-	// nettyServerConfig
-	// nettyClientConfig
-	MessageStoreConfig        *stgstorelog.MessageStoreConfig
-	ConfigDataVersion         *stgcommon.DataVersion
-	ConsumerOffsetManager     *ConsumerOffsetManager
-	ConsumerManager           *client.ConsumerManager
-	ProducerManager           *client.ProducerManager
-	ClientHousekeepingService *ClientHouseKeepingService
-	// DefaultTransactionCheckExecuter
-	PullMessageProcessor      *PullMessageProcessor
-	PullRequestHoldService    *PullRequestHoldService
-	Broker2Client             *Broker2Client
-	SubscriptionGroupManager  *SubscriptionGroupManager
-	ConsumerIdsChangeListener rebalance.ConsumerIdsChangeListener
+	BrokerConfig                    stgcommon.BrokerConfig
+	MessageStoreConfig              *stgstorelog.MessageStoreConfig
+	ConfigDataVersion               *stgcommon.DataVersion
+	ConsumerOffsetManager           *ConsumerOffsetManager
+	ConsumerManager                 *client.ConsumerManager
+	ProducerManager                 *client.ProducerManager
+	ClientHousekeepingService       *ClientHouseKeepingService
+	DefaultTransactionCheckExecuter *DefaultTransactionCheckExecuter
+	PullMessageProcessor            *PullMessageProcessor
+	PullRequestHoldService          *PullRequestHoldService
+	Broker2Client                   *Broker2Client
+	SubscriptionGroupManager        *SubscriptionGroupManager
+	ConsumerIdsChangeListener       rebalance.ConsumerIdsChangeListener
 	// RebalanceLockManager
 	BrokerOuterAPI *out.BrokerOuterAPI
 	// ScheduledExecutorService
@@ -54,19 +51,15 @@ type BrokerController struct {
 	FilterServerManager                  *FilterServerManager
 	brokerStatsManager                   *stats.BrokerStatsManager
 	StoreHost                            string
-	// configFile
-	ConfigFile             *string
-	sendMessageHookList    []mqtrace.SendMessageHook
-	consumeMessageHookList []mqtrace.ConsumeMessageHook
+	ConfigFile                           *string
+	sendMessageHookList                  []mqtrace.SendMessageHook
+	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConfig NettyServerConfig,
-	   nettyClientConfig NettyClientConfig , //*/
+func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 	messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
-	// TODO nettyServerConfig
-	// TODO nettyServerConfig
 	brokerController.MessageStoreConfig = messageStoreConfig
 	brokerController.ConfigDataVersion = stgcommon.NewDataVersion()
 	brokerController.ConsumerOffsetManager = NewConsumerOffsetManager(brokerController)
@@ -74,7 +67,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, /* nettyServerConf
 	brokerController.TopicConfigManager = NewTopicConfigManager(brokerController)
 	brokerController.PullMessageProcessor = NewPullMessageProcessor(brokerController)
 	brokerController.PullRequestHoldService = NewPullRequestHoldService(brokerController)
-	// TODO defaultTransactionCheckExecuter
+	brokerController.DefaultTransactionCheckExecuter = NewDefaultTransactionCheckExecuter(brokerController)
 	brokerController.ConsumerIdsChangeListener = NewDefaultConsumerIdsChangeListener(brokerController)
 	brokerController.ConsumerManager = client.NewConsumerManager(brokerController.ConsumerIdsChangeListener)
 	brokerController.ProducerManager = client.NewProducerManager()
@@ -117,8 +110,6 @@ func (bc *BrokerController) Initialize() bool {
 	// Master监听Slave请求的端口，默认为服务端口+1
 	// bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
 	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
-	// TODO test
-	bc.MessageStoreConfig.MapedFileSizeCommitLog = 1024 * 8
 
 	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
 
@@ -135,7 +126,6 @@ func (bc *BrokerController) Initialize() bool {
 	bc.registerProcessor()
 
 	bc.brokerStats = storeStatis.NewBrokerStats(bc.MessageStore)
-	// TODO this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
 
 	// 定时统计
 	initialDelay, err := strconv.Atoi(fmt.Sprint(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()))
@@ -385,8 +375,6 @@ func (bc *BrokerController) registerProcessor() {
 	bc.RemotingServer.RegisterProcessor(protocol.PULL_MESSAGE, pullMessageProcessor)
 	pullMessageProcessor.RegisterConsumeMessageHook(bc.consumeMessageHookList)
 
-	// TODO QueryMessageProcessor
-	// TODO EndTransactionProcessor
 }
 
 // getConfigDataVersion 获得数据配置版本号

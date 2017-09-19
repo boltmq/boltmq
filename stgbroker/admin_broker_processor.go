@@ -4,10 +4,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	//protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"net"
 	"strings"
 )
 
@@ -27,21 +27,21 @@ func NewAdminBrokerProcessor(brokerController *BrokerController) *AdminBrokerPro
 	return adminBrokerProcessor
 }
 
-func (abp *AdminBrokerProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	//switch request.Code {
-	//// 更新创建Topic
-	//case protocol2.UPDATE_AND_CREATE_TOPIC:
-	//	return abp.updateAndCreateTopic(addr, conn, request)
-	//// 更新创建Topic
-	//case protocol2.DELETE_TOPIC_IN_BROKER:
-	//	return abp.deleteTopic(addr, conn, request)
-	//case protocol2.GET_MAX_OFFSET:
-	//	return abp.getMaxOffset(addr, conn, request)
-	//}
+func (abp *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	switch request.Code {
+	// 更新创建Topic
+	case protocol2.UPDATE_AND_CREATE_TOPIC:
+		return abp.updateAndCreateTopic(ctx, request)
+		// 更新创建Topic
+	case protocol2.DELETE_TOPIC_IN_BROKER:
+		return abp.deleteTopic(ctx, request)
+	case protocol2.GET_MAX_OFFSET:
+		return abp.getMaxOffset(ctx, request)
+	}
 	return nil, nil
 }
 
-func (abp *AdminBrokerProcessor) updateAndCreateTopic(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := &header.CreateTopicRequestHeader{}
 	if strings.EqualFold(requestHeader.Topic, abp.BrokerController.BrokerConfig.BrokerClusterName) {
@@ -69,10 +69,10 @@ func (abp *AdminBrokerProcessor) updateAndCreateTopic(addr string, conn net.Conn
 	return response, nil
 }
 
-func (abp *AdminBrokerProcessor) getMaxOffset(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (abp *AdminBrokerProcessor) getMaxOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.GetMaxOffsetResponseHeader{}
-	//requestHeader:= &header.GetMaxOffsetRequestHeader{}
+
 	var offset int64
 	// TODO
 	//abp.BrokerController.MessageStore().getMaxOffsetInQuque(requestHeader.getTopic(),
@@ -83,13 +83,13 @@ func (abp *AdminBrokerProcessor) getMaxOffset(addr string, conn net.Conn, reques
 	response.Remark = ""
 	return response, nil
 }
-func (abp *AdminBrokerProcessor) deleteTopic(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (abp *AdminBrokerProcessor) deleteTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.DeleteTopicRequestHeader{}
 	abp.BrokerController.TopicConfigManager.deleteTopicConfig(responseHeader.Topic)
 	abp.BrokerController.addDeleteTopicTask()
 
-	logger.Infof("deleteTopic called by %v", conn.LocalAddr().String())
+	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil

@@ -10,11 +10,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
-	"net"
 	"strings"
 )
 
@@ -38,74 +37,71 @@ func NewDefaultRequestProcessor(controller *DefaultNamesrvController) remoting.R
 // ProcessRequest 默认请求处理器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) ProcessRequest(remoteAddr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	//remoteAddr := remotingUtil.ParseChannelRemoteAddr(conn)
-	format := "receive request. code=%d, remoteAddr=%s, content=%s"
-	logger.Info(format, request.Code, remoteAddr, request.ToString())
+func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	logger.Info("receive request. %s,  %s", ctx.ToString(), request.ToString())
 
 	switch request.Code {
 	case code.PUT_KV_CONFIG:
 		// code=100, 向Namesrv追加KV配置
-		return self.putKVConfig(conn, request)
+		return self.putKVConfig(ctx, request)
 	case code.GET_KV_CONFIG:
 		// code=101, 从Namesrv获取KV配置
-		return self.getKVConfig(conn, request)
+		return self.getKVConfig(ctx, request)
 	case code.DELETE_KV_CONFIG:
 		// code=102, 从Namesrv删除KV配置
-		return self.deleteKVConfig(conn, request)
+		return self.deleteKVConfig(ctx, request)
 	case code.REGISTER_BROKER:
 		// code=103, 注册Broker，数据都是持久化的，如果存在则覆盖配置
 		brokerVersion := mqversion.Value2Version(request.Version)
 		if brokerVersion >= mqversion.V3_0_11 {
 			// 注：高版本注册Broker(支持FilterServer过滤)
-			return self.registerBrokerWithFilterServer(conn, request)
+			return self.registerBrokerWithFilterServer(ctx, request)
 		} else {
 			// 注：低版本注册Broke(不支持FilterServer)
-			return self.registerBroker(conn, request)
+			return self.registerBroker(ctx, request)
 		}
 	case code.UNREGISTER_BROKER:
 		// code=104, 卸指定的Broker，数据都是持久化的
-		return self.unRegisterBroker(conn, request)
+		return self.unRegisterBroker(ctx, request)
 	case code.GET_ROUTEINTO_BY_TOPIC:
 		// code=105, 根据Topic获取BrokerName、队列数(包含读队列与写队列)
-		return self.getRouteInfoByTopic(conn, request)
+		return self.getRouteInfoByTopic(ctx, request)
 	case code.GET_BROKER_CLUSTER_INFO:
 		// code=106, 获取注册到NameServer的所有Broker集群信息
-		return self.getBrokerClusterInfo(conn, request)
+		return self.getBrokerClusterInfo(ctx, request)
 	case code.WIPE_WRITE_PERM_OF_BROKER:
 		// code=205, 优雅地向Broker写数据
-		return self.wipeWritePermOfBroker(conn, request)
+		return self.wipeWritePermOfBroker(ctx, request)
 	case code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
 		// code=206, 从NameServer获取完整Topic列表
-		return self.getAllTopicListFromNamesrv(conn, request)
+		return self.getAllTopicListFromNamesrv(ctx, request)
 	case code.DELETE_TOPIC_IN_NAMESRV:
 		// code=216, 从Namesrv删除Topic配置
-		return self.deleteTopicInNamesrv(conn, request)
+		return self.deleteTopicInNamesrv(ctx, request)
 	case code.GET_KV_CONFIG_BY_VALUE:
 		// code=217, Namesrv通过 project 获取所有的 server ip 信息
-		return self.getKVConfigByValue(conn, request)
+		return self.getKVConfigByValue(ctx, request)
 	case code.DELETE_KV_CONFIG_BY_VALUE:
 		// code=218, Namesrv删除指定 project group 下的所有 server ip 信息
-		// return deleteKVConfigByValue(conn, request)
-		return self.deleteKVConfigByValue(conn, request)
+		return self.deleteKVConfigByValue(ctx, request)
 	case code.GET_KVLIST_BY_NAMESPACE:
 		// code=219, 通过NameSpace获取所有的KV List
-		return self.getKVListByNamespace(conn, request)
+		return self.getKVListByNamespace(ctx, request)
 	case code.GET_TOPICS_BY_CLUSTER:
 		// code=224, 获取指定集群下的全部Topic列表
-		return self.getTopicsByCluster(conn, request)
+		return self.getTopicsByCluster(ctx, request)
 	case code.GET_SYSTEM_TOPIC_LIST_FROM_NS:
 		// code=304, 获取所有系统内置 Topic 列表
-		return self.getSystemTopicListFromNamesrv(conn, request)
+		return self.getSystemTopicListFromNamesrv(ctx, request)
 	case code.GET_UNIT_TOPIC_LIST:
 		// code=311, 单元化相关Topic
-		return self.getUnitTopicList(conn, request)
+		return self.getUnitTopicList(ctx, request)
 	case code.GET_HAS_UNIT_SUB_TOPIC_LIST:
 		// code=312, 获取含有单元化订阅组的 Topic 列表
-		return self.getHasUnitSubTopicList(conn, request)
+		return self.getHasUnitSubTopicList(ctx, request)
 	case code.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
 		// code=313, 获取含有单元化订阅组的非单元化 Topic 列表
-		return self.getHasUnitSubUnUnitTopicList(conn, request)
+		return self.getHasUnitSubUnUnitTopicList(ctx, request)
 	default:
 
 	}
@@ -116,17 +112,11 @@ func (self *DefaultRequestProcessor) ProcessRequest(remoteAddr string, conn net.
 // registerBrokerWithFilterServer 注册新版本Broker，数据都是持久化的，如果存在则覆盖配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -154,11 +144,13 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 		requestHeader.HaServerAddr,                     // 5
 		registerBrokerBody.TopicConfigSerializeWrapper, // 6
 		registerBrokerBody.FilterServerList,            // 7
-		conn, // 8
+		ctx, // 8
 	)
 
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表
 	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
@@ -172,7 +164,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(conn net.Con
 // getKVListByNamespace 获取指定Namespace所有的KV配置列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getKVListByNamespace(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getKVListByNamespace(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.GetKVListByNamespaceRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -197,7 +189,7 @@ func (self *DefaultRequestProcessor) getKVListByNamespace(conn net.Conn, request
 // deleteTopicInNamesrv 从Namesrv删除Topic配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) deleteTopicInNamesrv(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) deleteTopicInNamesrv(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.DeleteTopicInNamesrvRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -215,7 +207,7 @@ func (self *DefaultRequestProcessor) deleteTopicInNamesrv(conn net.Conn, request
 // getAllTopicListFromNamesrv 从Name Server获取全部Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getAllTopicList()
 	response.Body = body
@@ -227,18 +219,11 @@ func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(conn net.Conn, r
 // wipeWritePermOfBroker 优雅地向Broker写数据
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) wipeWritePermOfBroker(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.WipeWritePermOfBrokerResponseHeader{})
 
-	responseHeader := &namesrv.WipeWritePermOfBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.WipeWritePermOfBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -246,10 +231,13 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(conn net.Conn, reques
 
 	wipeTopicCount := self.NamesrvController.RouteInfoManager.wipeWritePermOfBrokerByLock(requestHeader.BrokerName)
 	format := "wipe write perm of broker[%s], client: %s, %d"
-	remoteAddr := remotingUtil.ParseChannelRemoteAddr(conn)
+	remoteAddr := ctx.RemoteAddr().String()
 	logger.Info(format, requestHeader.BrokerName, remoteAddr, wipeTopicCount)
 
+	responseHeader := &namesrv.WipeWritePermOfBrokerResponseHeader{}
 	responseHeader.WipeTopicCount = wipeTopicCount
+	response.CustomHeader = responseHeader
+
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -258,7 +246,7 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(conn net.Conn, reques
 // getBrokerClusterInfo 获取注册到Name Server的所有Broker集群信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getBrokerClusterInfo(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getBrokerClusterInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getAllClusterInfo()
 	response.Body = body
@@ -270,10 +258,10 @@ func (self *DefaultRequestProcessor) getBrokerClusterInfo(conn net.Conn, request
 // getRouteInfoByTopic 根据Topic获取BrokerName、队列数(包含读队列、写队列)，间接调用了RouteInfoManager.pickupTopicRouteData()方法来获取Broker和topic信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetRouteInfoRequestHeader{}
+	requestHeader := &namesrv.GetRouteInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
@@ -285,30 +273,27 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(conn net.Conn, request 
 	if topicRouteData != nil {
 		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(util.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
 		topicRouteData.OrderTopicConf = orderTopicConf
-
-		var content []byte
-		err = topicRouteData.Decode(content)
+		content, err := topicRouteData.Encode()
 		if err != nil {
-			fmt.Printf("topicRouteData.Decode() err: %s\n", err.Error())
+			fmt.Printf("topicRouteData.Encode() err: %s\n", err.Error())
 			return nil, err
 		}
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response, nil
-
 	}
 
 	response.Code = code.TOPIC_NOT_EXIST
-	remark := "No topic route info in name server for the topic: %s, faq: %s"
+	remark := "[No topic route info in name server for the topic: %s], faq: %s"
 	response.Remark = fmt.Sprintf(remark, topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
-	return nil, nil
+	return response, nil
 }
 
 // putKVConfig 向Namesrv追加KV配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) putKVConfig(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) putKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.PutKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -325,18 +310,10 @@ func (self *DefaultRequestProcessor) putKVConfig(conn net.Conn, request *protoco
 // getKVConfig 从Namesrv获取KV配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getKVConfig(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
-
-	responseHeader := &namesrv.GetKVConfigResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -344,7 +321,9 @@ func (self *DefaultRequestProcessor) getKVConfig(conn net.Conn, request *protoco
 
 	value := self.NamesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
 	if strings.TrimSpace(value) != "" {
+		responseHeader := &namesrv.GetKVConfigResponseHeader{}
 		responseHeader.Value = strings.TrimSpace(value)
+		response.CustomHeader = responseHeader
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response, nil
@@ -358,7 +337,7 @@ func (self *DefaultRequestProcessor) getKVConfig(conn net.Conn, request *protoco
 // deleteKVConfig 从Namesrv删除KV配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) deleteKVConfig(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) deleteKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.DeleteKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -375,17 +354,11 @@ func (self *DefaultRequestProcessor) deleteKVConfig(conn net.Conn, request *prot
 // registerBroker 注册旧版Broker(version < 3.0.11)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -412,14 +385,18 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 		requestHeader.HaServerAddr,
 		topicConfigWrapper,
 		[]string{},
-		conn,
+		ctx,
 	)
 
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
 	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
 
 	// 获取顺序消息 topic 列表
 	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(util.NAMESPACE_ORDER_TOPIC_CONFIG)
+
+	// 设置response响应
+	response.CustomHeader = responseHeader
 	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -430,7 +407,7 @@ func (self *DefaultRequestProcessor) registerBroker(conn net.Conn, request *prot
 // unRegisterBroker  卸载指定的Broker，数据都是持久化的
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) unRegisterBroker(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -453,17 +430,10 @@ func (self *DefaultRequestProcessor) unRegisterBroker(conn net.Conn, request *pr
 // getKVConfigByValue 通过 project 获取所有的 server ip 信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getKVConfigByValue(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
-	responseHeader := &namesrv.GetKVConfigResponseHeader{}
-	err := response.DecodeCommandCustomHeader(responseHeader)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
-	}
-
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
-	err = request.DecodeCommandCustomHeader(requestHeader)
+	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		return nil, err
@@ -471,7 +441,9 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(conn net.Conn, request *
 
 	value := self.NamesrvController.KvConfigManager.getKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
 	if value != "" {
+		responseHeader := &namesrv.GetKVConfigResponseHeader{}
 		responseHeader.Value = value
+		response.CustomHeader = responseHeader
 		response.Remark = ""
 		response.Code = code.SUCCESS
 		return response, nil
@@ -486,7 +458,7 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(conn net.Conn, request *
 // deleteKVConfigByValue 删除指定 project group 下的所有 server ip 信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) deleteKVConfigByValue(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) deleteKVConfigByValue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.DeleteKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -496,15 +468,15 @@ func (self *DefaultRequestProcessor) deleteKVConfigByValue(conn net.Conn, reques
 	}
 
 	self.NamesrvController.KvConfigManager.deleteKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
-	response.Remark = ""
 	response.Code = code.SUCCESS
+	response.Remark = ""
 	return response, nil
 }
 
 // getTopicsByCluster 获取指定集群下的全部Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getTopicsByCluster(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.GetTopicsByClusterRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -514,60 +486,60 @@ func (self *DefaultRequestProcessor) getTopicsByCluster(conn net.Conn, request *
 	}
 
 	body := self.NamesrvController.RouteInfoManager.getTopicsByCluster(requestHeader.Cluster)
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
 // getSystemTopicListFromNamesrv 获取所有系统内置Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getSystemTopicListFromNamesrv(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getSystemTopicListFromNamesrv(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getSystemTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
 // getUnitTopicList 获取单元化逻辑Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getUnitTopicList(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getUnitTopicList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getUnitTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
 // getHasUnitSubTopicList 获取含有单元化订阅组的Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getHasUnitSubTopicList(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getHasUnitSubTopicList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getHasUnitSubTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }
 
 // getHasUnitSubUnUnitTopicList 获取含有单元化订阅组的非单元化Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *DefaultRequestProcessor) getHasUnitSubUnUnitTopicList(conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (self *DefaultRequestProcessor) getHasUnitSubUnUnitTopicList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getHasUnitSubUnUnitTopicList()
 
+	response.Code = code.SUCCESS
 	response.Body = body
 	response.Remark = ""
-	response.Code = code.SUCCESS
 	return response, nil
 }

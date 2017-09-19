@@ -4,7 +4,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
+	set "github.com/deckarep/golang-set"
 	"strings"
 )
 
@@ -46,8 +48,9 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 	return nil
 }
 
-func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbeat.ConsumeType,
+func (cg *ConsumerGroupInfo) UpdateChannel(infoNew netm.Context, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
+	// TODO; key - value不統一
 	updated := false
 	cg.ConsumeType = consumeType
 	cg.MessageModel = messageModel
@@ -62,7 +65,7 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 		}
 		infoOld = infoNew
 	} else {
-		if infoold, ok := infoOld.(net.Conn); ok {
+		if infoold, ok := infoOld.(netm.Context); ok {
 			if !strings.EqualFold(infoNew.LocalAddr().String(), infoold.LocalAddr().String()) {
 				logger.Errorf(
 					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
@@ -82,8 +85,8 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew net.Conn, consumeType heartbe
 // doChannelCloseEvent 关闭通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Conn) bool {
-	info, err := cg.ConnTable.Remove(conn)
+func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Context) bool {
+	info, err := cg.ConnTable.Remove(ctx)
 	if err != nil {
 		logger.Error(err)
 		return false
@@ -99,14 +102,114 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, conn net.Con
 // getAllChannel 获得所有通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cg *ConsumerGroupInfo) getAllChannel() []net.Conn {
-	result := []net.Conn{}
+func (cg *ConsumerGroupInfo) GetAllChannel() []netm.Context {
+	result := []netm.Context{}
 	iterator := cg.ConnTable.Iterator()
 	for iterator.HasNext() {
 		key, _, _ := iterator.Next()
-		if channel, ok := key.(net.Conn); ok {
+		if channel, ok := key.(netm.Context); ok {
 			result = append(result, channel)
 		}
 	}
 	return result
+}
+
+// getAllChannel 获得所有客户端ID
+// Author rongzhihong
+// Since 2017/9/14
+func (cg *ConsumerGroupInfo) GetAllClientId() []string {
+	result := []string{}
+
+	iterator := cg.ConnTable.Iterator()
+	for iterator.HasNext() {
+		_, value, _ := iterator.Next()
+		if channel, ok := value.(*ChannelInfo); ok {
+			result = append(result, channel.ClientId)
+		}
+	}
+
+	return result
+}
+
+// UnregisterChannel 注销通道
+// Author rongzhihong
+// Since 2017/9/14
+func (cg *ConsumerGroupInfo) UnregisterChannel(clientChannelInfo *ChannelInfo) {
+	old, _ := cg.ConnTable.Remove(clientChannelInfo.Context)
+	if old != nil {
+		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v", cg.GroupName, old)
+	}
+}
+
+// UpdateSubscription 更新订阅
+// Author rongzhihong
+// Since 2017/9/17
+func (cg *ConsumerGroupInfo) UpdateSubscription(subList set.Set) bool {
+	updated := false
+
+	// 增加新的订阅关系
+	iterator := subList.Iterator()
+	for item := range iterator.C {
+		if sub, ok := item.(*heartbeat.SubscriptionData); ok {
+			old, _ := cg.SubscriptionTable.Get(sub.Topic)
+			if old == nil {
+				prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
+				if prev == nil {
+					updated = true
+					logger.Infof("subscription changed, add new topic, group: %s %#v", cg.GroupName, sub)
+				}
+				continue
+			}
+
+			if oldSub, ok := old.(*heartbeat.SubscriptionData); ok {
+				if sub.SubVersion > oldSub.SubVersion {
+					if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
+						logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, old, sub)
+					}
+					cg.SubscriptionTable.Put(sub.Topic, sub)
+				}
+			}
+		}
+	}
+
+	// 删除老的订阅关系
+	subIt := cg.SubscriptionTable.Iterator()
+	for subIt.HasNext() {
+		exist := false
+		oldTopic, oldValue, _ := subIt.Next()
+
+		for subItem := range subList.Iterator().C {
+			if sub, ok := subItem.(*heartbeat.SubscriptionData); ok {
+				if oldTopic, ok := oldTopic.(string); ok && strings.EqualFold(sub.Topic, oldTopic) {
+					exist = true
+					break
+				}
+			}
+		}
+
+		if !exist {
+			logger.Warnf("subscription changed, group: %s remove topic %s %v", cg.GroupName, oldTopic, oldValue)
+			subIt.Remove()
+			updated = true
+		}
+	}
+
+	cg.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
+	return updated
+}
+
+// FindChannel 根据clientId获得通道
+// Author rongzhihong
+// Since 2017/9/17
+func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
+	iterator := cg.ConnTable.Iterator()
+	for iterator.HasNext() {
+		_, value, _ := iterator.Next()
+		if info, ok := value.(*ChannelInfo); ok {
+			if strings.EqualFold(info.ClientId, clientId) {
+				return info
+			}
+		}
+	}
+	return nil
 }

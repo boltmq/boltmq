@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"log"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 )
@@ -17,7 +18,7 @@ var (
 type GetTopicStatsInfoProcessor struct {
 }
 
-func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn net.Conn,
+func (processor *GetTopicStatsInfoProcessor) ProcessRequest(ctx netm.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	fmt.Printf("GetTopicStatsInfoProcessor %d %d\n", request.Code, request.Opaque)
 
@@ -37,7 +38,7 @@ func (processor *GetTopicStatsInfoProcessor) ProcessRequest(addr string, conn ne
 type OtherProcessor struct {
 }
 
-func (processor *OtherProcessor) ProcessRequest(addr string, conn net.Conn,
+func (processor *OtherProcessor) ProcessRequest(ctx netm.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	fmt.Printf("OtherProcessor %d %d\n", request.Code, request.Opaque)
 
@@ -45,6 +46,25 @@ func (processor *OtherProcessor) ProcessRequest(addr string, conn net.Conn,
 	response.Opaque = request.Opaque
 
 	return response, nil
+}
+
+type ServerContextListener struct {
+}
+
+func (listener *ServerContextListener) OnContextConnect(ctx netm.Context) {
+	log.Printf("one connection create: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextClose(ctx netm.Context) {
+	log.Printf("one connection close: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextError(ctx netm.Context) {
+	log.Printf("one connection error: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ServerContextListener) OnContextIdle(ctx netm.Context) {
+	log.Printf("one connection idle: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
 }
 
 func main() {
@@ -65,4 +85,5 @@ func initServer() {
 	remotingServer.RegisterProcessor(cmprotocol.GET_ROUTEINTO_BY_TOPIC, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.UPDATE_AND_CREATE_TOPIC, &OtherProcessor{})
 	remotingServer.RegisterProcessor(cmprotocol.GET_KV_CONFIG, &OtherProcessor{})
+	remotingServer.RegisterContextListener(&ServerContextListener{})
 }

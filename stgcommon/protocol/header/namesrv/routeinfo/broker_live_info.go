@@ -3,28 +3,28 @@ package routeinfo
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 type BrokerLiveInfo struct {
 	LastUpdateTimestamp int64
 	DataVersion         *stgcommon.DataVersion
-	Conn                net.Conn
+	Context             netm.Context
 	HaServerAddr        string
 }
 
-func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, conn net.Conn) *BrokerLiveInfo {
+func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, ctx netm.Context) *BrokerLiveInfo {
 	brokerLiveInfo := BrokerLiveInfo{
 		LastUpdateTimestamp: stgcommon.GetCurrentTimeMillis(),
 		DataVersion:         dataVersion,
 		HaServerAddr:        haServerAddr,
-		Conn:                conn,
+		Context:             ctx,
 	}
 	return &brokerLiveInfo
 }
 
 func (self *BrokerLiveInfo) ToString() string {
 	format := "BrokerLiveInfo [lastUpdateTimestamp=%d, dataVersion=%s, conn=%s, haServerAddr=%s]"
-	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Conn, self.HaServerAddr)
+	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Context, self.HaServerAddr)
 	return info
 }

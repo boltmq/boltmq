@@ -1,7 +1,6 @@
 package out
 
 import (
-	"container/list"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -49,12 +48,8 @@ func (self *BrokerOuterAPI) Shutdown() {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
-	list := list.New()
 	addrArray := strings.Split(addrs, ";")
 	if addrArray != nil {
-		for _, v := range addrArray {
-			list.PushBack(v)
-		}
 		self.remotingClient.UpdateNameServerAddressList(addrArray)
 	}
 }
@@ -81,12 +76,14 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
+
 	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{}
 	requestHeader.BrokerAddr = brokerAddr
 	requestHeader.BrokerId = brokerId
 	requestHeader.BrokerName = brokerName
 	requestHeader.ClusterName = clusterName
 	requestHeader.HaServerAddr = haServerAddr
+
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
 
 	requestBody := body.RegisterBrokerBody{}
@@ -106,11 +103,16 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	case code.SUCCESS:
 		{
 			responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
+			err := response.DecodeCommandCustomHeader(responseHeader)
+			if err != nil {
+				logger.Error(err)
+			}
+
 			result := &namesrv.RegisterBrokerResult{}
 			result.MasterAddr = responseHeader.MasterAddr
 			result.HaServerAddr = responseHeader.HaServerAddr
 			if response.Body != nil {
-				//TODO result.KvTable(KVTable.decode(response.getBody(), KVTable.class));
+				result.KvTable.Decode(response.Body)
 			}
 			return result
 		}
@@ -161,6 +163,7 @@ func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAdd
 	default:
 		break
 	}
+	return
 }
 
 // UnregisterBrokerAll 注销全部Broker
@@ -179,13 +182,18 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 // getAllTopicConfig 获取全部topic信息
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			// TODO
+			tcsw := &body.TopicConfigSerializeWrapper{}
+			err := tcsw.Decode(response.Body)
+			if err != nil {
+				logger.Error(err)
+			}
+			return tcsw
 		}
 	default:
 		break
@@ -196,13 +204,18 @@ func (self *BrokerOuterAPI) getAllTopicConfig(namesrvAddr string) *body.TopicCon
 // getAllConsumerOffset 获取所有Consumer Offset
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			// TODO
+			cosw := &body.ConsumerOffsetSerializeWrapper{}
+			err := cosw.Decode(response.Body)
+			if err != nil {
+				logger.Error(err)
+			}
+			return cosw
 		}
 	default:
 		break
@@ -213,30 +226,35 @@ func (self *BrokerOuterAPI) getAllConsumerOffset(namesrvAddr string) *body.Consu
 // getAllDelayOffset 获取所有定时进度
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllDelayOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			// TODO
+			return string(response.Body)
 		}
 	default:
 		break
 	}
-	return nil
+	return ""
 }
 
 // getAllSubscriptionGroupConfig 获取订阅组配置
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) getAllSubscriptionGroupConfig(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			// TODO
+			sgw := &body.SubscriptionGroupWrapper{}
+			err := sgw.Decode(response.Body)
+			if err != nil {
+				logger.Error(err)
+			}
+			return sgw
 		}
 	default:
 		break

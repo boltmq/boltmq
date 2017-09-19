@@ -6,7 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"runtime"
 	"strings"
 	"time"
@@ -40,7 +40,7 @@ type FilterServerInfo struct {
 func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 	fsm := new(FilterServerManager)
 	fsm.brokerController = bc
-	fsm.ticker = timeutil.NewTicker(1000 * 30, 1000 * 5)
+	fsm.ticker = timeutil.NewTicker(1000*30, 1000*5)
 	fsm.FilterServerMaxIdleTimeMills = 30000
 	fsm.filterServerTable = sync.NewMap()
 	return fsm
@@ -101,8 +101,8 @@ func (fsm *FilterServerManager) buildStartCommand() string {
 // RegisterFilterServer 注册FilterServer
 // Author rongzhihong
 // Since 2017/9/8
-func (fsm *FilterServerManager) RegisterFilterServer(conn net.Conn, filterServerAddr string) {
-	bean, err := fsm.filterServerTable.Get(conn)
+func (fsm *FilterServerManager) RegisterFilterServer(ctx netm.Context, filterServerAddr string) {
+	bean, err := fsm.filterServerTable.Get(ctx)
 	if err != nil {
 		logger.Error(err)
 		return
@@ -112,14 +112,14 @@ func (fsm *FilterServerManager) RegisterFilterServer(conn net.Conn, filterServer
 		filterServerInfo := new(FilterServerInfo)
 		filterServerInfo.filterServerAddr = filterServerAddr
 		filterServerInfo.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
-		fsm.filterServerTable.Put(conn, filterServerInfo)
+		fsm.filterServerTable.Put(ctx, filterServerInfo)
 		logger.Infof("Receive a New Filter Server %v", filterServerAddr)
 		return
 	}
 
 	if filterServerInfo, ok := bean.(*FilterServerInfo); ok {
 		filterServerInfo.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
-		fsm.filterServerTable.Put(conn, filterServerInfo)
+		fsm.filterServerTable.Put(ctx, filterServerInfo)
 	}
 }
 
@@ -141,7 +141,7 @@ func (fsm *FilterServerManager) ScanNotActiveChannel() {
 		if (currentTimeMillis - timestamp) > fsm.FilterServerMaxIdleTimeMills {
 			logger.Infof("The Filter Server %v expired, remove it", key)
 			it.Remove()
-			if channel, ok := key.(net.Conn); ok {
+			if channel, ok := key.(netm.Context); ok {
 				channel.Close()
 			}
 		}
@@ -151,8 +151,8 @@ func (fsm *FilterServerManager) ScanNotActiveChannel() {
 // doChannelCloseEvent 组装CMD命令
 // Author rongzhihong
 // Since 2017/9/8
-func (fsm *FilterServerManager) doChannelCloseEvent(remoteAddr string, conn net.Conn) {
-	old, err := fsm.filterServerTable.Remove(conn)
+func (fsm *FilterServerManager) doChannelCloseEvent(remoteAddr string, ctx netm.Context) {
+	old, err := fsm.filterServerTable.Remove(ctx)
 	if err != nil {
 		logger.Errorf("The Filter Server Remove conn, throw:%s", err.Error())
 	}

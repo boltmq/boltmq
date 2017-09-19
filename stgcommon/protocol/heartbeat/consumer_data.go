@@ -1,6 +1,10 @@
 package heartbeat
 
-import set "github.com/deckarep/golang-set"
+import (
+	"fmt"
+	set "github.com/deckarep/golang-set"
+)
+
 // ConsumerData 消费者
 // Author: yintongqiang
 // Since:  2017/8/8
@@ -11,4 +15,13 @@ type ConsumerData struct {
 	ConsumeFromWhere    ConsumeFromWhere `json:"consumeFromWhere"`
 	SubscriptionDataSet set.Set          `json:"subscriptionDataSet"`
 	UnitMode            bool             `json:"unitMode"`
+}
+
+// ConsumerData 消费者
+// Author: rongzhihong
+// Since:  2017/9/14
+func (this *ConsumerData) ToString() string {
+	format := "ConsumerData [groupName=%s, consumeType=%s, messageModel=%s, consumeFromWhere=%s, unitMode=%s, subscriptionDataSet=%s]"
+	content := fmt.Sprintf(format, this.GroupName, this.ConsumeType, this.MessageModel, this.ConsumeFromWhere, this.UnitMode, this.SubscriptionDataSet)
+	return content
 }

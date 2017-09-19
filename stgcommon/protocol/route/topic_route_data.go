@@ -46,14 +46,18 @@ type BrokerData struct {
 	BrokerAddrsLock sync.RWMutex   `json:"-"`
 }
 
-func (topicRouteData *TopicRouteData) Decode(data []byte) error {
-	return ffjson.Unmarshal(data, topicRouteData)
+func (self *TopicRouteData) Decode(data []byte) error {
+	return ffjson.Unmarshal(data, self)
 }
 
-func (brokerData *BrokerData) SelectBrokerAddr() string {
-	value := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
+func (self *TopicRouteData) Encode() ([]byte, error) {
+	return ffjson.Marshal(self)
+}
+
+func (self *BrokerData) SelectBrokerAddr() string {
+	value := self.BrokerAddrs[stgcommon.MASTER_ID]
 	if strings.EqualFold(value, "") {
-		for _, value := range brokerData.BrokerAddrs {
+		for _, value := range self.BrokerAddrs {
 			return value
 		}
 	}
@@ -71,18 +75,18 @@ func (self *BrokerData) CloneBrokerData() *BrokerData {
 	return brokerDataClone
 }
 
-func (topicRouteData *TopicRouteData) CloneTopicRouteData() *TopicRouteData {
+func (self *TopicRouteData) CloneTopicRouteData() *TopicRouteData {
 	queueDatas := []*QueueData{}
 	brokerDatas := []*BrokerData{}
-	for _, queueData := range topicRouteData.QueueDatas {
+	for _, queueData := range self.QueueDatas {
 		queueDatas = append(queueDatas, &QueueData{BrokerName: queueData.BrokerName, Perm: queueData.Perm,
 			WriteQueueNums: queueData.WriteQueueNums, ReadQueueNums: queueData.ReadQueueNums, TopicSynFlag: queueData.TopicSynFlag})
 	}
-	for _, brokerData := range topicRouteData.BrokerDatas {
+	for _, brokerData := range self.BrokerDatas {
 		brokerDatas = append(brokerDatas, &BrokerData{BrokerName: brokerData.BrokerName, BrokerAddrs: brokerData.BrokerAddrs})
 	}
 	return &TopicRouteData{
-		OrderTopicConf: topicRouteData.OrderTopicConf,
+		OrderTopicConf: self.OrderTopicConf,
 		QueueDatas:     queueDatas,
 		BrokerDatas:    brokerDatas,
 	}

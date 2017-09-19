@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 )
@@ -96,8 +98,28 @@ func sendHearBeat(addr string) {
 	}
 }
 
+type ClientContextListener struct {
+}
+
+func (listener *ClientContextListener) OnContextConnect(ctx netm.Context) {
+	log.Printf("one connection create: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ClientContextListener) OnContextClose(ctx netm.Context) {
+	log.Printf("one connection close: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ClientContextListener) OnContextError(ctx netm.Context) {
+	log.Printf("one connection error: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
+func (listener *ClientContextListener) OnContextIdle(ctx netm.Context) {
+	log.Printf("one connection idle: addr[%s] localAddr[%s] remoteAddr[%s]\n", ctx.Addr(), ctx.LocalAddr(), ctx.RemoteAddr())
+}
+
 func initClient() {
 	// 初始化客户端
 	remotingClient = remoting.NewDefalutRemotingClient()
+	remotingClient.RegisterContextListener(&ClientContextListener{})
 	remotingClient.UpdateNameServerAddressList([]string{"10.122.1.100:10000"})
 }

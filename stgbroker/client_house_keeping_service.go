@@ -3,8 +3,8 @@ package stgbroker
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
-	"net"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
 // ClientHousekeepingService 定期检测客户端连接，清除不活动的连接
@@ -50,8 +50,7 @@ func (chks *ClientHouseKeepingService) Shutdown() {
 // Author rongzhihong
 // Since 2017/9/8
 func (chks *ClientHouseKeepingService) scanExceptionChannel() {
-	// TODO:
-	//chks.brokerController.ProducerManager.scanNotActiveChannel();
+	chks.brokerController.ProducerManager.ScanNotActiveChannel()
 	chks.brokerController.ConsumerManager.ScanNotActiveChannel()
 	chks.brokerController.FilterServerManager.ScanNotActiveChannel()
 }
@@ -59,36 +58,33 @@ func (chks *ClientHouseKeepingService) scanExceptionChannel() {
 // onChannelConnect 监听通道连接
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelConnect(remoteAddr string, conn net.Conn) {
+func (chks *ClientHouseKeepingService) onContextConnect(remoteAddr string, ctx netm.Context) {
 
 }
 
 // onChannelClose 监听通道关闭
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
-	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
+func (chks *ClientHouseKeepingService) onChannelClose(remoteAddr string, ctx netm.Context) {
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, ctx)
 }
 
 // onChannelException 监听通道异常
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
-	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
+func (chks *ClientHouseKeepingService) onChannelException(remoteAddr string, ctx netm.Context) {
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, ctx)
 }
 
 // onChannelIdle 监听通道闲置
 // Author rongzhihong
 // Since 2017/9/8
-func (chks *ClientHouseKeepingService) onChannelIdle(remoteAddr string, conn net.Conn) {
-	// TODO
-	//chks.brokerController.ProducerManager.doChannelCloseEvent(remoteAddr/*, channel*/);
-	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, conn)
-	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, conn)
+func (chks *ClientHouseKeepingService) onChannelIdle(remoteAddr string, ctx netm.Context) {
+	chks.brokerController.ProducerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.ConsumerManager.DoChannelCloseEvent(remoteAddr, ctx)
+	chks.brokerController.FilterServerManager.doChannelCloseEvent(remoteAddr, ctx)
 }

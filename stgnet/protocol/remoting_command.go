@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	configVersion int32 = -1
+	configVersion int32 = int32(GOLANG)
 )
 
 // RemotingCommand remoting command
@@ -35,7 +35,7 @@ type RemotingCommand struct {
 	Remark       string              `json:"remark"`
 	ExtFields    map[string]string   `json:"extFields"` // 请求拓展字段
 	CustomHeader CommandCustomHeader `json:"-"`         // 修改字段类型,"CustomHeader"字段不序列化 2017/8/24 Modify by jerrylou, <gunsluo@gmail.com>
-	Body         []byte              `json:"-"`         // body
+	Body         []byte              `json:"-"`         // body字段不序列化
 }
 
 // CreateResponseCommand 只有通信层内部会调用，业务不会调用
@@ -50,28 +50,31 @@ func CreateDefaultResponseCommand(customHeader ...CommandCustomHeader) *Remoting
 
 // CreateResponseCommand
 func CreateResponseCommand(code int32, remark string) *RemotingCommand {
-	remotingClient := &RemotingCommand{
-		Code:   code,
-		Remark: remark,
+	cmd := &RemotingCommand{
+		Code:      code,
+		Remark:    remark,
+		ExtFields: make(map[string]string),
+		Language:  LanguageCode(GOLANG).ToString(),
 	}
 	// 设置为响应报文
-	remotingClient.MarkResponseType()
+	cmd.MarkResponseType()
 	// 设置版本信息
-	remotingClient.setCMDVersion()
+	cmd.setCMDVersion()
 
-	return remotingClient
+	return cmd
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang
 func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *RemotingCommand {
-	remotingClient := &RemotingCommand{
+	cmd := &RemotingCommand{
 		Code:         code,
 		CustomHeader: customHeader,
 		ExtFields:    make(map[string]string),
+		Language:     LanguageCode(GOLANG).ToString(),
 	}
-	remotingClient.Opaque = inrcOpaque() // 标识自增，请求唯一标识
-	remotingClient.setCMDVersion()       // 设置版本信息
-	return remotingClient
+	cmd.Opaque = inrcOpaque() // 标识自增，请求唯一标识
+	cmd.setCMDVersion()       // 设置版本信息
+	return cmd
 }
 
 // Author: jerrylou, <gunsluo@gmail.com>
@@ -255,14 +258,14 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 }
 
 func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
-	remotingCommand := &RemotingCommand{}
-	remotingCommand.ExtFields = make(map[string]string)
-	err := ffjson.Unmarshal(header, remotingCommand)
+	cmd := &RemotingCommand{}
+	cmd.ExtFields = make(map[string]string)
+	err := ffjson.Unmarshal(header, cmd)
 	if err != nil {
 		return nil, err
 	}
-	remotingCommand.Body = body
-	return remotingCommand, nil
+	cmd.Body = body
+	return cmd, nil
 }
 
 // ToString 打印RemotingCommand对象数据
