@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
+	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -13,7 +14,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"strings"
 )
 
@@ -124,12 +124,14 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 
 	var registerBrokerBody body.RegisterBrokerBody
 	if request.Body != nil && len(request.Body) > 0 {
+		logger.Info("registerBroker.request.Body --> %s", string(request.Body))
 		err = registerBrokerBody.CustomDecode(request.Body, &registerBrokerBody)
 		if err != nil {
 			fmt.Printf("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
 			return response, err
 		}
 	} else {
+		logger.Info("registry default dataVersion with registerBrokerBody")
 		dataVersion := stgcommon.NewDataVersion()
 		dataVersion.Timestatmp = 0
 		registerBrokerBody.TopicConfigSerializeWrapper = new(body.TopicConfigSerializeWrapper)
@@ -146,6 +148,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		registerBrokerBody.FilterServerList,            // 7
 		ctx, // 8
 	)
+	logger.Info("registerBrokerBody.result ---> %s", result.ToString())
 
 	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	responseHeader.HaServerAddr = result.HaServerAddr
@@ -158,6 +161,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
+	logger.Info("registerBrokerBody.response ---> %s", response.ToString())
 	return response, nil
 }
 
