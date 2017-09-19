@@ -1,6 +1,9 @@
 package subscription
 
-import "git.oschina.net/cloudzone/smartgo/stgcommon"
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+)
 
 // SubscriptionGroupConfig 订阅关系配置
 // Author gaoyanlei
@@ -29,6 +32,8 @@ type SubscriptionGroupConfig struct {
 
 	// 发现消息堆积后，将Consumer的消费请求重定向到另外一台Slave机器
 	WhichBrokerWhenConsumeSlowly int64 `json:"whichBrokerWhenConsumeSlowly"`
+
+	*protocol.RemotingSerializable
 }
 
 // NewSubscriptionGroupConfig 初始化SubscriptionGroupConfig

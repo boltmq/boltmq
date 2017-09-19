@@ -9,11 +9,11 @@ import (
 // Author rongzhihong
 // Since 2017/9/12
 type BrokerStats struct {
-	msgPutTotalTodayMorning     int64
-	msgPutTotalYesterdayMorning int64
-	msgGetTotalTodayMorning     int64
-	msgGetTotalYesterdayMorning int64
-	defaultMessageStore         *stgstorelog.DefaultMessageStore
+	MsgPutTotalTodayMorning     int64
+	MsgPutTotalYesterdayMorning int64
+	MsgGetTotalTodayMorning     int64
+	MsgGetTotalYesterdayMorning int64
+	DefaultMessageStore         *stgstorelog.DefaultMessageStore
 }
 
 // NewBrokerStats 初始化broker统计
@@ -21,7 +21,7 @@ type BrokerStats struct {
 // Since 2017/9/12
 func NewBrokerStats(defaultMessageStore *stgstorelog.DefaultMessageStore) *BrokerStats {
 	brokerStats := new(BrokerStats)
-	brokerStats.defaultMessageStore = defaultMessageStore
+	brokerStats.DefaultMessageStore = defaultMessageStore
 	return brokerStats
 }
 
@@ -29,13 +29,13 @@ func NewBrokerStats(defaultMessageStore *stgstorelog.DefaultMessageStore) *Broke
 // Author rongzhihong
 // Since 2017/9/12
 func (bs *BrokerStats) Record() {
-	bs.msgPutTotalYesterdayMorning = bs.msgPutTotalTodayMorning
-	bs.msgGetTotalYesterdayMorning = bs.msgGetTotalTodayMorning
+	bs.MsgPutTotalYesterdayMorning = bs.MsgPutTotalTodayMorning
+	bs.MsgGetTotalYesterdayMorning = bs.MsgGetTotalTodayMorning
 	// TODO
 	//bs.msgPutTotalTodayMorning = bs.defaultMessageStore.StoreStatsService
 	//bs.msgGetTotalTodayMorning = bs.defaultMessageStore.StoreStatsService.getMessageTransferedMsgCount.get()
-	logger.Infof("yesterday put message total: %d", bs.msgPutTotalTodayMorning-bs.msgPutTotalYesterdayMorning)
-	logger.Infof("yesterday get message total: %d", bs.msgGetTotalTodayMorning-bs.msgGetTotalYesterdayMorning)
+	logger.Infof("yesterday put message total: %d", bs.MsgPutTotalTodayMorning-bs.MsgPutTotalYesterdayMorning)
+	logger.Infof("yesterday get message total: %d", bs.MsgGetTotalTodayMorning-bs.MsgGetTotalYesterdayMorning)
 }
 
 // GetMsgPutTotalTodayNow 获得当前put消息的次数

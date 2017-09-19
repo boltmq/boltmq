@@ -8,7 +8,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
-	set2 "github.com/toolkits/container/set"
 )
 
 // ConsumerManager 消费者管理
@@ -186,8 +185,8 @@ func (cm *ConsumerManager) FindSubscriptionDataCount(group string) int32 {
 // QueryTopicConsumeByWho 根据topic查找消费者
 // Author rongzhihong
 // Since 2017/9/18
-func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) *set2.StringSet {
-	groups := set2.NewStringSet()
+func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) set.Set {
+	groups := set.NewSet()
 	iterator := cm.consumerTable.Iterator()
 	for iterator.HasNext() {
 		group, value, _ := iterator.Next()

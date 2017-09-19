@@ -54,10 +54,10 @@ func (pm *ProducerManager) GetGroupChannelTable() {
 func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelInfo) {
 	pm.GroupChannelLock.Lock()
 
-	connTable := pm.GroupChannelTable.get(group)
+	connTable := pm.GroupChannelTable.Get(group)
 	if nil == connTable {
 		channelTable := make(map[netm.Context]*ChannelInfo)
-		pm.GroupChannelTable.put(group, channelTable)
+		pm.GroupChannelTable.Put(group, channelTable)
 	}
 
 	clientChannelInfoFound, ok := connTable[channelInfo.Context]
@@ -104,13 +104,13 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *ChannelInfo) {
 	pm.GroupChannelLock.Lock()
 
-	connTable := pm.GroupChannelTable.get(group)
+	connTable := pm.GroupChannelTable.Get(group)
 	if nil != connTable {
 		delete(connTable, channelInfo.Context)
 		logger.Infof("unregister a producer %s from groupChannelTable %s", group, channelInfo.Addr)
 
-		if pm.GroupChannelTable.size() <= 0 {
-			pm.GroupChannelTable.remove(group)
+		if pm.GroupChannelTable.Size() <= 0 {
+			pm.GroupChannelTable.Remove(group)
 			logger.Infof("unregister a producer %s from groupChannelTable", group)
 		}
 	}
