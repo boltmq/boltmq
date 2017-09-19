@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 )
 
 type ConfigManager interface {
@@ -38,11 +39,11 @@ func (cme *ConfigManagerExt) Load() bool {
 }
 
 func (cme *ConfigManagerExt) Persist() {
+	defer utils.RecoveredFn()
+
 	jsonString := cme.ConfigManager.Encode(true)
 	if jsonString != "" {
 		fileName := cme.ConfigManager.ConfigFilePath()
-		cme.configLock.Lock()
 		stgcommon.String2File([]byte(jsonString), fileName)
-		cme.configLock.Unlock()
 	}
 }

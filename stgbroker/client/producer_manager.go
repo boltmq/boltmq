@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 )
 
 type ProducerManager struct {
@@ -143,6 +144,8 @@ func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *Channel
 func (pm *ProducerManager) ScanNotActiveChannel() {
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
+	
+	defer utils.RecoveredFn()
 
 	for group, chlMap := range pm.GroupChannelTable.GroupChannelTable {
 		for key, info := range chlMap {
