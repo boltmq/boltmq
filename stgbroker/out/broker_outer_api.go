@@ -70,22 +70,22 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	return self.nameSrvAddr
 }
 
-// RegisterBroker 注册broker
+// RegisterBroker 向nameService注册broker
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
-	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{}
-	requestHeader.BrokerAddr = brokerAddr
-	requestHeader.BrokerId = brokerId
-	requestHeader.BrokerName = brokerName
-	requestHeader.ClusterName = clusterName
-	requestHeader.HaServerAddr = haServerAddr
+	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
+		BrokerAddr : brokerAddr,
+		BrokerId : brokerId,
+		BrokerName : brokerName,
+		ClusterName : clusterName,
+		HaServerAddr : haServerAddr,
+	}
 
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
-
 	requestBody := body.RegisterBrokerBody{}
 	requestBody.TopicConfigSerializeWrapper = topicConfigWrapper
 	requestBody.FilterServerList = filterServerList
@@ -130,6 +130,7 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	registerBrokerResult := &namesrv.RegisterBrokerResult{}
 
+	// 获取那么service地址
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
 	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
 		for _, namesrvAddr := range nameServerAddressList {
@@ -138,7 +139,7 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 			if result != nil {
 				registerBrokerResult = result
 			}
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
+			logger.Info("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 	return registerBrokerResult
@@ -148,11 +149,13 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
-	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{}
-	requestHeader.ClusterName = clusterName
-	requestHeader.BrokerName = brokerName
-	requestHeader.BrokerAddr = brokerName
-	requestHeader.BrokerId = brokerId
+	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
+		ClusterName : clusterName,
+		BrokerName : brokerAddr,
+		BrokerAddr : brokerName,
+		BrokerId : brokerId,
+	}
+
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {
@@ -174,7 +177,7 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
 		for _, namesrvAddr := range nameServerAddressList {
 			self.UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
+			logger.Info("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 }
