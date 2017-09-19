@@ -9,6 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"os"
 	"strings"
+	"errors"
 )
 
 type SmartgoBrokerConfig struct {
@@ -50,8 +51,7 @@ func CreateBrokerController() *BrokerController {
 
 	// 如果没有设置home环境变量，则启动失败
 	if "" == brokerConfig.SmartGoHome {
-		fmt.Println("Please set the " + stgcommon.SMARTGO_HOME_ENV + " variable in your environment to match the location of the RocketMQ installation")
-		os.Exit(-2)
+		panic(errors.New("Please set the " + stgcommon.SMARTGO_HOME_ENV + " variable in your environment to match the location of the RocketMQ installation"))
 	}
 
 	// 检测Name Server地址设置是否正确 IP:PORT
@@ -62,13 +62,16 @@ func CreateBrokerController() *BrokerController {
 			for _, value := range addrArray {
 				ipAndport := strings.Split(value, ":")
 				if ipAndport == nil {
+					panic(errors.New("NameService is fail"))
 					os.Exit(-3)
 				}
 			}
 		} else {
+			panic(errors.New("NameService is fail"))
 			os.Exit(-3)
 		}
 	} else {
+		panic(errors.New("Please set NAMESRV_ADDR"))
 		os.Exit(-3)
 	}
 
@@ -103,7 +106,7 @@ func CreateBrokerController() *BrokerController {
 	initResult := controller.Initialize()
 	if !initResult {
 		controller.Shutdown()
-		os.Exit(-3)
+		panic(errors.New("init fail"))
 	}
 
 	return controller
