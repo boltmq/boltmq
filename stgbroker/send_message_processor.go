@@ -10,9 +10,10 @@ import (
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
 
 // SendMessageProcessor 处理客户端发送消息的请求
@@ -32,10 +33,10 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 	return sendMessageProcessor
 }
 
-func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(conn, request), nil
+		return smp.consumerSendMsgBack(ctx, request), nil
 	}
 
 	requestHeader := smp.abstractSendMessageProcessor.parseRequestHeader(request)
@@ -43,9 +44,9 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 		return nil, nil
 	}
 
-	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(conn, requestHeader)
-	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(conn, request, mqtraceContext)
-	response := smp.sendMessage(conn, request, mqtraceContext, requestHeader)
+	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(ctx, requestHeader)
+	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(ctx, request, mqtraceContext)
+	response := smp.sendMessage(ctx, request, mqtraceContext, requestHeader)
 	smp.abstractSendMessageProcessor.ExecuteSendMessageHookAfter(response, mqtraceContext)
 	return response, nil
 }
@@ -53,7 +54,7 @@ func (smp *SendMessageProcessor) ProcessRequest(addr string, conn net.Conn, requ
 // consumerSendMsgBack 客户端返回未消费消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
+func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
@@ -179,8 +180,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 	msgInner.Body = msgExt.Body
 	msgInner.Flag = msgExt.Flag
 	message.SetPropertiesMap(&msgInner.Message, msgExt.Properties)
-	// TODO msgInner.PropertiesString(MessageDecoder.messageProperties2String(msgExt.getProperties()));
-	// TODO msgInner.TagsCode(MessageExtBrokerInner.tagsString2tagsCode(null, msgExt.getTags()));
+	msgInner.PropertiesString = message.MessageProperties2String(msgExt.Properties)
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgExt.GetTags())
 
 	msgInner.QueueId = int32(queueIdInt)
 	msgInner.SysFlag = msgExt.SysFlag
@@ -208,8 +209,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 			if correctTopic == "" || len(correctTopic) <= 0 {
 				backTopic = correctTopic
 			}
-			fmt.Println(backTopic)
-			// TODO smp.BrokerController.getBrokerStatsManager().incSendBackNums(requestHeader.getGroup(), backTopic);
+
+			smp.BrokerController.brokerStatsManager.IncSendBackNums(requestHeader.Group, backTopic)
 
 			response.Code = commonprotocol.SUCCESS
 			response.Remark = ""
@@ -230,7 +231,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn net.Conn,
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.RemotingCommand,
+func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.SendMessageResponseHeader{})
 	responseHeader := new(header.SendMessageResponseHeader)
@@ -241,7 +242,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 
 	response.Opaque = request.Opaque
 	response.Code = -1
-	smp.abstractSendMessageProcessor.msgCheck(conn, requestHeader, response)
+	smp.abstractSendMessageProcessor.msgCheck(ctx, requestHeader, response)
 	if response.Code != -1 {
 		return response
 	}
@@ -272,11 +273,11 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(topicConfig.TopicFilterType, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(&topicConfig.TopicFilterType, msgInner.GetTags())
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
-	msgInner.BornHost = conn.LocalAddr().String()
+	msgInner.BornHost = ctx.LocalAddr().String()
 	msgInner.StoreHost = smp.abstractSendMessageProcessor.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
@@ -328,17 +329,16 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 		}
 
 		if sendOK {
-			//TODO   this.brokerController.getBrokerStatsManager().incTopicPutNums(msgInner.getTopic());
-			//TODO this.brokerController.getBrokerStatsManager().incTopicPutSize(msgInner.getTopic(),
-			//TODO 	putMessageResult.getAppendMessageResult().getWroteBytes());
-			//TODO this.brokerController.getBrokerStatsManager().incBrokerPutNums();
+			smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
+			smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
+			smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
+
 			response.Remark = ""
 			responseHeader.MsgId = putMessageResult.AppendMessageResult.MsgId
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
 
-			DoResponse( // TODO  ctx
-				request, response)
+			DoResponse(ctx, request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
 					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
@@ -350,8 +350,7 @@ func (smp *SendMessageProcessor) sendMessage(conn net.Conn, request *protocol.Re
 				mqtraceContext.QueueId = responseHeader.QueueId
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
-			// TODO return nil
-			return response
+			return nil
 		}
 
 	} else {
@@ -401,7 +400,21 @@ func (smp *SendMessageProcessor) ExecuteConsumeMessageHookAfter(context *mqtrace
 	}
 }
 
+// diskUtil 磁盘使用情况
+// Author rongzhihong
+// Since 2017/9/16
 func (smp *SendMessageProcessor) diskUtil() string {
-	// TODO
-	return ""
+	storePathPhysic := smp.BrokerController.MessageStoreConfig.StorePathCommitLog
+
+	physicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
+
+	storePathLogis := config.GetStorePathConsumeQueue(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
+
+	logisRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathLogis)
+
+	storePathIndex := config.GetStorePathConsumeQueue(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
+
+	indexRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathIndex)
+
+	return fmt.Sprintf("CL: %5.2f CQ: %5.2f INDEX: %5.2f", physicRatio, logisRatio, indexRatio)
 }

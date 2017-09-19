@@ -4,9 +4,9 @@ package namesrv
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
 type PutKVConfigRequestHeader struct {
-	Namespace string
-	Key       string
-	Value     string
+	Namespace string `json:"namespace"`
+	Key       string `json:"key"`
+	Value     string `json:"value"`
 }
 
 func (header *PutKVConfigRequestHeader) CheckFields() error {

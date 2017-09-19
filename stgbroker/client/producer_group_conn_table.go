@@ -1,18 +1,18 @@
 package client
 
 import (
-	"net"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"sync"
 )
 
 type ProducerGroupConnTable struct {
-	GroupChannelTable map[string]map[string]net.Conn
+	GroupChannelTable map[string]map[netm.Context]*ChannelInfo
 	sync.RWMutex      `json:"-"`
 }
 
 func NewProducerGroupConnTable() *ProducerGroupConnTable {
 	return &ProducerGroupConnTable{
-		GroupChannelTable: make(map[string]map[string]net.Conn),
+		GroupChannelTable: make(map[string]map[netm.Context]*ChannelInfo),
 	}
 }
 
@@ -23,13 +23,13 @@ func (table *ProducerGroupConnTable) size() int {
 	return len(table.GroupChannelTable)
 }
 
-func (table *ProducerGroupConnTable) put(k string, v map[string]net.Conn) {
+func (table *ProducerGroupConnTable) put(k string, v map[netm.Context]*ChannelInfo) {
 	table.Lock()
 	defer table.Unlock()
 	table.GroupChannelTable[k] = v
 }
 
-func (table *ProducerGroupConnTable) get(k string) map[string]net.Conn {
+func (table *ProducerGroupConnTable) get(k string) map[netm.Context]*ChannelInfo {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -41,7 +41,7 @@ func (table *ProducerGroupConnTable) get(k string) map[string]net.Conn {
 	return v
 }
 
-func (table *ProducerGroupConnTable) remove(k string) map[string]net.Conn {
+func (table *ProducerGroupConnTable) remove(k string) map[netm.Context]*ChannelInfo {
 	table.Lock()
 	defer table.Unlock()
 
@@ -50,11 +50,11 @@ func (table *ProducerGroupConnTable) remove(k string) map[string]net.Conn {
 		return nil
 	}
 
-		delete(table.GroupChannelTable, k)
+	delete(table.GroupChannelTable, k)
 	return v
 }
 
-func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[string]net.Conn)) {
+func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[netm.Context]*ChannelInfo)) {
 	table.RLock()
 	defer table.RUnlock()
 

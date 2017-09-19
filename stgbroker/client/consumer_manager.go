@@ -6,8 +6,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
-	"net"
+	set2 "github.com/toolkits/container/set"
 )
 
 // ConsumerManager 消费者管理
@@ -54,12 +55,12 @@ func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.
 // registerConsumer 注册Consumer
 // Author gaoyanlei
 // Since 2017/8/24
-func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consumeType heartbeat.ConsumeType,
+func (cm *ConsumerManager) RegisterConsumer(group string, ctx netm.Context, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
 		tmp := NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
-		prev, err := cm.consumerTable.Put(group, tmp)
+		prev, err := cm.consumerTable.PutIfAbsent(group, tmp)
 		if err != nil || prev == nil {
 			consumerGroupInfo = tmp
 		} else {
@@ -68,13 +69,34 @@ func (cm *ConsumerManager) RegisterConsumer(group string, conn net.Conn, consume
 			}
 		}
 	}
-	r1 := consumerGroupInfo.UpdateChannel(conn, consumeType, messageModel, consumeFromWhere)
 	// TODO
-	return r1
+	r1 := consumerGroupInfo.UpdateChannel(ctx, consumeType, messageModel, consumeFromWhere)
+	r2 := consumerGroupInfo.UpdateSubscription(subList)
+
+	if r1 || r2 {
+		cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.GetAllChannel())
+	}
+
+	return r1 || r2
 }
 
+// UnregisterConsumer 注销消费者
+// Author rongzhihong
+// Since 2017/9/18
 func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *ChannelInfo) {
-
+	consumerGroupInfo, _ := cm.consumerTable.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			info.UnregisterChannel(channelInfo)
+			if info.ConnTable.IsEmpty() {
+				remove, _ := cm.consumerTable.Remove(group)
+				if remove != nil {
+					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+				}
+			}
+			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, info.GetAllChannel())
+		}
+	}
 }
 
 // ScanNotActiveChannel 扫描不活跃的通道
@@ -104,7 +126,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 			if diff > cm.ChannelExpiredTimeout {
 				logger.Warnf("SCAN: remove expired channel from ConsumerManager consumerTable. channel=%s, consumerGroup=%s",
 					channelInfo.Addr, group)
-				channelInfo.Conn.Close()
+				channelInfo.Context.Close()
 				chanIterator.Remove()
 			}
 		}
@@ -119,7 +141,7 @@ func (cm *ConsumerManager) ScanNotActiveChannel() {
 // ScanNotActiveChannel 扫描不活跃的通道
 // Author rongzhihong
 // Since 2017/9/11
-func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn) {
+func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Context) {
 	iterator := cm.consumerTable.Iterator()
 	for iterator.HasNext() {
 		key, value, _ := iterator.Next()
@@ -131,7 +153,7 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn)
 		if !ok {
 			continue
 		}
-		isRemoved := consumerGroupInfo.doChannelCloseEvent(remoteAddr, conn)
+		isRemoved := consumerGroupInfo.doChannelCloseEvent(remoteAddr, ctx)
 		if isRemoved {
 			if consumerGroupInfo.ConnTable.IsEmpty() {
 				remove, err := cm.consumerTable.Remove(group)
@@ -143,7 +165,53 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, conn net.Conn)
 					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}
-			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.getAllChannel())
+			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.GetAllChannel())
 		}
 	}
+}
+
+// FindSubscriptionDataCount 根据group查找订阅数量
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) FindSubscriptionDataCount(group string) int32 {
+	consumerGroupInfo, _ := cm.consumerTable.ConcurrentMap.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			return info.SubscriptionTable.Size()
+		}
+	}
+	return 0
+}
+
+// QueryTopicConsumeByWho 根据topic查找消费者
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) *set2.StringSet {
+	groups := set2.NewStringSet()
+	iterator := cm.consumerTable.Iterator()
+	for iterator.HasNext() {
+		group, value, _ := iterator.Next()
+		if info, ok := value.(*ConsumerGroupInfo); ok {
+			subscriptionTable := info.SubscriptionTable
+			if found, _ := subscriptionTable.ContainsKey(topic); found {
+				if k, ok := group.(string); ok {
+					groups.Add(k)
+				}
+			}
+		}
+	}
+	return groups
+}
+
+// FindChannel 获得某个组某个消费Id对应的通道
+// Author rongzhihong
+// Since 2017/9/18
+func (cm *ConsumerManager) FindChannel(group, clientId string) *ChannelInfo {
+	consumerGroupInfo, _ := cm.consumerTable.Get(group)
+	if consumerGroupInfo != nil {
+		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
+			return info.FindChannel(clientId)
+		}
+	}
+	return nil
 }

@@ -18,7 +18,7 @@ const (
 // 消费类型枚举
 // Author: yintongqiang
 // Since:  2017/8/8
-func (languageCode LanguageCode) String() string {
+func (languageCode LanguageCode) ToString() string {
 	switch languageCode {
 	case JAVA:
 		return "JAVA"
@@ -41,6 +41,6 @@ func (languageCode LanguageCode) String() string {
 	case GOLANG:
 		return "GOLANG"
 	default:
-		return "Unknow"
+		return "Unknown"
 	}
 }

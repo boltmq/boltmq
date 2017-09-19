@@ -1,4 +1,4 @@
-package header
+package namesrv
 
 // GetRouteInfoRequestHeader: 获取topic路由信息头
 // Author: yintongqiang

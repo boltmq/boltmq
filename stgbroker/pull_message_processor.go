@@ -1,8 +1,12 @@
 package stgbroker
 
 import (
+	"bytes"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
@@ -14,10 +18,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"net"
 	"strconv"
 )
 
@@ -38,17 +42,17 @@ func NewPullMessageProcessor(brokerController *BrokerController) *PullMessagePro
 	return pullMessageProcessor
 }
 
-func (pull *PullMessageProcessor) ProcessRequest(addr string, conn net.Conn, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
-	return pull.processRequest(request, conn, true)
+	return pull.processRequest(request, ctx, true)
 }
 
 // ExecuteRequestWhenWakeup  唤醒拉取消息的请求
 // Author rongzhihong
 // Since 2017/9/5
-func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, request *protocol.RemotingCommand) {
+func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
-		response, err := pull.processRequest(request, conn, false)
+		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
 			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
 			return
@@ -73,7 +77,7 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(conn net.Conn, reques
 	}()
 }
 
-func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, conn net.Conn, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
+func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, ctx netm.Context, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
 	responseHeader := &header.PullMessageResponseHeader{}
 
@@ -118,9 +122,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)
 
 	suspendTimeoutMillisLong := requestHeader.SuspendTimeoutMillis
-	// START: test data Add:rongzhihong
-	//hasSuspendFlag = true
-	// END: test data
 	if hasSuspendFlag == false {
 		suspendTimeoutMillisLong = 0
 	}
@@ -194,9 +195,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
-	// START: test data Add:rongzhihong
-	//getMessageResult.Status = stgstorelog.NO_MESSAGE_IN_QUEUE
-	// END: test data
 
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
@@ -221,12 +219,14 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context := new(mqtrace.ConsumeMessageContext)
 				context.ConsumerGroup = requestHeader.ConsumerGroup
 				context.Topic = requestHeader.Topic
-				context.ClientHost = conn.LocalAddr().String()
+				context.ClientHost = ctx.LocalAddr().String()
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
-				// TODO final SocketAddress storeHost =new InetSocketAddress(brokerController.getBrokerConfig().getBrokerIP1(), brokerController.getNettyServerConfig().getListenPort());
+				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
 				// TODO	messageIds :=pull.BrokerController.getMessageStore().getMessageIds(requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getQueueOffset() + getMessageResult.getMessageCount(), storeHost);
+				fmt.Println(storeHost)
+
 				messageIds := make(map[string]int64)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
@@ -257,32 +257,28 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_OVERFLOW_BADLY:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, ctx.LocalAddr().String())
 		case stgstorelog.OFFSET_OVERFLOW_ONE:
 			response.Code = commonprotocol.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_TOO_SMALL:
 			response.Code = commonprotocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, conn.LocalAddr().String())
+			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, ctx.LocalAddr().String())
 		default:
 		}
 
 		switch response.Code {
 		case commonprotocol.SUCCESS:
-			// TODO  统计
-			//this.brokerController.getBrokerStatsManager().incGroupGetNums(
-			//	requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-			//	getMessageResult.getMessageCount());
-			//
-			//this.brokerController.getBrokerStatsManager().incGroupGetSize(
-			//	requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-			//	getMessageResult.getBufferTotalSize());
-			//
-			//this.brokerController.getBrokerStatsManager().incBrokerGetNums(
-			//	getMessageResult.getMessageCount());
-			//
-			//	FileRegion fileRegion =
-			//	new ManyMessageTransfer(response.encodeHeader(getMessageResult
-			//	.getBufferTotalSize()), getMessageResult);
+			pull.BrokerController.brokerStatsManager.IncGroupGetNums(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.GetMessageCount())
+
+			pull.BrokerController.brokerStatsManager.IncGroupGetSize(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.BufferTotalSize)
+
+			pull.BrokerController.brokerStatsManager.IncBrokerGetNums(getMessageResult.GetMessageCount())
+
+			byteBufferHeader := bytes.NewBuffer(response.Body)
+			fileRegion := pagecache.NewManyMessageTransfer(byteBufferHeader, getMessageResult)
+			fmt.Println(fileRegion)
+
+			// TODO
 			//	channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
 			//	public void operationComplete(ChannelFuture future) throws Exception {
 			//	getMessageResult.release();
@@ -305,7 +301,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
 				suspendTimestamp := timeutil.CurrentTimeMillis()
-				pullRequest := longpolling.NewPullRequest(request, conn, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
+				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil
 			}
@@ -360,8 +356,30 @@ func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
 	return pull.ConsumeMessageHookList != nil && len(pull.ConsumeMessageHookList) > 0
 }
 
+// generateOffsetMovedEvent 偏移量移动事件
+// Author rongzhihong
+// Since 2017/9/17
 func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMovedEvent) {
-	// TODO
+	defer utils.RecoveredFn()
+
+	msgInner := new(stgstorelog.MessageExtBrokerInner)
+	msgInner.Topic = stgcommon.OFFSET_MOVED_EVENT
+	msgInner.SetTags(event.ConsumerGroup)
+	msgInner.SetDelayTimeLevel(0)
+	msgInner.SetKeys(event.ConsumerGroup)
+	msgInner.Body = event.Encode()
+	msgInner.Flag = 0
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgInner.GetTags())
+
+	msgInner.QueueId = int32(0)
+	msgInner.SysFlag = 0
+	msgInner.BornTimestamp = timeutil.CurrentTimeMillis()
+	msgInner.BornHost = pull.BrokerController.GetBrokerAddr()
+	msgInner.StoreHost = msgInner.BornHost
+
+	msgInner.ReconsumeTimes = 0
+
+	pull.BrokerController.MessageStore.PutMessage(msgInner)
 }
 
 // ConsumeMessageHook 消费消息回调
