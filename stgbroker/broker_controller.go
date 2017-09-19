@@ -113,14 +113,14 @@ func (bc *BrokerController) Initialize() bool {
 
 	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
 
-	if result {
-		bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
-	}
-
-	result = result && bc.MessageStore.Load()
-	if !result {
-		return result
-	}
+	//if result {
+	//	bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
+	//}
+	//
+	//result = result && bc.MessageStore.Load()
+	//if !result {
+	//	return result
+	//}
 
 	// 注册服务
 	bc.registerProcessor()
