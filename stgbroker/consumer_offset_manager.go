@@ -8,8 +8,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
-	"github.com/toolkits/container/set"
 	"regexp"
 	"sync"
 )
@@ -114,6 +114,15 @@ func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) 
 	return -1
 }
 
+// queryOffset2 获取偏移量
+// Author rongzhihong
+// Since 2017/9/12
+func (com *ConsumerOffsetManager) queryOffset2(group, topic string) map[int]int64 {
+	key := topic + TOPIC_GROUP_SEPARATOR + group
+	offsetTable := com.Offsets.get(key)
+	return offsetTable
+}
+
 func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int, offset int64) {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	com.commitOffset(key, queueId, offset)
@@ -169,8 +178,8 @@ func (com *ConsumerOffsetManager) offsetBehindMuchThanData(topic string, offsetT
 // WhichTopicByConsumer 获得消费者的Topic
 // Author rongzhihong
 // Since 2017/9/18
-func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) *set.StringSet {
-	topics := set.NewStringSet()
+func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) set.Set {
+	topics := set.NewSet()
 	for topicAtGroup := range com.Offsets.Offsets {
 		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
@@ -186,8 +195,8 @@ func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) *set.String
 // WhichGroupByTopic 获得Topic的消费者
 // Author rongzhihong
 // Since 2017/9/18
-func (com *ConsumerOffsetManager) WhichGroupByTopic(topic string) *set.StringSet {
-	groups := set.NewStringSet()
+func (com *ConsumerOffsetManager) WhichGroupByTopic(topic string) set.Set {
+	groups := set.NewSet()
 	for topicAtGroup := range com.Offsets.Offsets {
 		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
@@ -213,7 +222,7 @@ func (com *ConsumerOffsetManager) CloneOffset(srcGroup, destGroup, topic string)
 // QueryMinOffsetInAllGroup 查询所有组中最小偏移量
 // Author rongzhihong
 // Since 2017/9/18
-func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups string) {
+func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups string) map[int]int64 {
 	queueMinOffset := make(map[int]int64)
 
 	reg := regexp.MustCompile(`\S+?`)
@@ -248,6 +257,7 @@ func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups s
 			}
 		}
 	}
+	return queueMinOffset
 }
 
 // min int64 的最小值

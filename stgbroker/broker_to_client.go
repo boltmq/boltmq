@@ -169,3 +169,12 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	response.Body = resBody.Encode()
 	return response
 }
+
+// GetConsumeStatus Broker主动获取Consumer端的消息情况
+// Author rongzhihong
+// Since 2017/9/18
+func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) *protocol.RemotingCommand {
+	response := protocol.CreateDefaultResponseCommand(nil)
+	// TODO
+	return response
+}
