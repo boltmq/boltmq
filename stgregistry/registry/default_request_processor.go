@@ -119,7 +119,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		return response, err
 	}
 
 	var registerBrokerBody body.RegisterBrokerBody
@@ -127,7 +127,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		err = registerBrokerBody.CustomDecode(request.Body, &registerBrokerBody)
 		if err != nil {
 			fmt.Printf("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
-			return nil, err
+			return response, err
 		}
 	} else {
 		dataVersion := stgcommon.NewDataVersion()
@@ -136,7 +136,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
 	}
 
-	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(
+	result := self.NamesrvController.RouteInfoManager.registerBroker(
 		requestHeader.ClusterName,                      // 1
 		requestHeader.BrokerAddr,                       // 2
 		requestHeader.BrokerName,                       // 3
@@ -148,8 +148,8 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	)
 
 	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
-	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+	responseHeader.HaServerAddr = result.HaServerAddr
+	responseHeader.MasterAddr = result.MasterAddr
 	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表

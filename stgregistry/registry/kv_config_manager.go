@@ -128,8 +128,10 @@ func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
-		tb := &body.KVTable{}
-		tb.Table = kvTable
+		tb := body.NewKVTable()
+		for key, value := range kvTable {
+			tb.Table[key] = value
+		}
 		return tb.CustomEncode(tb)
 	}
 	self.ReadWriteLock.RUnlock()
