@@ -1,15 +1,16 @@
 package stgbroker
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"os"
-	"strings"
-	"errors"
 )
 
 type SmartgoBrokerConfig struct {

@@ -280,6 +280,11 @@ func (bootstrap *Bootstrap) RegisterContextListener(contextListener ContextListe
 
 // 接收数据
 func (bootstrap *Bootstrap) handleConn(ctx Context) {
+	if len(bootstrap.handlers) == 0 {
+		bootstrap.Fatalf("not handle register.")
+		return
+	}
+
 	b := make([]byte, 1024)
 	for {
 		n, err := ctx.Read(b)
