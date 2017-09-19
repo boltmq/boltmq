@@ -18,7 +18,7 @@ type TopicConfigManager struct {
 	BrokerController            *BrokerController
 	TopicConfigSerializeWrapper *body.TopicConfigSerializeWrapper
 	SystemTopicList             mapset.Set
-	configManagerExt            *ConfigManagerExt
+	ConfigManagerExt            *ConfigManagerExt
 	DataVersion                 *stgcommon.DataVersion
 }
 
@@ -30,7 +30,7 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	topicConfigManager.BrokerController = brokerController
 	topicConfigManager.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper()
 	topicConfigManager.init()
-	topicConfigManager.configManagerExt = NewConfigManagerExt(topicConfigManager)
+	topicConfigManager.ConfigManagerExt = NewConfigManagerExt(topicConfigManager)
 	topicConfigManager.DataVersion = stgcommon.NewDataVersion()
 	return topicConfigManager
 }
@@ -196,7 +196,7 @@ remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topi
 		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topic, topicConfig)
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 		createNew = true
-		tcm.configManagerExt.Persist()
+		tcm.ConfigManagerExt.Persist()
 	}
 
 	// 如果为新建则向所有Broker注册
@@ -230,7 +230,7 @@ func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
 	tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topic, topicConfig)
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 	createNew = true
-	tcm.configManagerExt.Persist()
+	tcm.ConfigManagerExt.Persist()
 
 	// 如果为新建则向所有Broker注册
 	if createNew {
@@ -249,7 +249,7 @@ func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicCon
 	}
 	logger.Infof("create new topic :%v", topicConfig)
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
-	tcm.configManagerExt.Persist()
+	tcm.ConfigManagerExt.Persist()
 }
 
 // updateOrderTopicConfig 更新顺序topic
@@ -279,7 +279,7 @@ func (tcm *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.KV
 
 		if isChange {
 			tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
-			tcm.configManagerExt.Persist()
+			tcm.ConfigManagerExt.Persist()
 		}
 	}
 }
@@ -305,7 +305,7 @@ func (tcm *TopicConfigManager) deleteTopicConfig(topic string) {
 	if value != nil {
 		logger.Info("delete topic config OK")
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
-		tcm.configManagerExt.Persist()
+		tcm.ConfigManagerExt.Persist()
 	} else {
 		logger.Infof("delete topic config failed, topic: %s not exist", topic)
 	}
@@ -322,7 +322,7 @@ func (tcm *TopicConfigManager) buildTopicConfigSerializeWrapper() *body.TopicCon
 }
 
 func (tcm *TopicConfigManager) Load() bool {
-	return tcm.configManagerExt.Load()
+	return tcm.ConfigManagerExt.Load()
 }
 
 func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
