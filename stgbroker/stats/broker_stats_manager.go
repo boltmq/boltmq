@@ -33,9 +33,9 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 	bs.momentStatsItemSet = stats.NewMomentStatsItemSet(GROUP_GET_FALL)
 	bs.clusterName = clusterName
 
-	topicPutNumsSet := stats.NewStatsItemSet()
+	/*topicPutNumsSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = TOPIC_PUT_NUMS
-	bs.statsTable[TOPIC_PUT_NUMS] = topicPutNumsSet
+	bs.statsTable["TOPIC_PUT_NUMS"] = topicPutNumsSet
 
 	topicPutSizeSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = TOPIC_PUT_SIZE
@@ -59,7 +59,7 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 
 	brokerGetNumsSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = BROKER_GET_NUMS
-	bs.statsTable[BROKER_GET_NUMS] = brokerGetNumsSet
+	bs.statsTable[BROKER_GET_NUMS] = brokerGetNumsSet*/
 	return bs
 }
 
@@ -143,11 +143,7 @@ func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
 // RecordDiskFallBehind  记录
 // Author rongzhihong
 // Since 2017/9/17
-func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId, fallBehind int64) {
+func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {
 	statsKey := fmt.Sprintf("%d@%s@%s", queueId, topic, group)
 	bsm.momentStatsItemSet.GetAndCreateStatsItem(statsKey).ValueCounter = fallBehind
-}
-
-func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {
-	// TODO
 }
