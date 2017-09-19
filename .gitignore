@@ -46,3 +46,4 @@ example/stgnet/remoting/client/client
 example/stgnet/remoting/serve/serve
 producer_main
 push_consumer_main
+stgbroker/start/demo
