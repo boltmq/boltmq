@@ -1,5 +1,6 @@
 package stgstorelog
 
 type FlushCommitLogService interface {
-	run()
+	start()
+	shutdown()
 }

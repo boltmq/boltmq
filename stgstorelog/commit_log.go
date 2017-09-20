@@ -7,6 +7,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+	"container/list"
+	"bytes"
 )
 
 const (
@@ -34,7 +36,7 @@ func NewCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
 	if config.SYNC_FLUSH == defaultMessageStore.MessageStoreConfig.FlushDiskType {
 		commitLog.FlushCommitLogService = new(GroupCommitService)
 	} else {
-		commitLog.FlushCommitLogService = new(FlushRealTimeService)
+		commitLog.FlushCommitLogService = NewFlushRealTimeService(commitLog)
 	}
 
 	commitLog.TopicQueueTable = make(map[string]int64, 1024)
@@ -165,4 +167,65 @@ func (self *CommitLog) rollNextFile(offset int64) int64 {
 	mapedFileSize := self.DefaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
 	nextOffset := offset + int64(mapedFileSize) - offset%int64(mapedFileSize)
 	return nextOffset
+}
+
+func (self *CommitLog) recoverNormally() {
+	// checkCRCOnRecover := self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover
+	mapedFiles := self.MapedFileQueue.mapedFiles
+	if mapedFiles != nil && mapedFiles.Len() > 0 {
+		index := mapedFiles.Len() - 3
+		if index < 0 {
+			index = 0
+		}
+
+		var mapedFile *MapedFile
+		var element *list.Element
+		i := mapedFiles.Len()
+		for element := mapedFiles.Back(); element != nil; element = element.Prev() {
+			if i == index {
+				mapedFile = element.Value.(*MapedFile)
+			}
+			i--
+		}
+
+		byteBuffer := mapedFile.mappedByteBuffer.slice()
+		processOffset := mapedFile.fileFromOffset
+		mapedFileOffset := int64(0)
+		for {
+			dispatchRequest := self.checkMessageAndReturnSize(byteBuffer,
+				self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover, true)
+			size := dispatchRequest.msgSize
+			if size > 0 {
+				mapedFileOffset += size
+			} else if size == 1 {
+				logger.Info("recover physics file end, ", mapedFile.fileName)
+				break
+			} else if size == 0 {
+				index++
+				if index >= mapedFiles.Len() {
+					logger.Info("recover last 3 physics file over, last maped file ", mapedFile.fileName)
+					break
+				} else {
+					mapedFile = element.Next().Value.(*MapedFile)
+					byteBuffer = mapedFile.mappedByteBuffer.slice()
+					processOffset = mapedFile.fileFromOffset
+					mapedFileOffset = 0
+				}
+			}
+		}
+
+		processOffset += mapedFileOffset
+		self.MapedFileQueue.committedWhere = processOffset
+		self.MapedFileQueue.truncateDirtyFiles(processOffset)
+
+	}
+}
+
+func (self *CommitLog) checkMessageAndReturnSize(byteBuffer *bytes.Buffer, checkCRC bool, readBody bool) *DispatchRequest {
+	// TODO
+	return nil
+}
+
+func (self *CommitLog) recoverAbnormally() {
+	// TODO
 }

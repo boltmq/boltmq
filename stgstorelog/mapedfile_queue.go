@@ -25,7 +25,7 @@ type MapedFileQueue struct {
 	// 每个文件的大小
 	mapedFileSize int64
 	// 各个文件
-	mapedFiles list.List
+	mapedFiles *list.List
 	// 读写锁（针对mapedFiles）
 	rwLock *sync.RWMutex
 	// 预分配MapedFile对象服务
@@ -41,6 +41,7 @@ func NewMapedFileQueue(storePath string, mapedFileSize int64,
 	self := &MapedFileQueue{}
 	self.storePath = storePath         // 存储路径
 	self.mapedFileSize = mapedFileSize // 文件size
+	self.mapedFiles = list.New()
 	// 根据读写请求队列requestQueue/readQueue中的读写请求，创建对应的mappedFile文件
 	self.allocateMapedFileService = allocateMapedFileService
 	self.DeleteFilesBatchMax = 10
@@ -198,17 +199,14 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 	var mapedFile, mapedFileLast *MapedFile
 	self.rwLock.RLock()
 	if self.mapedFiles.Len() == 0 {
-		// 此处createOffset即后续步骤中用来为文件命令用
 		createOffset = startOffset - (startOffset % int64(self.mapedFileSize))
 	} else {
-		// 如果mapedFile不为空，则获取list的最后一个文件
 		mapedFileLastObj := (self.mapedFiles.Back().Value).(*MapedFile)
 		mapedFileLast = mapedFileLastObj
 	}
 	self.rwLock.RUnlock()
 	if mapedFileLast != nil && mapedFileLast.isFull() {
 		createOffset = mapedFileLast.fileFromOffset + self.mapedFileSize
-
 	}
 
 	if createOffset != -1 {
@@ -262,7 +260,7 @@ func (self *MapedFileQueue) getMaxOffset() int64 {
 	defer self.rwLock.RUnlock()
 	if self.mapedFiles.Len() > 0 {
 		mappedfile := self.mapedFiles.Back().Value.(*MapedFile)
-		return mappedfile.fileFromOffset
+		return mappedfile.fileFromOffset + mappedfile.wrotePostion
 	}
 
 	return 0
@@ -380,7 +378,7 @@ func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNot
 		for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
 			if i == int(index) {
 				result := e.Value.(*MapedFile)
-				logger.Info("maped file queue find maped file by offset: %#v", result)
+				//logger.Info("maped file queue find maped file by offset: %#v", result)
 
 				return result
 			}

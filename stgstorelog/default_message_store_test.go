@@ -35,6 +35,8 @@ func Test_write_read(t *testing.T) {
 		t.Errorf("start message store failed:%s", err.Error())
 	}
 
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
 	queueId := int32(0)
 
 	for i := 0; i < totalMessages; i++ {
@@ -43,14 +45,14 @@ func Test_write_read(t *testing.T) {
 	}
 
 	for i := 0; i < totalMessages; i++ {
-		//time.Sleep(time.Duration(10000 * time.Millisecond))
+		time.Sleep(time.Duration(1000 * time.Millisecond))
 		result := master.GetMessage("GROUP_A", "test", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
 		}
 
 		// result.relase()
-		fmt.Printf("read %d ok %#v \r\n", i, result)
+		fmt.Printf("read %d ok %d \r\n", i, result.Status)
 	}
 
 	master.Shutdown()

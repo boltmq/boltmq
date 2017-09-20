@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"github.com/fanliao/go-concurrentMap"
 )
 
 const (
@@ -31,36 +30,30 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 	flushConsumeQueueThoroughInterval := self.defaultMessageStore.MessageStoreConfig.FlushConsumeQueueThoroughInterval
 	currentTimeMillis := time.Now().Unix()
 
-	var logicsMsgTimestamp int64
+	var logicMsgTimestamp int64
 
 	if currentTimeMillis >= (self.lastFlushTimestamp + int64(flushConsumeQueueThoroughInterval)) {
 		self.lastFlushTimestamp = currentTimeMillis
 		flushConsumeQueueLeastPages = 0
-		logicsMsgTimestamp = self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp
+		logicMsgTimestamp = self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp
 	}
 
-	tables := self.defaultMessageStore.ConsumeQueueTable
-	iter := tables.Iterator()
+	tables := self.defaultMessageStore.consumeTopicTable
 	times := int(retryTimes)
 
-	for iter.HasNext() {
-		_, value, _ := iter.Next()
-		consumeQueueMap := value.(*concurrent.ConcurrentMap)
-		mapIter := consumeQueueMap.Iterator()
-		for mapIter.HasNext() {
-			_, cvalue, _ := mapIter.Next()
-			cq := cvalue.(*ConsumeQueue)
+	for _, value := range tables {
+		for _, consumeQueue := range value.consumeQueues {
 			result := false
 			for i := 0; i < times && !result; i++ {
-				logger.Infof("consumeQueue %#v \r\n", cq)
-				result = cq.commit(flushConsumeQueueLeastPages)
+				logger.Infof("consumeQueue %#v \r\n", consumeQueue)
+				result = consumeQueue.commit(flushConsumeQueueLeastPages)
 			}
 		}
 	}
 
 	if 0 == flushConsumeQueueLeastPages {
-		if logicsMsgTimestamp > 0 {
-			self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp = logicsMsgTimestamp
+		if logicMsgTimestamp > 0 {
+			self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp = logicMsgTimestamp
 		}
 
 		self.defaultMessageStore.StoreCheckpoint.flush()
