@@ -6,15 +6,18 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"git.oschina.net/cloudzone/smartgo/stgbroker/stats"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"sync/atomic"
 	"time"
 
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/stats"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+
 	"sync"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 const (
@@ -152,7 +155,7 @@ func (self *DefaultMessageStore) Load() bool {
 
 func (self *DefaultMessageStore) recover(lastExitOK bool) {
 	// 先按照正常流程恢复Consume Queue
-	self.recoverConsumeQueue();
+	self.recoverConsumeQueue()
 
 	// 正常数据恢复
 	if lastExitOK {
@@ -172,7 +175,7 @@ func (self *DefaultMessageStore) recover(lastExitOK bool) {
 
 	// 恢复事务模块
 	// TODO self.TransactionStateService.recoverStateTable(lastExitOK);
-	self.recoverTopicQueueTable();
+	self.recoverTopicQueueTable()
 }
 
 func (self *DefaultMessageStore) recoverConsumeQueue() {
@@ -570,6 +573,102 @@ func (self *DefaultMessageStore) putMessagePostionInfo(topic string, queueId int
 	if cq != nil {
 		cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
 	}
+}
+
+// LookMessageByOffset 通过物理队列Offset，查询消息。 如果发生错误，则返回null
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) LookMessageByOffset(commitLogOffset int64) *message.MessageExt {
+	selectResult := self.CommitLog.getMessage(commitLogOffset, 4)
+	if selectResult != nil {
+		size := selectResult.MappedByteBuffer.ReadInt32()
+		return self.lookMessageByOffset(commitLogOffset, size)
+	}
+
+	return nil
+}
+
+func (self *DefaultMessageStore) lookMessageByOffset(commitLogOffset int64, size int32) *message.MessageExt {
+	selectResult := self.CommitLog.getMessage(commitLogOffset, size)
+	if selectResult != nil {
+		byteBuffers := selectResult.MappedByteBuffer.Bytes()
+		mesageExt, err := message.DecodeMessageExt(byteBuffers, true, false)
+		if err != nil {
+			logger.Error("default message store look message by offset error:", err.Error())
+			return nil
+		}
+
+		return mesageExt
+	}
+
+	return nil
+}
+
+// GetMaxOffsetInQueue 获取指定队列最大Offset 如果队列不存在，返回-1
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) GetMaxOffsetInQueue(topic string, queueId int32) int64 {
+	logic := self.findConsumeQueue(topic, queueId)
+	if logic != nil {
+		return logic.getMaxOffsetInQueue()
+	}
+
+	return -1
+}
+
+// GetMinOffsetInQueue 获取指定队列最小Offset 如果队列不存在，返回-1
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) GetMinOffsetInQueue(topic string, queueId int32) int64 {
+	logic := self.findConsumeQueue(topic, queueId)
+	if logic != nil {
+		return logic.getMinOffsetInQueue()
+	}
+
+	return -1
+}
+
+// CheckInDiskByConsumeOffset 判断消息是否在磁盘
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) CheckInDiskByConsumeOffset(topic string, queueId int32, consumeOffset int64) bool {
+	consumeQueue := self.findConsumeQueue(topic, queueId)
+	if consumeQueue != nil {
+		bufferConsumeQueue := consumeQueue.getIndexBuffer(consumeOffset)
+		if bufferConsumeQueue != nil {
+			maxOffsetPy := self.CommitLog.MapedFileQueue.getMaxOffset()
+
+			for i := 0; i < bufferConsumeQueue.MappedByteBuffer.WritePos; {
+				i += CQStoreUnitSize
+				offsetPy := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
+				return self.checkInDiskByCommitOffset(offsetPy, maxOffsetPy)
+			}
+		} else {
+			return false
+		}
+	}
+
+	return false
+}
+
+// SelectOneMessageByOffset 通过物理队列Offset，查询消息。 如果发生错误，则返回null
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) SelectOneMessageByOffset(commitLogOffset int64) *SelectMapedBufferResult {
+	selectResult := self.CommitLog.getMessage(commitLogOffset, 4)
+	if selectResult != nil {
+		size := selectResult.MappedByteBuffer.ReadInt32()
+		return self.CommitLog.getMessage(commitLogOffset, size)
+	}
+
+	return nil
+}
+
+// SelectOneMessageByOffsetAndSize 通过物理队列Offset、size，查询消息。 如果发生错误，则返回null
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (self *DefaultMessageStore) SelectOneMessageByOffsetAndSize(commitLogOffset int64, msgSize int32) *SelectMapedBufferResult {
+	return self.CommitLog.getMessage(commitLogOffset, msgSize)
 }
 
 func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
