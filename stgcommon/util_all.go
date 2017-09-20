@@ -8,7 +8,12 @@ import (
 	"time"
 )
 
-// ComputNextMorningTimeMillis 明天零点时间戳
+const (
+	WINDOWS   = "windows" // windows operating system
+	MAX_VALUE = 0x7fffffffffffffff
+)
+
+// ComputNextMorningTimeMillis 下一天（时、分、秒、毫秒置为0）
 // Author rongzhihong
 // Since 2017/9/5
 func ComputNextMorningTimeMillis() int64 {
@@ -16,6 +21,34 @@ func ComputNextMorningTimeMillis() int64 {
 
 	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day()+1,
 		0, 0, 0, 0, currentTime.Location())
+
+	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
+
+	return nextMorningTimeMillis
+}
+
+// ComputNextMinutesTimeMillis 下一个分钟（秒、毫秒置为0）
+// Author rongzhihong
+// Since 2017/9/5
+func ComputNextMinutesTimeMillis() int64 {
+	currentTime := time.Now()
+
+	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(),
+		currentTime.Hour(), currentTime.Minute()+1, 0, 0, currentTime.Location())
+
+	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
+
+	return nextMorningTimeMillis
+}
+
+// ComputNextMinutesTimeMillis 下一小时（分、秒、毫秒置为0）
+// Author rongzhihong
+// Since 2017/9/5
+func ComputNextHourTimeMillis() int64 {
+	currentTime := time.Now()
+
+	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(),
+		currentTime.Hour()+1, 0, 0, 0, currentTime.Location())
 
 	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
 
@@ -69,14 +102,20 @@ func isExists(fileFullPath string) (bool, error) {
 	return false, err
 }
 
-const (
-	WINDOWS = "windows" // windows operating system
-)
-
 // isWindowsOS check current os is windows
 // if current is windows operating system, return true ; otherwise return false
 // Author rongzhihong
 // Since 2017/9/8
 func IsWindowsOS() bool {
 	return strings.EqualFold(runtime.GOOS, WINDOWS)
+}
+
+const FORMAT = "2006-01-02 15:04:05"
+
+// MillsTime2String 将毫秒时间转为字符时间
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func MillsTime2String(millstime int64) string {
+	// TODO
+	return ""
 }

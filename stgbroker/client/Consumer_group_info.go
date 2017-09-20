@@ -15,8 +15,8 @@ import (
 // Since 2017/8/17
 type ConsumerGroupInfo struct {
 	GroupName           string
-	SubscriptionTable   *sync.Map
-	ConnTable           *sync.Map
+	SubscriptionTable   *sync.Map // key:Topic, val:SubscriptionData
+	ConnTable           *sync.Map // key: Channel val: ClientChannelInfo
 	ConsumeType         heartbeat.ConsumeType
 	MessageModel        heartbeat.MessageModel
 	ConsumeFromWhere    heartbeat.ConsumeFromWhere
@@ -212,4 +212,17 @@ func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
 		}
 	}
 	return nil
+}
+
+// SubscriptionTableToMap SubscriptionTable To Map
+// Author rongzhihong
+// Since 2017/9/17
+func (cg *ConsumerGroupInfo) SubscriptionTableToMap() map[interface{}]interface{} {
+	subscriptionDataMap := map[interface{}]interface{}{}
+	iterator := cg.SubscriptionTable.Iterator()
+	for iterator.HasNext() {
+		k, v, _ := iterator.Next()
+		subscriptionDataMap[k] = v
+	}
+	return subscriptionDataMap
 }

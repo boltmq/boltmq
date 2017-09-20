@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"container/list"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
@@ -48,6 +49,8 @@ type BrokerController struct {
 	// clientManageExecutor ExecutorService
 	UpdateMasterHAServerAddrPeriodically bool
 	brokerStats                          *storeStatis.BrokerStats
+	SendThreadPoolQueue                  *list.List
+	PullThreadPoolQueue                  *list.List
 	FilterServerManager                  *FilterServerManager
 	brokerStatsManager                   *stats.BrokerStatsManager
 	StoreHost                            string
@@ -75,6 +78,8 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 	brokerController.Broker2Client = NewBroker2Clientr(brokerController)
 	brokerController.SubscriptionGroupManager = NewSubscriptionGroupManager(brokerController)
 	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI()
+	brokerController.SendThreadPoolQueue = list.New()
+	brokerController.PullThreadPoolQueue = list.New()
 	brokerController.FilterServerManager = NewFilterServerManager(brokerController)
 
 	if brokerController.BrokerConfig.NamesrvAddr != "" {
@@ -334,6 +339,21 @@ func (bc *BrokerController) addDeleteTopicTask() {
 	go addDeleteTopicTaskTicker.Do(func(tm time.Time) {
 		bc.ConsumerOffsetManager.configManagerExt.Persist()
 	})
+}
+
+// UpdateAllConfig 更新所有文件
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) UpdateAllConfig(properties interface{}) {
+	// TODO
+}
+
+// EncodeAllConfig 读取所有配置文件信息
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) EncodeAllConfig() string {
+	// TODO
+	return ""
 }
 
 // registerProcessor 注册提供服务
