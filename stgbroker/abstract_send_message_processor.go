@@ -101,7 +101,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 			}
 		}
 
-		topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
+		topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
 			ctx.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {

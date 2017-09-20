@@ -142,7 +142,7 @@ func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicC
 // createTopicInSendMessageMethod 创建topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (tcm *TopicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
+func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopic,
 remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
