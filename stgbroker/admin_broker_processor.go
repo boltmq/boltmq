@@ -516,7 +516,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 	}
 
 	topic := requestHeader.Topic
-	topicConfig := abp.BrokerController.TopicConfigManager.selectTopicConfig(topic)
+	topicConfig := abp.BrokerController.TopicConfigManager.SelectTopicConfig(topic)
 	if topicConfig == nil {
 		response.Code = code.TOPIC_NOT_EXIST
 		response.Remark = fmt.Sprintf("topic[%s] not exist", topic)
@@ -675,7 +675,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 
 		if topic, ok := topic.(string); ok {
 
-			topicConfig := abp.BrokerController.TopicConfigManager.selectTopicConfig(topic)
+			topicConfig := abp.BrokerController.TopicConfigManager.SelectTopicConfig(topic)
 			if nil == topicConfig {
 				logger.Warnf("consumeStats, topic config not exist, %s", topic)
 				continue
@@ -888,7 +888,7 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 	}
 
 	topic := requestHeader.Topic
-	topicConfig := abp.BrokerController.TopicConfigManager.selectTopicConfig(topic)
+	topicConfig := abp.BrokerController.TopicConfigManager.SelectTopicConfig(topic)
 	if nil == topicConfig {
 		response.Code = code.TOPIC_NOT_EXIST
 		response.Remark = fmt.Sprintf("topic[%s] not exist", topic)
@@ -1098,7 +1098,7 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 
 	for item := range topics.Iterator().C {
 		if topic, ok := item.(string); ok {
-			topicConfig := abp.BrokerController.TopicConfigManager.selectTopicConfig(topic)
+			topicConfig := abp.BrokerController.TopicConfigManager.SelectTopicConfig(topic)
 			if nil == topicConfig {
 				logger.Warnf("[cloneGroupOffset], topic config not exist, %s", topic)
 				continue

@@ -71,7 +71,7 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 				}
 
 				newTopic := stgcommon.GetRetryTopic(consumerData.GroupName)
-				cmp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod( //
+				cmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod( //
 					newTopic, //
 					subscriptionGroupConfig.RetryQueueNums, //
 					constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
