@@ -1,4 +1,4 @@
-package stgbroker
+package test
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"

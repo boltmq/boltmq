@@ -46,7 +46,7 @@ func (slave *SlaveSynchronize) syncTopicConfig() {
 			slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.PutAll(
 				topicWrapper.TopicConfigTable.TopicConfigs,
 			)
-			slave.BrokerController.TopicConfigManager.configManagerExt.Persist()
+			slave.BrokerController.TopicConfigManager.ConfigManagerExt.Persist()
 		}
 	}
 }
