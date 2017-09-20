@@ -7,14 +7,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 )
 
-type DispatchMessageService struct {
-	requestsChan        chan *DispatchRequest
-	closeChan           chan bool
-	defaultMessageStore *DefaultMessageStore
-	mutex               *sync.Mutex
-	stop                bool
-}
-
 func NewDispatchMessageService(putMsgIndexHightWater int32, defaultMessageStore *DefaultMessageStore) *DispatchMessageService {
 	dms := new(DispatchMessageService)
 	rate := int32(float64(putMsgIndexHightWater) * 1.5)
@@ -26,15 +18,22 @@ func NewDispatchMessageService(putMsgIndexHightWater int32, defaultMessageStore 
 	return dms
 }
 
+type DispatchMessageService struct {
+	requestsChan        chan *DispatchRequest
+	closeChan           chan bool
+	defaultMessageStore *DefaultMessageStore
+	mutex               *sync.Mutex
+	stop                bool
+}
+
 func (self *DispatchMessageService) Start() {
 	logger.Info("dispatch message service started")
 
 	for {
 		select {
 		case request := <-self.requestsChan:
-			logger.Infof("dispatch message: %#v \r\n", request)
+			//logger.Infof("dispatch message: %#v \r\n", request)
 			self.doDispatch(request)
-			break
 		case <-self.closeChan:
 			self.destroy()
 			return
@@ -98,4 +97,9 @@ func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest)
 			self.defaultMessageStore.IndexService.putRequest(dispatchRequest)
 		}
 	}
+}
+
+func (self *DispatchMessageService) hasRemainMessage() bool {
+	// TODO
+	return false
 }

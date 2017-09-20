@@ -34,6 +34,7 @@ func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSiz
 	consumeQueue := new(ConsumeQueue)
 	consumeQueue.storePath = storePath
 	consumeQueue.mapedFileSize = mapedFileSize
+	consumeQueue.maxPhysicOffset = -1
 	consumeQueue.defaultMessageStore = defaultMessageStore
 	consumeQueue.topic = topic
 	consumeQueue.queueId = queueId
@@ -125,11 +126,11 @@ func (selfcq *ConsumeQueue) getOffsetInQueueByTime(timestamp int64) {
 	*/
 }
 
-func (self *ConsumeQueue) getMinOffsetInQueque() int64 {
+func (self *ConsumeQueue) getMinOffsetInQueue() int64 {
 	return self.minLogicOffset / CQStoreUnitSize
 }
 
-func (self *ConsumeQueue) getMaxOffsetInQueque() int64 {
+func (self *ConsumeQueue) getMaxOffsetInQueue() int64 {
 	return self.mapedFileQueue.getMaxOffset() / CQStoreUnitSize
 }
 

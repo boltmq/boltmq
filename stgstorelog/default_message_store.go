@@ -10,18 +10,28 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"github.com/fanliao/go-concurrentMap"
-
 	"sync/atomic"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"sync"
 )
 
 const (
 	TotalPhysicalMemorySize = 1024 * 1024 * 1024 * 24
 	LongMinValue            = -9223372036854775808
 )
+
+type ConsumeQueueTable struct {
+	consumeQueues   map[int32]*ConsumeQueue
+	consumeQueuesMu sync.RWMutex
+}
+
+func NewConsumeQueueTable() *ConsumeQueueTable {
+	table := new(ConsumeQueueTable)
+	table.consumeQueues = make(map[int32]*ConsumeQueue)
+	return table
+}
 
 // DefaultMessageStore 存储层对外提供的接口
 // Author zhoufei
@@ -30,7 +40,8 @@ type DefaultMessageStore struct {
 	MessageFilter            *DefaultMessageFilter // 消息过滤
 	MessageStoreConfig       *MessageStoreConfig   // 存储配置
 	CommitLog                *CommitLog
-	ConsumeQueueTable        *concurrent.ConcurrentMap // TODO ConcurrentHashMap
+	consumeTopicTable        map[string]*ConsumeQueueTable
+	consumeQueueTableMu      sync.RWMutex
 	FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
 	CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
 	CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
@@ -61,9 +72,9 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
 	ms.TransactionCheckExecuter = nil
-	ms.AllocateMapedFileService = NewAllocateMapedFileService()
+	ms.AllocateMapedFileService = nil // TODO NewAllocateMapedFileService()
+	ms.consumeTopicTable = make(map[string]*ConsumeQueueTable)
 	ms.CommitLog = NewCommitLog(ms)
-	ms.ConsumeQueueTable = concurrent.NewConcurrentMap(32)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
 	ms.CleanConsumeQueueService = new(CleanConsumeQueueService)
 	ms.StoreStatsService = new(StoreStatsService)
@@ -90,7 +101,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	}
 
 	// load过程依赖此服务，所以提前启动
-	go ms.AllocateMapedFileService.Start()
+	// go ms.AllocateMapedFileService.Start()
 	go ms.DispatchMessageService.Start()
 
 	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
@@ -133,7 +144,43 @@ func (self *DefaultMessageStore) Load() bool {
 
 	self.IndexService.Load(lastExitOk)
 
+	// 尝试恢复数据
+	// self.recover(lastExitOk)
+
 	return result
+}
+
+func (self *DefaultMessageStore) recover(lastExitOK bool) {
+	// 先按照正常流程恢复Consume Queue
+	self.recoverConsumeQueue();
+
+	// 正常数据恢复
+	if lastExitOK {
+		self.CommitLog.recoverNormally()
+	} else {
+		// 异常数据恢复，OS CRASH或者JVM CRASH或者机器掉电 else
+		self.CommitLog.recoverAbnormally()
+	}
+
+	// 保证消息都能从DispatchService缓冲队列进入到真正的队列
+	ticker := time.NewTicker(time.Millisecond * 500)
+	for _ = range ticker.C {
+		if self.DispatchMessageService.hasRemainMessage() {
+			break
+		}
+	}
+
+	// 恢复事务模块
+	// TODO self.TransactionStateService.recoverStateTable(lastExitOK);
+	self.recoverTopicQueueTable();
+}
+
+func (self *DefaultMessageStore) recoverConsumeQueue() {
+	for _, value := range self.consumeTopicTable {
+		for _, logic := range value.consumeQueues {
+			logic.recover()
+		}
+	}
 }
 
 func (self *DefaultMessageStore) loadConsumeQueue() bool {
@@ -181,23 +228,19 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 }
 
 func (self *DefaultMessageStore) putConsumeQueue(topic string, queueId int32, consumeQueue *ConsumeQueue) {
-	consumeQueueCon, err := self.ConsumeQueueTable.Get(topic)
-	if err != nil {
-		// TODO
-	}
+	self.consumeQueueTableMu.RLock()
+	_, ok := self.consumeTopicTable[topic]
+	self.consumeQueueTableMu.RUnlock()
 
-	if consumeQueueCon == nil {
-		consumeQueueMap := concurrent.NewConcurrentMap()
-		consumeQueueMap.Put(queueId, consumeQueue)
-		self.ConsumeQueueTable.Put(topic, consumeQueueMap)
-	} else {
-		consumeQueueMap := consumeQueueCon.(*concurrent.ConcurrentMap)
-		consumeQueueMap.Put(queueId, consumeQueue)
+	if !ok {
+		self.consumeQueueTableMu.Lock()
+		consumeQueueMap := NewConsumeQueueTable()
+		consumeQueueMap.consumeQueuesMu.Lock()
+		consumeQueueMap.consumeQueues[queueId] = consumeQueue
+		consumeQueueMap.consumeQueuesMu.Unlock()
+		self.consumeTopicTable[topic] = consumeQueueMap
+		self.consumeQueueTableMu.Unlock()
 	}
-	result, _ := self.ConsumeQueueTable.Get(topic)
-	r, _ := result.(*concurrent.ConcurrentMap).Get(queueId)
-	logger.Infof("ConsumeQueueTable %#v", r)
-
 }
 
 func (self *DefaultMessageStore) isTempFileExist() bool {
@@ -205,7 +248,6 @@ func (self *DefaultMessageStore) isTempFileExist() bool {
 	exist, err := PathExists(fileName)
 
 	if err != nil {
-		logger.Info(err.Error())
 		exist = false
 	}
 
@@ -213,7 +255,7 @@ func (self *DefaultMessageStore) isTempFileExist() bool {
 }
 
 func (self *DefaultMessageStore) Start() error {
-	go self.FlushConsumeQueueService.Start()
+	// go self.FlushConsumeQueueService.Start()
 	go self.CommitLog.Start()
 	go self.StoreStatsService.Start()
 
@@ -332,8 +374,8 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 
 	consumeQueue := self.findConsumeQueue(topic, queueId)
 	if consumeQueue != nil {
-		minOffset = consumeQueue.getMinOffsetInQueque()
-		maxOffset = consumeQueue.getMaxOffsetInQueque()
+		minOffset = consumeQueue.getMinOffsetInQueue()
+		maxOffset = consumeQueue.getMaxOffsetInQueue()
 
 		if maxOffset == 0 {
 			status = NO_MESSAGE_IN_QUEUE
@@ -391,6 +433,7 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 					// 消息过滤
 					if self.MessageFilter.IsMessageMatched(subscriptionData, tagsCode) {
 						selectResult := self.CommitLog.getMessage(offsetPy, sizePy)
+						logger.Info("Message: %s", string(selectResult.MappedByteBuffer.Bytes()))
 						if selectResult != nil {
 							atomic.AddInt64(&self.StoreStatsService.getMessageTransferedMsgCount, 1)
 							getResult.addMessage(selectResult)
@@ -495,53 +538,30 @@ func (self *DefaultMessageStore) isTheBatchFull(sizePy, maxMsgNums, bufferTotal,
 }
 
 func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *ConsumeQueue {
-	consumeQueueMap, err := self.ConsumeQueueTable.Get(topic)
-	if err != nil {
-		// TODO
+	self.consumeQueueTableMu.RLock()
+	consumeQueueMap, ok := self.consumeTopicTable[topic]
+	self.consumeQueueTableMu.RUnlock()
+
+	if !ok {
+		self.consumeQueueTableMu.Lock()
+		consumeQueueMap = NewConsumeQueueTable()
+		self.consumeTopicTable[topic] = consumeQueueMap
+		self.consumeQueueTableMu.Unlock()
 	}
 
-	var consumeQueueConMap *concurrent.ConcurrentMap
-	if consumeQueueMap == nil {
-		newMap := concurrent.NewConcurrentMap(128)
-		oldMap, err := self.ConsumeQueueTable.PutIfAbsent(topic, consumeQueueMap)
-		if err != nil {
-			// TODO
-		}
+	consumeQueueMap.consumeQueuesMu.RLock()
+	logic, ok := consumeQueueMap.consumeQueues[queueId]
+	consumeQueueMap.consumeQueuesMu.RUnlock()
 
-		if oldMap != nil {
-			consumeQueueConMap = oldMap.(*concurrent.ConcurrentMap)
-		} else {
-			consumeQueueConMap = newMap
-		}
-	} else {
-		consumeQueueConMap = consumeQueueMap.(*concurrent.ConcurrentMap)
-	}
-
-	logic, err := consumeQueueConMap.Get(queueId)
-	if err != nil {
-		// TODO
-	}
-
-	var logicCQ *ConsumeQueue
-
-	if logic == nil {
+	if !ok {
 		storePathRootDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
-		newLogic := NewConsumeQueue(topic, queueId, storePathRootDir, int64(self.MessageStoreConfig.MapedFileSizeConsumeQueue), self)
-		oldLogic, err := consumeQueueConMap.PutIfAbsent(queueId, newLogic)
-		if err != nil {
-			// TODO
-		}
-
-		if oldLogic != nil {
-			logicCQ = oldLogic.(*ConsumeQueue)
-		} else {
-			logicCQ = newLogic
-		}
-	} else {
-		logicCQ = logic.(*ConsumeQueue)
+		consumeQueueMap.consumeQueuesMu.Lock()
+		logic = NewConsumeQueue(topic, queueId, storePathRootDir, int64(self.MessageStoreConfig.MapedFileSizeConsumeQueue), self)
+		consumeQueueMap.consumeQueues[queueId] = logic
+		consumeQueueMap.consumeQueuesMu.Unlock()
 	}
 
-	return logicCQ
+	return logic
 }
 
 func (self *DefaultMessageStore) putMessagePostionInfo(topic string, queueId int32, offset int64, size int64,
@@ -562,5 +582,9 @@ func (self *DefaultMessageStore) SlaveFallBehindMuch() int64 {
 }
 
 func (self *DefaultMessageStore) addScheduleTask() {
+	// TODO
+}
+
+func (self *DefaultMessageStore) recoverTopicQueueTable() {
 	// TODO
 }
