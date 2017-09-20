@@ -1,7 +1,6 @@
 package out
 
 import (
-	"fmt"
 	"strings"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
@@ -103,7 +102,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	if err != nil {
 		// TODO: err to log or print
-		fmt.Println("err->", err, request.Opaque, request.Code)
+		logger.Error("REGISTER_BROKER failed。err: %s", err.Error())
 		return nil
 	}
 
