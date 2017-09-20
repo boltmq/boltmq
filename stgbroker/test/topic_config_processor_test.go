@@ -1,16 +1,14 @@
-package stgbroker
+package test
 
 import (
-	"testing"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"testing"
 )
 
-
-func TestTopicConfig(t *testing.T) {
+func TestTopicLoad(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
 	topicConfig := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfig.Load()
-	topicConfig.ConfigManagerExt.Persist()
+	fmt.Println(topicConfig.TopicConfigSerializeWrapper.TopicConfigTable)
 }
-
-

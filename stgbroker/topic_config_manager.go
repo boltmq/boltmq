@@ -184,7 +184,6 @@ remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topi
 				TopicSysFlag:    topicSysFlag,
 				TopicFilterType: defaultTopicConfig.TopicFilterType,
 			}
-
 		} else {
 			return nil, errors.New("No permissions to create topic")
 		}
