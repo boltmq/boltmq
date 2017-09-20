@@ -16,20 +16,20 @@ func NewProducerGroupConnTable() *ProducerGroupConnTable {
 	}
 }
 
-func (table *ProducerGroupConnTable) size() int {
+func (table *ProducerGroupConnTable) Size() int {
 	table.RLock()
 	defer table.RUnlock()
 
 	return len(table.GroupChannelTable)
 }
 
-func (table *ProducerGroupConnTable) put(k string, v map[netm.Context]*ChannelInfo) {
+func (table *ProducerGroupConnTable) Put(k string, v map[netm.Context]*ChannelInfo) {
 	table.Lock()
 	defer table.Unlock()
 	table.GroupChannelTable[k] = v
 }
 
-func (table *ProducerGroupConnTable) get(k string) map[netm.Context]*ChannelInfo {
+func (table *ProducerGroupConnTable) Get(k string) map[netm.Context]*ChannelInfo {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -41,7 +41,7 @@ func (table *ProducerGroupConnTable) get(k string) map[netm.Context]*ChannelInfo
 	return v
 }
 
-func (table *ProducerGroupConnTable) remove(k string) map[netm.Context]*ChannelInfo {
+func (table *ProducerGroupConnTable) Remove(k string) map[netm.Context]*ChannelInfo {
 	table.Lock()
 	defer table.Unlock()
 

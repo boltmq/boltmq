@@ -46,6 +46,11 @@ func (bootstrap *Bootstrap) Bind(host string, port int) *Bootstrap {
 
 // Sync 启动服务
 func (bootstrap *Bootstrap) Sync() {
+	// check handlers if register
+	if len(bootstrap.handlers) == 0 {
+		bootstrap.Warnf("no handler register, data not process.")
+	}
+
 	opts := bootstrap.getOpts()
 	addr := net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port))
 
@@ -146,6 +151,11 @@ func (bootstrap *Bootstrap) ConnectJoinAddr(addr string) error {
 
 // Connect 使用指定地址、端口的连接字符串进行连接并返回连接
 func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, error) {
+	// check handlers if register
+	if len(bootstrap.handlers) == 0 {
+		bootstrap.Warnf("no handler register, data not process.")
+	}
+
 	bootstrap.contextTableLock.RLock()
 	ctx, ok := bootstrap.contextTable[addr]
 	bootstrap.contextTableLock.RUnlock()
@@ -280,11 +290,6 @@ func (bootstrap *Bootstrap) RegisterContextListener(contextListener ContextListe
 
 // 接收数据
 func (bootstrap *Bootstrap) handleConn(ctx Context) {
-	if len(bootstrap.handlers) == 0 {
-		bootstrap.Fatalf("not handle register.")
-		return
-	}
-
 	b := make([]byte, 1024)
 	for {
 		n, err := ctx.Read(b)
@@ -339,6 +344,11 @@ func (bootstrap *Bootstrap) Size() int {
 
 // NewRandomConnect 连接指定地址、端口(客户端随机端口地址管理连接)。特殊业务使用
 func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (Context, error) {
+	// check handlers if register
+	if len(bootstrap.handlers) == 0 {
+		bootstrap.Warnf("no handler register, data not process.")
+	}
+
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
 	nctx, e := bootstrap.connect(addr)
