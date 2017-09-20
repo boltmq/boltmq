@@ -130,7 +130,7 @@ func (tcm *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
 // selectTopicConfig 根据topic查找
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) selectTopicConfig(topic string) *stgcommon.TopicConfig {
+func (tcm *TopicConfigManager) SelectTopicConfig(topic string) *stgcommon.TopicConfig {
 
 	topicConfig := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	if topicConfig != nil {
@@ -208,7 +208,7 @@ remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topi
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) createTopicInSendMessageBackMethod(topic string,
+func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string,
 	clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Lock()

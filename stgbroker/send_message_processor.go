@@ -112,7 +112,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 
 	// 检查topic是否存在
-	topicConfig, err := smp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
+	topicConfig, err := smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
 		constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
 	if topicConfig == nil || err != nil {
 		response.Code = commonprotocol.SYSTEM_ERROR
@@ -160,7 +160,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 		}
 
 		topicConfig, err =
-			smp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(
+			smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(
 				newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
 		if nil == topicConfig {
 			response.Code = commonprotocol.SYSTEM_ERROR
@@ -251,7 +251,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 
 	queueIdInt := requestHeader.QueueId
 
-	topicConfig := smp.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
+	topicConfig := smp.BrokerController.TopicConfigManager.SelectTopicConfig(requestHeader.Topic)
 
 	if queueIdInt < 0 {
 		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % topicConfig.WriteQueueNums

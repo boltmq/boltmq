@@ -127,7 +127,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	// 检查topic是否存在
-	topicConfig := pull.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
+	topicConfig := pull.BrokerController.TopicConfigManager.SelectTopicConfig(requestHeader.Topic)
 	if nil == topicConfig {
 		response.Code = commonprotocol.TOPIC_NOT_EXIST
 		response.Remark = "topic[" + requestHeader.Topic + "] not exist, apply first please!"

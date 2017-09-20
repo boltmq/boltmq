@@ -90,7 +90,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 		return response
 	}
 
-	topicConfig := asmp.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
+	topicConfig := asmp.BrokerController.TopicConfigManager.SelectTopicConfig(requestHeader.Topic)
 	if topicConfig == nil {
 		topicSysFlag := 0
 		if requestHeader.UnitMode {
@@ -105,7 +105,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 			ctx.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
-				topicConfig, _ = asmp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod(requestHeader.Topic,
+				topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(requestHeader.Topic,
 					1, constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
 			}
 		}

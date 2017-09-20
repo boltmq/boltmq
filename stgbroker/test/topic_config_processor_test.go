@@ -22,3 +22,11 @@ func TestCreateTopicInSendMessageMethod(t *testing.T) {
 	fmt.Println(topicConfig.TopicConfigSerializeWrapper.TopicConfigTable.Get("TestTopic_SEND").ReadQueueNums)
 }
 
+func TestSelectTopicConfig(t *testing.T) {
+	brokerController := stgbroker.CreateBrokerController()
+	topicConfig := stgbroker.NewTopicConfigManager(brokerController)
+	topicConfig.Load()
+	topic:=topicConfig.SelectTopicConfig("TestTopic_SEND")
+	fmt.Println(topic.ReadQueueNums)
+}
+
