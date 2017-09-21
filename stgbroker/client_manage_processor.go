@@ -62,7 +62,7 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 	for value := range consumerDataSet.Iterator().C {
 		if consumerData, ok := value.(*heartbeat.ConsumerData); ok {
 			subscriptionGroupConfig :=
-				cmp.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(consumerData.GroupName)
+				cmp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(consumerData.GroupName)
 
 			if subscriptionGroupConfig != nil {
 				topicSysFlag := 0
