@@ -325,8 +325,8 @@ func (tcm *TopicConfigManager) Load() bool {
 }
 
 func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
-	if b, err := json.Marshal(tcm.TopicConfigSerializeWrapper); err == nil {
-		return string(b)
+	if str, err := json.Marshal(tcm.TopicConfigSerializeWrapper); err == nil {
+		return string(str)
 	}
 	return ""
 }

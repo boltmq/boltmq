@@ -102,7 +102,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	// 确保订阅组存在
-	subscriptionGroupConfig := pull.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(
+	subscriptionGroupConfig := pull.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(
 		requestHeader.ConsumerGroup)
 	if nil == subscriptionGroupConfig {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST

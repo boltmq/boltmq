@@ -2,7 +2,6 @@ package stgbroker
 
 import (
 	"encoding/json"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
@@ -14,9 +13,9 @@ import (
 // Author gaoyanlei
 // Since 2017/8/9
 type SubscriptionGroupManager struct {
-	BrokerController *BrokerController
+	BrokerController       *BrokerController
 	SubscriptionGroupTable *subscription.SubscriptionGroupTable
-	ConfigManagerExt *ConfigManagerExt
+	ConfigManagerExt       *ConfigManagerExt
 }
 
 // NewSubscriptionGroupManager 创建SubscriptionGroupManager
@@ -58,7 +57,7 @@ func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 // findSubscriptionGroupConfig 查找订阅关系
 // Author gaoyanlei
 // Since 2017/8/17
-func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
+func (sgm *SubscriptionGroupManager) FindSubscriptionGroupConfig(group string) *subscription.SubscriptionGroupConfig {
 	subscriptionGroupConfig := sgm.SubscriptionGroupTable.Get(group)
 	if subscriptionGroupConfig == nil {
 		if sgm.BrokerController.BrokerConfig.AutoCreateSubscriptionGroup {
@@ -79,10 +78,8 @@ func (sgm *SubscriptionGroupManager) Load() bool {
 }
 
 func (sgm *SubscriptionGroupManager) Encode(prettyFormat bool) string {
-	if b, err := ffjson.Marshal(sgm.SubscriptionGroupTable); err == nil {
-		fmt.Println("SubscriptionGroupManager" + string(b) + "leng" + string(sgm.SubscriptionGroupTable.Size()))
-		fmt.Println(sgm.SubscriptionGroupTable.Size())
-		return string(b)
+	if str, err := ffjson.Marshal(sgm.SubscriptionGroupTable); err == nil {
+		return string(str)
 	}
 	return ""
 }
@@ -117,7 +114,7 @@ func (sgm *SubscriptionGroupManager) UpdateSubscriptionGroupConfig(config *subsc
 // deleteSubscriptionGroupConfig 删除某个订阅组的配置
 // Author rongzhihong
 // Since 2017/9/18
-func (sgm *SubscriptionGroupManager) deleteSubscriptionGroupConfig(groupName string) {
+func (sgm *SubscriptionGroupManager) DeleteSubscriptionGroupConfig(groupName string) {
 	old := sgm.SubscriptionGroupTable.Remove(groupName)
 	if old != nil {
 		logger.Infof("delete subscription group OK, subscription group: %v", old)
