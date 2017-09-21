@@ -488,7 +488,7 @@ func (abp *AdminBrokerProcessor) deleteSubscriptionGroup(ctx netm.Context, reque
 
 	logger.Infof("deleteSubscriptionGroup called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
 
-	abp.BrokerController.SubscriptionGroupManager.deleteSubscriptionGroupConfig(requestHeader.GroupName)
+	abp.BrokerController.SubscriptionGroupManager.DeleteSubscriptionGroupConfig(requestHeader.GroupName)
 
 	response.Code = code.SUCCESS
 	response.Remark = ""

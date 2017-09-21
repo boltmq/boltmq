@@ -74,7 +74,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 
 	// 确保订阅组存在
-	subscriptionGroupConfig := smp.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(requestHeader.Group)
+	subscriptionGroupConfig := smp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(requestHeader.Group)
 	if subscriptionGroupConfig == nil {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist"
