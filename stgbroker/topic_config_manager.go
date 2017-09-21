@@ -143,7 +143,7 @@ func (tcm *TopicConfigManager) SelectTopicConfig(topic string) *stgcommon.TopicC
 // Author gaoyanlei
 // Since 2017/8/10
 func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopic,
-remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
 	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
@@ -179,6 +179,7 @@ remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topi
 			perm := defaultTopicConfig.Perm
 			perm &= 0xFFFFFFFF ^ constant.PERM_INHERIT
 			topicConfig = &stgcommon.TopicConfig{
+				TopicName:  topic,
 				WriteQueueNums:  queueNums,
 				ReadQueueNums:   queueNums,
 				TopicSysFlag:    topicSysFlag,
@@ -210,8 +211,6 @@ remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topi
 // Since 2017/8/11
 func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string,
 	clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
-	tcm.lockTopicConfigTable.Lock()
-	defer tcm.lockTopicConfigTable.Lock()
 	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	// 是否新创建topic
 	createNew := false
@@ -220,12 +219,13 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string,
 	if tc != nil {
 		return tc, nil
 	}
-
-	topicConfig.WriteQueueNums = clientDefaultTopicQueueNums
-	topicConfig.ReadQueueNums = clientDefaultTopicQueueNums
-	topicConfig.TopicSysFlag = topicSysFlag
-	topicConfig.Perm = perm
-
+	topicConfig = &stgcommon.TopicConfig{
+		TopicName:      topic,
+		WriteQueueNums: clientDefaultTopicQueueNums,
+		ReadQueueNums:  clientDefaultTopicQueueNums,
+		TopicSysFlag:   topicSysFlag,
+		Perm:           perm,
+	}
 	tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topic, topicConfig)
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 	createNew = true
@@ -299,7 +299,7 @@ func (tcm *TopicConfigManager) IsOrderTopic(topic string) bool {
 // deleteTopicConfig 删除topic
 // Author gaoyanlei
 // Since 2017/8/10
-func (tcm *TopicConfigManager) deleteTopicConfig(topic string) {
+func (tcm *TopicConfigManager) DeleteTopicConfig(topic string) {
 	value := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Remove(topic)
 	if value != nil {
 		logger.Info("delete topic config OK")
