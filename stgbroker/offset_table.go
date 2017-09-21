@@ -18,20 +18,20 @@ func newOffsetTable() *OffsetTable {
 	}
 }
 
-func (table *OffsetTable) size() int {
+func (table *OffsetTable) Size() int {
 	table.RLock()
 	defer table.RUnlock()
 
 	return len(table.Offsets)
 }
 
-func (table *OffsetTable) put(k string, v map[int]int64) {
+func (table *OffsetTable) Put(k string, v map[int]int64) {
 	table.Lock()
 	defer table.Unlock()
 	table.Offsets[k] = v
 }
 
-func (table *OffsetTable) get(k string) map[int]int64 {
+func (table *OffsetTable) Get(k string) map[int]int64 {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -43,7 +43,7 @@ func (table *OffsetTable) get(k string) map[int]int64 {
 	return v
 }
 
-func (table *OffsetTable) remove(k string) map[int]int64 {
+func (table *OffsetTable) Remove(k string) map[int]int64 {
 	table.Lock()
 	defer table.Unlock()
 
@@ -56,7 +56,7 @@ func (table *OffsetTable) remove(k string) map[int]int64 {
 	return v
 }
 
-func (table *OffsetTable) foreach(fn func(k string, v map[int]int64)) {
+func (table *OffsetTable) Foreach(fn func(k string, v map[int]int64)) {
 	table.RLock()
 	defer table.RUnlock()
 
