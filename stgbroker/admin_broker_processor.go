@@ -199,7 +199,7 @@ func (abp *AdminBrokerProcessor) getMaxOffset(ctx netm.Context, request *protoco
 func (abp *AdminBrokerProcessor) deleteTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	responseHeader := &header.DeleteTopicRequestHeader{}
-	abp.BrokerController.TopicConfigManager.deleteTopicConfig(responseHeader.Topic)
+	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(responseHeader.Topic)
 	abp.BrokerController.addDeleteTopicTask()
 
 	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())
