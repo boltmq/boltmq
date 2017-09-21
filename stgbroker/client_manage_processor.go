@@ -146,7 +146,7 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request 
 		logger.Error(err)
 	}
 
-	offset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, int(requestHeader.QueueId))
+	offset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, int(requestHeader.QueueId))
 
 	// 订阅组存在
 	if offset >= 0 {
@@ -197,7 +197,7 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request
 
 		storeHost := cmp.BrokerController.BrokerConfig.BrokerIP1 + "" + cmp.BrokerController.RemotingServer.GetListenPort()
 
-		preOffset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
+		preOffset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
 
 		// TODO messageIds := cmp.BrokerController.MessageStore.getMessageIds(requestHeader.Topic, requestHeader.QueueId, preOffset, requestHeader.CommitOffset, storeHost)
 		messageIds := make(map[string]int64)

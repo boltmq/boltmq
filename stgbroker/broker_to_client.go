@@ -100,7 +100,7 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 		mq.Topic = topic
 		mq.QueueId = i
 
-		consumerOffset := b2c.BrokerController.ConsumerOffsetManager.queryOffset(group, topic, i)
+		consumerOffset := b2c.BrokerController.ConsumerOffsetManager.QueryOffset(group, topic, i)
 		if -1 == consumerOffset {
 			response.Code = protocol.SYSTEM_ERROR
 			response.Remark = fmt.Sprintf("THe consumer group <%s> not exist", group)

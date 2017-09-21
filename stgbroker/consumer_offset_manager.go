@@ -87,13 +87,15 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 	})
 }
 
-func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) int64 {
+// QueryOffset 获取group下topic queueId 的offset
+// Author 郜焱磊
+// Since 2017/9/10
+func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	value := com.Offsets.Get(key)
 	if nil != value {
 		offset := value[queueId]
 		if offset != 0 {
-
 			return offset
 		}
 	}
@@ -103,7 +105,7 @@ func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) 
 // queryOffset2 获取偏移量
 // Author rongzhihong
 // Since 2017/9/12
-func (com *ConsumerOffsetManager) queryOffset2(group, topic string) map[int]int64 {
+func (com *ConsumerOffsetManager) QueryOffsetByGreoupAndTopic(group, topic string) map[int]int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	offsetTable := com.Offsets.Get(key)
 	return offsetTable

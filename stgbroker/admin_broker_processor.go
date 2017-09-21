@@ -696,7 +696,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 					brokerOffset = 0
 				}
 
-				consumerOffset := abp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, topic, i)
+				consumerOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, topic, i)
 				if consumerOffset < 0 {
 					consumerOffset = 0
 				}
@@ -903,7 +903,7 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 		timeSpan.MaxTimeStamp = maxTime
 
 		var consumeTime int64
-		consumerOffset := abp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.Group, topic, i)
+		consumerOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.Group, topic, i)
 		if consumerOffset > 0 {
 			// TODO consumeTime = abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, consumerOffset)
 		} else {
@@ -1017,7 +1017,7 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 	correctionOffset := abp.BrokerController.ConsumerOffsetManager.QueryMinOffsetInAllGroup(
 		requestHeader.Topic, requestHeader.FilterGroups)
 
-	compareOffset := abp.BrokerController.ConsumerOffsetManager.queryOffset2(requestHeader.CompareGroup, requestHeader.Topic)
+	compareOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffsetByGreoupAndTopic(requestHeader.CompareGroup, requestHeader.Topic)
 
 	if compareOffset != nil && len(compareOffset) > 0 {
 		for queueId, v := range compareOffset {
