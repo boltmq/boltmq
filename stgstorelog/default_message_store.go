@@ -436,7 +436,7 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 					// 消息过滤
 					if self.MessageFilter.IsMessageMatched(subscriptionData, tagsCode) {
 						selectResult := self.CommitLog.getMessage(offsetPy, sizePy)
-						logger.Info("Message: %s", string(selectResult.MappedByteBuffer.Bytes()))
+
 						if selectResult != nil {
 							atomic.AddInt64(&self.StoreStatsService.getMessageTransferedMsgCount, 1)
 							getResult.addMessage(selectResult)

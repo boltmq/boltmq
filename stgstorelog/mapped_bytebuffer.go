@@ -44,6 +44,12 @@ func (m *MappedByteBuffer) Write(data []byte) (n int, err error) {
 	return len(data), nil
 }
 
+func (self *MappedByteBuffer) WriteInt16(i int16) (mappedByteBuffer *MappedByteBuffer) {
+	toBytes := byteutil.Int16ToBytes(i)
+	self.Write(toBytes)
+	return self
+}
+
 func (self *MappedByteBuffer) WriteInt32(i int32) (mappedByteBuffer *MappedByteBuffer) {
 	toBytes := byteutil.Int32ToBytes(i)
 	self.Write(toBytes)
@@ -64,6 +70,13 @@ func (m *MappedByteBuffer) Read(data []byte) (n int, err error) {
 	n = copy(data, m.MMapBuf[m.ReadPos:])
 	m.ReadPos += n
 	return
+}
+
+func (self *MappedByteBuffer) ReadInt16() (i int16) {
+	int16bytes := make([]byte, 2)
+	self.Read(int16bytes)
+	i = byteutil.BytesToInt16(int16bytes)
+	return i
 }
 
 func (self *MappedByteBuffer) ReadInt32() (i int32) {
