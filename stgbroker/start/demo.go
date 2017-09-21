@@ -3,6 +3,7 @@ package main
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/out"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 )
 
 func main() {
@@ -10,6 +11,5 @@ func main() {
 	topicManager := stgbroker.NewTopicConfigManager(brokerController)
 	topicManager.Load()
 	brokerOuterAPI := out.NewBrokerOuterAPI()
-	brokerOuterAPI.RegisterBroker("10.122.1.200:9876", "out", "10.122.2.28:10911",
-		"broker-1", "10.122.1.20:10912", 1, topicManager.TopicConfigSerializeWrapper, false, nil)
+	brokerOuterAPI.RegisterBroker("127.0.0.1:9876", "defaultCluster", "127.0.0.1:10911", "broker-mastrer1", "127.0.0.1:10912", 0, &body.TopicConfigSerializeWrapper{}, false, nil)
 }
