@@ -3,7 +3,6 @@ package stgstorelog
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"sync/atomic"
@@ -16,6 +15,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 
 	"sync"
+
+	"math"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
@@ -193,7 +194,7 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 		// TODO
 	}
 
-	pathSeparator := filepath.FromSlash(string(os.PathSeparator))
+	pathSeparator := GetPathSeparator()
 
 	if files != nil {
 		for _, fileTopic := range files {
@@ -671,13 +672,185 @@ func (self *DefaultMessageStore) SelectOneMessageByOffsetAndSize(commitLogOffset
 	return self.CommitLog.getMessage(commitLogOffset, msgSize)
 }
 
-func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
-	// TODO
+// GetOffsetInQueueByTime 根据消息时间获取某个队列中对应的offset
+// 1、如果指定时间（包含之前之后）有对应的消息，则获取距离此时间最近的offset（优先选择之前）
+// 2、如果指定时间无对应消息，则返回0
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) GetOffsetInQueueByTime(topic string, queueId int32, timestamp int64) int64 {
+	logic := self.findConsumeQueue(topic, queueId)
+	if logic != nil {
+		return logic.getOffsetInQueueByTime(timestamp)
+	}
+
+	return 0
 }
 
+// GetEarliestMessageTime 获取队列中最早的消息时间，如果找不到对应时间，则返回-1
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) GetEarliestMessageTime(topic string, queueId int32) int64 {
+	logicQueue := self.findConsumeQueue(topic, queueId)
+	if logicQueue != nil {
+		result := logicQueue.getIndexBuffer(logicQueue.minLogicOffset / CQStoreUnitSize)
+		defer result.MappedByteBuffer.unmap()
+		if result != nil {
+			phyOffset := result.MappedByteBuffer.ReadInt64()
+			size := result.MappedByteBuffer.ReadInt32()
+			storeTime := self.CommitLog.pickupStoretimestamp(phyOffset, size)
+			return storeTime
+		}
+	}
+	return -1
+}
+
+// GetRuntimeInfo 获取运行时统计数据
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) GetRuntimeInfo() map[string]string {
+	result := make(map[string]string)
+	// 检测物理文件磁盘空间
+	storePathPhysic := self.MessageStoreConfig.StorePathCommitLog
+	physicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
+	result[stgcommon.COMMIT_LOG_DISK_RATIO.String()] = strconv.FormatFloat(physicRatio, 'E', -1, 32)
+
+	// 检测逻辑文件磁盘空间
+	storePathLogic := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
+	logicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathLogic)
+	result[stgcommon.CONSUME_QUEUE_DISK_RATIO.String()] = strconv.FormatFloat(logicRatio, 'E', -1, 32)
+
+	// 延时进度
+	if self.ScheduleMessageService != nil {
+		self.ScheduleMessageService.buildRunningStats(result)
+	}
+
+	result[stgcommon.COMMIT_LOG_MIN_OFFSET.String()] = string(self.CommitLog.getMinOffset())
+	result[stgcommon.COMMIT_LOG_MAX_OFFSET.String()] = string(self.CommitLog.getMaxOffset())
+
+	return result
+}
+
+// GetMessageStoreTimeStamp 获取队列中存储时间，如果找不到对应时间，则返回-1
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) GetMessageStoreTimeStamp(topic string, queueId int32, offset int64) int64 {
+	logicQueue := self.findConsumeQueue(topic, queueId)
+	if logicQueue != nil {
+		result := logicQueue.getIndexBuffer(offset)
+		defer result.MappedByteBuffer.unmap()
+
+		if result != nil {
+			phyOffset := result.MappedByteBuffer.ReadInt64()
+			size := result.MappedByteBuffer.ReadInt32()
+			storeTime := self.CommitLog.pickupStoretimestamp(phyOffset, size)
+			return storeTime
+		}
+	}
+
+	return -1
+}
+
+// GetMessageStoreTimeStamp 清除失效的消费队列
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) CleanExpiredConsumerQueue() {
+	minCommitLogOffset := self.CommitLog.getMinOffset()
+	for topic, queueTable := range self.consumeTopicTable {
+		if topic != SCHEDULE_TOPIC {
+			for queueId, consumeQueue := range queueTable.consumeQueues {
+				maxCLOffsetInConsumeQueue := consumeQueue.getLastOffset()
+
+				// maxCLOffsetInConsumeQueue==-1有可能正好是索引文件刚好创建的那一时刻,此时不清除数据
+				if maxCLOffsetInConsumeQueue == -1 {
+					logger.Warnf("maybe ConsumeQueue was created just now. topic=%s queueId=%d maxPhysicOffset=%d minLogicOffset=%d.",
+						consumeQueue.topic, consumeQueue.queueId, consumeQueue.maxPhysicOffset, consumeQueue.minLogicOffset)
+				} else if maxCLOffsetInConsumeQueue < minCommitLogOffset {
+					logger.Infof("cleanExpiredConsumerQueue: %s %d consumer queue destroyed, minCommitLogOffset: %d maxCLOffsetInConsumeQueue: %d",
+						topic, queueId, minCommitLogOffset, maxCLOffsetInConsumeQueue)
+
+					self.CommitLog.removeQueurFromTopicQueueTable(consumeQueue.topic, consumeQueue.queueId)
+
+					consumeQueue.destroy()
+					delete(queueTable.consumeQueues, queueId)
+				}
+			}
+
+			if len(queueTable.consumeQueues) == 0 {
+				logger.Infof("cleanExpiredConsumerQueue: %s,topic destroyed", topic)
+				delete(self.consumeTopicTable, topic)
+			}
+		}
+	}
+}
+
+// UpdateHaMasterAddress 更新HaMaster地址
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
+	if self.HAService != nil {
+		self.HAService.updateMasterAddress(newAddr)
+	}
+}
+
+// SlaveFallBehindMuch Slave落后Master多少字节
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
 func (self *DefaultMessageStore) SlaveFallBehindMuch() int64 {
-	// TODO
+	if self.HAService != nil {
+		return self.CommitLog.getMaxOffset() - self.HAService.push2SlaveMaxOffset
+	}
+
 	return 0
+}
+
+// GetMessageIds 批量获取MessageId
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/21
+func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minOffset, maxOffset int64, storeHost string) map[string]int64 {
+	messageIds := make(map[string]int64)
+	if self.ShutdownFlag {
+		return messageIds
+	}
+
+	consumeQueue := self.findConsumeQueue(topic, queueId)
+	if consumeQueue != nil {
+		minOffsetting := math.Max(float64(minOffset), float64(consumeQueue.getMinOffsetInQueue()))
+		maxOffsetting := math.Max(float64(maxOffset), float64(consumeQueue.getMaxOffsetInQueue()))
+
+		if maxOffsetting == 0 {
+			return messageIds
+		}
+
+		nextOffset := int64(minOffsetting)
+		for {
+			if nextOffset >= int64(maxOffsetting) {
+				break
+			}
+
+			bufferConsumeQueue := consumeQueue.getIndexBuffer(nextOffset)
+			defer bufferConsumeQueue.MappedByteBuffer.unmap()
+
+			if bufferConsumeQueue != nil {
+				for i := 0; i < int(bufferConsumeQueue.Size); i += CQStoreUnitSize {
+					offsetPy := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
+					msgId, err := message.CreateMessageId(storeHost, offsetPy)
+					nextOffset++
+
+					if err != nil {
+						logger.Warn("message store get message ids create message id error:", err.Error())
+						continue
+					}
+
+					messageIds[msgId] = nextOffset
+					if nextOffset > maxOffset {
+						return messageIds
+					}
+				}
+			}
+		}
+	}
+
+	return messageIds
 }
 
 func (self *DefaultMessageStore) addScheduleTask() {

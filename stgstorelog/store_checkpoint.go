@@ -59,6 +59,7 @@ func NewStoreCheckpoint(scpPath string) (*StoreCheckpoint, error) {
 
 func (self *StoreCheckpoint) shutdown() {
 	self.flush()
+	self.mappedByteBuffer.unmap()
 }
 
 func (self *StoreCheckpoint) flush() {
