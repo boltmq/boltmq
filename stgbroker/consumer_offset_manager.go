@@ -59,20 +59,7 @@ func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
 
 func (com *ConsumerOffsetManager) Decode(jsonString []byte) {
 	if len(jsonString) > 0 {
-		fmt.Println(string(jsonString))
 		ffjson.Unmarshal(jsonString, com.Offsets)
-		fmt.Println(com.Offsets.size())
-		/*
-				for k, v := range cc.Offsets {
-					m := sync.NewMap()
-					for k1, v1 := range v {
-						m.Put(k1, v1)
-					}
-					com.Offsets.put(k, m)
-				}
-				com.OffsetTable.Put(k, m)
-			}
-		*/
 	}
 }
 
@@ -86,14 +73,14 @@ func (com *ConsumerOffsetManager) ConfigFilePath() string {
 // Since 2017/8/22
 func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 
-	com.Offsets.foreach(func(k string, v map[int]int64) {
+	com.Offsets.Foreach(func(k string, v map[int]int64) {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
 			topic := arrays[0]
 			group := arrays[1]
 			if nil == com.BrokerController.ConsumerManager.FindSubscriptionData(group, topic) &&
 				com.offsetBehindMuchThanData(topic, v) {
-				com.Offsets.remove(k)
+				com.Offsets.Remove(k)
 				logger.Warnf("remove topic offset, %s", topic)
 			}
 		}
@@ -102,7 +89,7 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 
 func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
-	value := com.Offsets.get(key)
+	value := com.Offsets.Get(key)
 	if nil != value {
 		offset := value[queueId]
 		if offset != 0 {
@@ -118,7 +105,7 @@ func (com *ConsumerOffsetManager) queryOffset(group, topic string, queueId int) 
 // Since 2017/9/12
 func (com *ConsumerOffsetManager) queryOffset2(group, topic string) map[int]int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
-	offsetTable := com.Offsets.get(key)
+	offsetTable := com.Offsets.Get(key)
 	return offsetTable
 }
 
@@ -128,11 +115,11 @@ func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int,
 }
 
 func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset int64) {
-	value := com.Offsets.get(key)
+	value := com.Offsets.Get(key)
 	if value == nil {
 		table := make(map[int]int64)
 		table[queueId] = offset
-		com.Offsets.put(key, table)
+		com.Offsets.Put(key, table)
 	} else {
 		value[queueId] = offset
 	}
@@ -211,9 +198,9 @@ func (com *ConsumerOffsetManager) WhichGroupByTopic(topic string) set.Set {
 // Author rongzhihong
 // Since 2017/9/18
 func (com *ConsumerOffsetManager) CloneOffset(srcGroup, destGroup, topic string) {
-	offsets := com.Offsets.get(topic + TOPIC_GROUP_SEPARATOR + srcGroup)
+	offsets := com.Offsets.Get(topic + TOPIC_GROUP_SEPARATOR + srcGroup)
 	if offsets != nil {
-		com.Offsets.put(topic+TOPIC_GROUP_SEPARATOR+destGroup, offsets)
+		com.Offsets.Put(topic+TOPIC_GROUP_SEPARATOR+destGroup, offsets)
 	}
 }
 
@@ -227,7 +214,7 @@ func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups s
 		for _, group := range strings.Split(filterGroups, ",") {
 			for groupName := range com.Offsets.Offsets {
 				if strings.EqualFold(group, strings.Split(groupName, TOPIC_GROUP_SEPARATOR)[1]) {
-					com.Offsets.remove(groupName)
+					com.Offsets.Remove(groupName)
 				}
 			}
 		}
@@ -236,7 +223,7 @@ func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups s
 	for topicGroup := range com.Offsets.Offsets {
 		topicGroupArr := strings.Split(topicGroup, TOPIC_GROUP_SEPARATOR)
 		if strings.EqualFold(topic, topicGroupArr[0]) {
-			offsetTable := com.Offsets.get(topicGroup)
+			offsetTable := com.Offsets.Get(topicGroup)
 			if offsetTable == nil {
 				continue
 			}
