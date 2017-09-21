@@ -20,5 +20,6 @@ func NewBrokerStatsData() *BrokerStatsData {
 	statsData.StatsMinute = new(BrokerStatsItem)
 	statsData.StatsHour = new(BrokerStatsItem)
 	statsData.StatsDay = new(BrokerStatsItem)
+	statsData.RemotingSerializable = new(protocol.RemotingSerializable)
 	return statsData
 }

@@ -10,8 +10,8 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
 type ClusterInfo struct {
-	BokerAddrTable   map[string]*route.BrokerData // brokerName[BrokerData]
-	ClusterAddrTable map[string]set.Set           // clusterName[set<brokerName>]
+	BokerAddrTable   map[string]*route.BrokerData `json:"bokerAddrTable"`   // brokerName[BrokerData]
+	ClusterAddrTable map[string]set.Set           `json:"clusterAddrTable"` // clusterName[set<brokerName>]
 	*protocol.RemotingSerializable
 }
 

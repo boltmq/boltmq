@@ -9,3 +9,10 @@ type QueryCorrectionOffsetBody struct {
 	CorrectionOffsets map[int]int64 `json:"correctionOffsets"`
 	*protocol.RemotingSerializable
 }
+
+func NewQueryCorrectionOffsetBody() *QueryCorrectionOffsetBody {
+	body := new(QueryCorrectionOffsetBody)
+	body.CorrectionOffsets = make(map[int]int64)
+	body.RemotingSerializable = new(protocol.RemotingSerializable)
+	return body
+}

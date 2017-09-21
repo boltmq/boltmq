@@ -10,7 +10,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
-	"regexp"
 	"sync"
 )
 
@@ -163,8 +162,7 @@ func (com *ConsumerOffsetManager) offsetBehindMuchThanData(topic string, offsetT
 	result := len(offsetTable) > 0
 
 	for key, offsetInPersist := range offsetTable {
-		// TODO minOffsetInStore := com.BrokerController.MessageStore.getMinOffsetInQuque(topic, key)
-		minOffsetInStore := int64(0)
+		minOffsetInStore := com.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(key))
 		fmt.Println(key)
 		if offsetInPersist > minOffsetInStore {
 			result = false
@@ -225,8 +223,7 @@ func (com *ConsumerOffsetManager) CloneOffset(srcGroup, destGroup, topic string)
 func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups string) map[int]int64 {
 	queueMinOffset := make(map[int]int64)
 
-	reg := regexp.MustCompile(`\S+?`)
-	if reg.FindString(filterGroups) != "" {
+	if !stgcommon.IsBlank(filterGroups) {
 		for _, group := range strings.Split(filterGroups, ",") {
 			for groupName := range com.Offsets.Offsets {
 				if strings.EqualFold(group, strings.Split(groupName, TOPIC_GROUP_SEPARATOR)[1]) {
@@ -244,8 +241,7 @@ func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups s
 				continue
 			}
 			for k, v := range offsetTable {
-				// TODO minOffset := com.BrokerController.MessageStore.getMinOffsetInQuque(topic, k)
-				minOffset := int64(0)
+				minOffset := com.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(k))
 				if v >= minOffset {
 					offset, ok := queueMinOffset[k]
 					if !ok {

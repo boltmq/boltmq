@@ -4,7 +4,7 @@ package header
 // Author rongzhihong
 // Since 2017/9/19
 type GetMinOffsetResponseHeader struct {
-	Offset int64
+	Offset int64 `json:"offset"`
 }
 
 func (header *GetMinOffsetResponseHeader) CheckFields() error {

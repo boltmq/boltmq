@@ -19,19 +19,19 @@ type QueueTimeSpan struct {
 // Author rongzhihong
 // Since 2017/9/19
 func (timespan *QueueTimeSpan) GetMinTimeStampStr() string {
-	return stgcommon.MillsTime2String(timespan.MinTimeStamp)
+	return stgcommon.MilliTime2String(timespan.MinTimeStamp)
 }
 
 // GetMaxTimeStampStr 终止时间
 // Author rongzhihong
 // Since 2017/9/19
 func (timespan *QueueTimeSpan) GetMaxTimeStampStr() string {
-	return stgcommon.MillsTime2String(timespan.MaxTimeStamp)
+	return stgcommon.MilliTime2String(timespan.MaxTimeStamp)
 }
 
 // GetConsumeTimeStampStr 消费时间
 // Author rongzhihong
 // Since 2017/9/19
 func (timespan *QueueTimeSpan) GetConsumeTimeStampStr() string {
-	return stgcommon.MillsTime2String(timespan.ConsumeTimeStamp)
+	return stgcommon.MilliTime2String(timespan.ConsumeTimeStamp)
 }

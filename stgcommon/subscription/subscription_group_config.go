@@ -47,6 +47,7 @@ func NewSubscriptionGroupConfig() *SubscriptionGroupConfig {
 		RetryQueueNums:         1,
 		RetryMaxTimes:          16,
 		BrokerId:               stgcommon.MASTER_ID,
+		RemotingSerializable:   new(protocol.RemotingSerializable),
 	}
 
 }

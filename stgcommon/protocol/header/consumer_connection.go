@@ -12,11 +12,22 @@ import (
 // Since 2017/9/19
 type ConsumerConnection struct {
 	ConnectionSet     set.Set                    `json:"connectionSet"`     // type: Connection
-	SubscriptionTable sync.Map                   `json:"subscriptionTable"` // key: String, val:SubscriptionData
+	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // key: String, val:SubscriptionData
 	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
 	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
 	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
 	*protocol.RemotingSerializable
+}
+
+// NewConsumerConnection 初始化
+// Author rongzhihong
+// Since 2017/9/19
+func NewConsumerConnection() *ConsumerConnection {
+	connect := new(ConsumerConnection)
+	connect.ConnectionSet = set.NewSet()
+	connect.SubscriptionTable = sync.NewMap()
+	connect.RemotingSerializable = new(protocol.RemotingSerializable)
+	return connect
 }
 
 // ComputeMinVersion 计算最小版本号

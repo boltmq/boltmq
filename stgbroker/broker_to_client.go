@@ -3,6 +3,7 @@ package stgbroker
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
@@ -14,6 +15,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"strconv"
+	"strings"
 )
 
 // Broker2Client Broker主动调用客户端接口
@@ -175,6 +177,79 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 // Since 2017/9/18
 func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) *protocol.RemotingCommand {
 	response := protocol.CreateDefaultResponseCommand(nil)
-	// TODO
+
+	requestHeader := &header.GetConsumerStatusRequestHeader{}
+	requestHeader.Topic = topic
+	requestHeader.Group = group
+
+	request := protocol.CreateRequestCommand(commonprotocol.GET_CONSUMER_STATUS_FROM_CLIENT, requestHeader)
+
+	consumerStatusTable := make(map[string]map[*message.MessageQueue]int64)
+
+	channelInfoTable := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group).ConnTable
+	if nil == channelInfoTable || channelInfoTable.Size() <= 0 {
+		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Remark = fmt.Sprintf("No Any Consumer online in the consumer group: [%s]", group)
+		return response
+	}
+
+	iterator := channelInfoTable.Iterator()
+	for iterator.HasNext() {
+		key, value, _ := iterator.Next()
+		channel, ok := key.(netm.Context)
+		if !ok {
+			logger.Warnf("The key=%s type is not netm.Context", key)
+			continue
+		}
+		channelInfo, ok := value.(*client.ChannelInfo)
+		if !ok {
+			logger.Warnf("The value=%s type is not ChannelInfo", value)
+			continue
+		}
+
+		version := channelInfo.Version
+		clientId := channelInfo.ClientId
+		if version < mqversion.V3_0_7_SNAPSHOT {
+			// 如果有一个客户端是不支持该功能的，则直接返回错误，需要应用方升级。
+			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Remark = fmt.Sprintf("the client does not support this feature. version=%s",
+				mqversion.GetVersionDesc(int(version)))
+			logger.Warnf("the client does not support this feature. version=%s",
+				mqversion.GetVersionDesc(int(version)))
+			return response
+
+		} else if stgcommon.IsBlank(originClientId) || strings.EqualFold(originClientId, clientId) {
+			// 不指定 originClientId 则对所有的 client 进行处理；若指定 originClientId 则只对当前
+			// originClientId 进行处理
+			response, err := b2c.BrokerController.RemotingServer.InvokeSync(channel, request, 5000)
+			if err != nil {
+				logger.Error(err)
+			}
+			switch response.Code {
+			case commonprotocol.SUCCESS:
+				if response.Body != nil && len(response.Body) > 0 {
+					statusBody := &body2.GetConsumerStatusBody{}
+					statusBody.Decode(response.Body)
+					consumerStatusTable[clientId] = statusBody.MessageQueueTable
+					logger.Infof(
+						"[get-consumer-status] get consumer status success. topic=%s, group=%s, channelRemoteAddr=%s",
+						topic, group, clientId)
+				}
+			}
+
+			// 若指定 originClientId 相应的 client 处理完成，则退出循环
+			if !stgcommon.IsBlank(originClientId) && strings.EqualFold(originClientId, clientId) {
+				break
+			}
+		}
+
+	}
+
+	resBody := &body2.GetConsumerStatusBody{}
+	resBody.ConsumerTable = consumerStatusTable
+	response.Body = resBody.Encode()
+
+	response.Code = commonprotocol.SUCCESS
+	response.Remark = ""
 	return response
 }

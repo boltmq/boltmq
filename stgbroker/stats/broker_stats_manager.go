@@ -3,6 +3,7 @@ package stats
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/stats"
+	"sync/atomic"
 )
 
 const (
@@ -116,14 +117,16 @@ func (bsm *BrokerStatsManager) IncGroupGetSize(group, topic string, incValue int
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerPutNums() {
-	bsm.statsTable["BROKER_PUT_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter += 1
+	bsm.statsTable["BROKER_PUT_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
+		atomic.AddInt64(&bsm.statsTable["BROKER_PUT_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter, 1)
 }
 
 // IncBrokerGetNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerGetNums(incValue int) {
-	bsm.statsTable["BROKER_GET_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter += int64(incValue)
+	bsm.statsTable["BROKER_GET_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
+		atomic.AddInt64(&bsm.statsTable["BROKER_GET_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter, int64(incValue))
 }
 
 // IncSendBackNums  增加数量
@@ -145,5 +148,5 @@ func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {
 	statsKey := fmt.Sprintf("%d@%s@%s", queueId, topic, group)
-	bsm.momentStatsItemSet.GetAndCreateStatsItem(statsKey).ValueCounter = fallBehind
+	bsm.momentStatsItemSet.GetAndCreateStatsItem(statsKey).ValueCounter = atomic.AddInt64(&fallBehind, 0)
 }

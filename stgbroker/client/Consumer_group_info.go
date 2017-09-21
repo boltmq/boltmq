@@ -16,7 +16,7 @@ import (
 type ConsumerGroupInfo struct {
 	GroupName           string
 	SubscriptionTable   *sync.Map // key:Topic, val:SubscriptionData
-	ConnTable           *sync.Map // key: Channel val: ClientChannelInfo
+	ConnTable           *sync.Map // key: Channel val: ChannelInfo
 	ConsumeType         heartbeat.ConsumeType
 	MessageModel        heartbeat.MessageModel
 	ConsumeFromWhere    heartbeat.ConsumeFromWhere
@@ -48,37 +48,40 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 	return nil
 }
 
-func (cg *ConsumerGroupInfo) UpdateChannel(infoNew netm.Context, consumeType heartbeat.ConsumeType,
+func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
-	// TODO; key - value不統一
+
 	updated := false
 	cg.ConsumeType = consumeType
 	cg.MessageModel = messageModel
 	cg.ConsumeFromWhere = consumeFromWhere
-	infoOld, err := cg.ConnTable.Get(infoNew.LocalAddr().String())
+	infoOld, err := cg.ConnTable.Get(infoNew.Context)
 	if infoOld == nil || err != nil {
-		prev, err := cg.ConnTable.Put(infoNew.LocalAddr().String(), infoNew)
+		prev, err := cg.ConnTable.Put(infoNew.Context, infoNew)
 		if prev == nil || err != nil {
 			logger.Infof("new consumer connected, group: %s %v %v channel: %s", cg.GroupName, consumeType,
-				messageModel, infoNew.LocalAddr().String())
+				messageModel, infoNew.Context.LocalAddr().String())
 			updated = true
 		}
 		infoOld = infoNew
 	} else {
-		if infoold, ok := infoOld.(netm.Context); ok {
-			if !strings.EqualFold(infoNew.LocalAddr().String(), infoold.LocalAddr().String()) {
+		if infoold, ok := infoOld.(*ChannelInfo); ok {
+			if !strings.EqualFold(infoNew.ClientId, infoold.ClientId) {
 				logger.Errorf(
 					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
-					cg.GroupName,                 //
-					infoold.LocalAddr().String(), //
-					infoNew.LocalAddr().String())
-				cg.ConnTable.Put(infoNew.LocalAddr().String(), infoNew)
+					cg.GroupName,                         //
+					infoold.Context.LocalAddr().String(), //
+					infoNew.Context.LocalAddr().String())
+				cg.ConnTable.Put(infoNew.Context, infoNew)
 			}
-
 		}
 	}
-	//cg.lastUpdateTimestamp = System.currentTimeMillis();
-	//infoOld.setLastUpdateTimestamp(this.lastUpdateTimestamp);
+
+	cg.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
+	if infoOld, ok := infoOld.(*ChannelInfo); ok {
+		infoOld.LastUpdateTimestamp = cg.lastUpdateTimestamp
+	}
+
 	return updated
 }
 

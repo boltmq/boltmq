@@ -2,6 +2,7 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"os"
 	"runtime"
 )
@@ -11,60 +12,61 @@ import (
 // Since 2017/8/8
 type BrokerConfig struct {
 	// mqHome
-	SmartGoHome string
+	SmartGoHome string `json:"SmartGoHome"`
 	// namsrv地址
-	NamesrvAddr string
+	NamesrvAddr string `json:"NamesrvAddr"`
 	// 本机ip地址
-	BrokerIP1 string
-	BrokerIP2 string
+	BrokerIP1 string `json:"BrokerIP1"`
+	BrokerIP2 string `json:"BrokerIP2"`
 	// 当前机器hostName
-	BrokerName string
+	BrokerName string `json:"BrokerName"`
 	// 集群名称
-	BrokerClusterName string
+	BrokerClusterName string `json:"BrokerClusterName"`
 	// mastId
-	BrokerId int64
+	BrokerId int64 `json:"BrokerId"`
 	// Broker权限
-	BrokerPermission int
+	BrokerPermission int `json:"BrokerPermission"`
 	// 默认topic队列数
-	DefaultTopicQueueNums int32
+	DefaultTopicQueueNums int32 `json:"DefaultTopicQueueNums"`
 	// 自动创建Topic功能是否开启（线上建议关闭）
-	AutoCreateTopicEnable bool
+	AutoCreateTopicEnable bool `json:"AutoCreateTopicEnable"`
 	// 自动创建以集群名字命名的Topic功能是否开启
-	ClusterTopicEnable bool
+	ClusterTopicEnable bool `json:"ClusterTopicEnable"`
 	// 自动创建以服务器名字命名的Topic功能是否开启
-	BrokerTopicEnable bool
+	BrokerTopicEnable bool `json:"BrokerTopicEnable"`
 	// 自动创建订阅组功能是否开启（线上建议关闭）
-	AutoCreateSubscriptionGroup bool
+	AutoCreateSubscriptionGroup bool `json:"AutoCreateSubscriptionGroup"`
 	// SendMessageProcessor处理线程数
-	SendMessageThreadPoolNums int
+	SendMessageThreadPoolNums int `json:"SendMessageThreadPoolNums"`
 	// PullMessageProcessor处理线程数
-	PullMessageThreadPoolNums int
+	PullMessageThreadPoolNums int `json:"PullMessageThreadPoolNums"`
 	// AdminBrokerProcessor处理线程数
-	AdminBrokerThreadPoolNums int
+	AdminBrokerThreadPoolNums int `json:"AdminBrokerThreadPoolNums"`
 	// ClientManageProcessor处理线程数
-	ClientManageThreadPoolNums int
+	ClientManageThreadPoolNums int `json:"ClientManageThreadPoolNums"`
 	// 刷新Consumer offest定时间隔
-	FlushConsumerOffsetInterval int
+	FlushConsumerOffsetInterval int `json:"FlushConsumerOffsetInterval"`
 	// 此值cloudmq没有用到
-	FlushConsumerOffsetHistoryInterval int
+	FlushConsumerOffsetHistoryInterval int `json:"FlushConsumerOffsetHistoryInterval"`
 	// 是否拒绝接收事务消息
-	RejectTransactionMessage bool
+	RejectTransactionMessage bool `json:"RejectTransactionMessage"`
 	// 是否从地址服务器寻找Name Server地址，正式发布后，默认值为false
-	FetchNamesrvAddrByAddressServer bool
+	FetchNamesrvAddrByAddressServer bool `json:"FetchNamesrvAddrByAddressServer"`
 	// 发送消息对应的线程池阻塞队列size
-	SendThreadPoolQueueCapacity int
+	SendThreadPoolQueueCapacity int `json:"SendThreadPoolQueueCapacity"`
 	// 订阅消息对应的线程池阻塞队列size
-	PullThreadPoolQueueCapacity int
+	PullThreadPoolQueueCapacity int `json:"PullThreadPoolQueueCapacity"`
 	// 过滤服务器数量
-	FilterServerNums int32
+	FilterServerNums int32 `json:"FilterServerNums"`
 	// Consumer订阅消息时，Broker是否开启长轮询
-	LongPollingEnable bool
+	LongPollingEnable bool `json:"LongPollingEnable"`
 	// 如果是短轮询，服务器挂起时间
-	ShortPollingTimeMills int
+	ShortPollingTimeMills int `json:"ShortPollingTimeMills"`
 	// notify consumerId changed 开关
-	NotifyConsumerIdsChangedEnable bool
+	NotifyConsumerIdsChangedEnable bool `json:"NotifyConsumerIdsChangedEnable"`
 	// slave 是否需要纠正位点
-	OffsetCheckInSlave bool
+	OffsetCheckInSlave             bool `json:"OffsetCheckInSlave"`
+	*protocol.RemotingSerializable `json:"-"`
 }
 
 // NewBrokerConfig 初始化BrokerConfig
@@ -100,6 +102,7 @@ func NewBrokerConfig() *BrokerConfig {
 		ShortPollingTimeMills:              1000,
 		NotifyConsumerIdsChangedEnable:     true,
 		OffsetCheckInSlave:                 true,
+		RemotingSerializable:               new(protocol.RemotingSerializable),
 	}
 }
 

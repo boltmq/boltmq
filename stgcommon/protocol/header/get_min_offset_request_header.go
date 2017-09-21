@@ -4,8 +4,8 @@ package header
 // Author rongzhihong
 // Since 2017/9/19
 type GetMinOffsetRequestHeader struct {
-	Topic   string
-	QueueId int32
+	Topic   string `json:"topic"`
+	QueueId int32  `json:"queueId"`
 }
 
 func (header *GetMinOffsetRequestHeader) CheckFields() error {

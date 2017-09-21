@@ -10,7 +10,15 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type SubscriptionGroupWrapper struct {
-	SubscriptionGroupTable *sync.Map
-	DataVersion            stgcommon.DataVersion
+	SubscriptionGroupTable *sync.Map             `json:"subscriptionGroupTable"`
+	DataVersion            stgcommon.DataVersion `json:"dataVersion"`
 	*protocol.RemotingSerializable
+}
+
+func NewSubscriptionGroupWrapper() *SubscriptionGroupWrapper {
+	wrapper := new(SubscriptionGroupWrapper)
+	wrapper.SubscriptionGroupTable = sync.NewMap()
+	wrapper.DataVersion = *stgcommon.NewDataVersion()
+	wrapper.RemotingSerializable = new(protocol.RemotingSerializable)
+	return wrapper
 }

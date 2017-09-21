@@ -85,8 +85,7 @@ func (serv *PullRequestHoldService) checkHoldRequest() {
 				if err != nil {
 					logger.Errorf("queueId=%s: string to int fail.", kArray[1])
 				}
-				// TODO long offset =  this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId);
-				offset := int64(0)
+				offset := serv.brokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(queueId))
 				serv.notifyMessageArriving(topic, int32(queueId), offset)
 			}
 		}
@@ -121,8 +120,7 @@ func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId 
 				continue
 			} else {
 				// 尝试取最新Offset
-				// TODO newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQuque(topic, queueId)
-				newestOffset := int64(1)
+				newestOffset := serv.brokerController.MessageStore.GetMaxOffsetInQueue(topic, queueId)
 				if newestOffset > pullRequest.PullFromThisOffset {
 					serv.brokerController.PullMessageProcessor.ExecuteRequestWhenWakeup(pullRequest.Context, pullRequest.RequestCommand)
 					continue

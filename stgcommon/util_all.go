@@ -3,14 +3,16 @@ package stgcommon
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
 )
 
 const (
-	WINDOWS   = "windows" // windows operating system
-	MAX_VALUE = 0x7fffffffffffffff
+	WINDOWS    = "windows" // windows operating system
+	MAX_VALUE  = 0x7fffffffffffffff
+	TIMEFORMAT = "2006-01-02 15:04:05"
 )
 
 // ComputNextMorningTimeMillis 下一天（时、分、秒、毫秒置为0）
@@ -50,7 +52,7 @@ func ComputNextHourTimeMillis() int64 {
 	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(),
 		currentTime.Hour()+1, 0, 0, 0, currentTime.Location())
 
-	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
+	nextMorningTimeMillis := nextMorning.UnixNano() / int64(time.Millisecond)
 
 	return nextMorningTimeMillis
 }
@@ -110,12 +112,31 @@ func IsWindowsOS() bool {
 	return strings.EqualFold(runtime.GOOS, WINDOWS)
 }
 
-const FORMAT = "2006-01-02 15:04:05"
-
 // MillsTime2String 将毫秒时间转为字符时间
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
 // Since: 2017/9/19
-func MillsTime2String(millstime int64) string {
-	// TODO
-	return ""
+func MilliTime2String(millisecond int64) string {
+	secondTime := millisecond / 1000
+	return time.Unix(secondTime, 0).Format(TIMEFORMAT)
+}
+
+var blankReg = regexp.MustCompile(`\S+?`)
+
+// IsBlank 是否为空:false:不为空, true:为空
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func IsBlank(content string) bool {
+	if blankReg.FindString(content) != "" {
+		return false
+	}
+	return true
+}
+
+var numberReg = regexp.MustCompile(`^[0-9]+?$`)
+
+// IsNumber 是否是数字:true:是, false:否
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func IsNumber(content string) bool {
+	return numberReg.MatchString(content)
 }

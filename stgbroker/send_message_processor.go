@@ -129,8 +129,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 
 	// 查询消息，这里如果堆积消息过多，会访问磁盘
 	// 另外如果频繁调用，是否会引起gc问题，需要关注
-	// TODO  msgExt :=smp.BrokerController.getMessageStore().lookMessageByOffset(requestHeader.getOffset());
-	msgExt := new(message.MessageExt)
+	msgExt := smp.BrokerController.MessageStore.LookMessageByOffset(requestHeader.Offset)
 	if nil == msgExt {
 		response.Code = commonprotocol.SYSTEM_ERROR
 		response.Remark = "look message by offset failed, " + string(requestHeader.Offset)
