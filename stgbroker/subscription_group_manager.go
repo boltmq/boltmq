@@ -15,25 +15,25 @@ import (
 // Since 2017/8/9
 type SubscriptionGroupManager struct {
 	BrokerController *BrokerController
-
 	SubscriptionGroupTable *subscription.SubscriptionGroupTable
-	DataVersion            stgcommon.DataVersion `json:"dataVersion"`
-
-	configManagerExt *ConfigManagerExt
+	ConfigManagerExt *ConfigManagerExt
 }
 
-// NewSubscriptionGroupManager 初始化SubscriptionGroupManager
+// NewSubscriptionGroupManager 创建SubscriptionGroupManager
 // Author gaoyanlei
 // Since 2017/8/9
 func NewSubscriptionGroupManager(brokerController *BrokerController) *SubscriptionGroupManager {
 	var subscriptionGroupManager = new(SubscriptionGroupManager)
 	subscriptionGroupManager.SubscriptionGroupTable = subscription.NewSubscriptionGroupTable()
 	subscriptionGroupManager.BrokerController = brokerController
-	subscriptionGroupManager.configManagerExt = NewConfigManagerExt(subscriptionGroupManager)
+	subscriptionGroupManager.ConfigManagerExt = NewConfigManagerExt(subscriptionGroupManager)
 	subscriptionGroupManager.init()
 	return subscriptionGroupManager
 }
 
+// init 初始化SubscriptionGroupManager
+// Author gaoyanlei
+// Since 2017/8/9
 func (subscriptionGroupManager *SubscriptionGroupManager) init() {
 
 	{
@@ -65,8 +65,8 @@ func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *
 			subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
 			subscriptionGroupConfig.GroupName = group
 			sgm.SubscriptionGroupTable.Put(group, subscriptionGroupConfig)
-			sgm.DataVersion.NextVersion()
-			sgm.configManagerExt.Persist()
+			sgm.SubscriptionGroupTable.DataVersion.NextVersion()
+			sgm.ConfigManagerExt.Persist()
 			return subscriptionGroupConfig
 		}
 	}
@@ -75,7 +75,7 @@ func (sgm *SubscriptionGroupManager) findSubscriptionGroupConfig(group string) *
 
 func (sgm *SubscriptionGroupManager) Load() bool {
 
-	return sgm.configManagerExt.Load()
+	return sgm.ConfigManagerExt.Load()
 }
 
 func (sgm *SubscriptionGroupManager) Encode(prettyFormat bool) string {
@@ -109,9 +109,9 @@ func (sgm *SubscriptionGroupManager) UpdateSubscriptionGroupConfig(config *subsc
 		logger.Infof("create new subscription group:%v", config)
 	}
 
-	sgm.DataVersion.NextVersion()
+	sgm.SubscriptionGroupTable.DataVersion.NextVersion()
 
-	sgm.configManagerExt.Persist()
+	sgm.ConfigManagerExt.Persist()
 }
 
 // deleteSubscriptionGroupConfig 删除某个订阅组的配置
@@ -121,8 +121,8 @@ func (sgm *SubscriptionGroupManager) deleteSubscriptionGroupConfig(groupName str
 	old := sgm.SubscriptionGroupTable.Remove(groupName)
 	if old != nil {
 		logger.Infof("delete subscription group OK, subscription group: %v", old)
-		sgm.DataVersion.NextVersion()
-		sgm.configManagerExt.Persist()
+		sgm.SubscriptionGroupTable.DataVersion.NextVersion()
+		sgm.ConfigManagerExt.Persist()
 	} else {
 		logger.Warnf("delete subscription group failed, subscription group: %v not exist", old)
 	}

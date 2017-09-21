@@ -87,13 +87,13 @@ func (slave *SlaveSynchronize) syncSubscriptionGroupConfig() {
 	if "" != (masterAddrBak) {
 		subscriptionWrapper := slave.BrokerController.BrokerOuterAPI.GetAllSubscriptionGroupConfig(masterAddrBak)
 
-		if slave.BrokerController.SubscriptionGroupManager.DataVersion != subscriptionWrapper.DataVersion {
+		if slave.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion != subscriptionWrapper.DataVersion {
 			subscriptionGroupManager := slave.BrokerController.SubscriptionGroupManager
-			subscriptionGroupManager.DataVersion.AssignNewOne(
+			subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(
 				stgcommon.DataVersion{Timestatmp: subscriptionWrapper.DataVersion.Timestatmp, Counter: subscriptionWrapper.DataVersion.Counter})
 			subscriptionGroupManager.SubscriptionGroupTable.Clear()
 			subscriptionGroupManager.SubscriptionGroupTable.PutAll(subscriptionWrapper.SubscriptionGroupTable)
-			subscriptionGroupManager.configManagerExt.Persist()
+			subscriptionGroupManager.ConfigManagerExt.Persist()
 
 			logger.Infof("update slave Subscription Group from master, %s", masterAddrBak)
 		}
