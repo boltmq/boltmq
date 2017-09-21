@@ -1,14 +1,7 @@
 package stgstorelog
 
 import (
-	"bytes"
 	"math"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
@@ -75,46 +68,9 @@ type MessageStoreConfig struct {
 	*protocol.RemotingSerializable
 }
 
-func GetHome() string {
-	if runtime.GOOS == "windows" {
-		return GetWindowsHome()
-	}
-
-	return GetUnixHome()
-}
-
-func GetWindowsHome() string {
-	drive := os.Getenv("HOMEDRIVE")
-	path := os.Getenv("HOMEPATH")
-	home := drive + path
-
-	if drive == "" || path == "" {
-		home = os.Getenv("USERPROFILE")
-	}
-
-	return home
-}
-
-func GetUnixHome() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-
-	var stdout bytes.Buffer
-	cmd := exec.Command("sh", "-c", "eval echo ~$USER")
-	cmd.Stdout = &stdout
-	if err := cmd.Run(); err != nil {
-		return ""
-	}
-
-	result := strings.TrimSpace(stdout.String())
-
-	return result
-}
-
 func NewMessageStoreConfig() *MessageStoreConfig {
 	home := GetHome()
-	pathSeparator := filepath.FromSlash(string(os.PathSeparator))
+	pathSeparator := GetPathSeparator()
 
 	storeRootDir := home + pathSeparator + "store"
 

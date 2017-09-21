@@ -4,11 +4,13 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
+	"container/list"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"container/list"
-	"bytes"
+	"fmt"
 )
 
 const (
@@ -219,6 +221,41 @@ func (self *CommitLog) recoverNormally() {
 		self.MapedFileQueue.truncateDirtyFiles(processOffset)
 
 	}
+}
+
+func (self *CommitLog) pickupStoretimestamp(offset int64, size int32) int64 {
+	if offset > self.getMinOffset() {
+		result := self.getMessage(offset, size)
+		if result != nil {
+			result.MappedByteBuffer.ReadPos = message.MessageStoreTimestampPostion
+			storeTimestamp := result.MappedByteBuffer.ReadInt64()
+			result.MappedByteBuffer.unmap()
+			return storeTimestamp
+		}
+	}
+
+	return -1
+}
+
+func (self *CommitLog) getMinOffset() int64 {
+	mapedFile := self.MapedFileQueue.getFirstMapedFileOnLock()
+	if mapedFile != nil {
+		// TODO mapedFile.isAvailable()
+		return mapedFile.fileFromOffset
+	}
+
+	return -1
+}
+
+func (self *CommitLog) getMaxOffset() int64 {
+	return self.MapedFileQueue.getMaxOffset()
+}
+
+func (self *CommitLog) removeQueurFromTopicQueueTable(topic string, queueId int32) {
+	self.mutex.Lock()
+	self.mutex.Unlock()
+	key := fmt.Sprintf("%s-%d", topic, queueId)
+	delete(self.TopicQueueTable, key)
 }
 
 func (self *CommitLog) checkMessageAndReturnSize(byteBuffer *bytes.Buffer, checkCRC bool, readBody bool) *DispatchRequest {

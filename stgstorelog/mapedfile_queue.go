@@ -401,6 +401,20 @@ func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {
 	return result
 }
 
+func (self *MapedFileQueue) getLastMapedFile2() *MapedFile {
+	if self.mapedFiles.Len() == 0 {
+		return nil
+	}
+
+	lastElement := self.mapedFiles.Back()
+	result, ok := lastElement.Value.(*MapedFile)
+	if !ok {
+		logger.Info("mapedfile queue get last maped file type conversion error")
+	}
+
+	return result
+}
+
 func (self *MapedFileQueue) getLastAndLastMapedFile() *MapedFile {
 	if self.mapedFiles.Len() == 0 {
 		return nil
@@ -431,5 +445,30 @@ func (self *MapedFileQueue) shutdown(intervalForcibly int64) {
 
 // destroy 销毁队列，队列数据被删除，此函数有可能不成功
 func (self *MapedFileQueue) destroy() {
+	self.rwLock.Lock()
+	self.rwLock.Unlock()
 
+	for element := self.mapedFiles.Front(); element != nil; element = element.Next() {
+		mapedFile, ok := element.Value.(*MapedFile)
+		if !ok {
+			logger.Warnf("maped file queue destroy type conversion error")
+			continue
+		}
+		mapedFile.destroy()
+	}
+
+	self.mapedFiles.Init()
+	self.committedWhere = 0
+
+	// delete parent director
+	exist, err := PathExists(self.storePath)
+	if err != nil {
+		logger.Warn("maped file queue destroy check store path is exists, error:", err.Error())
+	}
+
+	if exist {
+		if storeFile, _ := os.Stat(self.storePath); storeFile.IsDir() {
+			os.RemoveAll(self.storePath)
+		}
+	}
 }
