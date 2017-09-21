@@ -32,3 +32,11 @@ func TestQueryOffsetByGreoupAndTopic(t *testing.T) {
 	consumerOffsetManager.Load()
 	fmt.Println(consumerOffsetManager.QueryOffsetByGreoupAndTopic("SimpleConsumerGroupIdQB-test","TopicTestMQ"))
 }
+
+func TestCommitOffset(t *testing.T) {
+	brokerController := stgbroker.CreateBrokerController()
+	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
+	consumerOffsetManager.Load()
+	consumerOffsetManager.CommitOffset("SimpleConsumerGroupIdQB-test","TopicTestMQ",3,4)
+	consumerOffsetManager.Persist()
+}

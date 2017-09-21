@@ -88,7 +88,7 @@ func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 }
 
 // QueryOffset 获取group下topic queueId 的offset
-// Author 郜焱磊
+// Author gaoyanlei
 // Since 2017/9/10
 func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
@@ -102,7 +102,7 @@ func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) 
 	return -1
 }
 
-// queryOffset2 获取偏移量
+// QueryOffsetByGreoupAndTopic 获取group与topuic所有队列offset
 // Author rongzhihong
 // Since 2017/9/12
 func (com *ConsumerOffsetManager) QueryOffsetByGreoupAndTopic(group, topic string) map[int]int64 {
@@ -111,6 +111,9 @@ func (com *ConsumerOffsetManager) QueryOffsetByGreoupAndTopic(group, topic strin
 	return offsetTable
 }
 
+// CommitOffset 提交offset
+// Author gaoyanlei
+// Since 2017/9/10
 func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int, offset int64) {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	com.commitOffset(key, queueId, offset)
@@ -130,19 +133,19 @@ func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset i
 // persist 将内存数据刷入文件中
 // Author rongzhihong
 // Since 2017/9/12
-func (com *ConsumerOffsetManager) persist() {
-	defer utils.RecoveredFn()
-
-	jsonString := com.Encode(true)
-	if jsonString != "" {
-		fileName := com.ConfigFilePath()
-
-		com.persistLock.RLock()
-		defer com.persistLock.Unlock()
-
-		stgcommon.String2File([]byte(jsonString), fileName)
-	}
-}
+//func (com *ConsumerOffsetManager) persist() {
+//	defer utils.RecoveredFn()
+//
+//	jsonString := com.Encode(true)
+//	if jsonString != "" {
+//		fileName := com.ConfigFilePath()
+//
+//		com.persistLock.RLock()
+//		defer com.persistLock.Unlock()
+//
+//		stgcommon.String2File([]byte(jsonString), fileName)
+//	}
+//}
 
 // offsetBehindMuchThanData 检查偏移量与数据是否相差很大
 // Author rongzhihong
@@ -254,3 +257,8 @@ func min(a, b int64) int64 {
 	}
 	return a
 }
+
+func (com *ConsumerOffsetManager) Persist() {
+	com.configManagerExt.Persist()
+}
+

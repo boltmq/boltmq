@@ -214,7 +214,7 @@ func (bc *BrokerController) Shutdown() {
 		bc.BrokerOuterAPI.Shutdown()
 	}
 
-	bc.ConsumerOffsetManager.persist()
+	bc.ConsumerOffsetManager.configManagerExt.Persist()
 
 	if bc.FilterServerManager != nil {
 		bc.FilterServerManager.Shutdown()
