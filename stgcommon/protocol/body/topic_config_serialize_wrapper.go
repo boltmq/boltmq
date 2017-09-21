@@ -9,14 +9,15 @@ import (
 // @author gaoyanlei
 // @since 2017/8/11
 type TopicConfigSerializeWrapper struct {
-	TopicConfigTable *TopicConfigTable      `json:"topiConfigTable"`
+	TopicConfigTable *TopicConfigTable      `json:"topicConfigTable"`
 	DataVersion      *stgcommon.DataVersion `json:"dataVersion"`
 	*protocol.RemotingSerializable
 }
 
 func NewTopicConfigSerializeWrapper() *TopicConfigSerializeWrapper {
 	return &TopicConfigSerializeWrapper{
-		TopicConfigTable: NewTopicConfigTable(),
-		DataVersion:      stgcommon.NewDataVersion(),
+		TopicConfigTable:     NewTopicConfigTable(),
+		DataVersion:          stgcommon.NewDataVersion(),
+		RemotingSerializable: new(protocol.RemotingSerializable),
 	}
 }

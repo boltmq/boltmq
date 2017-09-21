@@ -14,6 +14,16 @@ type ConsumeStats struct {
 	*protocol.RemotingSerializable
 }
 
+// NewConsumeStats 初始化
+// Author rongzhihong
+// Since 2017/9/19
+func NewConsumeStats() *ConsumeStats {
+	consumeStats := new(ConsumeStats)
+	consumeStats.OffsetTable = make(map[*message.MessageQueue]*OffsetWrapper)
+	consumeStats.RemotingSerializable = new(protocol.RemotingSerializable)
+	return consumeStats
+}
+
 // ComputeTotalDiff 偏移量差值
 // Author rongzhihong
 // Since 2017/9/19

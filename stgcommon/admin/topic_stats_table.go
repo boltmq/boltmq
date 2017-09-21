@@ -18,5 +18,7 @@ type TopicStatsTable struct {
 // Since 2017/9/19
 func NewTopicStatsTable() *TopicStatsTable {
 	topic := new(TopicStatsTable)
+	topic.OffsetTable = make(map[*message.MessageQueue]*TopicOffset)
+	topic.RemotingSerializable = new(protocol.RemotingSerializable)
 	return topic
 }

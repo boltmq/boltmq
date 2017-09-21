@@ -3,7 +3,6 @@ package stgbroker
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 )
 
 // DefaultTransactionCheckExecuter 存储层回调此接口，用来主动回查Producer的事务状态
@@ -35,8 +34,7 @@ func (trans *DefaultTransactionCheckExecuter) GotoCheck(producerGroupHashCode in
 	}
 
 	// 第二步、查询消息
-	// TODO selectMapedBufferResult := trans.brokerController.MessageStore.selectOneMessageByOffset(commitLogOffset, msgSize)
-	selectMapedBufferResult := new(stgstorelog.SelectMapedBufferResult)
+	selectMapedBufferResult := trans.brokerController.MessageStore.SelectOneMessageByOffsetAndSize(commitLogOffset, int32(msgSize))
 	if selectMapedBufferResult == nil {
 		logger.Warnf("check a producer transaction state, but not find message by commitLogOffset: %d, msgSize: %d",
 			commitLogOffset, msgSize)

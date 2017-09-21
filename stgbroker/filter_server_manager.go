@@ -83,7 +83,7 @@ func (fsm *FilterServerManager) createFilterServer() {
 func (fsm *FilterServerManager) buildStartCommand() string {
 	var config = ""
 
-	if fsm.brokerController.ConfigFile != nil {
+	if fsm.brokerController.ConfigFile != "" {
 		config = fmt.Sprintf("-c %s", fsm.brokerController.ConfigFile)
 	}
 

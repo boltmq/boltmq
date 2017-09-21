@@ -12,3 +12,10 @@ type LockBatchResponseBody struct {
 	LockOKMQSet set.Set `json:"lockOKMQSet"`
 	*protocol.RemotingSerializable
 }
+
+func NewLockBatchResponseBody() *LockBatchResponseBody {
+	body := new(LockBatchResponseBody)
+	body.LockOKMQSet = set.NewSet()
+	body.RemotingSerializable = new(protocol.RemotingSerializable)
+	return body
+}

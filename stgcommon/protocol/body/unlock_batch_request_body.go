@@ -14,3 +14,10 @@ type UnlockBatchRequestBody struct {
 	MqSet         set.Set `json:"mqSet"`
 	*protocol.RemotingSerializable
 }
+
+func NewUnlockBatchRequestBody() *UnlockBatchRequestBody {
+	body := new(UnlockBatchRequestBody)
+	body.MqSet = set.NewSet()
+	body.RemotingSerializable = new(protocol.RemotingSerializable)
+	return body
+}

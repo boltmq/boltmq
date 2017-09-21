@@ -18,7 +18,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
-	"regexp"
 	"strings"
 )
 
@@ -183,13 +182,16 @@ func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request 
 }
 
 func (abp *AdminBrokerProcessor) getMaxOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
 	responseHeader := &header.GetMaxOffsetResponseHeader{}
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	var offset int64
-	// TODO
-	//abp.BrokerController.MessageStore().getMaxOffsetInQuque(requestHeader.getTopic(),
-	//requestHeader.getQueueId());
+	requestHeader := header.NewGetMaxOffsetRequestHeader()
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	offset := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(requestHeader.Topic, int32(requestHeader.QueueId))
 
 	responseHeader.Offset = offset
 	response.Code = code.SUCCESS
@@ -240,20 +242,13 @@ func (adp *AdminBrokerProcessor) updateBrokerConfig(ctx netm.Context, request *p
 
 	content := request.Body
 	if content != nil {
-		bodyStr := string(content)
-		// TODO properties = MixAll.string2Properties(bodyStr)
-		var properties interface{}
-		fmt.Println(bodyStr)
-
-		if properties != nil {
-			logger.Infof("updateBrokerConfig, new config: %s, client: ", properties, ctx.RemoteAddr().String())
-			adp.BrokerController.UpdateAllConfig(properties)
-		} else {
-			logger.Error("string2Properties error")
-			response.Code = code.SYSTEM_ERROR
-			response.Remark = "string2Properties error"
-			return response, nil
-		}
+		logger.Infof("updateBrokerConfig, new config: %s, client: %s", string(content), ctx.RemoteAddr().String())
+		adp.BrokerController.UpdateAllConfig(content)
+	} else {
+		logger.Error("string2Properties error")
+		response.Code = code.SYSTEM_ERROR
+		response.Remark = "string2Properties error"
+		return response, nil
 	}
 
 	response.Code = code.SUCCESS
@@ -314,8 +309,7 @@ func (abp *AdminBrokerProcessor) getMinOffset(ctx netm.Context, request *protoco
 		logger.Error(err)
 	}
 
-	// TODO offset := abp.BrokerController.MessageStore.getMinOffsetInQuque(requestHeader.Topic, requestHeader.QueueId)
-	offset := int64(0)
+	offset := abp.BrokerController.MessageStore.GetMinOffsetInQueue(requestHeader.Topic, requestHeader.QueueId)
 	responseHeader.Offset = offset
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -376,9 +370,8 @@ func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol
 		logger.Error(err)
 	}
 
-	// TODO lockOKMQSet := abp.BrokerController.RebalanceLockManager.TryLockBatch(requestBody.ConsumerGroup,
-	//	requestBody.MqSet, requestBody.ClientId)
-	lockOKMQSet := set.NewSet()
+	lockOKMQSet := abp.BrokerController.RebalanceLockManager.TryLockBatch(requestBody.ConsumerGroup,
+		requestBody.MqSet, requestBody.ClientId)
 
 	responseBody := &body.LockBatchResponseBody{}
 	responseBody.LockOKMQSet = lockOKMQSet
@@ -395,12 +388,13 @@ func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol
 func (abp *AdminBrokerProcessor) unlockBatchMQ(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(nil)
 
-	requestBody := &body.UnlockBatchRequestBody{}
+	requestBody := body.NewUnlockBatchRequestBody()
 	err := requestBody.Decode(request.Body)
 	if err != nil {
 		logger.Error(err)
 	}
-	// TODO abp.BrokerController.RebalanceLockManager.UnlockBatch(requestBody.ConsumerGroup, requestBody.MqSet, requestBody.ClientId)
+
+	abp.BrokerController.RebalanceLockManager.UnlockBatch(requestBody.ConsumerGroup, requestBody.MqSet, requestBody.ClientId)
 
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -429,9 +423,6 @@ func (abp *AdminBrokerProcessor) prepareRuntimeInfo() map[string]string {
 		fmt.Sprintf("%d", abp.BrokerController.brokerStats.MsgGetTotalTodayMorning)
 	runtimeInfo["msgGetTotalTodayNow"] =
 		fmt.Sprintf("%d", abp.BrokerController.brokerStats.GetMsgGetTotalTodayNow())
-
-	runtimeInfo["sendThreadPoolQueueSize"] =
-		fmt.Sprintf("%d", abp.BrokerController.SendThreadPoolQueue.Len())
 
 	runtimeInfo["sendThreadPoolQueueCapacity"] =
 		fmt.Sprintf("%d", abp.BrokerController.BrokerConfig.SendThreadPoolQueueCapacity)
@@ -533,14 +524,12 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 		mq.QueueId = i
 
 		topicOffset := &admin.TopicOffset{}
-		// TODO min := abp.BrokerController.MessageStore.getMinOffsetInQuque(topic, i)
-		min := int64(0)
+		min := abp.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(i))
 		if min < 0 {
 			min = 0
 		}
 
-		// TODO max := abp.BrokerController.MessageStore.getMaxOffsetInQuque(topic, i)
-		max := int64(0)
+		max := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(i))
 		if max < 0 {
 			max = 0
 		}
@@ -664,8 +653,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 	consumeStats := &admin.ConsumeStats{}
 
 	topics := set.NewSet()
-	reg := regexp.MustCompile(`\S+?`)
-	if reg.FindString(requestHeader.ConsumerGroup) != "" {
+	if !stgcommon.IsBlank(requestHeader.ConsumerGroup) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.ConsumerGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -703,8 +691,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 				mq.QueueId = i
 
 				offsetWrapper := &admin.OffsetWrapper{}
-				// TODO brokerOffset := abp.BrokerController.MessageStore.getMaxOffsetInQuque(topic, i)
-				brokerOffset := int64(1)
+				brokerOffset := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(i))
 				if brokerOffset < 0 {
 					brokerOffset = 0
 				}
@@ -909,8 +896,9 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 		minTime := int64(0)
 		timeSpan.MinTimeStamp = minTime
 
-		// TODO max := abp.BrokerController.MessageStore.getMaxOffsetInQuque(topic, i)
-		// maxTime := abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, (max - 1))
+		// max := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(i))
+		// TODO maxTime := abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, (max - 1))
+
 		maxTime := int64(0)
 		timeSpan.MaxTimeStamp = maxTime
 
@@ -1065,12 +1053,11 @@ func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, reques
 		logger.Error(err)
 		return nil, nil
 	}
-	fmt.Println(messageId)
-	// TODO selectMapedBufferResult := abp.BrokerController.MessageStore.selectOneMessageByOffset(messageId.Offset)
-	// length := selectMapedBufferResult.getSize()
-	//readContent := make([]byte, length)
-	//selectMapedBufferResult.ByteBuffer.Read(readContent)
-	//request.Body = readContent
+	selectMapedBufferResult := abp.BrokerController.MessageStore.SelectOneMessageByOffset(int64(messageId.Offset))
+	length := selectMapedBufferResult.Size
+	readContent := make([]byte, length)
+	selectMapedBufferResult.MappedByteBuffer.Read(readContent)
+	request.Body = readContent
 
 	return abp.callConsumer(code.CONSUME_MESSAGE_DIRECTLY, request, requestHeader.ConsumerGroup, requestHeader.ClientId)
 }
@@ -1089,8 +1076,7 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 
 	topics := set.NewSet()
 
-	reg := regexp.MustCompile(`\S+?`)
-	if reg.FindString(requestHeader.Topic) != "" {
+	if !stgcommon.IsBlank(requestHeader.Topic) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.SrcGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
