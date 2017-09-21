@@ -213,6 +213,7 @@ func (self *KVConfigManager) load() error {
 		buf := []byte(strings.TrimSpace(content))
 		kvConfigSerializeWrapper := new(KVConfigSerializeWrapper)
 		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)
+
 		if err != nil {
 			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s \n\t %s", err.Error(), content)
 		}
@@ -220,6 +221,7 @@ func (self *KVConfigManager) load() error {
 			for k, v := range kvConfigSerializeWrapper.ConfigTable {
 				self.ConfigTable[k] = v
 			}
+			logger.Info("set kvConfigManager.configTable from %s to this", cfgName)
 		}
 	}
 	logger.Info("kvConfigManager load successful.")
