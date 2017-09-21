@@ -3,6 +3,10 @@ package stgstorelog
 import (
 	"strconv"
 
+	"bytes"
+	"encoding/binary"
+	"net"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
@@ -23,6 +27,9 @@ const (
 	STORE_HOST_ADDRESS          = 8 // 12 STOREHOSTADDRESS
 	RE_CONSUME_TIMES            = 4 // 13 RECONSUMETIMES
 	PREPARED_TRANSACTION_OFFSET = 8 // 14 Prepared Transaction Offset
+	BODY_LENGTH                 = 4
+	TOPIC_LENGTH                = 1
+	PROPERTIES_LENGTH           = 2
 )
 
 type DefaultAppendMessageCallback struct {
@@ -66,19 +73,20 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 
 	// Serialize message
 	propertiesData := []byte(msgInner.PropertiesString)
-	propertiesLength := len(propertiesData)
+	propertiesContentLength := len(propertiesData)
 	topicData := []byte(msgInner.Topic)
-	topicLength := len(topicData)
-	bodyLength := len(msgInner.Body)
+	topicContentLength := len(topicData)
+	bodyContentLength := len(msgInner.Body)
 
 	msgLen := int32(TOTALSIZE + MAGICCODE + BODYCRC + QUEUE_ID + FLAG + QUEUE_OFFSET + PHYSICAL_OFFSET +
 		SYSFLAG + BORN_TIMESTAMP + BORN_HOST + STORE_TIMESTAMP + STORE_HOST_ADDRESS + RE_CONSUME_TIMES +
-		PREPARED_TRANSACTION_OFFSET + bodyLength + topicLength + propertiesLength)
+		PREPARED_TRANSACTION_OFFSET + BODY_LENGTH + bodyContentLength + TOPIC_LENGTH + topicContentLength +
+		PROPERTIES_LENGTH + propertiesContentLength)
 
 	// Exceeds the maximum message
 	if msgLen > self.maxMessageSize {
 		logger.Errorf("message size exceeded, msg total size: %d, msg body size: %d, maxMessageSize: %d",
-			msgLen, bodyLength, self.maxMessageSize)
+			msgLen, bodyContentLength, self.maxMessageSize)
 
 		return &AppendMessageResult{Status: MESSAGE_SIZE_EXCEEDED}
 	}
@@ -102,39 +110,38 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 			LogicsOffset:   queryOffset}
 	}
 
+	messageMagicCode := MessageMagicCode
+
 	// Initialization of storage space
 	self.resetMsgStoreItemMemory(msgLen)
-
-	self.msgStoreItemMemory.WriteInt32(msgLen)
-	messageMagicCode := MessageMagicCode
-	self.msgStoreItemMemory.WriteInt32(int32(messageMagicCode))
-	self.msgStoreItemMemory.WriteInt32(msgInner.BodyCRC)
-	self.msgStoreItemMemory.WriteInt32(msgInner.QueueId)
-	self.msgStoreItemMemory.WriteInt32(msgInner.Flag)
-	self.msgStoreItemMemory.WriteInt64(queryOffset)
-	self.msgStoreItemMemory.WriteInt64(fileFromOffset + int64(mappedByteBuffer.WritePos))
-	self.msgStoreItemMemory.WriteInt32(msgInner.SysFlag)
-	self.msgStoreItemMemory.WriteInt64(msgInner.BornTimestamp)
-	self.msgStoreItemMemory.Write([]byte(msgInner.BornHost))
-	self.msgStoreItemMemory.WriteInt64(msgInner.StoreTimestamp)
-	self.msgStoreItemMemory.Write([]byte(msgInner.StoreHost))
-	self.msgStoreItemMemory.WriteInt32(msgInner.ReconsumeTimes)
-	self.msgStoreItemMemory.WriteInt64(msgInner.PreparedTransactionOffset)
-
-	self.msgStoreItemMemory.WriteInt32(int32(bodyLength))
-	if bodyLength > 0 {
-		self.msgStoreItemMemory.Write(msgInner.Body)
+	self.msgStoreItemMemory.WriteInt32(msgLen)                                            // 1 TOTALSIZE
+	self.msgStoreItemMemory.WriteInt32(int32(messageMagicCode))                           // 2 MAGICCODE
+	self.msgStoreItemMemory.WriteInt32(msgInner.BodyCRC)                                  // 3 BODYCRC
+	self.msgStoreItemMemory.WriteInt32(msgInner.QueueId)                                  // 4 QUEUEID
+	self.msgStoreItemMemory.WriteInt32(msgInner.Flag)                                     // 5 FLAG
+	self.msgStoreItemMemory.WriteInt64(queryOffset)                                       // 6 QUEUEOFFSET
+	self.msgStoreItemMemory.WriteInt64(fileFromOffset + int64(mappedByteBuffer.WritePos)) // 7 PHYSICALOFFSET
+	self.msgStoreItemMemory.WriteInt32(msgInner.SysFlag)                                  // 8 SYSFLAG
+	self.msgStoreItemMemory.WriteInt64(msgInner.BornTimestamp)                            // 9 BORNTIMESTAMP
+	self.msgStoreItemMemory.Write(self.hostStringToBytes(msgInner.BornHost))              // 10 BORNHOST
+	self.msgStoreItemMemory.WriteInt64(msgInner.StoreTimestamp)                           // 11 STORETIMESTAMP
+	self.msgStoreItemMemory.Write([]byte(self.hostStringToBytes(msgInner.StoreHost)))     // 12 STOREHOSTADDRESS
+	self.msgStoreItemMemory.WriteInt32(msgInner.ReconsumeTimes)                           // 13 RECONSUMETIMES
+	self.msgStoreItemMemory.WriteInt64(msgInner.PreparedTransactionOffset)                // 14 Prepared Transaction Offset
+	self.msgStoreItemMemory.WriteInt32(int32(bodyContentLength))                          // 15 BODY
+	if bodyContentLength > 0 {
+		self.msgStoreItemMemory.Write(msgInner.Body) // BODY Content
 	}
 
-	self.msgStoreItemMemory.WriteInt32(int32(topicLength))
+	self.msgStoreItemMemory.Write([]byte{byte(topicContentLength)}) // 16 TOPIC
 	self.msgStoreItemMemory.Write(topicData)
 
-	self.msgStoreItemMemory.WriteInt32(int32(propertiesLength))
-	if propertiesLength > 0 {
+	self.msgStoreItemMemory.WriteInt16(int16(propertiesContentLength)) // 17 PROPERTIES
+	if propertiesContentLength > 0 {
 		self.msgStoreItemMemory.Write(propertiesData)
 	}
 
-	logger.Info("doAppend: ",string(self.msgStoreItemMemory.Bytes()))
+	logger.Info("doAppend: ", string(self.msgStoreItemMemory.Bytes()))
 	mappedByteBuffer.Write(self.msgStoreItemMemory.Bytes())
 
 	result := &AppendMessageResult{
@@ -148,6 +155,27 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 	// TODO 事务消息处理
 
 	return result
+}
+
+func (self *DefaultAppendMessageCallback) hostStringToBytes(hostAddr string) []byte {
+	host, port, err := message.SplitHostPort(hostAddr)
+	if err != nil {
+		logger.Warnf("parse message %s error: %s", hostAddr, err.Error())
+		return make([]byte, 8)
+	}
+
+	ip := net.ParseIP(host)
+	ipBytes := []byte(ip)
+
+	var addrBytes *bytes.Buffer
+	if len(ipBytes) > 0 {
+		addrBytes = bytes.NewBuffer(ipBytes[12:])
+	} else {
+		addrBytes = bytes.NewBuffer(make([]byte, 4))
+	}
+
+	binary.Write(addrBytes, binary.BigEndian, &port)
+	return addrBytes.Bytes()
 }
 
 func (self *DefaultAppendMessageCallback) resetMsgStoreItemMemory(length int32) {
