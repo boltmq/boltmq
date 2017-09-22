@@ -51,11 +51,11 @@ func NewRouteInfoManager() *RouteInfoManager {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) getAllClusterInfo() []byte {
-	clusterInfoSerializeWrapper := &body.ClusterInfo{
+	clusterInfo := &body.ClusterInfo{
 		BokerAddrTable:   self.BrokerAddrTable,
 		ClusterAddrTable: self.ClusterAddrTable,
 	}
-	return clusterInfoSerializeWrapper.Encode()
+	return clusterInfo.CustomEncode(clusterInfo)
 }
 
 // deleteTopic 删除Topic
@@ -63,8 +63,9 @@ func (self *RouteInfoManager) getAllClusterInfo() []byte {
 // Since: 2017/9/6
 func (self *RouteInfoManager) deleteTopic(topic string) {
 	self.ReadWriteLock.Lock()
+	defer self.ReadWriteLock.Unlock()
+
 	delete(self.TopicQueueTable, topic)
-	self.ReadWriteLock.Unlock()
 	logger.Info("delete topic[%s] from topicQueueTable.", topic)
 }
 
@@ -107,7 +108,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	 * (1)若Broker集群名字不在该Map变量中，则初始化一个Set集合,并将brokerName存入该Set集合中
 	 * (2)然后以clusterName为key 值，该Set集合为values值存入此Map变量中
 	 */
-	if brokerNames == nil {
+	if !ok || brokerNames == nil {
 		brokerNames = set.NewSet()
 		self.ClusterAddrTable[clusterName] = brokerNames
 	}
@@ -120,8 +121,8 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	 * (3)说明同一个BrokerName下面可以有多个不同BrokerId 的Broker存在，表示一个BrokerName有多个Broker存在，通过BrokerId来区分主备
 	 */
 	registerFirst := false
-	brokerData, _ := self.BrokerAddrTable[brokerName]
-	if brokerData == nil {
+	brokerData, ok := self.BrokerAddrTable[brokerName]
+	if !ok || brokerData == nil {
 		registerFirst = true
 		brokerData = &route.BrokerData{
 			BrokerName:  brokerName,
@@ -156,6 +157,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 			logger.Info("new broker registerd, %s HAServer: %s", brokerAddr, haServerAddr)
 		}
 		self.BrokerLiveTable[brokerAddr] = brokerLiveInfo
+		logger.Info("history broker registerd, %s HAServer: %s", brokerAddr, haServerAddr)
 	}
 
 	// 更新Filter Server列表: 对于filterServerList不为空的,以broker地址为key值存入
@@ -451,6 +453,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 				// 删除无效Broker列表
 				self.ReadWriteLock.RLock()
 				delete(self.BrokerLiveTable, brokerAddr)
+				logger.Info("delete brokerAddr[%s] from brokerLiveTable", brokerAddr)
 				self.ReadWriteLock.RUnlock()
 
 				// 关闭Channel通道
@@ -472,7 +475,7 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 	if ctx != nil {
 		this.ReadWriteLock.RLock()
 		for k, v := range this.BrokerLiveTable {
-			if v != nil && v.Context == ctx {
+			if v != nil && v.Context.RemoteAddr().String() == ctx.RemoteAddr().String() && v.Context.RemoteAddr().Network() == ctx.RemoteAddr().Network() {
 				brokerAddrFound = k
 				queryBroker = true
 			}
