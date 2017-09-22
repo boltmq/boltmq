@@ -37,6 +37,7 @@ func CloseChannel(ctx netm.Context) {
 
 	success := true
 	if err := ctx.Close(); err != nil {
+		logger.Error("closeChannel: close ctx error. %s, %s", ctx.ToString(), err.Error())
 		success = false
 	}
 	logger.Info("closeChannel: close ctx %s, result: %s", ctx.ToString(), success)
