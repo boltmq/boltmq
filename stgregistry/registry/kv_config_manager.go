@@ -194,7 +194,7 @@ func (self *KVConfigManager) load() error {
 		if !ok {
 			return fmt.Errorf("create %s failed, but err is nil", cfgName)
 		}
-		logger.Info("create %s successful.", cfgName)
+		logger.Info("create %s successful", cfgName)
 	}
 
 	// 读取kvConfig.json文件内容，并打印日志
@@ -224,6 +224,6 @@ func (self *KVConfigManager) load() error {
 			logger.Info("set kvConfigManager.configTable from %s to this", cfgName)
 		}
 	}
-	logger.Info("kvConfigManager load successful.")
+	logger.Info("kvConfigManager load successful")
 	return nil
 }
