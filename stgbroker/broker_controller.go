@@ -110,14 +110,14 @@ func (bc *BrokerController) Initialize() bool {
 
 	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
 
-	//if result {
-	//	bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
-	//}
-	//
-	//result = result && bc.MessageStore.Load()
-	//if !result {
-	//	return result
-	//}
+	if result {
+		bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
+	}
+
+	result = result && bc.MessageStore.Load()
+	if !result {
+		return result
+	}
 
 	// 注册服务
 	bc.registerProcessor()
@@ -440,8 +440,7 @@ func (bc *BrokerController) RegisterConsumeMessageHook(hook mqtrace.ConsumeMessa
 // Author rongzhihong
 // Since 2017/9/11
 func (bc *BrokerController) printMasterAndSlaveDiff() {
-	// TODO diff := bc.MessageStore.slaveFallBehindMuch()
-	diff := 0
+	diff := bc.MessageStore.SlaveFallBehindMuch()
 	// XXX: warn and notify me
 	logger.Infof("slave fall behind master, how much, %d bytes", diff)
 }

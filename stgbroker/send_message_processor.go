@@ -232,8 +232,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 // Since 2017/8/17
 func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
-	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.SendMessageResponseHeader{})
 	responseHeader := new(header.SendMessageResponseHeader)
+	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, responseHeader)
 
 	if value, ok := response.CustomHeader.(*header.SendMessageResponseHeader); ok {
 		responseHeader = value
@@ -328,9 +328,9 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 		}
 
 		if sendOK {
-			smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
-			smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
-			smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
+			//smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
+			//smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
+			//smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
 
 			response.Remark = ""
 			responseHeader.MsgId = putMessageResult.AppendMessageResult.MsgId

@@ -283,3 +283,13 @@ func (self *RemotingCommand) ToString() string {
 	info := fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields)
 	return info
 }
+
+// DecodeCommand RemotingCommand转字符串
+// Author: rongzhihong
+// Since: 2017/9/19
+func (self *RemotingCommand) DecodeCommand() []byte {
+	if bf, err := ffjson.Marshal(self); err == nil {
+		return bf
+	}
+	return nil
+}

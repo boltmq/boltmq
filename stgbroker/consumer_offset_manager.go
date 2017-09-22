@@ -129,23 +129,6 @@ func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset i
 	}
 }
 
-// persist 将内存数据刷入文件中
-// Author rongzhihong
-// Since 2017/9/12
-//func (com *ConsumerOffsetManager) persist() {
-//	defer utils.RecoveredFn()
-//
-//	jsonString := com.Encode(true)
-//	if jsonString != "" {
-//		fileName := com.ConfigFilePath()
-//
-//		com.persistLock.RLock()
-//		defer com.persistLock.Unlock()
-//
-//		stgcommon.String2File([]byte(jsonString), fileName)
-//	}
-//}
-
 // offsetBehindMuchThanData 检查偏移量与数据是否相差很大
 // Author rongzhihong
 // Since 2017/9/12
@@ -260,4 +243,3 @@ func min(a, b int64) int64 {
 func (com *ConsumerOffsetManager) Persist() {
 	com.configManagerExt.Persist()
 }
-

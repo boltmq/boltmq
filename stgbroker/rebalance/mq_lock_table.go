@@ -9,7 +9,7 @@ import (
 // Since 2017/9/20
 type MqLockTable struct {
 	mqLockTable     map[string]*LockEntryTable // key: group
-	mqLockTableLock *sync.RWMutex
+	mqLockTableLock sync.RWMutex
 }
 
 func NewMqLockTable() *MqLockTable {

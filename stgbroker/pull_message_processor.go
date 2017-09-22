@@ -224,10 +224,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context.QueueId = requestHeader.QueueId
 
 				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
-				// TODO	messageIds :=pull.BrokerController.getMessageStore().getMessageIds(requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getQueueOffset() + getMessageResult.getMessageCount(), storeHost);
-				fmt.Println(storeHost)
-
-				messageIds := make(map[string]int64)
+				messageIds := pull.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, requestHeader.QueueOffset+int64(getMessageResult.GetMessageCount()), storeHost)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
 				pull.ExecuteConsumeMessageHookBefore(context)
@@ -299,7 +296,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
 				}
 
-				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
+				// TODO suspendTimestamp = pull.BrokerController.MessageStore.Now()
 				suspendTimestamp := timeutil.CurrentTimeMillis()
 				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)

@@ -2,6 +2,7 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"github.com/pquerna/ffjson/ffjson"
 	"os"
 	"regexp"
 	"runtime"
@@ -139,4 +140,21 @@ var numberReg = regexp.MustCompile(`^[0-9]+?$`)
 // Since: 2017/9/19
 func IsNumber(content string) bool {
 	return numberReg.MatchString(content)
+}
+
+// Encode Json Encode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Encode(v interface{}) []byte {
+	if value, err := ffjson.Marshal(v); err == nil {
+		return value
+	}
+	return nil
+}
+
+// Decode Json Decode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Decode(data []byte, v interface{}) error {
+	return ffjson.Unmarshal(data, v)
 }

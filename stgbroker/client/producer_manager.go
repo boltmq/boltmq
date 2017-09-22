@@ -16,9 +16,9 @@ type ProducerManager struct {
 	LockTimeoutMillis     int64
 	ChannelExpiredTimeout int64
 	GroupChannelTable     *ProducerGroupConnTable
-	GroupChannelLock      *sync.RWMutex
+	GroupChannelLock      sync.RWMutex
 	hashcodeChannelTable  map[int64]*list.List
-	HashCodeChannelLock   *sync.RWMutex
+	HashCodeChannelLock   sync.RWMutex
 	Rand                  *rand.Rand
 }
 
@@ -144,7 +144,7 @@ func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *Channel
 func (pm *ProducerManager) ScanNotActiveChannel() {
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
-	
+
 	defer utils.RecoveredFn()
 
 	for group, chlMap := range pm.GroupChannelTable.GroupChannelTable {

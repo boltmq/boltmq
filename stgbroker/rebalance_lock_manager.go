@@ -16,7 +16,7 @@ import (
 // Author rongzhihong
 // Since 2017/9/20
 type RebalanceLockManager struct {
-	ReentrantLock *sync.RWMutex
+	ReentrantLock sync.RWMutex
 	mqLockTable   *rebalance.MqLockTable
 }
 
