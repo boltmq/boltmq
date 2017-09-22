@@ -3,7 +3,6 @@ package main
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/out"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 )
 
 func main() {

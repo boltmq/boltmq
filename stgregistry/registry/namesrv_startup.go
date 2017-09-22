@@ -20,11 +20,11 @@ func Startup() *DefaultNamesrvController {
 	initResult := controller.initialize()
 	if !initResult {
 		controller.shutdown()
-		logger.Info("the name server controller initialize failed.")
+		logger.Info("the name server controller initialize failed")
 		os.Exit(0)
 	}
 	controller.start()
-	logger.Info("the name server boot success.")
+	logger.Info("the name server boot success")
 	return controller
 }
 
@@ -44,6 +44,6 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
 	controller := NewNamesrvController(cfg, remotingServer)
 
-	logger.Info("create default namesrv controller success.")
+	logger.Info("create default namesrv controller success")
 	return controller
 }

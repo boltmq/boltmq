@@ -107,10 +107,10 @@ func (self *DefaultNamesrvController) registerProcessor() error {
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) startScanNotActiveBroker() {
 	go func() {
-		logger.Info("start scanNotActiveBroker task successful")
 		self.scanBrokerTicker.Do(func(tm time.Time) {
 			self.RouteInfoManager.scanNotActiveBroker()
 		})
+		logger.Info("start scanNotActiveBroker task successful")
 	}()
 }
 
@@ -119,10 +119,10 @@ func (self *DefaultNamesrvController) startScanNotActiveBroker() {
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) startPrintAllPeriodically() {
 	go func() {
-		logger.Info("start printAllPeriodically task successful")
 		self.printNamesrvTicker.Do(func(tm time.Time) {
 			self.KvConfigManager.printAllPeriodically()
 		})
+		logger.Info("start printAllPeriodically task successful")
 	}()
 }
 
