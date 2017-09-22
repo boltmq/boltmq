@@ -64,6 +64,6 @@ func (self *StoreStatsService) setGetMessageEntireTimeMax(value int64) {
 	}
 }
 
-func (self *StoreStatsService) gGtGetMessageTransferedMsgCount() int64 {
+func (self *StoreStatsService) GetGetMessageTransferedMsgCount() int64 {
 	return atomic.LoadInt64(&self.getMessageTransferedMsgCount)
 }
