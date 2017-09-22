@@ -66,10 +66,10 @@ func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	msg.Message.PutProperty("TAGS", "TAG1")
 	msg.Message.PutProperty("KEYS", "Hello")
 	msg.Body = messageBody
-	msg.Message.PutProperty("KEYS", string(time.Now().Unix()))
+	msg.Message.PutProperty("KEYS", string(time.Now().UnixNano()/1000000))
 	msg.QueueId = int32(math.Abs(float64(atomic.AddInt32(queueId, 1) / QUEUE_TOTAL)))
 	msg.SysFlag = int32(8)
-	msg.BornTimestamp = time.Now().Unix()
+	msg.BornTimestamp = time.Now().UnixNano() / 1000000
 	msg.StoreHost = StoreHost
 	msg.BornHost = BornHost
 

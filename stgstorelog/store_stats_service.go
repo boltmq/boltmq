@@ -46,8 +46,8 @@ func NewStoreStatsService() *StoreStatsService {
 	service.lockPut = new(sync.Mutex)
 	service.lockGet = new(sync.Mutex)
 	service.lockSampling = new(sync.Mutex)
-	atomic.StoreInt64(&service.messageStoreBootTimestamp, time.Now().Unix())
-	atomic.StoreInt64(&service.lastPrintTimestamp, time.Now().Unix())
+	atomic.StoreInt64(&service.messageStoreBootTimestamp, time.Now().UnixNano()/1000000)
+	atomic.StoreInt64(&service.lastPrintTimestamp, time.Now().UnixNano()/1000000)
 
 	return service
 }
@@ -62,4 +62,8 @@ func (self *StoreStatsService) setGetMessageEntireTimeMax(value int64) {
 		self.getMessageEntireTimeMax = value
 		self.lockGet.Unlock()
 	}
+}
+
+func (self *StoreStatsService) gGtGetMessageTransferedMsgCount() int64 {
+	return atomic.LoadInt64(&self.getMessageTransferedMsgCount)
 }

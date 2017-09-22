@@ -64,13 +64,13 @@ func (self *CommitLog) Start() {
 }
 
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
-	msg.StoreTimestamp = time.Now().Unix()
+	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
 	// TOD0 crc32
 	msg.BodyCRC = 0
 
 	// TODO 事务消息处理
 	self.mutex.Lock()
-	beginLockTimestamp := time.Now().Unix()
+	beginLockTimestamp := time.Now().UnixNano() / 1000000
 	msg.BornTimestamp = beginLockTimestamp
 
 	mapedFile, err := self.MapedFileQueue.getLastMapedFile(int64(0))
@@ -126,7 +126,7 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 
 	self.DefaultMessageStore.DispatchMessageService.putRequest(dispatchRequest)
 
-	eclipseTimeInLock := time.Now().Unix() - beginLockTimestamp
+	eclipseTimeInLock := time.Now().UnixNano()/1000000 - beginLockTimestamp
 	self.mutex.Unlock()
 
 	if eclipseTimeInLock > 1000 {

@@ -94,19 +94,18 @@ func (self *AllocateMapedFileService) mmapOperation() bool {
 		}
 
 		if request.mapedFile == nil {
-			beginTime := time.Now().Unix()
+			beginTime := time.Now().UnixNano() / 1000000
 			mapedFile, err := NewMapedFile(request.filePath, request.fileSize)
 			if mapedFile == nil {
 				logger.Error("New Maped File")
 			}
-
 
 			if err != nil {
 				logger.Warn("allocate maped file service has exception, maybe by shutdown,error:", err.Error())
 				return false
 			}
 
-			eclipseTime := beginTime - time.Now().Unix()
+			eclipseTime := beginTime - time.Now().UnixNano()/1000000
 			if eclipseTime > 10 {
 				// TODO
 			}

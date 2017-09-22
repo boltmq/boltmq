@@ -28,7 +28,7 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 	}
 
 	flushConsumeQueueThoroughInterval := self.defaultMessageStore.MessageStoreConfig.FlushConsumeQueueThoroughInterval
-	currentTimeMillis := time.Now().Unix()
+	currentTimeMillis := time.Now().UnixNano() / 1000000
 
 	var logicMsgTimestamp int64
 
