@@ -853,6 +853,10 @@ func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minO
 	return messageIds
 }
 
+func (self *DefaultMessageStore) Now() int64 {
+	return time.Now().UnixNano() / 1000000
+}
+
 func (self *DefaultMessageStore) addScheduleTask() {
 	// TODO
 }

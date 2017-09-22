@@ -56,11 +56,12 @@ func (self *IndexFile) load() {
 }
 
 func (self *IndexFile) flush() {
-	beginTime := time.Now().Unix()
+	beginTime := time.Now().UnixNano() / 1000000
 	self.indexHeader.updateByteBuffer()
 	self.mappedByteBuffer.flush()
 	self.mapedFile.release()
-	logger.Info("flush index file eclipse time(ms) ", (time.Now().Unix() - beginTime))
+	endTime := time.Now().UnixNano() / 1000000
+	logger.Info("flush index file eclipse time(ms) ", endTime-beginTime)
 }
 
 func (self *IndexFile) isWriteFull() bool {

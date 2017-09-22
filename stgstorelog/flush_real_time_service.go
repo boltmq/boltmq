@@ -38,7 +38,7 @@ func (self *FlushRealTimeService) start() {
 			printFlushProgress := false
 
 			// Print flush progress
-			currentTimeMillis := time.Now().Unix()
+			currentTimeMillis := time.Now().UnixNano() / 1000000
 			if currentTimeMillis >= int64(self.lastFlushTimestamp+flushPhysicQueueThoroughInterval) {
 				self.lastFlushTimestamp = int32(currentTimeMillis)
 				flushPhysicQueueLeastPages = 0
