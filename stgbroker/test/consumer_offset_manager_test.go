@@ -40,3 +40,14 @@ func TestCommitOffset(t *testing.T) {
 	consumerOffsetManager.CommitOffset("SimpleConsumerGroupIdQB-test","TopicTestMQ",3,4)
 	consumerOffsetManager.Persist()
 }
+
+func TestScanUnsubscribedTopic(t *testing.T) {
+		// TODO
+}
+
+func TestWhichTopicByConsumer(t *testing.T) {
+	brokerController := stgbroker.CreateBrokerController()
+	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
+	consumerOffsetManager.Load()
+	fmt.Println(consumerOffsetManager.WhichGroupByTopic("TopicTestMQ"))
+}

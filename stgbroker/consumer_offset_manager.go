@@ -7,7 +7,6 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
 	"sync"
