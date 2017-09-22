@@ -47,7 +47,11 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 
 	return nil
 }
-
+/**
+ * UpdateChannel 更新通道
+ * Author gaoyanlei
+ * Since 2017/9/21
+ */
 func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
 

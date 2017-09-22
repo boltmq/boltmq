@@ -30,6 +30,5 @@ func TestNameServer(t *testing.T) {
 	brokerOuterAPI := out.NewBrokerOuterAPI()
 	brokerOuterAPI.Start()
 	brokerOuterAPI.UpdateNameServerAddressList("0.0.0.0:9999")
-
 	brokerOuterAPI.FetchNameServerAddr()
 }
