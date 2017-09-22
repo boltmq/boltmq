@@ -31,12 +31,14 @@ type BrokerStatsManager struct {
 // Since 2017/8/18
 func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 	var bs = new(BrokerStatsManager)
-	bs.momentStatsItemSet = stats.NewMomentStatsItemSet(GROUP_GET_FALL)
-	bs.clusterName = clusterName
 
-	/*topicPutNumsSet := stats.NewStatsItemSet()
+	bs.clusterName = clusterName
+	bs.statsTable = make(map[string]*stats.StatsItemSet)
+	bs.momentStatsItemSet = stats.NewMomentStatsItemSet(GROUP_GET_FALL)
+
+	topicPutNumsSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = TOPIC_PUT_NUMS
-	bs.statsTable["TOPIC_PUT_NUMS"] = topicPutNumsSet
+	bs.statsTable[TOPIC_PUT_NUMS] = topicPutNumsSet
 
 	topicPutSizeSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = TOPIC_PUT_SIZE
@@ -60,7 +62,7 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 
 	brokerGetNumsSet := stats.NewStatsItemSet()
 	topicPutNumsSet.StatsName = BROKER_GET_NUMS
-	bs.statsTable[BROKER_GET_NUMS] = brokerGetNumsSet*/
+	bs.statsTable[BROKER_GET_NUMS] = brokerGetNumsSet
 	return bs
 }
 
@@ -89,58 +91,63 @@ func (bsm *BrokerStatsManager) GetStatsItem(statsName, statsKey string) *stats.S
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncTopicPutNums(topic string) {
-	bsm.statsTable["TOPIC_PUT_NUMS"].AddValue(topic, 1, 1)
+	bsm.statsTable[TOPIC_PUT_NUMS].AddValue(topic, 1, 1)
 }
 
 // IncTopicPutSize  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncTopicPutSize(topic string, size int64) {
-	bsm.statsTable["TOPIC_PUT_SIZE"].AddValue(topic, 1, 1)
+	bsm.statsTable[TOPIC_PUT_SIZE].AddValue(topic, 1, 1)
 }
 
 // IncGroupGetNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncGroupGetNums(group, topic string, incValue int) {
-	bsm.statsTable["GROUP_GET_NUMS"].AddValue(topic+"@"+group, int64(incValue), 1)
+	bsm.statsTable[GROUP_GET_NUMS].AddValue(topic+"@"+group, int64(incValue), 1)
 }
 
 // IncGroupGetSize  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncGroupGetSize(group, topic string, incValue int) {
-	bsm.statsTable["GROUP_GET_SIZE"].AddValue(topic+"@"+group, int64(incValue), 1)
+	bsm.statsTable[GROUP_GET_SIZE].AddValue(topic+"@"+group, int64(incValue), 1)
 }
 
 // incBrokerPutNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerPutNums() {
-	bsm.statsTable["BROKER_PUT_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
-		atomic.AddInt64(&bsm.statsTable["BROKER_PUT_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter, 1)
+	statsItemSet := bsm.statsTable[BROKER_PUT_NUMS]
+	if statsItemSet != nil {
+		statsItemSet.GetStatsDataInMinute(bsm.clusterName)
+	}
+	fmt.Println(bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter)
+	bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
+		atomic.AddInt64(&(bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter), 1)
 }
 
 // IncBrokerGetNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerGetNums(incValue int) {
-	bsm.statsTable["BROKER_GET_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
-		atomic.AddInt64(&bsm.statsTable["BROKER_GET_NUMS"].GetAndCreateStatsItem(bsm.clusterName).ValueCounter, int64(incValue))
+	bsm.statsTable[BROKER_GET_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
+		atomic.AddInt64(&(bsm.statsTable[BROKER_GET_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter), int64(incValue))
 }
 
 // IncSendBackNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncSendBackNums(group, topic string) {
-	bsm.statsTable["SNDBCK_PUT_NUMS"].AddValue(topic+"@"+group, 1, 1)
+	bsm.statsTable[SNDBCK_PUT_NUMS].AddValue(topic+"@"+group, 1, 1)
 }
 
 // TpsGroupGetNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
-	return bsm.statsTable["GROUP_GET_NUMS"].GetStatsDataInMinute(topic + "@" + group).Tps
+	return bsm.statsTable[GROUP_GET_NUMS].GetStatsDataInMinute(topic + "@" + group).Tps
 }
 
 // RecordDiskFallBehind  记录

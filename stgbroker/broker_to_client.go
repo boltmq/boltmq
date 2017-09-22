@@ -107,8 +107,7 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 			return response
 		}
 
-		// TODO timeStampOffset := b2c.BrokerController.MessageStore.getOffsetInQueueByTime(topic, i, timeStamp)
-		timeStampOffset := int64(0)
+		timeStampOffset := b2c.BrokerController.MessageStore.GetOffsetInQueueByTime(topic, int32(i), timeStamp)
 		if isForce || timeStampOffset < consumerOffset {
 			offsetTable[mq] = timeStampOffset
 		} else {

@@ -287,8 +287,7 @@ func (abp *AdminBrokerProcessor) searchOffsetByTimestamp(ctx netm.Context, reque
 		logger.Error(err)
 	}
 
-	// TODO offset := abp.BrokerController.MessageStore.getOffsetInQueueByTime(requestHeader.Topic, requestHeader.QueueId, requestHeader.Timestamp)
-	offset := int64(0)
+	offset := abp.BrokerController.MessageStore.GetOffsetInQueueByTime(requestHeader.Topic, requestHeader.QueueId, requestHeader.Timestamp)
 	responseHeader.Offset = offset
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -330,8 +329,7 @@ func (abp *AdminBrokerProcessor) getEarliestMsgStoretime(ctx netm.Context, reque
 		logger.Error(err)
 	}
 
-	// TODO timestamp := abp.BrokerController.MessageStore.getEarliestMessageTime(requestHeader.Topic, requestHeader.QueueId)
-	timestamp := int64(0)
+	timestamp := abp.BrokerController.MessageStore.GetEarliestMessageTime(requestHeader.Topic, requestHeader.QueueId)
 	responseHeader.Timestamp = timestamp
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -405,8 +403,7 @@ func (abp *AdminBrokerProcessor) unlockBatchMQ(ctx netm.Context, request *protoc
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) prepareRuntimeInfo() map[string]string {
-	// TODO runtimeInfo := abp.BrokerController.MessageStore.getRuntimeInfo()
-	runtimeInfo := make(map[string]string)
+	runtimeInfo := abp.BrokerController.MessageStore.GetRuntimeInfo()
 	runtimeInfo["brokerVersionDesc"] = mqversion.GetVersionDesc(mqversion.CurrentVersion)
 	runtimeInfo["brokerVersion"] = fmt.Sprintf("%d", mqversion.CurrentVersion)
 
@@ -536,7 +533,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		timestamp := int64(0)
 		if max > 0 {
-			// TODO timestamp := abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, (max - 1))
+			timestamp = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), (max - 1))
 		}
 
 		topicOffset.MinOffset = min
@@ -707,8 +704,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 				// 查询消费者最后一条消息对应的时间戳
 				timeOffset := consumerOffset - 1
 				if timeOffset >= 0 {
-					// TODO lastTimestamp := abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, timeOffset)
-					lastTimestamp := int64(0)
+					lastTimestamp := abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), timeOffset)
 					if lastTimestamp > 0 {
 						offsetWrapper.LastTimestamp = lastTimestamp
 					}
@@ -759,8 +755,7 @@ func (abp *AdminBrokerProcessor) getAllConsumerOffset(ctx netm.Context, request 
 func (abp *AdminBrokerProcessor) getAllDelayOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(nil)
 
-	// TODO content := abp.BrokerController.MessageStore.ScheduleMessageService.Encode()
-	content := ""
+	content := abp.BrokerController.MessageStore.ScheduleMessageService.Encode()
 	if len(content) > 0 {
 		response.Body = []byte(content)
 	} else {
@@ -892,20 +887,18 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 		mq.QueueId = i
 		timeSpan.MessageQueue = mq
 
-		// minTime := abp.BrokerController.MessageStore.getEarliestMessageTime(topic, i)
-		minTime := int64(0)
+		minTime := abp.BrokerController.MessageStore.GetEarliestMessageTime(topic, int32(i))
 		timeSpan.MinTimeStamp = minTime
 
-		// max := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(i))
-		// TODO maxTime := abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, (max - 1))
+		max := abp.BrokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(i))
+		maxTime := abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), (max - 1))
 
-		maxTime := int64(0)
 		timeSpan.MaxTimeStamp = maxTime
 
 		var consumeTime int64
 		consumerOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.Group, topic, i)
 		if consumerOffset > 0 {
-			// TODO consumeTime = abp.BrokerController.MessageStore.getMessageStoreTimeStamp(topic, i, consumerOffset)
+			consumeTime = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), consumerOffset)
 		} else {
 			consumeTime = minTime
 		}
@@ -946,7 +939,7 @@ func (abp *AdminBrokerProcessor) getSystemTopicListFromBroker(ctx netm.Context, 
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) cleanExpiredConsumeQueue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	logger.Warn("invoke cleanExpiredConsumeQueue start.")
-	// TODO abp.BrokerController.MessageStore.cleanExpiredConsumerQueue()
+	abp.BrokerController.MessageStore.CleanExpiredConsumerQueue()
 	logger.Warn("invoke cleanExpiredConsumeQueue end.")
 
 	response := protocol.CreateDefaultResponseCommand(nil)

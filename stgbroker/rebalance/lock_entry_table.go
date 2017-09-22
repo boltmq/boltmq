@@ -11,7 +11,7 @@ import (
 // Since 2017/9/20
 type LockEntryTable struct {
 	lockEntryTable map[*message.MessageQueue]*body.LockEntry
-	lockEntryLock  *sync.RWMutex
+	lockEntryLock  sync.RWMutex
 }
 
 func NewLockEntryTable() *LockEntryTable {

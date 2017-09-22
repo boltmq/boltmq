@@ -1,7 +1,6 @@
 package stgbroker
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
@@ -13,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -51,14 +51,15 @@ func (cmp *ClientManageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Author gaoyanlei
 // Since 2017/8/23
 func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
+
 	response := &protocol.RemotingCommand{}
 
-	heartbeatData := &heartbeat.HeartbeatData{}
+	heartbeatData := heartbeat.NewHeartbeatData()
 	heartbeatData.Decode(request.Body)
 	consumerDataSet := heartbeatData.ConsumerDataSet
 
 	channelInfo := client.NewClientChannelInfo(ctx, heartbeatData.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
-
 	for value := range consumerDataSet.Iterator().C {
 		if consumerData, ok := value.(*heartbeat.ConsumerData); ok {
 			subscriptionGroupConfig :=
@@ -199,10 +200,7 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request
 
 		preOffset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
 
-		// TODO messageIds := cmp.BrokerController.MessageStore.getMessageIds(requestHeader.Topic, requestHeader.QueueId, preOffset, requestHeader.CommitOffset, storeHost)
-		messageIds := make(map[string]int64)
-		fmt.Println(storeHost)
-		fmt.Println(preOffset)
+		messageIds := cmp.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, int32(requestHeader.QueueId), preOffset, requestHeader.CommitOffset, storeHost)
 
 		context.MessageIds = messageIds
 		cmp.ExecuteConsumeMessageHookAfter(context)
