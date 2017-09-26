@@ -43,6 +43,7 @@ const (
 	RETRY_GROUP_TOPIC_PREFIX        = "%RETRY%" // 为每个ConsumerGroup建立一个默认的Topic，前缀+GroupName，用来保存处理失败需要重试的消息
 	DLQ_GROUP_TOPIC_PREFIX          = "%DLQ%"   // 为每个ConsumerGroup建立一个默认的Topic，前缀+GroupName，用来保存重试多次都失败，接下来不再重试的消息
 	BROKER_REBLANCE_LOCKMAXLIVETIME = "smartgo.broker.rebalance.lockMaxLiveTime"
+	SMARTGO_CONF_DIR                = "/git.oschina.net/cloudzone/smartgo/conf/"
 )
 
 func GetRetryTopic(consumerGroup string) string {
@@ -227,4 +228,18 @@ func ExistsFile(fileFullPath string) (bool, error) {
 		return false, nil // 使用os.IsNotExist()判断为true,说明文件或文件夹不存在
 	}
 	return false, err // 不确定是否在存在
+}
+
+func GetGoPath() string {
+	return os.Getenv("GOPATH")
+}
+
+// GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetSmartgoConfigDir() string {
+	gopath := GetGoPath()
+	src := "/src"
+	smartgoConfigPath := gopath + src + SMARTGO_CONF_DIR
+	return smartgoConfigPath
 }
