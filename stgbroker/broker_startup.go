@@ -1,12 +1,12 @@
 package stgbroker
 
 import (
-	"flag"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+	"github.com/toolkits/file"
 	"os"
 	"strings"
 )
@@ -32,6 +32,13 @@ func (self *SmartgoBrokerConfig) ToString() string {
 	return info
 }
 
+// IsBlank 判断配置项是否读取成功
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *SmartgoBrokerConfig) IsBlank() bool {
+	return self == nil || strings.TrimSpace(self.BrokerClusterName) == "" || strings.TrimSpace(self.BrokerName) == ""
+}
+
 func Start() *BrokerController {
 	controller := CreateBrokerController()
 	controller.Start()
@@ -48,12 +55,17 @@ func Start() *BrokerController {
 }
 
 func CreateBrokerController() *BrokerController {
-	var cfg SmartgoBrokerConfig
+	cfgName := "smartgoBroker.toml"
+	brokerConfigPath := "../../conf/" + cfgName
+	if !file.IsExist(brokerConfigPath) {
+		// TODO:加载配置文件，通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
+		// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
+		brokerConfigPath = stgcommon.GetSmartgoConfigDir() + cfgName
+		fmt.Printf("idea special brokerConfigPath = %s \n", brokerConfigPath)
+	}
 
-	// 加载配置文件
-	brokerConfigPath := flag.String("c", "../../conf/smartgoBroker.toml", "")
-	flag.Parse()
-	parseutil.ParseConf(*brokerConfigPath, &cfg)
+	var cfg SmartgoBrokerConfig
+	parseutil.ParseConf(brokerConfigPath, &cfg)
 	fmt.Println(cfg.ToString())
 
 	// 初始化brokerConfig
@@ -118,7 +130,7 @@ func CreateBrokerController() *BrokerController {
 
 	// 初始化日志
 	controller := NewBrokerController(*brokerConfig, messageStoreConfig)
-	controller.ConfigFile = *brokerConfigPath
+	controller.ConfigFile = brokerConfigPath
 
 	// 初始化controller
 	initResult := controller.Initialize()
