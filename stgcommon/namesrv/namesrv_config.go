@@ -62,13 +62,27 @@ func (self *NamesrvConfig) GetKvConfigName() string {
 	return cfgName
 }
 
+// ToString 打印Namesrv基础配置信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/8
+func (self *NamesrvConfig) ToString() string {
+	return fmt.Sprintf("namesrv cfg [smartgoHome=%s, kvConfigPath=%s]", self.smartgoHome, self.kvConfigPath)
+}
+
+
+
 // getSmartGoHome 获得默认配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func getSmartGoHome() string {
-	smartGoHome := strings.TrimSpace(os.Getenv(stgcommon.CLOUDMQ_HOME_PROPERTY))
+	smartGoHome := strings.TrimSpace(os.Getenv(stgcommon.SMARTGO_HOME_ENV))
 	if smartGoHome == "" {
-		return stgcommon.SMARTGO_HOME_ENV
+		rootDir, err := user.Current()
+		if err != nil {
+			fmt.Printf("get default smartGoHomeEnv err: %s \n", err.Error())
+			return "" //stgcommon.SMARTGO_HOME_ENV
+		}
+		return rootDir.HomeDir
 	}
 	return smartGoHome
 }

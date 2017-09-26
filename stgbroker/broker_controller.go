@@ -52,8 +52,7 @@ type BrokerController struct {
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
-	messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
+func NewBrokerController(brokerConfig stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
 	brokerController.MessageStoreConfig = messageStoreConfig
@@ -88,7 +87,14 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 // Author rongzhihong
 // Since 2017/9/5
 func (bc *BrokerController) GetBrokerAddr() string {
-	return bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
+	return fmt.Sprintf("%s:%s", bc.BrokerConfig.BrokerIP1, bc.RemotingServer.GetListenPort())
+}
+
+// GetStoreHost 获取StoreHost
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *BrokerController) GetStoreHost() string {
+	return fmt.Sprintf("%s:%s", self.BrokerConfig.BrokerIP1, self.RemotingServer.GetListenPort())
 }
 
 // Initialize BrokerController初始化
@@ -108,7 +114,7 @@ func (bc *BrokerController) Initialize() bool {
 	// bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
 	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
 
-	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
+	bc.StoreHost = bc.GetStoreHost()
 
 	if result {
 		bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
@@ -201,7 +207,7 @@ func (bc *BrokerController) Shutdown() {
 	}
 
 	if bc.RemotingServer != nil {
-		// bc.RemotingServer.Shutdown()
+		bc.RemotingServer.Shutdown()
 	}
 
 	if bc.MessageStore != nil {
@@ -267,17 +273,9 @@ func (bc *BrokerController) Start() {
 // Author rongzhihong
 // Since 2017/9/12
 func (bc *BrokerController) unregisterBrokerAll() {
-	brokerId, err := strconv.Atoi(fmt.Sprint(bc.BrokerConfig.BrokerId))
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	bc.BrokerOuterAPI.UnregisterBrokerAll(
-		bc.BrokerConfig.BrokerClusterName,
-		bc.GetBrokerAddr(),
-		bc.BrokerConfig.BrokerName,
-		brokerId)
+	brokerId := int(bc.BrokerConfig.BrokerId)
+	bc.BrokerOuterAPI.UnregisterBrokerAll(bc.BrokerConfig.BrokerClusterName, bc.GetBrokerAddr(), bc.BrokerConfig.BrokerName, brokerId)
+	logger.Info("unRegisterBrokerAll successful")
 }
 
 // RegisterBrokerAll 注册所有broker

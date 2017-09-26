@@ -179,7 +179,7 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 			perm := defaultTopicConfig.Perm
 			perm &= 0xFFFFFFFF ^ constant.PERM_INHERIT
 			topicConfig = &stgcommon.TopicConfig{
-				TopicName:  topic,
+				TopicName:       topic,
 				WriteQueueNums:  queueNums,
 				ReadQueueNums:   queueNums,
 				TopicSysFlag:    topicSysFlag,
@@ -331,9 +331,9 @@ func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
 	return ""
 }
 
-func (tcm *TopicConfigManager) Decode(jsonString []byte) {
-	if len(jsonString) > 0 {
-		json.Unmarshal(jsonString, tcm.TopicConfigSerializeWrapper)
+func (tcm *TopicConfigManager) Decode(content []byte) {
+	if content != nil && len(content) > 0 {
+		json.Unmarshal(content, tcm.TopicConfigSerializeWrapper)
 	}
 }
 

@@ -83,6 +83,7 @@ func (self *DefaultNamesrvController) shutdown() {
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
 	}
+	logger.Info("namesrv controller shutdown successful")
 }
 
 // start 启动Namesrv控制服务
