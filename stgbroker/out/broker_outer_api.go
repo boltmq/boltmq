@@ -79,11 +79,11 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
 	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
-		BrokerAddr : brokerAddr,
-		BrokerId : brokerId,
-		BrokerName : brokerName,
-		ClusterName : clusterName,
-		HaServerAddr : haServerAddr,
+		BrokerAddr:   brokerAddr,
+		BrokerId:     brokerId,
+		BrokerName:   brokerName,
+		ClusterName:  clusterName,
+		HaServerAddr: haServerAddr,
 	}
 
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
@@ -101,32 +101,33 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 
 	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	if err != nil {
-		// TODO: err to log or print
-		logger.Error("REGISTER_BROKER failed。err: %s", err.Error())
+		logger.Errorf("register broker failed. %s, err [%s]", request.ToString(), err.Error())
+		return nil
+	}
+	if response == nil {
+		logger.Error("register broker end, but response nil")
 		return nil
 	}
 
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
-			err := response.DecodeCommandCustomHeader(responseHeader)
-			if err != nil {
-				logger.Error(err)
-			}
-
-			result := &namesrv.RegisterBrokerResult{}
-			result.MasterAddr = responseHeader.MasterAddr
-			result.HaServerAddr = responseHeader.HaServerAddr
-			if response.Body != nil {
-				result.KvTable.Decode(response.Body)
-			}
-			return result
-		}
-	default:
-
+	if response.Code != code.SUCCESS {
+		logger.Errorf("register broker end, but not success. %s", response.ToString())
+		return nil
 	}
-	return nil
+
+	logger.Infof("register broker ok. %s", response.ToString())
+	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
+	err = response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		logger.Error("err: %s", err.Error())
+	}
+
+	result := &namesrv.RegisterBrokerResult{}
+	result.MasterAddr = responseHeader.MasterAddr
+	result.HaServerAddr = responseHeader.HaServerAddr
+	if response.Body != nil {
+		result.KvTable.Decode(response.Body)
+	}
+	return result
 }
 
 // RegisterBrokerAll 向每个nameservice注册
@@ -157,10 +158,10 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
 	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
-		ClusterName : clusterName,
-		BrokerName : brokerAddr,
-		BrokerAddr : brokerName,
-		BrokerId : brokerId,
+		ClusterName: clusterName,
+		BrokerName:  brokerAddr,
+		BrokerAddr:  brokerName,
+		BrokerId:    brokerId,
 	}
 
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
