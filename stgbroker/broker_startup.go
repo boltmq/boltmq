@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
 type SmartgoBrokerConfig struct {
 	BrokerClusterName string
 	BrokerName        string
@@ -18,6 +21,15 @@ type SmartgoBrokerConfig struct {
 	FileReservedTime  int
 	BrokerRole        string
 	FlushDiskType     string
+}
+
+// ToString 打印smartgoBroker配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *SmartgoBrokerConfig) ToString() string {
+	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s]"
+	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime, self.BrokerRole, self.FlushDiskType)
+	return info
 }
 
 func Start() *BrokerController {
@@ -42,6 +54,7 @@ func CreateBrokerController() *BrokerController {
 	brokerConfigPath := flag.String("c", "../../conf/smartgoBroker.toml", "")
 	flag.Parse()
 	parseutil.ParseConf(*brokerConfigPath, &cfg)
+	fmt.Println(cfg.ToString())
 
 	// 初始化brokerConfig
 	brokerConfig := stgcommon.NewBrokerConfig()
