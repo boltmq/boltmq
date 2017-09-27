@@ -32,8 +32,8 @@ func (bs *BrokerStats) Record() {
 	bs.MsgPutTotalYesterdayMorning = bs.MsgPutTotalTodayMorning
 	bs.MsgGetTotalYesterdayMorning = bs.MsgGetTotalTodayMorning
 	// TODO
-	//bs.msgPutTotalTodayMorning = bs.defaultMessageStore.StoreStatsService
-	//bs.msgGetTotalTodayMorning = bs.defaultMessageStore.StoreStatsService.getMessageTransferedMsgCount.get()
+	//bs.msgPutTotalTodayMorning = bs.defaultMessageStore.StoreStatsService.getPutMessageTimesTotal()
+	bs.MsgGetTotalTodayMorning = bs.DefaultMessageStore.StoreStatsService.GetGetMessageTransferedMsgCount()
 	logger.Infof("yesterday put message total: %d", bs.MsgPutTotalTodayMorning-bs.MsgPutTotalYesterdayMorning)
 	logger.Infof("yesterday get message total: %d", bs.MsgGetTotalTodayMorning-bs.MsgGetTotalYesterdayMorning)
 }
@@ -50,6 +50,5 @@ func (bs *BrokerStats) GetMsgPutTotalTodayNow() int64 {
 // Author rongzhihong
 // Since 2017/9/12
 func (bs *BrokerStats) GetMsgGetTotalTodayNow() int64 {
-	// TODO bs.defaultMessageStore.StoreStatsService.getGetMessageTransferedMsgCount().get()
-	return 0
+	return bs.DefaultMessageStore.StoreStatsService.GetGetMessageTransferedMsgCount()
 }

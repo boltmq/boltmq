@@ -4,12 +4,12 @@ package header
 // Author: yintongqiang
 // Since:  2017/8/17
 type ConsumerSendMsgBackRequestHeader struct {
-	Offset      int64
-	Group       string
-	DelayLevel  int32
-	OriginMsgId string
-	OriginTopic string
-	UnitMode    bool
+	Offset      int64  `json:"offset"`
+	Group       string `json:"group"`
+	DelayLevel  int32  `json:"delayLevel"`
+	OriginMsgId string `json:"originMsgId"`
+	OriginTopic string `json:"originTopic"`
+	UnitMode    bool   `json:"unitMode"`
 }
 
 func (header *ConsumerSendMsgBackRequestHeader) CheckFields() error {

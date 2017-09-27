@@ -409,6 +409,18 @@ func (bc *BrokerController) registerProcessor() {
 	bc.RemotingServer.RegisterProcessor(protocol.PULL_MESSAGE, pullMessageProcessor)
 	pullMessageProcessor.RegisterConsumeMessageHook(bc.consumeMessageHookList)
 
+	// QueryMessageProcessor
+	queryProcessor := NewQueryMessageProcessor(bc)
+	bc.RemotingServer.RegisterProcessor(protocol.QUERY_MESSAGE, queryProcessor)
+	bc.RemotingServer.RegisterProcessor(protocol.VIEW_MESSAGE_BY_ID, queryProcessor)
+
+	// EndTransactionProcessor
+	endTransactionProcessor := NewEndTransactionProcessor(bc)
+	bc.RemotingServer.RegisterProcessor(protocol.END_TRANSACTION, endTransactionProcessor)
+
+	// Default
+	adminProcessor := NewAdminBrokerProcessor(bc)
+	bc.RemotingServer.RegisterDefaultProcessor(adminProcessor)
 }
 
 // getConfigDataVersion 获得数据配置版本号

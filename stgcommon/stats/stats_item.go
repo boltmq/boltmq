@@ -16,11 +16,11 @@ import (
 // Author rongzhihong
 // Since 2017/9/19
 type StatsItem struct {
-	ValueCounter int64                  `json:"valueCounter"`
-	TimesCounter int64                  `json:"timesCounter"`
-	CsListMinute *list.BufferLinkedList `json:"csListMinute"`
-	CsListHour   *list.BufferLinkedList `json:"csListHour"`
-	CsListDay    *list.BufferLinkedList `json:"csListDay"`
+	ValueCounter int64                  `json:"valueCounter"` // 具体的统计值
+	TimesCounter int64                  `json:"timesCounter"` // 统计次数
+	CsListMinute *list.BufferLinkedList `json:"csListMinute"` // 最近一分钟内的镜像，数量6，10秒钟采样一次
+	CsListHour   *list.BufferLinkedList `json:"csListHour"`   // 最近一小时内的镜像，数量6，10分钟采样一次
+	CsListDay    *list.BufferLinkedList `json:"csListDay"`    // 最近一天内的镜像，数量24，1小时采样一次
 	StatsName    string                 `json:"statsName"`
 	StatsKey     string                 `json:"statsKey"`
 }
@@ -30,11 +30,11 @@ type StatsItem struct {
 // Since 2017/9/19
 func NewStatsItem() *StatsItem {
 	statsItem := new(StatsItem)
-	statsItem.ValueCounter = atomic.AddInt64(&statsItem.ValueCounter, 0)
-	statsItem.TimesCounter = atomic.AddInt64(&statsItem.TimesCounter, 0)
 	statsItem.CsListMinute = list.NewBufferLinkedList()
 	statsItem.CsListHour = list.NewBufferLinkedList()
 	statsItem.CsListDay = list.NewBufferLinkedList()
+	atomic.AddInt64(&(statsItem.ValueCounter), 0)
+	atomic.AddInt64(&(statsItem.TimesCounter), 0)
 	return statsItem
 }
 
@@ -42,8 +42,6 @@ func NewStatsItem() *StatsItem {
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *StatsSnapshot {
-	csList.Lock()
-	defer csList.Unlock()
 	defer utils.RecoveredFn()
 
 	var (
@@ -59,14 +57,15 @@ func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *Sta
 
 		if isHasFirst && isHasLast && firstBuffer != nil && lastBuffer != nil {
 			first := &CallSnapshot{}
-			stgcommon.Decode([]byte(firstBuffer.String()), first)
+			stgcommon.Decode(firstBuffer.Bytes(), first)
 
 			last := &CallSnapshot{}
-			stgcommon.Decode([]byte(lastBuffer.String()), last)
+			stgcommon.Decode(lastBuffer.Bytes(), last)
 
 			sum = last.Value - first.Value
 			tps = float64(sum) * 1000.0 / float64(last.Timestamp-first.Timestamp)
 			timesDiff := last.Times - first.Times
+
 			if timesDiff > 0 {
 				avgpt = float64(sum) / float64(timesDiff)
 			}
@@ -174,14 +173,11 @@ func (statsItem *StatsItem) PrintAtDay() {
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInSeconds() {
-	statsItem.CsListMinute.Lock()
-	defer statsItem.CsListMinute.Unlock()
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: statsItem.TimesCounter, Value: statsItem.ValueCounter}
+	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
 	content := stgcommon.Encode(callSnapshot)
-	bytesBuffer := bytes.NewBuffer(content)
-	statsItem.CsListMinute.Add(bytesBuffer)
+	statsItem.CsListMinute.Add(bytes.NewBuffer(content))
 
 	if statsItem.CsListMinute.Size() > 7 {
 		statsItem.CsListMinute.Remove(0)
@@ -192,11 +188,9 @@ func (statsItem *StatsItem) SamplingInSeconds() {
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInMinutes() {
-	statsItem.CsListHour.Lock()
-	defer statsItem.CsListHour.Unlock()
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: statsItem.TimesCounter, Value: statsItem.ValueCounter}
+	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
 	content := stgcommon.Encode(callSnapshot)
 	bytesBuffer := bytes.NewBuffer(content)
 	statsItem.CsListHour.Add(bytesBuffer)
@@ -210,11 +204,9 @@ func (statsItem *StatsItem) SamplingInMinutes() {
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInHour() {
-	statsItem.CsListDay.Lock()
-	defer statsItem.CsListDay.Unlock()
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: statsItem.TimesCounter, Value: statsItem.ValueCounter}
+	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
 	content := stgcommon.Encode(callSnapshot)
 	bytesBuffer := bytes.NewBuffer(content)
 	statsItem.CsListDay.Add(bytesBuffer)

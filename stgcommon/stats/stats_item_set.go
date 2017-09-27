@@ -15,15 +15,16 @@ import (
 type StatsItemSet struct {
 	StatsItemTable map[string]*StatsItem // key: statsKey, val:StatsItem
 	sync.RWMutex
-	StatsName      string
+	StatsName string
 }
 
 // NewStatsItemSet 统计单元集合初始化
 // Author rongzhihong
 // Since 2017/9/19
-func NewStatsItemSet() *StatsItemSet {
+func NewStatsItemSet(statsName string) *StatsItemSet {
 	statsItemSet := new(StatsItemSet)
 	statsItemSet.StatsItemTable = make(map[string]*StatsItem)
+	statsItemSet.StatsName = statsName
 	statsItemSet.Init()
 	return statsItemSet
 }
@@ -32,8 +33,8 @@ func NewStatsItemSet() *StatsItemSet {
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetAndCreateStatsItem(statsKey string) *StatsItem {
-	//stats.Lock()
-	//defer stats.Unlock()
+	stats.Lock()
+	defer stats.Unlock()
 
 	statsItem, ok := stats.StatsItemTable[statsKey]
 	if !ok || nil == statsItem {
@@ -49,8 +50,8 @@ func (stats *StatsItemSet) GetAndCreateStatsItem(statsKey string) *StatsItem {
 // Since 2017/9/19
 func (stats *StatsItemSet) AddValue(statsKey string, incValue, incTimes int64) {
 	statsItem := stats.GetAndCreateStatsItem(statsKey)
-	statsItem.ValueCounter = atomic.AddInt64(&statsItem.ValueCounter, incValue)
-	statsItem.TimesCounter = atomic.AddInt64(&statsItem.TimesCounter, incTimes)
+	atomic.AddInt64(&(statsItem.ValueCounter), incValue)
+	atomic.AddInt64(&(statsItem.TimesCounter), incTimes)
 }
 
 // GetStatsDataInMinute 获得分钟统计快照

@@ -137,9 +137,8 @@ func (cmp *ClientManageProcessor) unregisterClient(ctx netm.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/14
 func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
 	responseHeader := &header.QueryConsumerOffsetResponseHeader{}
-	response.CustomHeader = responseHeader
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	requestHeader := &header.QueryConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)

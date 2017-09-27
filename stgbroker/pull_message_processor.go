@@ -78,12 +78,8 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 }
 
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, ctx netm.Context, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
 	responseHeader := &header.PullMessageResponseHeader{}
-
-	if pullMessageResponseHeader, ok := response.CustomHeader.(*header.PullMessageResponseHeader); ok {
-		responseHeader = pullMessageResponseHeader
-	}
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	requestHeader := &header.PullMessageRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -286,8 +282,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			//	}
 			//	}
 			//	});
-
-			response = nil
+			// response = nil
 		case commonprotocol.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
@@ -296,8 +291,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
 				}
 
-				// TODO suspendTimestamp = pull.BrokerController.MessageStore.Now()
-				suspendTimestamp := timeutil.CurrentTimeMillis()
+				suspendTimestamp := pull.BrokerController.MessageStore.Now()
 				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil

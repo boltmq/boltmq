@@ -34,35 +34,23 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 
 	bs.clusterName = clusterName
 	bs.statsTable = make(map[string]*stats.StatsItemSet)
+
 	bs.momentStatsItemSet = stats.NewMomentStatsItemSet(GROUP_GET_FALL)
 
-	topicPutNumsSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = TOPIC_PUT_NUMS
-	bs.statsTable[TOPIC_PUT_NUMS] = topicPutNumsSet
+	bs.statsTable[TOPIC_PUT_NUMS] = stats.NewStatsItemSet(TOPIC_PUT_NUMS)
 
-	topicPutSizeSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = TOPIC_PUT_SIZE
-	bs.statsTable[TOPIC_PUT_SIZE] = topicPutSizeSet
+	bs.statsTable[TOPIC_PUT_SIZE] = stats.NewStatsItemSet(TOPIC_PUT_SIZE)
 
-	groupGetNumsSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = GROUP_GET_NUMS
-	bs.statsTable[GROUP_GET_NUMS] = groupGetNumsSet
+	bs.statsTable[GROUP_GET_NUMS] = stats.NewStatsItemSet(GROUP_GET_NUMS)
 
-	groupGetSizeSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = GROUP_GET_SIZE
-	bs.statsTable[GROUP_GET_SIZE] = groupGetSizeSet
+	bs.statsTable[GROUP_GET_SIZE] = stats.NewStatsItemSet(GROUP_GET_SIZE)
 
-	sndbckPutNumsSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = SNDBCK_PUT_NUMS
-	bs.statsTable[SNDBCK_PUT_NUMS] = sndbckPutNumsSet
+	bs.statsTable[SNDBCK_PUT_NUMS] = stats.NewStatsItemSet(SNDBCK_PUT_NUMS)
 
-	brokerPutNumsSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = BROKER_PUT_NUMS
-	bs.statsTable[BROKER_PUT_NUMS] = brokerPutNumsSet
+	bs.statsTable[BROKER_PUT_NUMS] = stats.NewStatsItemSet(BROKER_PUT_NUMS)
 
-	brokerGetNumsSet := stats.NewStatsItemSet()
-	topicPutNumsSet.StatsName = BROKER_GET_NUMS
-	bs.statsTable[BROKER_GET_NUMS] = brokerGetNumsSet
+	bs.statsTable[BROKER_GET_NUMS] = stats.NewStatsItemSet(BROKER_GET_NUMS)
+
 	return bs
 }
 
@@ -84,7 +72,11 @@ func (bsm *BrokerStatsManager) Shutdown() {
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) GetStatsItem(statsName, statsKey string) *stats.StatsItem {
-	return bsm.statsTable[statsName].GetStatsItem(statsKey)
+	statItemSet, ok := bsm.statsTable[statsName]
+	if ok {
+		return statItemSet.GetStatsItem(statsKey)
+	}
+	return nil
 }
 
 // IncTopicPutNums  增加数量
@@ -98,7 +90,7 @@ func (bsm *BrokerStatsManager) IncTopicPutNums(topic string) {
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncTopicPutSize(topic string, size int64) {
-	bsm.statsTable[TOPIC_PUT_SIZE].AddValue(topic, 1, 1)
+	bsm.statsTable[TOPIC_PUT_SIZE].AddValue(topic, size, 1)
 }
 
 // IncGroupGetNums  增加数量
@@ -119,21 +111,16 @@ func (bsm *BrokerStatsManager) IncGroupGetSize(group, topic string, incValue int
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerPutNums() {
-	statsItemSet := bsm.statsTable[BROKER_PUT_NUMS]
-	if statsItemSet != nil {
-		statsItemSet.GetStatsDataInMinute(bsm.clusterName)
-	}
-	fmt.Println(bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter)
-	bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
-		atomic.AddInt64(&(bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter), 1)
+	statsItem := bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName)
+	atomic.AddInt64(&(statsItem.ValueCounter), 1)
 }
 
 // IncBrokerGetNums  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerGetNums(incValue int) {
-	bsm.statsTable[BROKER_GET_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter =
-		atomic.AddInt64(&(bsm.statsTable[BROKER_GET_NUMS].GetAndCreateStatsItem(bsm.clusterName).ValueCounter), int64(incValue))
+	statsItem := bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName)
+	atomic.AddInt64(&(statsItem.ValueCounter), int64(incValue))
 }
 
 // IncSendBackNums  增加数量
@@ -155,5 +142,5 @@ func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {
 	statsKey := fmt.Sprintf("%d@%s@%s", queueId, topic, group)
-	bsm.momentStatsItemSet.GetAndCreateStatsItem(statsKey).ValueCounter = atomic.AddInt64(&fallBehind, 0)
+	atomic.StoreInt64(&(bsm.momentStatsItemSet.GetAndCreateStatsItem(statsKey).ValueCounter), fallBehind)
 }
