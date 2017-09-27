@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
+	"strconv"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
-	"os"
-	"strconv"
 )
 
 // RemotingCommand 服务器与客户端通过传递RemotingCommand来交互
@@ -269,27 +270,35 @@ func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
 	return cmd, nil
 }
 
+// Bytes 实现Serirable接口
+func (rc *RemotingCommand) Bytes() []byte {
+	var (
+		header []byte
+		packet []byte
+	)
+
+	// 头部进行编码
+	header = rc.EncodeHeader()
+	if rc.Body != nil && len(rc.Body) > 0 {
+		packet = append(header, rc.Body...)
+	} else {
+		packet = header
+	}
+
+	return packet
+}
+
 // ToString 打印RemotingCommand对象数据
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RemotingCommand) ToString() string {
-	flagBinary := fmt.Sprintf("%b", self.Flag)
+func (rc *RemotingCommand) ToString() string {
+	flagBinary := fmt.Sprintf("%b", rc.Flag)
 	extFields := "{}"
-	if bf, err := ffjson.Marshal(self.ExtFields); err == nil {
+	if bf, err := ffjson.Marshal(rc.ExtFields); err == nil {
 		extFields = string(bf)
 	}
 
 	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s]"
-	info := fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields)
+	info := fmt.Sprintf(format, rc.Code, rc.Language, rc.Version, rc.Opaque, flagBinary, rc.Remark, extFields)
 	return info
-}
-
-// DecodeCommand RemotingCommand转字符串
-// Author: rongzhihong
-// Since: 2017/9/19
-func (self *RemotingCommand) DecodeCommand() []byte {
-	if bf, err := ffjson.Marshal(self); err == nil {
-		return bf
-	}
-	return nil
 }
