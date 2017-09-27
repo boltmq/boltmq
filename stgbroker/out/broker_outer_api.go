@@ -79,11 +79,11 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
 	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
-		BrokerAddr:   brokerAddr,
-		BrokerId:     brokerId,
-		BrokerName:   brokerName,
-		ClusterName:  clusterName,
-		HaServerAddr: haServerAddr,
+		BrokerAddr : brokerAddr,
+		BrokerId : brokerId,
+		BrokerName : brokerName,
+		ClusterName : clusterName,
+		HaServerAddr : haServerAddr,
 	}
 
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
@@ -147,7 +147,7 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 			if result != nil {
 				registerBrokerResult = result
 			}
-			logger.Info("register broker to name server %s OK", namesrvAddr)
+			logger.Infof("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 	return registerBrokerResult
@@ -185,7 +185,7 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
 		for _, namesrvAddr := range nameServerAddressList {
 			self.UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-			logger.Info("register broker to name server %s OK", namesrvAddr)
+			logger.Infof("register broker to name server %s OK", namesrvAddr)
 		}
 	}
 }

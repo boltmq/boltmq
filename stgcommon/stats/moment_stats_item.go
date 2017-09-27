@@ -13,9 +13,9 @@ import (
 // Author rongzhihong
 // Since 2017/9/19
 type MomentStatsItem struct {
-	ValueCounter int64
-	StatsName    string
-	StatsKey     string
+	ValueCounter int64  `json:"valueCounter"`
+	StatsName    string `json:"statsName"`
+	StatsKey     string `json:"statsKey"`
 }
 
 // NewMomentStatsItem  初始化结构体
@@ -31,10 +31,11 @@ func NewMomentStatsItem() *MomentStatsItem {
 // Author rongzhihong
 // Since 2017/9/19
 func (item *MomentStatsItem) Init() {
+	// 分钟整点执行
 	var diff float64 = float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delay int = int(math.Abs(diff))
 	printAtMinutesTicker := timeutil.NewTicker(300000, delay)
-	printAtMinutesTicker.Do(func(tm time.Time) {
+	go printAtMinutesTicker.Do(func(tm time.Time) {
 		item.printAtMinutes()
 	})
 }

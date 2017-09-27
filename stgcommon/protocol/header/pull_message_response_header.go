@@ -4,10 +4,10 @@ package header
 // Author: yintongqiang
 // Since:  2017/8/16
 type PullMessageResponseHeader struct {
-	SuggestWhichBrokerId int64
-	NextBeginOffset      int64
-	MinOffset            int64
-	MaxOffset            int64
+	SuggestWhichBrokerId int64 `json:"suggestWhichBrokerId"`
+	NextBeginOffset      int64 `json:"nextBeginOffset"`
+	MinOffset            int64 `json:"minOffset"`
+	MaxOffset            int64 `json:"maxOffset"`
 }
 
 func (header *PullMessageResponseHeader) CheckFields() error {

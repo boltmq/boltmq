@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
@@ -57,7 +58,12 @@ func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *proto
 func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
+
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
 
 	// 消息轨迹：记录消费失败的消息
 	if len(requestHeader.OriginMsgId) > 0 {
@@ -78,10 +84,11 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	if subscriptionGroupConfig == nil {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist"
+		return response
 	}
 
 	// 检查Broker权限
-	if constant.IsWriteable(smp.BrokerController.BrokerConfig.BrokerPermission) {
+	if !constant.IsWriteable(smp.BrokerController.BrokerConfig.BrokerPermission) {
 		response.Code = commonprotocol.NO_PERMISSION
 		response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
 		return response
@@ -197,9 +204,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 	message.SetOriginMessageId(&msgInner.Message, originMsgId)
 
-	smp.BrokerController.MessageStore.PutMessage(msgInner)
-	putMessageResult := new(stgstorelog.PutMessageResult)
-
+	putMessageResult := smp.BrokerController.MessageStore.PutMessage(msgInner)
 	if putMessageResult != nil {
 		switch putMessageResult.PutMessageStatus {
 		case stgstorelog.PUTMESSAGE_PUT_OK:
@@ -234,10 +239,6 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	responseHeader := new(header.SendMessageResponseHeader)
 	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, responseHeader)
-
-	if value, ok := response.CustomHeader.(*header.SendMessageResponseHeader); ok {
-		responseHeader = value
-	}
 
 	response.Opaque = request.Opaque
 	response.Code = -1
@@ -276,7 +277,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
-	msgInner.BornHost = ctx.LocalAddr().String()
+	msgInner.BornHost = ctx.RemoteAddr().String()
 	msgInner.StoreHost = smp.abstractSendMessageProcessor.StoreHost
 	if requestHeader.ReconsumeTimes == 0 {
 		msgInner.ReconsumeTimes = 0
@@ -292,7 +293,8 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 			return response
 		}
 	}
-
+	// TODO:当前messageStore有问题，只有SysFlag=8才能分发消息位置信息到ConsumeQueue
+	msgInner.SysFlag = 8
 	putMessageResult := smp.BrokerController.MessageStore.PutMessage(msgInner)
 	if putMessageResult != nil {
 		sendOK := false
@@ -328,16 +330,16 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 		}
 
 		if sendOK {
-			//smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
-			//smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
-			//smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
+			smp.BrokerController.brokerStatsManager.IncTopicPutNums(msgInner.Topic)
+			smp.BrokerController.brokerStatsManager.IncTopicPutSize(msgInner.Topic, putMessageResult.AppendMessageResult.WroteBytes)
+			smp.BrokerController.brokerStatsManager.IncBrokerPutNums()
 
 			response.Remark = ""
 			responseHeader.MsgId = putMessageResult.AppendMessageResult.MsgId
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
 
-			DoResponse(ctx, request, response)
+			// TODO DoResponse(ctx, request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
 					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
@@ -349,7 +351,8 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 				mqtraceContext.QueueId = responseHeader.QueueId
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
-			return nil
+			logger.Infof("response:%#v", response)
+			return response
 		}
 
 	} else {

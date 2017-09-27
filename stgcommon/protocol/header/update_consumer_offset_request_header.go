@@ -4,10 +4,10 @@ package header
 // Author: yintongqiang
 // Since:  2017/8/11
 type UpdateConsumerOffsetRequestHeader struct {
-	ConsumerGroup string
-	Topic         string
-	QueueId       int
-	CommitOffset  int64
+	ConsumerGroup string `json:"consumerGroup"`
+	Topic         string `json:"topic"`
+	QueueId       int    `json:"queueId"`
+	CommitOffset  int64  `json:"commitOffset"`
 }
 
 func (header *UpdateConsumerOffsetRequestHeader) CheckFields() error {
