@@ -23,7 +23,7 @@ import (
 )
 
 type BrokerController struct {
-	BrokerConfig                         stgcommon.BrokerConfig
+	BrokerConfig                         *stgcommon.BrokerConfig
 	MessageStoreConfig                   *stgstorelog.MessageStoreConfig
 	ConfigDataVersion                    *stgcommon.DataVersion
 	ConsumerOffsetManager                *ConsumerOffsetManager
@@ -52,7 +52,7 @@ type BrokerController struct {
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
+func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
 	brokerController.MessageStoreConfig = messageStoreConfig
@@ -80,6 +80,8 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig, messageStoreConfig
 
 	brokerController.SlaveSynchronize = NewSlaveSynchronize(brokerController)
 	brokerController.brokerStatsManager = stats.NewBrokerStatsManager(brokerController.BrokerConfig.BrokerClusterName)
+	logger.Info("create broker controller success")
+
 	return brokerController
 }
 

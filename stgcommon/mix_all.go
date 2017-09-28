@@ -7,9 +7,11 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -242,4 +244,24 @@ func GetSmartgoConfigDir() string {
 	src := "/src"
 	smartgoConfigPath := gopath + src + SMARTGO_CONF_DIR
 	return smartgoConfigPath
+}
+
+// CheckIpAndPort 校验ip:port是否有效
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func CheckIpAndPort(addr string) bool {
+	if addr == "" {
+		return false
+	}
+	ipAndPort := strings.Split(addr, ":")
+	if ipAndPort == nil || len(ipAndPort) != 2 {
+		return false
+	}
+	if tmpIp := net.ParseIP(ipAndPort[0]); tmpIp == nil {
+		return false
+	}
+	if tmpPort, err := strconv.Atoi(ipAndPort[1]); err != nil || (tmpPort <= 1 || tmpPort >= 100000) {
+		return false
+	}
+	return true
 }

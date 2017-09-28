@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"github.com/toolkits/file"
 	"strings"
 	"sync"
 )
@@ -186,7 +187,7 @@ func (self *KVConfigManager) load() error {
 	cfgPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
 	logger.Info("get kvConfigPath = %s", cfgPath)
 	cfgName := self.NamesrvController.NamesrvConfig.GetKvConfigName()
-	if ok, err := stgcommon.ExistsFile(cfgPath); err != nil || !ok {
+	if !file.IsExist(cfgPath) {
 		ok, err := stgcommon.CreateFile(cfgPath)
 		if err != nil {
 			return fmt.Errorf("create %s failed. err: %s", cfgName, err.Error())

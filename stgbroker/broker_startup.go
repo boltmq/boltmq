@@ -39,6 +39,9 @@ func (self *SmartgoBrokerConfig) IsBlank() bool {
 	return self == nil || strings.TrimSpace(self.BrokerClusterName) == "" || strings.TrimSpace(self.BrokerName) == ""
 }
 
+// Start 启动BrokerController
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/20
 func Start() *BrokerController {
 	controller := CreateBrokerController()
 	controller.Start()
@@ -54,31 +57,60 @@ func Start() *BrokerController {
 	return controller
 }
 
+// CreateBrokerController 创建BrokerController对象
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/20
 func CreateBrokerController() *BrokerController {
 	cfgName := "smartgoBroker.toml"
 	brokerConfigPath := "../../conf/" + cfgName
 	if !file.IsExist(brokerConfigPath) {
-		// TODO:加载配置文件，通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
-		// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
+		// 通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
+		// TODO:为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
 		brokerConfigPath = stgcommon.GetSmartgoConfigDir() + cfgName
 		fmt.Printf("idea special brokerConfigPath = %s \n", brokerConfigPath)
 	}
 
+	// 读取并转化*.toml配置项的值
 	var cfg SmartgoBrokerConfig
 	parseutil.ParseConf(brokerConfigPath, &cfg)
 	fmt.Println(cfg.ToString())
 
+	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
+	brokerConfig := stgcommon.NewBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName)
+	if !checkBrokerConfig(brokerConfig) {
+		os.Exit(0)
+	}
+
 	// 初始化brokerConfig
-	brokerConfig := stgcommon.NewBrokerConfig()
+	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
+	if !checkMessageStoreConfig(messageStoreConfig, brokerConfig) {
+		os.Exit(0)
+	}
 
-	brokerConfig.BrokerName = cfg.BrokerName
-	brokerConfig.BrokerClusterName = cfg.BrokerClusterName
+	// 构建BrokerController结构体
+	controller := NewBrokerController(brokerConfig, messageStoreConfig)
+	controller.ConfigFile = brokerConfigPath
 
+	// 初始化controller
+	initResult := controller.Initialize()
+	if !initResult {
+		fmt.Println("the broker initialize failed")
+		controller.Shutdown()
+		os.Exit(0)
+	}
+
+	return controller
+}
+
+// checBrokerConfig 校验broker启动的所必需的SmartGoHome、namesrv配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 	// 如果没有设置home环境变量，则启动失败
 	if "" == brokerConfig.SmartGoHome {
 		errMsg := fmt.Sprintf("Please set the '%s' variable in your environment to match the location of the Smartgo installation\n", stgcommon.SMARTGO_HOME_ENV)
 		fmt.Printf(errMsg)
-		os.Exit(0)
+		return false
 	}
 
 	// 检测环境变量NAMESRV_ADDR
@@ -86,7 +118,7 @@ func CreateBrokerController() *BrokerController {
 	if strings.TrimSpace(nameSrvAddr) == "" {
 		errMsg := fmt.Sprintf("Please set the '%s' variable in your environment\n", stgcommon.NAMESRV_ADDR_ENV)
 		fmt.Printf(errMsg)
-		os.Exit(0)
+		return false
 	}
 
 	// 检测NameServer环境变量设置是否正确 IP:PORT
@@ -94,21 +126,25 @@ func CreateBrokerController() *BrokerController {
 	if addrs == nil || len(addrs) == 0 {
 		errMsg := fmt.Sprintf("the %s=%s environment variable is invalid. \n", stgcommon.NAMESRV_ADDR_ENV, addrs)
 		fmt.Printf(errMsg)
-		os.Exit(0)
+		return false
 	}
 	for _, addr := range addrs {
-		ipAndPort := strings.Split(addr, ":")
-		if ipAndPort == nil {
-			errMsg := fmt.Sprintf("the ipAndPort[%s] is invalid. \n", addr)
-			fmt.Printf(errMsg)
-			os.Exit(0)
+		if !stgcommon.CheckIpAndPort(addr) {
+			format := "The Name Server Address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\"\n"
+			fmt.Printf(format, addr)
+			return false
 		}
 	}
 
-	// 初始化brokerConfig
-	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
+	return true
+}
+
+// checkMessageStoreConfig 校验messageStoreConfig配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) bool {
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
-	if config.SLAVE == messageStoreConfig.BrokerRole {
+	if messageStoreConfig.BrokerRole == config.SLAVE {
 		ratio := messageStoreConfig.AccessMessageInMemoryMaxRatio - 10
 		messageStoreConfig.AccessMessageInMemoryMaxRatio = ratio
 	}
@@ -122,23 +158,10 @@ func CreateBrokerController() *BrokerController {
 	case config.SLAVE:
 		if brokerConfig.BrokerId <= 0 {
 			fmt.Printf("Slave's brokerId[%d] must be > 0 \n", brokerConfig.BrokerId)
-			os.Exit(0)
+			return false
 		}
 	default:
 
 	}
-
-	// 初始化日志
-	controller := NewBrokerController(*brokerConfig, messageStoreConfig)
-	controller.ConfigFile = brokerConfigPath
-
-	// 初始化controller
-	initResult := controller.Initialize()
-	if !initResult {
-		fmt.Println("the broker initialize failed")
-		controller.Shutdown()
-		os.Exit(0)
-	}
-
-	return controller
+	return true
 }

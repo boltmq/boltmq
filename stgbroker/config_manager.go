@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"github.com/toolkits/file"
 	"io/ioutil"
 	"sync"
 )
@@ -29,25 +30,27 @@ func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
 
 func (cme *ConfigManagerExt) Load() bool {
 	fileName := cme.ConfigManager.ConfigFilePath()
-	bytes, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		fmt.Println("ReadFile: ", err.Error())
-
-		// 第一次启动服务，如果 诸如topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
+	if !file.IsExist(fileName) {
+		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
 		ok, err := stgcommon.CreateFile(fileName)
 		if err != nil {
 			fmt.Printf("create %s failed. err: %s \n", fileName, err.Error())
 			return false
 		}
 		if !ok {
-			fmt.Printf("create %s failed, but err is nil\n", fileName)
+			fmt.Printf("create %s failed, unknown reason. \n", fileName)
 			return false
 		}
-
 		fmt.Printf("create %s successful. \n", fileName)
 	}
 
-	cme.ConfigManager.Decode(bytes)
+	buf, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		fmt.Println("ReadFile: ", err.Error())
+		return false
+	}
+
+	cme.ConfigManager.Decode(buf)
 	return true
 }
 
