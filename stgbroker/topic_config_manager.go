@@ -45,7 +45,7 @@ func (self *TopicConfigManager) init() {
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
@@ -61,7 +61,7 @@ func (self *TopicConfigManager) init() {
 			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.WriteQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.Perm = constant.PERM_INHERIT | constant.PERM_READ | constant.PERM_WRITE
-			logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+			logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 			self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 		}
 	}
@@ -74,7 +74,7 @@ func (self *TopicConfigManager) init() {
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
-		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
@@ -89,7 +89,7 @@ func (self *TopicConfigManager) init() {
 			perm |= constant.PERM_READ | constant.PERM_WRITE
 		}
 		topicConfig.Perm = perm
-		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
@@ -106,7 +106,7 @@ func (self *TopicConfigManager) init() {
 		topicConfig.Perm = perm
 		topicConfig.WriteQueueNums = 1
 		topicConfig.ReadQueueNums = 1
-		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
@@ -118,7 +118,7 @@ func (self *TopicConfigManager) init() {
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		logger.Infof("topicConfigManager init: %s", topicConfig.ToString())
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 }
