@@ -134,7 +134,7 @@ func NewMessageStoreConfig() *MessageStoreConfig {
 }
 
 func (self *MessageStoreConfig) getMapedFileSizeConsumeQueue() int32 {
-	factor := math.Ceil(float64(self.MapedFileSizeConsumeQueue / (CQStoreUnitSize * 1.0)))
+	factor := math.Ceil(float64(self.MapedFileSizeConsumeQueue) / float64(CQStoreUnitSize*1.0))
 	return int32(factor * CQStoreUnitSize)
 }
 

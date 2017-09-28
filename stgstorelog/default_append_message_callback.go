@@ -9,6 +9,8 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"sync/atomic"
 )
 
 const (
@@ -133,7 +135,7 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		self.msgStoreItemMemory.Write(msgInner.Body) // BODY Content
 	}
 
-	self.msgStoreItemMemory.Write([]byte{byte(topicContentLength)}) // 16 TOPIC
+	self.msgStoreItemMemory.WriteInt8(int8(topicContentLength)) // 16 TOPIC
 	self.msgStoreItemMemory.Write(topicData)
 
 	self.msgStoreItemMemory.WriteInt16(int16(propertiesContentLength)) // 17 PROPERTIES
@@ -152,7 +154,22 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		StoreTimestamp: msgInner.StoreTimestamp,
 		LogicsOffset:   queryOffset}
 
-	// TODO 事务消息处理
+	tranType := sysflag.GetTransactionValue(int(msgInner.SysFlag))
+	switch tranType {
+	case sysflag.TransactionPreparedType:
+		// TODO 事务消息处理
+		break
+	case sysflag.TransactionRollbackType:
+		// TODO 事务消息处理
+		break
+	case sysflag.TransactionNotType:
+	case sysflag.TransactionCommitType:
+		atomic.AddInt64(&queryOffset, 1)
+		self.commitLog.TopicQueueTable[key] = atomic.LoadInt64(&queryOffset)
+		break
+	default:
+		break
+	}
 
 	return result
 }

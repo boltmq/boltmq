@@ -34,14 +34,21 @@ func (m *MappedByteBuffer) Bytes() []byte { return m.MMapBuf[:m.WritePos] }
 // Write appends the contents of data to the buffer
 func (m *MappedByteBuffer) Write(data []byte) (n int, err error) {
 	if m.WritePos+len(data) > m.Limit {
-		logger.Error("m.WritePos + len(data)(%v > %v)", m.WritePos+len(data), m.Limit)
-		panic(errors.New("m.WritePos + len(data)"))
+		logger.Errorf("m.WritePos + len(data)(%v > %v) data: %s", m.WritePos+len(data), m.Limit, string(data))
+		//panic(errors.New("m.WritePos + len(data)"))
+		return 0, errors.New("m.WritePos + len(data)")
 	}
 	for index, value := range data {
 		m.MMapBuf[m.WritePos+index] = value
 	}
 	m.WritePos += len(data)
 	return len(data), nil
+}
+
+func (self *MappedByteBuffer) WriteInt8(i int8) (mappedByteBuffer *MappedByteBuffer) {
+	toBytes := byteutil.Int8ToBytes(i)
+	self.Write(toBytes)
+	return self
 }
 
 func (self *MappedByteBuffer) WriteInt16(i int16) (mappedByteBuffer *MappedByteBuffer) {
@@ -70,6 +77,13 @@ func (m *MappedByteBuffer) Read(data []byte) (n int, err error) {
 	n = copy(data, m.MMapBuf[m.ReadPos:])
 	m.ReadPos += n
 	return
+}
+
+func (self *MappedByteBuffer) ReadInt8() (i int8) {
+	int8bytes := make([]byte, 1)
+	self.Read(int8bytes)
+	i = byteutil.BytesToInt8(int8bytes)
+	return i
 }
 
 func (self *MappedByteBuffer) ReadInt16() (i int16) {

@@ -5,12 +5,15 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"sync/atomic"
+	"time"
 )
 
 func NewDispatchMessageService(putMsgIndexHightWater int32, defaultMessageStore *DefaultMessageStore) *DispatchMessageService {
 	dms := new(DispatchMessageService)
 	rate := int32(float64(putMsgIndexHightWater) * 1.5)
 	dms.requestsChan = make(chan *DispatchRequest, rate)
+	dms.requestSize = 0
 	dms.closeChan = make(chan bool, 1)
 	dms.mutex = new(sync.Mutex)
 	dms.defaultMessageStore = defaultMessageStore
@@ -20,6 +23,7 @@ func NewDispatchMessageService(putMsgIndexHightWater int32, defaultMessageStore 
 
 type DispatchMessageService struct {
 	requestsChan        chan *DispatchRequest
+	requestSize         int32
 	closeChan           chan bool
 	defaultMessageStore *DefaultMessageStore
 	mutex               *sync.Mutex
@@ -32,7 +36,7 @@ func (self *DispatchMessageService) Start() {
 	for {
 		select {
 		case request := <-self.requestsChan:
-			//logger.Infof("dispatch message: %#v \r\n", request)
+			logger.Infof("dispatch message: %#v \r\n", request)
 			self.doDispatch(request)
 		case <-self.closeChan:
 			self.destroy()
@@ -54,7 +58,18 @@ func (self *DispatchMessageService) destroy() {
 func (self *DispatchMessageService) putRequest(dispatchRequest *DispatchRequest) {
 	if !self.stop {
 		self.requestsChan <- dispatchRequest
+		atomic.AddInt32(&self.requestSize, 1)
+
+		logger.Info("dispatch message service put request,request size: ", self.requestSize)
+
+		putMsgIndexHightWater := self.defaultMessageStore.MessageStoreConfig.PutMsgIndexHightWater
+		if atomic.LoadInt32(&self.requestSize) > putMsgIndexHightWater {
+			logger.Infof("Message index buffer size %d > high water %d", atomic.LoadInt32(&self.requestSize),
+				putMsgIndexHightWater)
+			time.Sleep(time.Millisecond * 1)
+		}
 	}
+
 }
 
 func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest) {

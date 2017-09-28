@@ -35,7 +35,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	oldValue, err := self.requestTable.PutIfAbsent(nextFilePath, nextReq)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service put request error:", err.Error())
 		return nil, nil
 	}
 
@@ -45,7 +45,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	nextOldValue, err := self.requestTable.PutIfAbsent(nextNextFilePath, nextNextReq)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service put request error:", err.Error())
 		return nil, nil
 	}
 
@@ -55,7 +55,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	result, err := self.requestTable.Get(nextFilePath)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service get request by file path error:", err.Error())
 	}
 
 	if result != nil {
@@ -84,7 +84,7 @@ func (self *AllocateMapedFileService) mmapOperation() bool {
 	case request := <-self.requestChan:
 		value, err := self.requestTable.Get(request.filePath)
 		if err != nil {
-			logger.Info(err.Error())
+			logger.Info("allocate maped file service mmapOperation get request error:", err.Error())
 			return true
 		}
 
