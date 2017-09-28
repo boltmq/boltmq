@@ -46,7 +46,7 @@ func reflectSturctSetField(structValue reflect.Value, name string, value string)
 	structFieldType := structFieldValue.Type()
 	switch structFieldType.Kind() {
 	case reflect.String:
-		structFieldValue.Set(reflect.ValueOf(value))
+		structFieldValue.SetString(value)
 	case reflect.Int8:
 		fallthrough
 	case reflect.Int16:
@@ -78,7 +78,7 @@ func reflectSturctSetField(structValue reflect.Value, name string, value string)
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
-		structFieldValue.Set(reflect.ValueOf(bval))
+		structFieldValue.SetBool(bval)
 	default:
 		return errors.Errorf("Provided value type didn't match obj field type")
 	}
