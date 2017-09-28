@@ -78,7 +78,7 @@ func (self *TopicConfigManager) init() {
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
-	// 集群名称BrokerClusterName
+	// DefaultCluster
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
@@ -93,7 +93,7 @@ func (self *TopicConfigManager) init() {
 		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
-	// 服务器名字:BrokerName
+	// DEFAULT_BROKER
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
@@ -138,7 +138,6 @@ func (tcm *TopicConfigManager) isTopicCanSendMessage(topic string) bool {
 // Author gaoyanlei
 // Since 2017/8/11
 func (tcm *TopicConfigManager) SelectTopicConfig(topic string) *stgcommon.TopicConfig {
-
 	topicConfig := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	if topicConfig != nil {
 		return topicConfig

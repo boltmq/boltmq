@@ -47,11 +47,11 @@ type BrokerConfig struct {
 	*protocol.RemotingSerializable     `json:"-"`
 }
 
-// NewBrokerConfig 初始化BrokerConfig
+// NewDefaultBrokerConfig 初始化默认BrokerConfig
 // Author gaoyanlei
 // Since 2017/8/9
-func NewBrokerConfig() *BrokerConfig {
-	return &BrokerConfig{
+func NewDefaultBrokerConfig() *BrokerConfig {
+	brokerConfig := &BrokerConfig{
 		SmartGoHome:                        os.Getenv(SMARTGO_HOME_ENV),
 		NamesrvAddr:                        os.Getenv(NAMESRV_ADDR_ENV),
 		BrokerIP1:                          stgclient.GetLocalAddress(),
@@ -82,6 +82,18 @@ func NewBrokerConfig() *BrokerConfig {
 		OffsetCheckInSlave:                 true,
 		RemotingSerializable:               new(protocol.RemotingSerializable),
 	}
+
+	return brokerConfig
+}
+
+// NewBrokerConfig 初始化BrokerConfig
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/28
+func NewBrokerConfig(brokerName, brokerClusterName string) *BrokerConfig {
+	brokerConfig := NewDefaultBrokerConfig()
+	brokerConfig.BrokerName = brokerName
+	brokerConfig.BrokerClusterName = brokerClusterName
+	return brokerConfig
 }
 
 // localHostName 获取当前机器hostName

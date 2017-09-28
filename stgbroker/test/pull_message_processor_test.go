@@ -70,15 +70,13 @@ func createRequest() *protocol.RemotingCommand {
 
 func InitBrokerController() *stgbroker.BrokerController {
 	// 初始化brokerConfig
-	brokerConfig := stgcommon.NewBrokerConfig()
+	brokerConfig := stgcommon.NewBrokerConfig("BrokerName", "BrokerClusterName")
 
-	brokerConfig.BrokerName = "BrokerName"
-	brokerConfig.BrokerClusterName = "BrokerClusterName"
-
-	// 初始化brokerConfig
+	// 初始化messageStoreConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 
-	controller := stgbroker.NewBrokerController(*brokerConfig, messageStoreConfig)
+	// 创建BrokerController结构体
+	controller := stgbroker.NewBrokerController(brokerConfig, messageStoreConfig)
 
 	// 初始化controller
 	initResult := controller.Initialize()
@@ -96,8 +94,8 @@ func createCtx() netm.Context {
 	bootstrap := netm.NewBootstrap()
 	go bootstrap.Bind("127.0.0.1", 18001).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
-		remoteContext = ctx
-	}).Sync()
+			remoteContext = ctx
+		}).Sync()
 
 	clientBootstrap := netm.NewBootstrap()
 	err := clientBootstrap.Connect("127.0.0.1", 18001)

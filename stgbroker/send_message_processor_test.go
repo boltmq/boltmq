@@ -7,12 +7,12 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"testing"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 // TestPutMessage 测试存消息
@@ -29,7 +29,7 @@ func TestPutMessage(t *testing.T) {
 	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgInner.GetTags())
 	msgInner.QueueId = 0
 	msgInner.SysFlag = 8
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
@@ -84,15 +84,13 @@ func TestConsumerSendMsgBack(t *testing.T) {
 
 func InitBrokerController() *BrokerController {
 	// 初始化brokerConfig
-	brokerConfig := stgcommon.NewBrokerConfig()
-
-	brokerConfig.BrokerName = "BrokerName"
-	brokerConfig.BrokerClusterName = "BrokerClusterName"
+	brokerConfig := stgcommon.NewBrokerConfig("BrokerName", "BrokerClusterName")
 
 	// 初始化brokerConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 
-	controller := NewBrokerController(*brokerConfig, messageStoreConfig)
+	// 初始化BrokerController
+	controller := NewBrokerController(brokerConfig, messageStoreConfig)
 
 	// 初始化controller
 	initResult := controller.Initialize()
@@ -110,8 +108,8 @@ func CreateCtx() netm.Context {
 	bootstrap := netm.NewBootstrap()
 	go bootstrap.Bind("127.0.0.1", 18000).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
-		remoteContext = ctx
-	}).Sync()
+			remoteContext = ctx
+		}).Sync()
 
 	clientBootstrap := netm.NewBootstrap()
 	err := clientBootstrap.Connect("127.0.0.1", 18000)
@@ -153,6 +151,6 @@ func CreateMqtraceContext() *mqtrace.SendMessageContext {
 func CreateConsumerSendMsgBackRequest() *protocol.RemotingCommand {
 	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
 	requestHeader.Offset = 0
-	request := protocol.CreateRequestCommand(commonprotocol.CONSUMER_SEND_MSG_BACK, requestHeader)
+	request := protocol.CreateRequestCommand(code.CONSUMER_SEND_MSG_BACK, requestHeader)
 	return request
 }
