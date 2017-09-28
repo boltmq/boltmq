@@ -213,7 +213,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
-				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
+				storeHost := pull.BrokerController.GetStoreHost()
 				messageIds := pull.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, requestHeader.QueueOffset+int64(getMessageResult.GetMessageCount()), storeHost)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()

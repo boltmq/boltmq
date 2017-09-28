@@ -1,15 +1,10 @@
 package main
 
 import (
-	"testing"
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 )
 
-func TestNewClientConfig(t *testing.T) {
-
+func main() {
 	stgbroker.Start()
-	select {
-
-	}
+	select {}
 }
-

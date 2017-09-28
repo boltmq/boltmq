@@ -195,10 +195,8 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request
 		context.Success = true
 		context.Status = listener.CONSUME_SUCCESS.String()
 
-		storeHost := cmp.BrokerController.BrokerConfig.BrokerIP1 + "" + cmp.BrokerController.RemotingServer.GetListenPort()
-
+		storeHost := cmp.BrokerController.GetStoreHost()
 		preOffset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
-
 		messageIds := cmp.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, int32(requestHeader.QueueId), preOffset, requestHeader.CommitOffset, storeHost)
 
 		context.MessageIds = messageIds

@@ -27,18 +27,13 @@ func main() {
 		response         *protocol.RemotingCommand
 		err              error
 		brokerName       = "broker-b"
-		brokerAddr       = "10.122.2.28:10911"
-		haServerAddr     = "10.122.2.28:10912"
+		brokerAddr       = "127.0.0.1:10911"
+		haServerAddr     = "127.0.0.1:10912"
 		clusterName      = "DefaultCluster"
-		brokerId         = 0
+		brokerId         = int64(0)
 		filterServerList []string
 		oneway           = false
 	)
-
-	brokerController := stgbroker.CreateBrokerController()
-	topicManager := stgbroker.NewTopicConfigManager(brokerController)
-	topicManager.Load()
-	topicConfigWrapper := brokerController.TopicConfigManager.TopicConfigSerializeWrapper
 
 	// 初始化
 	initClient()
@@ -47,7 +42,11 @@ func main() {
 	cmd.Start()
 	logger.Info("example registry broker, client start success")
 
-	requestHeader := namesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, int64(brokerId))
+	brokerController := stgbroker.CreateBrokerController()
+	brokerController.TopicConfigManager.Load()
+	topicConfigWrapper := brokerController.TopicConfigManager.TopicConfigSerializeWrapper
+
+	requestHeader := namesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request = protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
 
 	requestBody := body.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
