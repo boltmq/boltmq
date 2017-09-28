@@ -309,11 +309,46 @@ func (self *DefaultMessageStore) createTempFile() error {
 	return nil
 }
 
+func (self *DefaultMessageStore) deleteFile(fileName string) {
+	exist, _ := PathExists(fileName)
+	if exist {
+		if err := os.Remove(fileName); err != nil {
+			logger.Errorf("message store delete file %s error: ", fileName, err.Error())
+		}
+	}
+}
+
 func (self *DefaultMessageStore) Shutdown() {
 	if !self.ShutdownFlag {
 		self.ShutdownFlag = true
 
-		// TODO
+		// TODO self.scheduledExecutorService.shutdown()
+
+		time.After(time.Millisecond * 3) // 等待其他调用停止
+
+		if self.ScheduleMessageService != nil {
+			self.ScheduleMessageService.Shutdown()
+		}
+
+		if self.HAService != nil {
+			self.HAService.Shutdown()
+		}
+
+		self.StoreStatsService.Shutdown()
+		self.DispatchMessageService.Shutdown()
+		self.IndexService.Shutdown()
+		self.FlushConsumeQueueService.Shutdown()
+		self.CommitLog.Shutdown()
+		self.AllocateMapedFileService.Shutdown()
+
+		if self.ReputMessageService != nil {
+			self.ReputMessageService.Shutdown()
+		}
+
+		self.StoreCheckpoint.flush()
+		self.StoreCheckpoint.shutdown()
+
+		self.deleteFile(config.GetAbortFile(self.MessageStoreConfig.StorePathRootDir))
 	}
 }
 

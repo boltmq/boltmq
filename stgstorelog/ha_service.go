@@ -2,6 +2,7 @@ package stgstorelog
 
 import (
 	"container/list"
+	"sync"
 )
 
 type HAService struct {
@@ -13,6 +14,7 @@ type HAService struct {
 	push2SlaveMaxOffset  int64                // 写入到Slave的最大Offset
 	groupTransferService *interface{}         // TODO 主从复制通知服务
 	haClient             *HAClient            // Slave订阅对象
+	mutex                *sync.Mutex
 }
 
 func NewHAService(defaultMessageStore *DefaultMessageStore) *HAService {
@@ -25,7 +27,19 @@ func NewHAService(defaultMessageStore *DefaultMessageStore) *HAService {
 		push2SlaveMaxOffset:  int64(0),
 		groupTransferService: nil,
 		haClient:             nil,
+		mutex:                new(sync.Mutex),
 	}
+}
+
+func (self *HAService) destroyConnections() {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	for element := self.connectionList.Front(); element != nil; element = element.Next() {
+		// TODO connection := element.Value.(*HAConnection)
+	}
+
+	self.connectionList = list.New()
 }
 
 func (self *HAService) updateMasterAddress(newAddr string) {
@@ -34,4 +48,11 @@ func (self *HAService) updateMasterAddress(newAddr string) {
 
 func (self *HAService) Start() {
 	// TODO
+}
+
+func (self *HAService) Shutdown() {
+	self.haClient.Shutdown()
+	self.acceptSocketService.Shutdown(true)
+	self.destroyConnections()
+	// TODO self.groupTransferService.Shutdown()
 }

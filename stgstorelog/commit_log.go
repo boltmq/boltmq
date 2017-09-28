@@ -62,6 +62,10 @@ func (self *CommitLog) Start() {
 	// TODO
 }
 
+func (self *CommitLog) Shutdown() {
+	// TODO
+}
+
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
 	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
 	// TOD0 crc32

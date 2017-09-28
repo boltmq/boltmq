@@ -75,3 +75,7 @@ func (self *StoreStatsService) GetPutMessageTimesTotal() int64 {
 
 	return result
 }
+
+func (self *StoreStatsService) Shutdown() {
+	// TODO
+}
