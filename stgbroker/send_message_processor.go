@@ -187,7 +187,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	msgInner.Flag = msgExt.Flag
 	message.SetPropertiesMap(&msgInner.Message, msgExt.Properties)
 	msgInner.PropertiesString = message.MessageProperties2String(msgExt.Properties)
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgExt.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgExt.GetTags())
 
 	msgInner.QueueId = int32(queueIdInt)
 	msgInner.SysFlag = msgExt.SysFlag
@@ -238,8 +238,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	responseHeader := new(header.SendMessageResponseHeader)
-	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, responseHeader)
-
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
 	smp.abstractSendMessageProcessor.msgCheck(ctx, requestHeader, response)
@@ -273,7 +272,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(&topicConfig.TopicFilterType, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(topicConfig.TopicFilterType, msgInner.GetTags())
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
@@ -339,7 +338,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
 
-			// TODO DoResponse(ctx, request, response)
+			DoResponse(ctx, request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
 					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
@@ -352,7 +351,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
 			logger.Infof("response:%#v", response)
-			return response
+			return nil
 		}
 
 	} else {

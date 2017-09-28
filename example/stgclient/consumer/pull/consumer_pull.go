@@ -1,4 +1,4 @@
-package pull
+package main
 
 import (
 	"fmt"
@@ -11,12 +11,13 @@ func main() {
 	defaultMQPullConsumer.SetNamesrvAddr("127.0.0.1:10911")
 	defaultMQPullConsumer.Start()
 
-	mqs := defaultMQPullConsumer.FetchSubscribeMessageQueues("MY_DEFAULT_TOPIC")
+	mqs := defaultMQPullConsumer.FetchSubscribeMessageQueues("TestTopic")
 	for _, mq := range mqs {
-		pullResult, err := defaultMQPullConsumer.Pull(mq, "mq", 0, 32)
+		pullResult, err := defaultMQPullConsumer.Pull(mq, "tagA", 0, 32)
 		if pullResult == nil || err != nil {
 			fmt.Println(err)
 		} else {
+			fmt.Println(pullResult)
 			for _, msgExt := range pullResult.MsgFoundList {
 
 				fmt.Println(string(msgExt.Body))

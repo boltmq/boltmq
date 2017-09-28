@@ -185,7 +185,7 @@ func (etp *EndTransactionProcessor) endMessageTransaction(msgExt *message.Messag
 		topicFilterType = stgcommon.SINGLE_TAG
 	}
 
-	tagsCodeValue := stgstorelog.TagsString2tagsCode(&topicFilterType, msgInner.GetTags())
+	tagsCodeValue := stgstorelog.TagsString2tagsCode(topicFilterType, msgInner.GetTags())
 	msgInner.TagsCode = tagsCodeValue
 	msgInner.PropertiesString = message.MessageProperties2String(msgExt.Properties)
 
