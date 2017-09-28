@@ -1,6 +1,8 @@
 package out
 
 import (
+	"strings"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -9,7 +11,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"github.com/pquerna/ffjson/ffjson"
-	"strings"
 )
 
 // BrokerOuterAPI Broker对外调用的API封装
@@ -70,22 +71,22 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	return self.nameSrvAddr
 }
 
-// RegisterBroker 注册broker
+// RegisterBroker 向nameService注册broker
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
-	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{}
-	requestHeader.BrokerAddr = brokerAddr
-	requestHeader.BrokerId = brokerId
-	requestHeader.BrokerName = brokerName
-	requestHeader.ClusterName = clusterName
-	requestHeader.HaServerAddr = haServerAddr
+	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
+		BrokerAddr : brokerAddr,
+		BrokerId : brokerId,
+		BrokerName : brokerName,
+		ClusterName : clusterName,
+		HaServerAddr : haServerAddr,
+	}
 
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
-
 	requestBody := body.RegisterBrokerBody{}
 	requestBody.TopicConfigSerializeWrapper = topicConfigWrapper
 	requestBody.FilterServerList = filterServerList
@@ -98,28 +99,35 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 		return nil
 	}
 
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
-			err := response.DecodeCommandCustomHeader(responseHeader)
-			if err != nil {
-				logger.Error(err)
-			}
-
-			result := &namesrv.RegisterBrokerResult{}
-			result.MasterAddr = responseHeader.MasterAddr
-			result.HaServerAddr = responseHeader.HaServerAddr
-			if response.Body != nil {
-				result.KvTable.Decode(response.Body)
-			}
-			return result
-		}
-	default:
-
+	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	if err != nil {
+		logger.Errorf("register broker failed. %s, err [%s]", request.ToString(), err.Error())
+		return nil
 	}
-	return nil
+	if response == nil {
+		logger.Error("register broker end, but response nil")
+		return nil
+	}
+
+	if response.Code != code.SUCCESS {
+		logger.Errorf("register broker end, but not success. %s", response.ToString())
+		return nil
+	}
+
+	logger.Infof("register broker ok. %s", response.ToString())
+	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
+	err = response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		logger.Error("err: %s", err.Error())
+	}
+
+	result := &namesrv.RegisterBrokerResult{}
+	result.MasterAddr = responseHeader.MasterAddr
+	result.HaServerAddr = responseHeader.HaServerAddr
+	if response.Body != nil {
+		result.KvTable.Decode(response.Body)
+	}
+	return result
 }
 
 // RegisterBrokerAll 向每个nameservice注册
@@ -130,6 +138,7 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	registerBrokerResult := &namesrv.RegisterBrokerResult{}
 
+	// 获取那么service地址
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
 	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
 		for _, namesrvAddr := range nameServerAddressList {
@@ -148,11 +157,13 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
-	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{}
-	requestHeader.ClusterName = clusterName
-	requestHeader.BrokerName = brokerName
-	requestHeader.BrokerAddr = brokerName
-	requestHeader.BrokerId = brokerId
+	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
+		ClusterName: clusterName,
+		BrokerName:  brokerAddr,
+		BrokerAddr:  brokerName,
+		BrokerId:    brokerId,
+	}
+
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	switch response.Code {

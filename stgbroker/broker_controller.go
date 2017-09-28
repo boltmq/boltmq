@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"bytes"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client/rebalance"
@@ -22,42 +23,36 @@ import (
 )
 
 type BrokerController struct {
-	BrokerConfig                    stgcommon.BrokerConfig
-	MessageStoreConfig              *stgstorelog.MessageStoreConfig
-	ConfigDataVersion               *stgcommon.DataVersion
-	ConsumerOffsetManager           *ConsumerOffsetManager
-	ConsumerManager                 *client.ConsumerManager
-	ProducerManager                 *client.ProducerManager
-	ClientHousekeepingService       *ClientHouseKeepingService
-	DefaultTransactionCheckExecuter *DefaultTransactionCheckExecuter
-	PullMessageProcessor            *PullMessageProcessor
-	PullRequestHoldService          *PullRequestHoldService
-	Broker2Client                   *Broker2Client
-	SubscriptionGroupManager        *SubscriptionGroupManager
-	ConsumerIdsChangeListener       rebalance.ConsumerIdsChangeListener
-	// RebalanceLockManager
-	BrokerOuterAPI *out.BrokerOuterAPI
-	// ScheduledExecutorService
-	SlaveSynchronize   *SlaveSynchronize
-	MessageStore       *stgstorelog.DefaultMessageStore
-	RemotingServer     *remoting.DefalutRemotingServer
-	TopicConfigManager *TopicConfigManager
-	// SendMessageExecutor ExecutorService
-	// PullMessageExecutor ExecutorService
-	// adminBrokerExecutor ExecutorService
-	// clientManageExecutor ExecutorService
+	BrokerConfig                         stgcommon.BrokerConfig
+	MessageStoreConfig                   *stgstorelog.MessageStoreConfig
+	ConfigDataVersion                    *stgcommon.DataVersion
+	ConsumerOffsetManager                *ConsumerOffsetManager
+	ConsumerManager                      *client.ConsumerManager
+	ProducerManager                      *client.ProducerManager
+	ClientHousekeepingService            *ClientHouseKeepingService
+	DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
+	PullMessageProcessor                 *PullMessageProcessor
+	PullRequestHoldService               *PullRequestHoldService
+	Broker2Client                        *Broker2Client
+	SubscriptionGroupManager             *SubscriptionGroupManager
+	ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
+	RebalanceLockManager                 *RebalanceLockManager
+	BrokerOuterAPI                       *out.BrokerOuterAPI
+	SlaveSynchronize                     *SlaveSynchronize
+	MessageStore                         *stgstorelog.DefaultMessageStore
+	RemotingServer                       *remoting.DefalutRemotingServer
+	TopicConfigManager                   *TopicConfigManager
 	UpdateMasterHAServerAddrPeriodically bool
 	brokerStats                          *storeStatis.BrokerStats
 	FilterServerManager                  *FilterServerManager
 	brokerStatsManager                   *stats.BrokerStatsManager
 	StoreHost                            string
-	ConfigFile                           *string
+	ConfigFile                           string
 	sendMessageHookList                  []mqtrace.SendMessageHook
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
-	messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
+func NewBrokerController(brokerConfig stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
 	brokerController.MessageStoreConfig = messageStoreConfig
@@ -70,6 +65,7 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 	brokerController.DefaultTransactionCheckExecuter = NewDefaultTransactionCheckExecuter(brokerController)
 	brokerController.ConsumerIdsChangeListener = NewDefaultConsumerIdsChangeListener(brokerController)
 	brokerController.ConsumerManager = client.NewConsumerManager(brokerController.ConsumerIdsChangeListener)
+	brokerController.RebalanceLockManager = NewRebalanceLockManager()
 	brokerController.ProducerManager = client.NewProducerManager()
 	brokerController.ClientHousekeepingService = NewClientHousekeepingService(brokerController)
 	brokerController.Broker2Client = NewBroker2Clientr(brokerController)
@@ -91,7 +87,14 @@ func NewBrokerController(brokerConfig stgcommon.BrokerConfig,
 // Author rongzhihong
 // Since 2017/9/5
 func (bc *BrokerController) GetBrokerAddr() string {
-	return bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
+	return fmt.Sprintf("%s:%s", bc.BrokerConfig.BrokerIP1, bc.RemotingServer.GetListenPort())
+}
+
+// GetStoreHost 获取StoreHost
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *BrokerController) GetStoreHost() string {
+	return fmt.Sprintf("%s:%s", self.BrokerConfig.BrokerIP1, self.RemotingServer.GetListenPort())
 }
 
 // Initialize BrokerController初始化
@@ -111,7 +114,7 @@ func (bc *BrokerController) Initialize() bool {
 	// bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
 	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
 
-	bc.StoreHost = bc.BrokerConfig.BrokerIP1 + ":" + bc.RemotingServer.GetListenPort()
+	bc.StoreHost = bc.GetStoreHost()
 
 	if result {
 		bc.MessageStore = stgstorelog.NewDefaultMessageStore(bc.MessageStoreConfig, bc.brokerStatsManager)
@@ -166,7 +169,7 @@ func (bc *BrokerController) Initialize() bool {
 	// 定时主从同步
 	if config.SLAVE == bc.MessageStoreConfig.BrokerRole {
 		if bc.MessageStoreConfig.HaMasterAddress != "" && len(bc.MessageStoreConfig.HaMasterAddress) >= 6 {
-			// TODO bc.MessageStore.updateHaMasterAddress(bc.MessageStoreConfig.HaMasterAddress)
+			bc.MessageStore.UpdateHaMasterAddress(bc.MessageStoreConfig.HaMasterAddress)
 			bc.UpdateMasterHAServerAddrPeriodically = false
 		} else {
 			bc.UpdateMasterHAServerAddrPeriodically = true
@@ -204,7 +207,7 @@ func (bc *BrokerController) Shutdown() {
 	}
 
 	if bc.RemotingServer != nil {
-		// bc.RemotingServer.Shutdown()
+		bc.RemotingServer.Shutdown()
 	}
 
 	if bc.MessageStore != nil {
@@ -217,7 +220,7 @@ func (bc *BrokerController) Shutdown() {
 		bc.BrokerOuterAPI.Shutdown()
 	}
 
-	bc.ConsumerOffsetManager.persist()
+	bc.ConsumerOffsetManager.configManagerExt.Persist()
 
 	if bc.FilterServerManager != nil {
 		bc.FilterServerManager.Shutdown()
@@ -255,7 +258,7 @@ func (bc *BrokerController) Start() {
 	bc.RegisterBrokerAll(true, false)
 
 	registerBrokerAllTicker := timeutil.NewTicker(1000*30, 1000*10)
-	registerBrokerAllTicker.Do(func(tm time.Time) {
+	go registerBrokerAllTicker.Do(func(tm time.Time) {
 		bc.RegisterBrokerAll(true, false)
 	})
 
@@ -270,17 +273,9 @@ func (bc *BrokerController) Start() {
 // Author rongzhihong
 // Since 2017/9/12
 func (bc *BrokerController) unregisterBrokerAll() {
-	brokerId, err := strconv.Atoi(fmt.Sprint(bc.BrokerConfig.BrokerId))
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	bc.BrokerOuterAPI.UnregisterBrokerAll(
-		bc.BrokerConfig.BrokerClusterName,
-		bc.GetBrokerAddr(),
-		bc.BrokerConfig.BrokerName,
-		brokerId)
+	brokerId := int(bc.BrokerConfig.BrokerId)
+	bc.BrokerOuterAPI.UnregisterBrokerAll(bc.BrokerConfig.BrokerClusterName, bc.GetBrokerAddr(), bc.BrokerConfig.BrokerName, brokerId)
+	logger.Info("unRegisterBrokerAll successful")
 }
 
 // RegisterBrokerAll 注册所有broker
@@ -307,7 +302,7 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 
 	if registerBrokerResult != nil {
 		if bc.UpdateMasterHAServerAddrPeriodically && registerBrokerResult.HaServerAddr != "" {
-			// TODO bc.MessageStore.updateHaMasterAddress(registerBrokerResult.HaServerAddr)
+			bc.MessageStore.UpdateHaMasterAddress(registerBrokerResult.HaServerAddr)
 		}
 
 		bc.SlaveSynchronize.masterAddr = registerBrokerResult.MasterAddr
@@ -334,6 +329,45 @@ func (bc *BrokerController) addDeleteTopicTask() {
 	go addDeleteTopicTaskTicker.Do(func(tm time.Time) {
 		bc.ConsumerOffsetManager.configManagerExt.Persist()
 	})
+}
+
+// UpdateAllConfig 更新所有文件
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) UpdateAllConfig(properties []byte) {
+	defer utils.RecoveredFn()
+	bc.BrokerConfig.Decode(properties)
+	bc.MessageStoreConfig.Decode(properties)
+	bc.ConfigDataVersion.NextVersion()
+	bc.flushAllConfig()
+}
+
+// flushAllConfig 将配置信息刷入文件中
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) flushAllConfig() {
+	defer utils.RecoveredFn()
+	allConfig := bc.EncodeAllConfig()
+	stgcommon.String2File([]byte(allConfig), bc.ConfigFile)
+	logger.Infof("flush broker config, %s OK", bc.ConfigFile)
+}
+
+// EncodeAllConfig 读取所有配置文件信息
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) EncodeAllConfig() string {
+	bytesBuffer := &bytes.Buffer{}
+	{
+		brokerConfigContent := bc.BrokerConfig.Encode()
+		bytesBuffer.WriteString(string(brokerConfigContent))
+	}
+
+	{
+		messageStoreConfigContent := bc.MessageStoreConfig.Encode()
+		bytesBuffer.WriteString(string(messageStoreConfigContent))
+	}
+
+	return bytesBuffer.String()
 }
 
 // registerProcessor 注册提供服务
@@ -375,6 +409,18 @@ func (bc *BrokerController) registerProcessor() {
 	bc.RemotingServer.RegisterProcessor(protocol.PULL_MESSAGE, pullMessageProcessor)
 	pullMessageProcessor.RegisterConsumeMessageHook(bc.consumeMessageHookList)
 
+	// QueryMessageProcessor
+	queryProcessor := NewQueryMessageProcessor(bc)
+	bc.RemotingServer.RegisterProcessor(protocol.QUERY_MESSAGE, queryProcessor)
+	bc.RemotingServer.RegisterProcessor(protocol.VIEW_MESSAGE_BY_ID, queryProcessor)
+
+	// EndTransactionProcessor
+	endTransactionProcessor := NewEndTransactionProcessor(bc)
+	bc.RemotingServer.RegisterProcessor(protocol.END_TRANSACTION, endTransactionProcessor)
+
+	// Default
+	adminProcessor := NewAdminBrokerProcessor(bc)
+	bc.RemotingServer.RegisterDefaultProcessor(adminProcessor)
 }
 
 // getConfigDataVersion 获得数据配置版本号
@@ -404,8 +450,7 @@ func (bc *BrokerController) RegisterConsumeMessageHook(hook mqtrace.ConsumeMessa
 // Author rongzhihong
 // Since 2017/9/11
 func (bc *BrokerController) printMasterAndSlaveDiff() {
-	// TODO diff := bc.MessageStore.slaveFallBehindMuch()
-	diff := 0
+	diff := bc.MessageStore.SlaveFallBehindMuch()
 	// XXX: warn and notify me
 	logger.Infof("slave fall behind master, how much, %d bytes", diff)
 }

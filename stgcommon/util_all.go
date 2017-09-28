@@ -2,13 +2,21 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"github.com/pquerna/ffjson/ffjson"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
 )
 
-// ComputNextMorningTimeMillis 明天零点时间戳
+const (
+	WINDOWS    = "windows" // windows operating system
+	MAX_VALUE  = 0x7fffffffffffffff
+	TIMEFORMAT = "2006-01-02 15:04:05"
+)
+
+// ComputNextMorningTimeMillis 下一天（时、分、秒、毫秒置为0）
 // Author rongzhihong
 // Since 2017/9/5
 func ComputNextMorningTimeMillis() int64 {
@@ -18,6 +26,34 @@ func ComputNextMorningTimeMillis() int64 {
 		0, 0, 0, 0, currentTime.Location())
 
 	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
+
+	return nextMorningTimeMillis
+}
+
+// ComputNextMinutesTimeMillis 下一个分钟（秒、毫秒置为0）
+// Author rongzhihong
+// Since 2017/9/5
+func ComputNextMinutesTimeMillis() int64 {
+	currentTime := time.Now()
+
+	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(),
+		currentTime.Hour(), currentTime.Minute()+1, 0, 0, currentTime.Location())
+
+	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
+
+	return nextMorningTimeMillis
+}
+
+// ComputNextMinutesTimeMillis 下一小时（分、秒、毫秒置为0）
+// Author rongzhihong
+// Since 2017/9/5
+func ComputNextHourTimeMillis() int64 {
+	currentTime := time.Now()
+
+	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(),
+		currentTime.Hour()+1, 0, 0, 0, currentTime.Location())
+
+	nextMorningTimeMillis := nextMorning.UnixNano() / int64(time.Millisecond)
 
 	return nextMorningTimeMillis
 }
@@ -69,14 +105,56 @@ func isExists(fileFullPath string) (bool, error) {
 	return false, err
 }
 
-const (
-	WINDOWS = "windows" // windows operating system
-)
-
 // isWindowsOS check current os is windows
 // if current is windows operating system, return true ; otherwise return false
 // Author rongzhihong
 // Since 2017/9/8
 func IsWindowsOS() bool {
 	return strings.EqualFold(runtime.GOOS, WINDOWS)
+}
+
+// MillsTime2String 将毫秒时间转为字符时间
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func MilliTime2String(millisecond int64) string {
+	secondTime := millisecond / 1000
+	return time.Unix(secondTime, 0).Format(TIMEFORMAT)
+}
+
+var blankReg = regexp.MustCompile(`\S+?`)
+
+// IsBlank 是否为空:false:不为空, true:为空
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func IsBlank(content string) bool {
+	if blankReg.FindString(content) != "" {
+		return false
+	}
+	return true
+}
+
+var numberReg = regexp.MustCompile(`^[0-9]+?$`)
+
+// IsNumber 是否是数字:true:是, false:否
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func IsNumber(content string) bool {
+	return numberReg.MatchString(content)
+}
+
+// Encode Json Encode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Encode(v interface{}) []byte {
+	if value, err := ffjson.Marshal(v); err == nil {
+		return value
+	}
+	return nil
+}
+
+// Decode Json Decode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Decode(data []byte, v interface{}) error {
+	return ffjson.Unmarshal(data, v)
 }

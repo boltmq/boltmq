@@ -59,17 +59,13 @@ func (self *DefaultNamesrvController) initialize() bool {
 	self.registerProcessor()
 
 	// (3)注册broker连接的监听器
-	//self.registerContextListener()
+	self.registerContextListener()
 
 	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
-	go func() {
-		self.startScanNotActiveBroker()
-	}()
+	self.startScanNotActiveBroker()
 
 	// (5)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
-	go func() {
-		self.startPrintAllPeriodically()
-	}()
+	self.startPrintAllPeriodically()
 
 	return true
 }
@@ -87,6 +83,7 @@ func (self *DefaultNamesrvController) shutdown() {
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
 	}
+	logger.Info("namesrv controller shutdown successful")
 }
 
 // start 启动Namesrv控制服务
@@ -110,23 +107,29 @@ func (self *DefaultNamesrvController) registerProcessor() error {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) startScanNotActiveBroker() {
-	self.scanBrokerTicker.Do(func(tm time.Time) {
-		self.RouteInfoManager.scanNotActiveBroker()
-	})
+	go func() {
+		self.scanBrokerTicker.Do(func(tm time.Time) {
+			self.RouteInfoManager.scanNotActiveBroker()
+		})
+		logger.Info("start scanNotActiveBroker task successful")
+	}()
 }
 
 // startPrintAllPeriodically 启动任务：每个10秒打印namesrv全局配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) startPrintAllPeriodically() {
-	self.printNamesrvTicker.Do(func(tm time.Time) {
-		self.KvConfigManager.printAllPeriodically()
-	})
+	go func() {
+		self.printNamesrvTicker.Do(func(tm time.Time) {
+			self.KvConfigManager.printAllPeriodically()
+		})
+		logger.Info("start printAllPeriodically task successful")
+	}()
 }
 
 // registerContextListener 注册监听器，监听broker对应的net.conn连接的Close()、Idel()、Error()等状态变化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/18
 func (self *DefaultNamesrvController) registerContextListener() {
-	self.RemotingServer.RegisterContextListener(&BrokerHousekeepingService{})
+	self.RemotingServer.RegisterContextListener(self.BrokerHousekeepingService)
 }

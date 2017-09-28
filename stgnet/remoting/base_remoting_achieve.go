@@ -211,22 +211,9 @@ func (ra *BaseRemotingAchieve) sendResponse(response *protocol.RemotingCommand, 
 
 // 发送报文
 func (ra *BaseRemotingAchieve) send(remotingCommand *protocol.RemotingCommand, ctx netm.Context) error {
-	var (
-		header []byte
-		packet []byte
-	)
-
-	// 头部进行编码
-	header = remotingCommand.EncodeHeader()
-	if remotingCommand.Body != nil && len(remotingCommand.Body) > 0 {
-		packet = append(header, remotingCommand.Body...)
-	} else {
-		packet = header
-	}
-
 	//_, err = ra.bootstrap.Write(addr, header)
 	// 发送报文
-	_, err := ctx.Write(packet)
+	_, err := ctx.Write(remotingCommand.Bytes())
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}

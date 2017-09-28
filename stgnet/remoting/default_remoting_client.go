@@ -40,8 +40,13 @@ func (rc *DefalutRemotingClient) Start() {
 
 // Shutdown shutdown client
 func (rc *DefalutRemotingClient) Shutdown() {
-	rc.timeoutTimer.Stop()
-	rc.bootstrap.Shutdown()
+	if rc.timeoutTimer != nil {
+		rc.timeoutTimer.Stop()
+	}
+
+	if rc.bootstrap != nil {
+		rc.bootstrap.Shutdown()
+	}
 	rc.isRunning = false
 }
 

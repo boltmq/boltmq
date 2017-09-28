@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"math"
+	"hash/fnv"
 )
 
 var (
@@ -17,8 +19,7 @@ type IndexFile struct {
 	indexNum         int32
 	mapedFile        *MapedFile
 	mappedByteBuffer *MappedByteBuffer
-	// TODO FileChannel fileChannel
-	indexHeader *IndexHeader
+	indexHeader      *IndexHeader
 }
 
 func NewIndexFile(fileName string, hashSlotNum, indexNum int32, endPhyOffset, endTimestamp int64) *IndexFile {
@@ -35,8 +36,7 @@ func NewIndexFile(fileName string, hashSlotNum, indexNum int32, endPhyOffset, en
 	indexFile.hashSlotNum = hashSlotNum
 	indexFile.indexNum = indexNum
 
-	byteBuffer := indexFile.mappedByteBuffer.slice()
-	indexFile.indexHeader = NewIndexHeader(NewMappedByteBuffer(byteBuffer.Bytes()))
+	indexFile.indexHeader = NewIndexHeader(NewMappedByteBuffer(make([]byte, indexFile.mapedFile.fileSize)))
 
 	if endPhyOffset > 0 {
 		indexFile.indexHeader.setBeginPhyOffset(endPhyOffset)
@@ -56,11 +56,12 @@ func (self *IndexFile) load() {
 }
 
 func (self *IndexFile) flush() {
-	beginTime := time.Now().Unix()
+	beginTime := time.Now().UnixNano() / 1000000
 	self.indexHeader.updateByteBuffer()
 	self.mappedByteBuffer.flush()
 	self.mapedFile.release()
-	logger.Info("flush index file eclipse time(ms) ", (time.Now().Unix() - beginTime))
+	endTime := time.Now().UnixNano() / 1000000
+	logger.Info("flush index file eclipse time(ms) ", endTime-beginTime)
 }
 
 func (self *IndexFile) isWriteFull() bool {
@@ -73,4 +74,72 @@ func (self *IndexFile) getEndPhyOffset() int64 {
 
 func (self *IndexFile) getEndTimestamp() int64 {
 	return self.indexHeader.endTimestamp
+}
+
+func (self *IndexFile) putKey(key string, phyOffset int64, storeTimestamp int64) bool {
+	if self.indexHeader.indexCount < self.indexNum {
+		keyHash := self.indexKeyHashMethod(key)
+		slotPos := keyHash % self.hashSlotNum
+		absSlotPos := INDEX_HEADER_SIZE + slotPos*HASH_SLOT_SIZE
+
+		self.mappedByteBuffer.ReadPos = int(absSlotPos)
+		slotValue := self.mappedByteBuffer.ReadInt32()
+		if slotValue <= INVALID_INDEX || slotValue > self.indexHeader.indexCount {
+			slotValue = INVALID_INDEX
+		}
+
+		timeDiff := storeTimestamp - self.indexHeader.beginTimestamp
+		// 时间差存储单位由毫秒改为秒
+		timeDiff = timeDiff / 1000
+
+		if self.indexHeader.beginTimestamp <= 0 {
+			timeDiff = 0
+		} else if timeDiff > 0x7fffffff {
+			timeDiff = 0x7fffffff
+		} else if timeDiff < 0 {
+			timeDiff = 0
+		}
+
+		absIndexPos := INDEX_HEADER_SIZE + self.hashSlotNum*HASH_SLOT_SIZE + self.indexHeader.indexCount*INDEX_SIZE
+
+		// 写入真正索引
+		self.mappedByteBuffer.WritePos = int(absIndexPos)
+		self.mappedByteBuffer.WriteInt32(keyHash)
+		self.mappedByteBuffer.WriteInt64(phyOffset)
+		self.mappedByteBuffer.WriteInt32(int32(timeDiff))
+		self.mappedByteBuffer.WriteInt32(slotValue)
+
+		// 更新哈希槽
+		self.mappedByteBuffer.WriteInt32(self.indexHeader.indexCount)
+
+		// 第一次写入
+		if self.indexHeader.indexCount <= 1 {
+			self.indexHeader.beginPhyOffset = phyOffset
+			self.indexHeader.beginTimestamp = storeTimestamp
+		}
+
+		self.indexHeader.incHashSlotCount()
+		self.indexHeader.incIndexCount()
+		self.indexHeader.endPhyOffset = phyOffset
+		self.indexHeader.endTimestamp = storeTimestamp
+
+		return true
+	}
+
+	return false
+}
+
+func (self *IndexFile) indexKeyHashMethod(key string) int32 {
+	keyHash := self.indexKeyHashCode(key)
+	keyHashPositive := math.Abs(float64(keyHash))
+	if keyHashPositive < 0 {
+		keyHashPositive = 0
+	}
+	return int32(keyHashPositive)
+}
+
+func (self *IndexFile) indexKeyHashCode(key string) int32 {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	return int32(h.Sum32())
 }

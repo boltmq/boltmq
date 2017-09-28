@@ -8,14 +8,13 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	set "github.com/deckarep/golang-set"
-	set2 "github.com/toolkits/container/set"
 )
 
 // ConsumerManager 消费者管理
 // Author gaoyanlei
 // Since 2017/8/9
 type ConsumerManager struct {
-	consumerTable             *sync.Map
+	consumerTable             *sync.Map // key:group, value:ConsumerGroupInfo
 	ConsumerIdsChangeListener rebalance.ConsumerIdsChangeListener
 	ChannelExpiredTimeout     int64
 }
@@ -55,7 +54,7 @@ func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.
 // registerConsumer 注册Consumer
 // Author gaoyanlei
 // Since 2017/8/24
-func (cm *ConsumerManager) RegisterConsumer(group string, ctx netm.Context, consumeType heartbeat.ConsumeType,
+func (cm *ConsumerManager) RegisterConsumer(group string, channelInfo *ChannelInfo, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
@@ -69,8 +68,8 @@ func (cm *ConsumerManager) RegisterConsumer(group string, ctx netm.Context, cons
 			}
 		}
 	}
-	// TODO
-	r1 := consumerGroupInfo.UpdateChannel(ctx, consumeType, messageModel, consumeFromWhere)
+
+	r1 := consumerGroupInfo.UpdateChannel(channelInfo, consumeType, messageModel, consumeFromWhere)
 	r2 := consumerGroupInfo.UpdateSubscription(subList)
 
 	if r1 || r2 {
@@ -186,8 +185,8 @@ func (cm *ConsumerManager) FindSubscriptionDataCount(group string) int32 {
 // QueryTopicConsumeByWho 根据topic查找消费者
 // Author rongzhihong
 // Since 2017/9/18
-func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) *set2.StringSet {
-	groups := set2.NewStringSet()
+func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) set.Set {
+	groups := set.NewSet()
 	iterator := cm.consumerTable.Iterator()
 	for iterator.HasNext() {
 		group, value, _ := iterator.Next()

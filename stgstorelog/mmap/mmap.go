@@ -6,23 +6,19 @@ package mmap
 
 import (
 	"errors"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap/unix"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap/windows"
 	"os"
 	"reflect"
-	"runtime"
-	"strings"
 	"unsafe"
 )
 
 const (
 	// RDONLY maps the memory read-only.
-	// Attempts to write to the MemoryMap object will result in undefined behavior.
+	// Attempts to write to the MMap object will result in undefined behavior.
 	RDONLY = 0
-	// RDWR maps the memory as read-write. Writes to the MemoryMap object will update the
+	// RDWR maps the memory as read-write. Writes to the MMap object will update the
 	// underlying file.
 	RDWR = 1 << iota
-	// COPY maps the memory as copy-on-write. Writes to the MemoryMap object will affect
+	// COPY maps the memory as copy-on-write. Writes to the MMap object will affect
 	// memory, but the underlying file will remain unchanged.
 	COPY
 	// If EXEC is set, the mapped memory is marked as executable.
@@ -30,19 +26,16 @@ const (
 )
 
 const (
-	ANON = 1 << iota // If the ANON flag is set, the mapped memory will not be backed by a file.
+	// If the ANON flag is set, the mapped memory will not be backed by a file.
+	ANON = 1 << iota
 )
 
-const (
-	WINDOWS = "windows" // windows operating system
-)
-
-// MemoryMap represents a file mapped into memory.
-type MemoryMap []byte
+// MMap represents a file mapped into memory.
+type MMap []byte
 
 // Map maps an entire file into memory.
 // If ANON is set in flags, f is ignored.
-func Map(f *os.File, prot, flags int) (MemoryMap, error) {
+func Map(f *os.File, prot, flags int) (MMap, error) {
 	return MapRegion(f, -1, prot, flags, 0)
 }
 
@@ -50,7 +43,7 @@ func Map(f *os.File, prot, flags int) (MemoryMap, error) {
 // The offset parameter must be a multiple of the system's page size.
 // If length < 0, the entire file will be mapped.
 // If ANON is set in flags, f is ignored.
-func MapRegion(f *os.File, length int, prot, flags int, offset int64) (MemoryMap, error) {
+func MapRegion(f *os.File, length int, prot, flags int, offset int64) (MMap, error) {
 	if offset%int64(os.Getpagesize()) != 0 {
 		return nil, errors.New("offset parameter must be a multiple of the system's page size")
 	}
@@ -71,74 +64,43 @@ func MapRegion(f *os.File, length int, prot, flags int, offset int64) (MemoryMap
 		}
 		fd = ^uintptr(0)
 	}
-
-	if isWindowsOS() {
-		return windows.Mmap(length, uintptr(prot), uintptr(flags), fd, offset)
-	}
-
-	return unix.Mmap(length, uintptr(prot), uintptr(flags), fd, offset)
+	return mmap(length, uintptr(prot), uintptr(flags), fd, offset)
 }
 
-func (m *MemoryMap) header() *reflect.SliceHeader {
+func (m *MMap) header() *reflect.SliceHeader {
 	return (*reflect.SliceHeader)(unsafe.Pointer(m))
 }
 
 // Lock keeps the mapped region in physical memory, ensuring that it will not be
 // swapped out.
-func (m MemoryMap) Lock() error {
+func (m MMap) Lock() error {
 	dh := m.header()
-
-	if isWindowsOS() {
-		return windows.Lock(dh.Data, uintptr(dh.Len))
-	}
-
-	return unix.Lock(dh.Data, uintptr(dh.Len))
+	return lock(dh.Data, uintptr(dh.Len))
 }
 
 // Unlock reverses the effect of Lock, allowing the mapped region to potentially
 // be swapped out.
 // If m is already unlocked, aan error will result.
-func (m MemoryMap) Unlock() error {
+func (m MMap) Unlock() error {
 	dh := m.header()
-
-	if isWindowsOS() {
-		return windows.Unlock(dh.Data, uintptr(dh.Len))
-	}
-
-	return unix.Unlock(dh.Data, uintptr(dh.Len))
+	return unlock(dh.Data, uintptr(dh.Len))
 }
 
-// flush synchronizes the mapping's contents to the file's contents on disk.
-func (m MemoryMap) Flush() error {
+// Flush synchronizes the mapping's contents to the file's contents on disk.
+func (m MMap) Flush() error {
 	dh := m.header()
-
-	if isWindowsOS() {
-		return windows.Flush(dh.Data, uintptr(dh.Len))
-	}
-
-	return unix.Flush(dh.Data, uintptr(dh.Len))
+	return flush(dh.Data, uintptr(dh.Len))
 }
 
-// unmap deletes the memory mapped region, flushes any remaining changes, and sets
+// Unmap deletes the memory mapped region, flushes any remaining changes, and sets
 // m to nil.
-// Trying to read or write any remaining references to m after unmap is called will
+// Trying to read or write any remaining references to m after Unmap is called will
 // result in undefined behavior.
-// unmap should only be called on the slice value that was originally returned from
-// a call to Map. Calling unmap on a derived slice may cause errors.
-func (m *MemoryMap) Unmap() (err error) {
+// Unmap should only be called on the slice value that was originally returned from
+// a call to Map. Calling Unmap on a derived slice may cause errors.
+func (m *MMap) Unmap() error {
 	dh := m.header()
-	if isWindowsOS() {
-		err = windows.Unmap(dh.Data, uintptr(dh.Len))
-	} else {
-		err = unix.Unmap(dh.Data, uintptr(dh.Len))
-	}
-
+	err := unmap(dh.Data, uintptr(dh.Len))
 	*m = nil
 	return err
-}
-
-// isWindowsOS check current os is windows
-// if current is windows operating system, return true ; otherwise return false
-func isWindowsOS() bool {
-	return strings.EqualFold(runtime.GOOS, WINDOWS)
 }

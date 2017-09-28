@@ -20,3 +20,11 @@ func TestFormatTimestampMillis(t *testing.T) {
 	fmt.Printf("timesmap=%d\t time.format=%s \n", stamp, value)
 
 }
+
+func TestGetGoPath(t *testing.T) {
+	fmt.Printf("GoPath = %s \n", GetGoPath())
+}
+
+func TestGetSmartgoConfigDir(t *testing.T) {
+	fmt.Printf("SmartgoConfigPath = %s \n", GetSmartgoConfigDir())
+}

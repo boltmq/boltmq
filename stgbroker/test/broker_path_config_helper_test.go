@@ -1,4 +1,4 @@
-package stgbroker
+package test
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"git.oschina.net/cloudzone/smartgo/stgbroker"
 )
 
 func TestNewClientConfig(t *testing.T) {
@@ -34,7 +35,7 @@ func TestPathSeparator(t *testing.T) {
 	if nil == err {
 	}
 
-	fmt.Println(GetTopicConfigPath(user.HomeDir))
+	fmt.Println(stgbroker.GetTopicConfigPath(user.HomeDir))
 }
 
 

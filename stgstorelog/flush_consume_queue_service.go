@@ -28,32 +28,32 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 	}
 
 	flushConsumeQueueThoroughInterval := self.defaultMessageStore.MessageStoreConfig.FlushConsumeQueueThoroughInterval
-	currentTimeMillis := time.Now().Unix()
+	currentTimeMillis := time.Now().UnixNano() / 1000000
 
-	var logicsMsgTimestamp int64
+	var logicMsgTimestamp int64
 
 	if currentTimeMillis >= (self.lastFlushTimestamp + int64(flushConsumeQueueThoroughInterval)) {
 		self.lastFlushTimestamp = currentTimeMillis
 		flushConsumeQueueLeastPages = 0
-		logicsMsgTimestamp = self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp
+		logicMsgTimestamp = self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp
 	}
 
-	tables := self.defaultMessageStore.ConsumeQueueTable
-	iter := tables.Iterator()
+	tables := self.defaultMessageStore.consumeTopicTable
 	times := int(retryTimes)
 
-	for iter.HasNext() {
-		result := false
-		for i := 0; i < times && !result; i++ {
-			_, value, _ := iter.Next()
-			consumeQueue := value.(ConsumeQueue)
-			consumeQueue.commit(flushConsumeQueueLeastPages)
+	for _, value := range tables {
+		for _, consumeQueue := range value.consumeQueues {
+			result := false
+			for i := 0; i < times && !result; i++ {
+				logger.Infof("consumeQueue %#v \r\n", consumeQueue)
+				result = consumeQueue.commit(flushConsumeQueueLeastPages)
+			}
 		}
 	}
 
 	if 0 == flushConsumeQueueLeastPages {
-		if logicsMsgTimestamp > 0 {
-			self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp = logicsMsgTimestamp
+		if logicMsgTimestamp > 0 {
+			self.defaultMessageStore.StoreCheckpoint.logicsMsgTimestamp = logicMsgTimestamp
 		}
 
 		self.defaultMessageStore.StoreCheckpoint.flush()

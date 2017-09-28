@@ -4,6 +4,10 @@ type GroupCommitService struct {
 	// TODO
 }
 
-func (self *GroupCommitService) run() {
+func (self *GroupCommitService) start() {
+
+}
+
+func (self *GroupCommitService) shutdown() {
 
 }

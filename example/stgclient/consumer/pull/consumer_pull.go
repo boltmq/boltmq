@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"time"
-	"fmt"
 )
 
 func main() {
@@ -11,7 +11,7 @@ func main() {
 	defaultMQPullConsumer.SetNamesrvAddr("127.0.0.1:10911")
 	defaultMQPullConsumer.Start()
 
-	mqs := defaultMQPullConsumer.FetchSubscribeMessageQueues("TestTopic")
+	mqs := defaultMQPullConsumer.FetchSubscribeMessageQueues("MY_DEFAULT_TOPIC")
 	for _, mq := range mqs {
 		pullResult, err := defaultMQPullConsumer.Pull(mq, "mq", 0, 32)
 		if pullResult == nil || err != nil {
@@ -22,11 +22,9 @@ func main() {
 				fmt.Println(string(msgExt.Body))
 			}
 		}
+		time.Sleep(time.Second * 600)
 	}
-	time.Sleep(time.Second * 600)
+
 	defaultMQPullConsumer.Shutdown()
-	select {
-
-	}
+	select {}
 }
-

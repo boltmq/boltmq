@@ -35,7 +35,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	oldValue, err := self.requestTable.PutIfAbsent(nextFilePath, nextReq)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service put request error:", err.Error())
 		return nil, nil
 	}
 
@@ -45,7 +45,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	nextOldValue, err := self.requestTable.PutIfAbsent(nextNextFilePath, nextNextReq)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service put request error:", err.Error())
 		return nil, nil
 	}
 
@@ -55,7 +55,7 @@ func (self *AllocateMapedFileService) putRequestAndReturnMapedFile(nextFilePath 
 
 	result, err := self.requestTable.Get(nextFilePath)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("allocate maped file service get request by file path error:", err.Error())
 	}
 
 	if result != nil {
@@ -84,7 +84,7 @@ func (self *AllocateMapedFileService) mmapOperation() bool {
 	case request := <-self.requestChan:
 		value, err := self.requestTable.Get(request.filePath)
 		if err != nil {
-			logger.Info(err.Error())
+			logger.Info("allocate maped file service mmapOperation get request error:", err.Error())
 			return true
 		}
 
@@ -94,19 +94,18 @@ func (self *AllocateMapedFileService) mmapOperation() bool {
 		}
 
 		if request.mapedFile == nil {
-			beginTime := time.Now().Unix()
+			beginTime := time.Now().UnixNano() / 1000000
 			mapedFile, err := NewMapedFile(request.filePath, request.fileSize)
 			if mapedFile == nil {
 				logger.Error("New Maped File")
 			}
-
 
 			if err != nil {
 				logger.Warn("allocate maped file service has exception, maybe by shutdown,error:", err.Error())
 				return false
 			}
 
-			eclipseTime := beginTime - time.Now().Unix()
+			eclipseTime := beginTime - time.Now().UnixNano()/1000000
 			if eclipseTime > 10 {
 				// TODO
 			}

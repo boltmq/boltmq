@@ -1,7 +1,6 @@
 package stgbroker
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer/listener"
@@ -13,6 +12,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -51,18 +51,19 @@ func (cmp *ClientManageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Author gaoyanlei
 // Since 2017/8/23
 func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
+
 	response := &protocol.RemotingCommand{}
 
-	heartbeatData := &heartbeat.HeartbeatData{}
+	heartbeatData := heartbeat.NewHeartbeatData()
 	heartbeatData.Decode(request.Body)
 	consumerDataSet := heartbeatData.ConsumerDataSet
 
 	channelInfo := client.NewClientChannelInfo(ctx, heartbeatData.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
-
 	for value := range consumerDataSet.Iterator().C {
 		if consumerData, ok := value.(*heartbeat.ConsumerData); ok {
 			subscriptionGroupConfig :=
-				cmp.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(consumerData.GroupName)
+				cmp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(consumerData.GroupName)
 
 			if subscriptionGroupConfig != nil {
 				topicSysFlag := 0
@@ -71,13 +72,13 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 				}
 
 				newTopic := stgcommon.GetRetryTopic(consumerData.GroupName)
-				cmp.BrokerController.TopicConfigManager.createTopicInSendMessageBackMethod( //
+				cmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod( //
 					newTopic, //
 					subscriptionGroupConfig.RetryQueueNums, //
 					constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
 			}
 
-			changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, ctx,
+			changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, channelInfo,
 				consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
 			if changed {
 				logger.Infof("registerConsumer info changed {} %s", consumerData.ToString(), ctx.RemoteAddr().String())
@@ -136,9 +137,8 @@ func (cmp *ClientManageProcessor) unregisterClient(ctx netm.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/14
 func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
 	responseHeader := &header.QueryConsumerOffsetResponseHeader{}
-	response.CustomHeader = responseHeader
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	requestHeader := &header.QueryConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -146,7 +146,7 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request 
 		logger.Error(err)
 	}
 
-	offset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, int(requestHeader.QueueId))
+	offset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, int(requestHeader.QueueId))
 
 	// 订阅组存在
 	if offset >= 0 {
@@ -155,10 +155,9 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request 
 		response.Remark = ""
 	} else { // 订阅组不存在
 
-		// TODO minOffset := cmp.BrokerController.MessageStore.getMinOffsetInQuque(requestHeader.Topic, requestHeader.QueueId)
-		minOffset := int64(0)
-		// TODO isInDisk := cmp.BrokerController.MessageStore.checkInDiskByConsumeOffset(requestHeader.Topic, requestHeader.QueueId, 0)
-		isInDisk := false
+		minOffset := cmp.BrokerController.MessageStore.GetMinOffsetInQueue(requestHeader.Topic, requestHeader.QueueId)
+
+		isInDisk := cmp.BrokerController.MessageStore.CheckInDiskByConsumeOffset(requestHeader.Topic, requestHeader.QueueId, 0)
 		// 订阅组不存在情况下，如果这个队列的消息最小Offset是0，则表示这个Topic上线时间不长，服务器堆积的数据也不多，那么这个订阅组就从0开始消费。
 		// 尤其对于Topic队列数动态扩容时，必须要从0开始消费。
 		if minOffset <= 0 && !isInDisk {
@@ -198,12 +197,9 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request
 
 		storeHost := cmp.BrokerController.BrokerConfig.BrokerIP1 + "" + cmp.BrokerController.RemotingServer.GetListenPort()
 
-		preOffset := cmp.BrokerController.ConsumerOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
+		preOffset := cmp.BrokerController.ConsumerOffsetManager.QueryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId)
 
-		// TODO messageIds := cmp.BrokerController.MessageStore.getMessageIds(requestHeader.Topic, requestHeader.QueueId, preOffset, requestHeader.CommitOffset, storeHost)
-		messageIds := make(map[string]int64)
-		fmt.Println(storeHost)
-		fmt.Println(preOffset)
+		messageIds := cmp.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, int32(requestHeader.QueueId), preOffset, requestHeader.CommitOffset, storeHost)
 
 		context.MessageIds = messageIds
 		cmp.ExecuteConsumeMessageHookAfter(context)

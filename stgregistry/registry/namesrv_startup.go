@@ -19,12 +19,12 @@ func Startup() *DefaultNamesrvController {
 	controller := CreateNamesrvController()
 	initResult := controller.initialize()
 	if !initResult {
+		logger.Info("the name server controller initialize failed")
 		controller.shutdown()
-		logger.Info("the name server controller initialize failed.")
 		os.Exit(0)
 	}
 	controller.start()
-	logger.Info("the name server boot success.")
+	logger.Info("the name server boot success")
 	return controller
 }
 
@@ -34,6 +34,8 @@ func Startup() *DefaultNamesrvController {
 func CreateNamesrvController() *DefaultNamesrvController {
 	// 初始化配置文件
 	cfg := namesrv.NewNamesrvConfig()
+	logger.Info("%s", cfg.ToString())
+
 	if cfg.GetSmartGoHome() == "" {
 		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
 		logger.Error(msg, stgcommon.SMARTGO_HOME_ENV)
@@ -44,6 +46,6 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
 	controller := NewNamesrvController(cfg, remotingServer)
 
-	logger.Info("create default namesrv controller success.")
+	logger.Info("create default namesrv controller success")
 	return controller
 }

@@ -9,6 +9,16 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type ConsumerOffsetSerializeWrapper struct {
-	OffsetTable *sync.Map
+	OffsetTable *sync.Map `json:"offsetTable"`
 	*protocol.RemotingSerializable
+}
+
+// NewConsumerOffsetSerializeWrapper 初始化
+// Author gaoyanlei
+// Since 2017/8/22
+func NewConsumerOffsetSerializeWrapper() *ConsumerOffsetSerializeWrapper {
+	wrapper := new(ConsumerOffsetSerializeWrapper)
+	wrapper.OffsetTable = sync.NewMap()
+	wrapper.RemotingSerializable = new(protocol.RemotingSerializable)
+	return wrapper
 }

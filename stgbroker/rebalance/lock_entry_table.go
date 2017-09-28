@@ -1,0 +1,48 @@
+package rebalance
+
+import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	"sync"
+)
+
+// LockEntryTable LockEntryTable
+// Author rongzhihong
+// Since 2017/9/20
+type LockEntryTable struct {
+	lockEntryTable map[*message.MessageQueue]*body.LockEntry
+	lockEntryLock  sync.RWMutex
+}
+
+func NewLockEntryTable() *LockEntryTable {
+	lockTable := new(LockEntryTable)
+	lockTable.lockEntryTable = make(map[*message.MessageQueue]*body.LockEntry, 32)
+	return lockTable
+}
+
+func (lockTable *LockEntryTable) Put(key *message.MessageQueue, value *body.LockEntry) {
+	lockTable.lockEntryLock.Lock()
+	defer lockTable.lockEntryLock.Unlock()
+	lockTable.lockEntryTable[key] = value
+}
+
+func (lockTable *LockEntryTable) Get(key *message.MessageQueue) *body.LockEntry {
+	lockTable.lockEntryLock.Lock()
+	defer lockTable.lockEntryLock.Unlock()
+	return lockTable.lockEntryTable[key]
+}
+
+func (lockTable *LockEntryTable) Remove(key *message.MessageQueue) {
+	lockTable.lockEntryLock.Lock()
+	defer lockTable.lockEntryLock.Unlock()
+	delete(lockTable.lockEntryTable, key)
+}
+
+func (lockTable *LockEntryTable) Foreach(fn func(k *message.MessageQueue, v *body.LockEntry)) {
+	lockTable.lockEntryLock.Lock()
+	defer lockTable.lockEntryLock.Unlock()
+
+	for k, v := range lockTable.lockEntryTable {
+		fn(k, v)
+	}
+}

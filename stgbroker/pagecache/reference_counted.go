@@ -5,9 +5,9 @@ type ReferenceCounted interface {
 
 	Retain() ReferenceCounted
 
-	Retain2(var1 int32) ReferenceCounted
+	RetainInt(var1 int32) ReferenceCounted
 
 	Release() bool
 
-	Release2(var1 int32) bool
+	ReleaseInt(var1 int32) bool
 }
