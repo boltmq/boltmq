@@ -154,10 +154,10 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	if topicConfigWrapper != nil {
 		brokerLiveInfo := routeinfo.NewBrokerLiveInfo(topicConfigWrapper.DataVersion, haServerAddr, ctx)
 		if prevBrokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; ok && prevBrokerLiveInfo == nil {
-			logger.Info("new broker registerd, %s HAServer: %s", brokerAddr, haServerAddr)
+			logger.Info("new broker registerd, %s, HAServer: %s", brokerAddr, haServerAddr)
 		}
 		self.BrokerLiveTable[brokerAddr] = brokerLiveInfo
-		logger.Info("history broker registerd, %s HAServer: %s", brokerAddr, haServerAddr)
+		logger.Info("history broker registerd, %s, HAServer: %s", brokerAddr, haServerAddr)
 	}
 
 	// 更新Filter Server列表: 对于filterServerList不为空的,以broker地址为key值存入
@@ -270,7 +270,7 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 		queueDataList = make([]*route.QueueData, 0)
 		queueDataList = append(queueDataList, queueData)
 		self.TopicQueueTable[topic] = queueDataList
-		logger.Info("new topic registerd, %s %s", topic, queueData.ToString())
+		logger.Info("new topic registerd, topic[%s], %s", topic, queueData.ToString())
 	} else {
 		addNewOne := true
 		for index, qd := range queueDataList {
