@@ -189,7 +189,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 // Since: 2017/9/6
 func (self *RouteInfoManager) isBrokerTopicConfigChanged(brokerAddr string, dataVersion *stgcommon.DataVersion) bool {
 	if prev, ok := self.BrokerLiveTable[brokerAddr]; ok {
-		if prev == nil || !prev.DataVersion.Equal(dataVersion) {
+		if prev == nil || !prev.DataVersion.Equals(dataVersion) {
 			return true
 		}
 	}
@@ -443,8 +443,8 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 		for brokerAddr, brokerLiveInfo := range self.BrokerLiveTable {
 			lastTimestamp := brokerLiveInfo.LastUpdateTimestamp + brokerChannelExpiredTime
 			currentTime := stgcommon.GetCurrentTimeMillis()
-			format := "scanNotActiveBroker[lastTimestamp=%s, currentTimeMillis=%s]"
-			logger.Debug(format, stgcommon.FormatTimestamp(lastTimestamp), stgcommon.FormatTimestamp(currentTime))
+			//format := "scanNotActiveBroker[lastTimestamp=%s, currentTimeMillis=%s]"
+			//logger.Debug(format, stgcommon.FormatTimestamp(lastTimestamp), stgcommon.FormatTimestamp(currentTime))
 
 			if lastTimestamp < currentTime {
 				// 主动关闭Channel通道，关闭后打印日志
@@ -457,7 +457,7 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 				self.ReadWriteLock.RUnlock()
 
 				// 关闭Channel通道
-				format = "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
+				format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
 				logger.Info(format, brokerAddr, currentTime, lastTimestamp, brokerChannelExpiredTime)
 				self.onChannelDestroy(brokerAddr, brokerLiveInfo.Context)
 			}

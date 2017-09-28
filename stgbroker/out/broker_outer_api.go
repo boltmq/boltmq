@@ -1,8 +1,6 @@
 package out
 
 import (
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -10,7 +8,7 @@ import (
 	headerNamesrv "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"github.com/pquerna/ffjson/ffjson"
+	"strings"
 )
 
 // BrokerOuterAPI Broker对外调用的API封装
@@ -78,21 +76,13 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 
-	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
-		BrokerAddr : brokerAddr,
-		BrokerId : brokerId,
-		BrokerName : brokerName,
-		ClusterName : clusterName,
-		HaServerAddr : haServerAddr,
-	}
-
+	requestHeader := headerNamesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
-	requestBody := body.RegisterBrokerBody{}
-	requestBody.TopicConfigSerializeWrapper = topicConfigWrapper
-	requestBody.FilterServerList = filterServerList
-	if b, err := ffjson.Marshal(requestBody); err == nil {
-		request.Body = b
-	}
+
+	requestBody := body.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
+	content := requestBody.CustomEncode(requestBody)
+	request.Body = content
+	logger.Infof("register broker, request.body is %s", string(content))
 
 	if oneway {
 		self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
@@ -101,7 +91,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 
 	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	if err != nil {
-		logger.Errorf("register broker failed. %s, err [%s]", request.ToString(), err.Error())
+		logger.Errorf("register broker failed. err:[%s], %s", err.Error(), request.ToString())
 		return nil
 	}
 	if response == nil {

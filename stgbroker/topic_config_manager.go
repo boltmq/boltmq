@@ -35,84 +35,91 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	return topicConfigManager
 }
 
-func (tcm *TopicConfigManager) init() {
+func (self *TopicConfigManager) init() {
 
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.SELF_TEST_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		tcm.SystemTopicList = mapset.NewSet()
-		tcm.SystemTopicList.Add(topicConfig)
+		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	// DEFAULT_TOPIC
 	{
-		if tcm.BrokerController.BrokerConfig.AutoCreateTopicEnable {
+		autoCreateTopicEnable := self.BrokerController.BrokerConfig.AutoCreateTopicEnable
+		logger.Infof("self.BrokerController.BrokerConfig.AutoCreateTopicEnable=%t", autoCreateTopicEnable)
+		if autoCreateTopicEnable {
 			topicName := stgcommon.DEFAULT_TOPIC
 			topicConfig := stgcommon.NewTopicConfigByName(topicName)
-			tcm.SystemTopicList = mapset.NewSet()
-			tcm.SystemTopicList.Add(topicConfig)
-			topicConfig.ReadQueueNums = tcm.BrokerController.BrokerConfig.DefaultTopicQueueNums
-			topicConfig.WriteQueueNums = tcm.BrokerController.BrokerConfig.DefaultTopicQueueNums
+			self.SystemTopicList = mapset.NewSet()
+			self.SystemTopicList.Add(topicConfig)
+			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
+			topicConfig.WriteQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.Perm = constant.PERM_INHERIT | constant.PERM_READ | constant.PERM_WRITE
-			tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+			logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+			self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 		}
-
 	}
 
 	// BENCHMARK_TOPIC
 	{
 		topicName := stgcommon.BENCHMARK_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		tcm.SystemTopicList = mapset.NewSet()
-		tcm.SystemTopicList.Add(topicConfig)
+		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
-	//集群名字
+	// 集群名称BrokerClusterName
 	{
-		topicName := tcm.BrokerController.BrokerConfig.BrokerClusterName
+		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		tcm.SystemTopicList = mapset.NewSet()
-		tcm.SystemTopicList.Add(topicConfig)
+		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
-		if tcm.BrokerController.BrokerConfig.ClusterTopicEnable {
+		if self.BrokerController.BrokerConfig.ClusterTopicEnable {
 			perm |= constant.PERM_READ | constant.PERM_WRITE
 		}
 		topicConfig.Perm = perm
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
-	// 服务器名字
+	// 服务器名字:BrokerName
 	{
-		topicName := tcm.BrokerController.BrokerConfig.BrokerName
+		topicName := self.BrokerController.BrokerConfig.BrokerName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		tcm.SystemTopicList = mapset.NewSet()
-		tcm.SystemTopicList.Add(topicConfig)
+		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
-		if tcm.BrokerController.BrokerConfig.BrokerTopicEnable {
+		if self.BrokerController.BrokerConfig.BrokerTopicEnable {
 			perm |= constant.PERM_READ | constant.PERM_WRITE
 		}
 		topicConfig.Perm = perm
 		topicConfig.WriteQueueNums = 1
 		topicConfig.ReadQueueNums = 1
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.OFFSET_MOVED_EVENT
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		tcm.SystemTopicList = mapset.NewSet()
-		tcm.SystemTopicList.Add(topicConfig)
+		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
+		logger.Infof("TopicConfigManager.init() topic is %s", topicConfig.ToString())
+		self.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	}
 }
 

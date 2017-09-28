@@ -14,10 +14,15 @@ type TopicConfigSerializeWrapper struct {
 	*protocol.RemotingSerializable
 }
 
-func NewTopicConfigSerializeWrapper() *TopicConfigSerializeWrapper {
-	return &TopicConfigSerializeWrapper{
+func NewTopicConfigSerializeWrapper(dataVersion ...*stgcommon.DataVersion) *TopicConfigSerializeWrapper {
+	topicConfigSerializeWrapper := &TopicConfigSerializeWrapper{
 		TopicConfigTable:     NewTopicConfigTable(),
-		DataVersion:          stgcommon.NewDataVersion(),
 		RemotingSerializable: new(protocol.RemotingSerializable),
 	}
+
+	topicConfigSerializeWrapper.DataVersion = stgcommon.NewDataVersion()
+	if dataVersion != nil && len(dataVersion) > 0 {
+		topicConfigSerializeWrapper.DataVersion = dataVersion[0]
+	}
+	return topicConfigSerializeWrapper
 }
