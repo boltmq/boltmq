@@ -47,60 +47,32 @@ func reflectSturctSetField(structValue reflect.Value, name string, value string)
 	switch structFieldType.Kind() {
 	case reflect.String:
 		structFieldValue.Set(reflect.ValueOf(value))
+	case reflect.Int8:
+		fallthrough
+	case reflect.Int16:
+		fallthrough
 	case reflect.Int32:
-		ival, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(int32(ival)))
+		fallthrough
 	case reflect.Int64:
-		ival, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(ival))
+		fallthrough
 	case reflect.Int:
 		ival, err := strconv.ParseInt(value, 10, 32)
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
-		structFieldValue.Set(reflect.ValueOf(int(ival)))
-	case reflect.Int16:
-		ival, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(int16(ival)))
-	case reflect.Int8:
-		ival, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(int8(ival)))
-	case reflect.Uint16:
-		ival, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(uint16(ival)))
+		structFieldValue.SetInt(ival)
 	case reflect.Uint8:
-		ival, err := strconv.ParseInt(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(uint8(ival)))
+		fallthrough
+	case reflect.Uint16:
+		fallthrough
 	case reflect.Uint32:
-		ival, err := strconv.ParseUint(value, 10, 32)
-		if err != nil {
-			return errors.Wrap(err, 0)
-		}
-		structFieldValue.Set(reflect.ValueOf(uint32(ival)))
+		fallthrough
 	case reflect.Uint64:
 		ival, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
-		structFieldValue.Set(reflect.ValueOf(ival))
+		structFieldValue.SetUint(ival)
 	case reflect.Bool:
 		bval, err := strconv.ParseBool(value)
 		if err != nil {
