@@ -40,6 +40,7 @@ type BrokerController struct {
 	BrokerOuterAPI                       *out.BrokerOuterAPI
 	SlaveSynchronize                     *SlaveSynchronize
 	MessageStore                         *stgstorelog.DefaultMessageStore
+	RemotingClient                       *remoting.DefalutRemotingClient
 	RemotingServer                       *remoting.DefalutRemotingServer
 	TopicConfigManager                   *TopicConfigManager
 	UpdateMasterHAServerAddrPeriodically bool
@@ -52,7 +53,7 @@ type BrokerController struct {
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
-func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig) *BrokerController {
+func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig, remotingClient *remoting.DefalutRemotingClient) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
 	brokerController.MessageStoreConfig = messageStoreConfig
@@ -70,7 +71,8 @@ func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfi
 	brokerController.ClientHousekeepingService = NewClientHousekeepingService(brokerController)
 	brokerController.Broker2Client = NewBroker2Clientr(brokerController)
 	brokerController.SubscriptionGroupManager = NewSubscriptionGroupManager(brokerController)
-	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI()
+	brokerController.RemotingClient = remotingClient
+	brokerController.BrokerOuterAPI = out.NewBrokerOuterAPI(remotingClient)
 	brokerController.FilterServerManager = NewFilterServerManager(brokerController)
 
 	if brokerController.BrokerConfig.NamesrvAddr != "" {
@@ -216,7 +218,7 @@ func (bc *BrokerController) Shutdown() {
 		bc.MessageStore.Shutdown()
 	}
 
-	bc.unregisterBrokerAll()
+	bc.unRegisterBrokerAll()
 
 	if bc.BrokerOuterAPI != nil {
 		bc.BrokerOuterAPI.Shutdown()
@@ -271,12 +273,12 @@ func (bc *BrokerController) Start() {
 	bc.addDeleteTopicTask()
 }
 
-// unregisterBrokerAll 注销所有broker
+// unRegisterBrokerAll 注销所有broker
 // Author rongzhihong
 // Since 2017/9/12
-func (bc *BrokerController) unregisterBrokerAll() {
+func (bc *BrokerController) unRegisterBrokerAll() {
 	brokerId := int(bc.BrokerConfig.BrokerId)
-	bc.BrokerOuterAPI.UnregisterBrokerAll(bc.BrokerConfig.BrokerClusterName, bc.GetBrokerAddr(), bc.BrokerConfig.BrokerName, brokerId)
+	bc.BrokerOuterAPI.UnRegisterBrokerAll(bc.BrokerConfig.BrokerClusterName, bc.GetBrokerAddr(), bc.BrokerConfig.BrokerName, brokerId)
 	logger.Info("unRegisterBrokerAll successful")
 }
 

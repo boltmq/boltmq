@@ -97,6 +97,8 @@ func (self *RouteInfoManager) getAllTopicList() []byte {
 func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64, haServerAddr string, topicConfigWrapper *body.TopicConfigSerializeWrapper, filterServerList []string, ctx netm.Context) *namesrv.RegisterBrokerResult {
 	result := &namesrv.RegisterBrokerResult{}
 	self.ReadWriteLock.Lock()
+	defer self.ReadWriteLock.Unlock()
+
 	logger.Info("routeInfoManager.registerBroker() start ...")
 	brokerNames, ok := self.ClusterAddrTable[clusterName]
 	if ok {
@@ -130,22 +132,28 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 		}
 		self.BrokerAddrTable[brokerName] = brokerData
 	}
-	if oldAddr, ok := brokerData.BrokerAddrs[int(brokerId)]; ok {
-		registerFirst = registerFirst || (oldAddr == "")
-	}
+
+	oldAddr, ok := brokerData.BrokerAddrs[int(brokerId)]
+	registerFirst = registerFirst || ok || oldAddr == ""
+	brokerData.BrokerAddrs[int(brokerId)] = brokerAddr
 
 	// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)
 	if topicConfigWrapper != nil && brokerId == stgcommon.MASTER_ID {
-		isChanged := self.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.DataVersion) || registerFirst
-		if isChanged {
+		isChanged := self.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.DataVersion)
+		if isChanged || registerFirst {
 			// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)
 			if tcTable := topicConfigWrapper.TopicConfigTable; tcTable != nil && tcTable.TopicConfigs != nil {
-				for topic, _ := range tcTable.TopicConfigs {
-					if topicConfig, ok := tcTable.TopicConfigs[topic]; ok {
-						// TODO:遍历 可能存在问题:
-						self.createAndUpdateQueueData(brokerName, topicConfig)
-					}
-				}
+				tcTable.Foreach(func(topic string, topicConfig *stgcommon.TopicConfig) {
+					// TODO:遍历 可能存在问题
+					self.createAndUpdateQueueData(brokerName, topicConfig)
+				})
+
+				//for topic, _ := range tcTable.TopicConfigs {
+				//	if topicConfig, ok := tcTable.TopicConfigs[topic]; ok {
+				//		// TODO:遍历 可能存在问题:
+				//		self.createAndUpdateQueueData(brokerName, topicConfig)
+				//	}
+				//}
 			}
 		}
 	}
@@ -153,11 +161,14 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	// 更新最后变更时间: 初始化BrokerLiveInfo对象并以broker地址为key值存入brokerLiveTable变量中
 	if topicConfigWrapper != nil {
 		brokerLiveInfo := routeinfo.NewBrokerLiveInfo(topicConfigWrapper.DataVersion, haServerAddr, ctx)
-		if prevBrokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; ok && prevBrokerLiveInfo == nil {
-			logger.Info("new broker registerd, %s, HAServer: %s", brokerAddr, haServerAddr)
+		format := "history broker registerd, %s, HAServer: %s"
+		if prevBrokerLiveInfo, ok := self.BrokerLiveTable[brokerAddr]; !ok && prevBrokerLiveInfo == nil {
+			format = "new broker registerd, %s, HAServer: %s"
 		}
+		logger.Info(format, brokerAddr, haServerAddr)
 		self.BrokerLiveTable[brokerAddr] = brokerLiveInfo
-		logger.Info("history broker registerd, %s, HAServer: %s", brokerAddr, haServerAddr)
+	} else {
+		logger.Info("topicConfigWrapper is nil, no broker'topic to ")
 	}
 
 	// 更新Filter Server列表: 对于filterServerList不为空的,以broker地址为key值存入
@@ -180,7 +191,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 		}
 	}
 	logger.Info("routeInfoManager.registerBroker() end ...")
-	self.ReadWriteLock.Unlock()
+
 	return result
 }
 
@@ -265,8 +276,8 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 		TopicSynFlag:   topicConfig.TopicSysFlag,
 	}
 
-	queueDataList, _ := self.TopicQueueTable[topic]
-	if queueDataList == nil {
+	queueDataList, ok := self.TopicQueueTable[topic]
+	if !ok || queueDataList == nil {
 		queueDataList = make([]*route.QueueData, 0)
 		queueDataList = append(queueDataList, queueData)
 		self.TopicQueueTable[topic] = queueDataList
@@ -275,7 +286,7 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 		addNewOne := true
 		for index, qd := range queueDataList {
 			if qd != nil && qd.BrokerName == brokerName {
-				if qd == queueData {
+				if queueData.Equals(qd) {
 					addNewOne = false
 				} else {
 					logger.Info("topic changed, %s OLD: %s NEW: %s", topic, qd.ToString(), queueData.ToString())

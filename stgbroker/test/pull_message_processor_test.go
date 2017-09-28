@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"testing"
 )
@@ -76,7 +77,8 @@ func InitBrokerController() *stgbroker.BrokerController {
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 
 	// 创建BrokerController结构体
-	controller := stgbroker.NewBrokerController(brokerConfig, messageStoreConfig)
+	remotingClient := remoting.NewDefalutRemotingClient()
+	controller := stgbroker.NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
 
 	// 初始化controller
 	initResult := controller.Initialize()

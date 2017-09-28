@@ -4,40 +4,13 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/toolkits/file"
 	"os"
 	"strings"
 )
-
-// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-type SmartgoBrokerConfig struct {
-	BrokerClusterName string
-	BrokerName        string
-	DeleteWhen        int
-	FileReservedTime  int
-	BrokerRole        string
-	FlushDiskType     string
-}
-
-// ToString 打印smartgoBroker配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-func (self *SmartgoBrokerConfig) ToString() string {
-	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s]"
-	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime, self.BrokerRole, self.FlushDiskType)
-	return info
-}
-
-// IsBlank 判断配置项是否读取成功
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-func (self *SmartgoBrokerConfig) IsBlank() bool {
-	return self == nil || strings.TrimSpace(self.BrokerClusterName) == "" || strings.TrimSpace(self.BrokerName) == ""
-}
 
 // Start 启动BrokerController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
@@ -88,7 +61,8 @@ func CreateBrokerController() *BrokerController {
 	}
 
 	// 构建BrokerController结构体
-	controller := NewBrokerController(brokerConfig, messageStoreConfig)
+	remotingClient := remoting.NewDefalutRemotingClient()
+	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
 	controller.ConfigFile = brokerConfigPath
 
 	// 初始化controller
@@ -164,4 +138,32 @@ func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig,
 
 	}
 	return true
+}
+
+// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+type SmartgoBrokerConfig struct {
+	BrokerClusterName string
+	BrokerName        string
+	DeleteWhen        int
+	FileReservedTime  int
+	BrokerRole        string
+	FlushDiskType     string
+}
+
+// ToString 打印smartgoBroker配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *SmartgoBrokerConfig) ToString() string {
+	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s]"
+	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime, self.BrokerRole, self.FlushDiskType)
+	return info
+}
+
+// IsBlank 判断配置项是否读取成功
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+func (self *SmartgoBrokerConfig) IsBlank() bool {
+	return self == nil || strings.TrimSpace(self.BrokerClusterName) == "" || strings.TrimSpace(self.BrokerName) == ""
 }

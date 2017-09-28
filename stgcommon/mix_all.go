@@ -232,6 +232,9 @@ func ExistsFile(fileFullPath string) (bool, error) {
 	return false, err // 不确定是否在存在
 }
 
+// GetGoPath 获取GoPath路径
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
 func GetGoPath() string {
 	return os.Getenv("GOPATH")
 }

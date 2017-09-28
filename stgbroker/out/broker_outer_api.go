@@ -12,8 +12,8 @@ import (
 )
 
 // BrokerOuterAPI Broker对外调用的API封装
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/22
 type BrokerOuterAPI struct {
 	topAddressing  *namesrv.TopAddressing
 	remotingClient *remoting.DefalutRemotingClient
@@ -21,26 +21,40 @@ type BrokerOuterAPI struct {
 }
 
 // NewBrokerOuterAPI 初始化
-// @author gaoyanlei
-// @since 2017/8/9
-func NewBrokerOuterAPI( /** NettyClientConfig nettyClientConfig */ ) *BrokerOuterAPI {
-	var brokerController = new(BrokerOuterAPI)
-	brokerController.remotingClient = remoting.NewDefalutRemotingClient()
-	return brokerController
+// Author gaoyanlei
+// Since 2017/8/22
+func NewBrokerOuterAPI(defaultRemotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
+	brokerOuterAPI := &BrokerOuterAPI{
+		remotingClient: defaultRemotingClient, // 参数defaultRemotingClient必须从外部传入，而不是直接调用remoting.NewDefalutRemotingClient()
+	}
+	return brokerOuterAPI
+}
+
+// NewDefaultBrokerOuterAPI 创建默认BrokerOuterAPI实例
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func NewDefaultBrokerOuterAPI(remotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
+	var brokerOuterAPI = new(BrokerOuterAPI)
+	brokerOuterAPI.remotingClient = remotingClient
+	return brokerOuterAPI
 }
 
 // Start 启动
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) Start() {
-	self.remotingClient.Start()
+	if self.remotingClient != nil {
+		self.remotingClient.Start()
+	}
 }
 
 // Shutdown 关闭
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) Shutdown() {
-	self.remotingClient.Shutdown()
+	if self.remotingClient != nil {
+		self.remotingClient.Shutdown()
+	}
 }
 
 // UpdateNameServerAddressList 更新nameService地址
@@ -48,7 +62,7 @@ func (self *BrokerOuterAPI) Shutdown() {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 	addrArray := strings.Split(addrs, ";")
-	if addrArray != nil {
+	if addrArray != nil && len(addrArray) > 0 {
 		self.remotingClient.UpdateNameServerAddressList(addrArray)
 	}
 }
@@ -58,14 +72,13 @@ func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	addrs := self.topAddressing.FetchNSAddr()
-	if addrs != "" {
-		if !strings.EqualFold(addrs, self.nameSrvAddr) {
-			logger.Info("name server address changed, old: " + self.nameSrvAddr + " new: " + addrs)
-			self.UpdateNameServerAddressList(addrs)
-			self.nameSrvAddr = addrs
-			return self.nameSrvAddr
-		}
+	if addrs == "" || strings.EqualFold(addrs, self.nameSrvAddr) {
+		return self.nameSrvAddr
 	}
+
+	logger.Info("name server address changed, old: " + self.nameSrvAddr + ", new: " + addrs)
+	self.UpdateNameServerAddressList(addrs)
+	self.nameSrvAddr = addrs
 	return self.nameSrvAddr
 }
 
@@ -126,27 +139,27 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
-	registerBrokerResult := &namesrv.RegisterBrokerResult{}
+	var registerBrokerResult *namesrv.RegisterBrokerResult
 
-	// 获取那么service地址
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
-	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
-		for _, namesrvAddr := range nameServerAddressList {
-			result := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId,
-				topicConfigWrapper, oneway, filterServerList)
-			if result != nil {
-				registerBrokerResult = result
-			}
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
+	if nameServerAddressList == nil || len(nameServerAddressList) == 0 {
+		return registerBrokerResult
+	}
+
+	for _, namesrvAddr := range nameServerAddressList {
+		result := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
+		if result != nil {
+			registerBrokerResult = result
 		}
+		logger.Infof("register broker to name server %s OK, the result: %v", namesrvAddr, result)
 	}
 	return registerBrokerResult
 }
 
-// UnregisterBroker 注销broker
+// UnRegisterBroker 注销broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
+func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
 	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
 		ClusterName: clusterName,
 		BrokerName:  brokerAddr,
@@ -167,16 +180,18 @@ func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAdd
 	return
 }
 
-// UnregisterBrokerAll 注销全部Broker
+// UnRegisterBrokerAll 注销全部Broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerName string, brokerId int) {
+func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerName string, brokerId int) {
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
-	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
-		for _, namesrvAddr := range nameServerAddressList {
-			self.UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
-		}
+	if nameServerAddressList == nil || len(nameServerAddressList) == 0 {
+		return
+	}
+
+	for _, namesrvAddr := range nameServerAddressList {
+		self.UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
+		logger.Infof("register broker to name server %s OK", namesrvAddr)
 	}
 }
 
