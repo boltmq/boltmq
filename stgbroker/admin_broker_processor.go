@@ -37,6 +37,9 @@ func NewAdminBrokerProcessor(brokerController *BrokerController) *AdminBrokerPro
 	return adminBrokerProcessor
 }
 
+// ProcessRequest 请求入口
+// Author rongzhihong
+// Since 2017/8/23
 func (abp *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
 	// 更新创建Topic
@@ -153,9 +156,18 @@ func (abp *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *proto
 	return nil, nil
 }
 
+// updateAndCreateTopic 更新创建TOPIC
+// Author rongzhihong
+// Since 2017/8/23
 func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 	requestHeader := &header.CreateTopicRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	// Topic名字是否与保留字段冲突
 	if strings.EqualFold(requestHeader.Topic, abp.BrokerController.BrokerConfig.BrokerClusterName) {
 		errorMsg :=
 			"the topic[" + requestHeader.Topic + "] is conflict with system reserved words."
@@ -166,9 +178,9 @@ func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request 
 	}
 
 	topicConfig := &stgcommon.TopicConfig{
+		TopicName:       requestHeader.Topic,
 		ReadQueueNums:   requestHeader.ReadQueueNums,
 		WriteQueueNums:  requestHeader.WriteQueueNums,
-		TopicFilterType: requestHeader.TopicFilterType,
 		Perm:            requestHeader.Perm,
 	}
 	if requestHeader.TopicSysFlag != 0 {
@@ -176,6 +188,7 @@ func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request 
 	}
 	abp.BrokerController.TopicConfigManager.UpdateTopicConfig(topicConfig)
 	abp.BrokerController.RegisterBrokerAll(false, true)
+
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -200,8 +213,13 @@ func (abp *AdminBrokerProcessor) getMaxOffset(ctx netm.Context, request *protoco
 }
 func (abp *AdminBrokerProcessor) deleteTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
-	responseHeader := &header.DeleteTopicRequestHeader{}
-	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(responseHeader.Topic)
+	requestHeader := &header.DeleteTopicRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(requestHeader.Topic)
 	abp.BrokerController.addDeleteTopicTask()
 
 	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())

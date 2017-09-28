@@ -1,4 +1,4 @@
-package oneway
+package main
 
 import (
 	"fmt"

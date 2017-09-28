@@ -57,19 +57,13 @@ func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, re
 	request := protocol.CreateRequestCommand(commonprotocol.CHECK_TRANSACTION_STATE, requestHeader)
 	request.MarkOnewayRPC()
 
-	// TODO
-	/*FileRegion fileRegion =
-			new OneMessageTransfer(request.encodeHeader(selectMapedBufferResult.getSize()),
-			selectMapedBufferResult);
-		channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
-			@Override
-		public void operationComplete(ChannelFuture future) throws Exception {
-			selectMapedBufferResult.release();
-			if (!future.isSuccess()) {
-			log.error("invokeProducer failed,", future.cause());
-			}
-		}
-	});*/
+	// TODO WriteSerialObject不支持request请求
+	//oneMessageTransfer := pagecache.NewOneMessageTransfer(request, selectMapedBufferResult)
+	//_, err := channel.WriteSerialObject(oneMessageTransfer)
+	//if err != nil {
+	//	logger.Errorf("invokeProducer failed, %s", err.Error())
+	//}
+	// selectMapedBufferResult.Release()
 }
 
 // CallClient 调用客户端

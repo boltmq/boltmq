@@ -144,8 +144,11 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 func DoResponse(ctx netm.Context,
 	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
-		// ctx.Write([]byte(response.ToString()))
-		ctx.Write(response.DecodeCommand())
+		_, err := ctx.WriteSerialObject(response)
+		if err != nil {
+			logger.Errorf("DoResponse:%s", err.Error())
+			return
+		}
 	}
 }
 

@@ -1,8 +1,6 @@
 package stgbroker
 
 import (
-	"bytes"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
@@ -58,21 +56,17 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 			return
 		}
 
-		if response != nil {
-			response.Opaque = request.Opaque
-			response.MarkResponseType()
-			// TODO
-			/*			channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
-						public void operationComplete(ChannelFuture future) throws Exception {
-							if (!future.isSuccess()) {
-								log.error("processRequestWrapper response to "
-								+ future.channel().remoteAddress() + " failed",
-									future.cause());
-							log.error(request.toString());
-							log.error(response.toString());
-						}
-						}
-					});*/
+		if response == nil {
+			return
+		}
+
+		response.Opaque = request.Opaque
+		response.MarkResponseType()
+
+		_, err = ctx.WriteSerialObject(response)
+		if err != nil {
+			logger.Errorf("processRequestWrapper response to %s failed %s. \n request:%s, response:%s",
+				ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
 	}()
 }
@@ -267,22 +261,14 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 			pull.BrokerController.brokerStatsManager.IncBrokerGetNums(getMessageResult.GetMessageCount())
 
-			byteBufferHeader := bytes.NewBuffer(response.Body)
-			fileRegion := pagecache.NewManyMessageTransfer(byteBufferHeader, getMessageResult)
-			fmt.Println(fileRegion)
-
-			// TODO
-			//	channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
-			//	public void operationComplete(ChannelFuture future) throws Exception {
-			//	getMessageResult.release();
-			//	if (!future.isSuccess()) {
-			//	log.error(
-			//	"transfer many message by pagecache failed, " + channel.remoteAddress(),
-			//	future.cause());
-			//	}
-			//	}
-			//	});
-			// response = nil
+			manyMessageTransfer := pagecache.NewManyMessageTransfer(response, getMessageResult)
+			_, err = ctx.WriteSerialObject(manyMessageTransfer)
+			if err != nil {
+				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
+					ctx.RemoteAddr().String(), err.Error())
+			}
+			// TODO getMessageResult.Release()
+			response = nil
 		case commonprotocol.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
@@ -360,7 +346,7 @@ func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMov
 	msgInner.SetKeys(event.ConsumerGroup)
 	msgInner.Body = event.Encode()
 	msgInner.Flag = 0
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgInner.GetTags())
 
 	msgInner.QueueId = int32(0)
 	msgInner.SysFlag = 0

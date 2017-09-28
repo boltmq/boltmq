@@ -2,6 +2,7 @@ package stgbroker
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
@@ -64,8 +65,12 @@ func (qmp *QueryMessageProcessor) QueryMessage(ctx netm.Context, request *protoc
 			response.Code = commonprotocol.SUCCESS
 			response.Remark = ""
 
-			// fileRegion
-			// ctx.channel().writeAndFlush(fileRegion).addListener()
+			queryMessageTransfer := pagecache.NewQueryMessageTransfer(response, queryMessageResult)
+			_, err := ctx.WriteSerialObject(queryMessageTransfer)
+			if err != nil {
+				logger.Errorf("transfer query message by pagecache failed, %s", err.Error())
+			}
+			// TODO queryMessageTransfer.Release()
 			return nil, nil
 		}
 	}
@@ -94,7 +99,12 @@ func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *pro
 		response.Code = commonprotocol.SUCCESS
 		response.Remark = ""
 
-		// TODO
+		oneMessageTransfer := pagecache.NewOneMessageTransfer(response, selectMapedBufferResult)
+		_, err = ctx.WriteSerialObject(oneMessageTransfer)
+		if err != nil {
+			logger.Errorf("transfer one message by pagecache failed, %s", err.Error())
+		}
+		// TODO selectMapedBufferResult.Release()
 		return nil, nil
 	}
 
