@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"container/list"
 )
 
 // ConsumeQueue 消费队列实现
@@ -50,7 +51,6 @@ func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSiz
 
 func (self *ConsumeQueue) load() bool {
 	result := self.mapedFileQueue.load()
-
 	resultMsg := "Failed"
 	if result {
 		resultMsg = "OK"
@@ -81,26 +81,111 @@ func (self *ConsumeQueue) rollNextFile(index int64) int64 {
 	return nextIndex
 }
 
-func (self *ConsumeQueue) recover() {
-	/*
-		mapedFiles := cq.mapedFileQueue.mapedFiles
-		if mapedFiles.Len() > 0 {
-			index := mapedFiles.Len() - 3
-			if index < 0 {
-				index = 0
-			}
-			var mapedFile *MapedFile
+func (self *ConsumeQueue) correctMinOffset(phyMinOffset int64) {
+	mapedFile := self.mapedFileQueue.getFirstMapedFileOnLock()
+	if mapedFile != nil {
+		result := mapedFile.selectMapedBuffer(0)
+		if result != nil {
+			for i := 0; i < int(result.Size); i += CQStoreUnitSize {
+				offsetPy := result.MappedByteBuffer.ReadInt64()
+				result.MappedByteBuffer.ReadInt32()
+				result.MappedByteBuffer.ReadInt64()
 
-			i := mapedFiles.Len() - 1
-			for e := mapedFiles.Back(); e != nil; e = e.Prev() {
-				if index == i {
-					mapedFile := e.Value.(MapedFile)
+				if offsetPy >= phyMinOffset {
+					self.minLogicOffset = result.MapedFile.fileFromOffset + int64(i)
+					logger.Infof("compute logics min offset: %d, topic: %s, queueId: %d",
+						self.getMinOffsetInQueue(), self.topic, self.queueId)
+					break
+				}
+			}
+		}
+	}
+}
+
+func getMapedFileByIndex(mapedFiles *list.List, index int) *MapedFile {
+	i := 0
+	for e := mapedFiles.Front(); e != nil; e = e.Next() {
+		if index == i {
+			mapedFile := e.Value.(*MapedFile)
+			return mapedFile
+		}
+
+		i++
+	}
+
+	return nil
+}
+
+func (self *ConsumeQueue) recover() {
+	mapedFiles := self.mapedFileQueue.mapedFiles
+	if mapedFiles.Len() > 0 {
+		index := mapedFiles.Len() - 3
+		if index < 0 {
+			index = 0
+		}
+
+		mapedFile := getMapedFileByIndex(mapedFiles, index)
+
+		byteBuffer := bytes.NewBuffer(mapedFile.mappedByteBuffer.Bytes())
+		processOffset := mapedFile.fileFromOffset
+		mapedFileOffset := int64(0)
+
+		for {
+			for i := 0; i < int(self.mapedFileSize); i += CQStoreUnitSize {
+				var (
+					offset   int64
+					size     int32
+					tagsCode int64
+				)
+
+				if err := binary.Read(byteBuffer, binary.BigEndian, &offset); err != nil {
+					logger.Error("consume queue recover maped file offset error:", err.Error())
+				}
+
+				if err := binary.Read(byteBuffer, binary.BigEndian, &size); err != nil {
+					logger.Error("consume queue recover maped file size error:", err.Error())
+				}
+
+				if err := binary.Read(byteBuffer, binary.BigEndian, &tagsCode); err != nil {
+					logger.Error("consume queue recover maped file tags code error:", err.Error())
+				}
+
+				// 说明当前存储单元有效
+				// TODO 这样判断有效是否合理？
+				if offset >= 0 && size > 0 {
+					mapedFileOffset = int64(i) + CQStoreUnitSize
+					self.maxPhysicOffset = offset
+				} else {
+					logger.Infof("recover current consume queue file over, %s %d %d %d ",
+						mapedFile.fileName, offset, size, tagsCode)
+					break
 				}
 			}
 
-			// TODO
+			// 走到文件末尾，切换至下一个文件
+			if mapedFileOffset == self.mapedFileSize {
+				index++
+				if index >= mapedFiles.Len() {
+					logger.Info("recover last consume queue file over, last maped file ", mapedFile.fileName)
+					break
+				} else {
+					mapedFile = getMapedFileByIndex(mapedFiles, index)
+					byteBuffer = bytes.NewBuffer(mapedFile.mappedByteBuffer.Bytes())
+					processOffset = mapedFile.fileFromOffset
+					mapedFileOffset = 0
+					logger.Info("recover next consume queue file, ", mapedFile.fileName)
+				}
+			} else {
+				logger.Infof("recover current consume queue queue over %s %d",
+					mapedFile.fileName, processOffset+mapedFileOffset)
+				break
+			}
 		}
-	*/
+
+		processOffset += mapedFileOffset
+		self.mapedFileQueue.truncateDirtyFiles(processOffset)
+
+	}
 }
 
 func (self *ConsumeQueue) getOffsetInQueueByTime(timestamp int64) int64 {
@@ -208,8 +293,7 @@ func (self *ConsumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset
 		return true
 	}
 
-	self.byteBufferIndex.flip()
-	self.byteBufferIndex.limit(CQStoreUnitSize)
+	self.resetMsgStoreItemMemory(CQStoreUnitSize)
 	self.byteBufferIndex.WriteInt64(offset)
 	self.byteBufferIndex.WriteInt32(int32(size))
 	self.byteBufferIndex.WriteInt64(tagsCode)
@@ -238,7 +322,7 @@ func (self *ConsumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset
 
 		// 记录物理队列最大offset
 		self.maxPhysicOffset = offset
-		byteBuffers := self.byteBufferIndex.MMapBuf[:]
+		byteBuffers := self.byteBufferIndex.Bytes()
 		return mapedFile.appendMessage(byteBuffers)
 	}
 
@@ -288,8 +372,67 @@ func (self *ConsumeQueue) getLastOffset() int64 {
 	return physicsLastOffset
 }
 
+func (self *ConsumeQueue) truncateDirtyLogicFiles(phyOffet int64) {
+	logicFileSize := int(self.mapedFileSize)
+
+	for {
+		mapedFile := self.mapedFileQueue.getLastMapedFile2()
+		if mapedFile != nil {
+			mappedBuyteBuffer := NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+			mapedFile.wrotePostion = 0
+			mapedFile.committedPosition = 0
+
+			for i := 0; i < logicFileSize; i += CQStoreUnitSize {
+				offset := mappedBuyteBuffer.ReadInt64()
+				size := mappedBuyteBuffer.ReadInt32()
+				mappedBuyteBuffer.ReadInt64()
+
+				if 0 == i {
+					if offset >= phyOffet {
+						self.mapedFileQueue.deleteLastMapedFile()
+						break
+					} else {
+						pos := i + CQStoreUnitSize
+						mapedFile.wrotePostion = int64(pos)
+						mapedFile.committedPosition = int64(pos)
+						self.maxPhysicOffset = offset
+					}
+				} else {
+					if offset >= 0 && size >= 0 {
+						if offset >= phyOffet {
+							return
+						}
+
+						pos := i + CQStoreUnitSize
+						mapedFile.wrotePostion = int64(pos)
+						mapedFile.committedPosition = int64(pos)
+						self.maxPhysicOffset = offset
+
+						if pos == logicFileSize {
+							return
+						}
+					} else {
+						return
+					}
+				}
+			}
+		} else {
+			break
+		}
+	}
+}
+
 func (self *ConsumeQueue) destroy() {
 	self.maxPhysicOffset = -1
 	self.minLogicOffset = 0
 	self.mapedFileQueue.destroy()
+}
+
+func (self *ConsumeQueue) resetMsgStoreItemMemory(length int32) {
+	self.byteBufferIndex.Limit = self.byteBufferIndex.WritePos
+	self.byteBufferIndex.WritePos = 0
+	self.byteBufferIndex.Limit = int(length)
+	if self.byteBufferIndex.WritePos > self.byteBufferIndex.Limit {
+		self.byteBufferIndex.WritePos = self.byteBufferIndex.Limit
+	}
 }

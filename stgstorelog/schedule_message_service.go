@@ -57,6 +57,15 @@ func (self *ScheduleMessageService) encodeOffsetTable() string {
 	return string(result)
 }
 
+func (self *ScheduleMessageService) computeDeliverTimestamp(delayLevel int32, storeTimestamp int64) int64 {
+	time, ok := self.delayLevelTable[delayLevel]
+	if ok {
+		return time + storeTimestamp
+	}
+
+	return storeTimestamp + 1000
+}
+
 func (self *ScheduleMessageService) Encode() string {
 	return self.encodeOffsetTable()
 }

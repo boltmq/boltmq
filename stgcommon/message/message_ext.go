@@ -6,6 +6,7 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"github.com/go-errors/errors"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 // MessageExt 消息体
@@ -204,4 +205,12 @@ func (msgExt *MessageExt) Encode() ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func ParseTopicFilterType(sysFlag int32) stgcommon.TopicFilterType {
+	if (sysFlag & sysflag.MultiTagsFlag) == sysflag.MultiTagsFlag {
+		return stgcommon.MULTI_TAG
+	}
+
+	return stgcommon.SINGLE_TAG
 }

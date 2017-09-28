@@ -19,6 +19,7 @@ import (
 	"math"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"fmt"
 )
 
 const (
@@ -76,7 +77,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
 	ms.TransactionCheckExecuter = nil
-	ms.AllocateMapedFileService = nil // TODO NewAllocateMapedFileService()
+	ms.AllocateMapedFileService = NewAllocateMapedFileService()
 	ms.consumeTopicTable = make(map[string]*ConsumeQueueTable)
 	ms.CommitLog = NewCommitLog(ms)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
@@ -104,8 +105,14 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 		ms.ScheduleMessageService = nil
 	}
 
+	storeCheckpoint, err := NewStoreCheckpoint(config.GetStoreCheckpoint(ms.MessageStoreConfig.StorePathRootDir))
+	ms.StoreCheckpoint = storeCheckpoint
+	if err != nil {
+		logger.Error("load exception", err.Error())
+	}
+
 	// load过程依赖此服务，所以提前启动
-	// go ms.AllocateMapedFileService.Start()
+	go ms.AllocateMapedFileService.Start()
 	go ms.DispatchMessageService.Start()
 
 	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
@@ -138,18 +145,10 @@ func (self *DefaultMessageStore) Load() bool {
 	self.loadConsumeQueue()
 
 	// TODO load 事务模块
-
-	var err error
-	self.StoreCheckpoint, err = NewStoreCheckpoint(config.GetStoreCheckpoint(self.MessageStoreConfig.StorePathRootDir))
-	if err != nil {
-		logger.Error("load exception", err.Error())
-		result = false
-	}
-
 	self.IndexService.Load(lastExitOk)
 
 	// 尝试恢复数据
-	// self.recover(lastExitOk)
+	self.recover(lastExitOk)
 
 	return result
 }
@@ -167,12 +166,14 @@ func (self *DefaultMessageStore) recover(lastExitOK bool) {
 	}
 
 	// 保证消息都能从DispatchService缓冲队列进入到真正的队列
+	/*
 	ticker := time.NewTicker(time.Millisecond * 500)
 	for _ = range ticker.C {
-		if self.DispatchMessageService.hasRemainMessage() {
+		if !self.DispatchMessageService.hasRemainMessage() {
 			break
 		}
 	}
+	*/
 
 	// 恢复事务模块
 	// TODO self.TransactionStateService.recoverStateTable(lastExitOK);
@@ -191,7 +192,7 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 	dirLogicDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
 	files, err := ioutil.ReadDir(dirLogicDir)
 	if err != nil {
-		// TODO
+		logger.Warnf("default message store load consume queue directory %s, error: %s", dirLogicDir, err.Error())
 	}
 
 	pathSeparator := GetPathSeparator()
@@ -214,7 +215,7 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 
 					logic := NewConsumeQueue(topic, int32(queueId),
 						config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir),
-						int64(self.MessageStoreConfig.MapedFileSizeConsumeQueue), self)
+						int64(self.MessageStoreConfig.getMapedFileSizeConsumeQueue()), self)
 
 					self.putConsumeQueue(topic, int32(queueId), logic)
 
@@ -413,6 +414,11 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 				)
 
 				for ; int32(i) < bufferConsumeQueue.Size && i < MaxFilterMessageCount; i += CQStoreUnitSize {
+					if bufferConsumeQueue.MappedByteBuffer.WritePos == 0 {
+						logger.Warnf("message store get message mapped byte buffer is empty")
+						continue
+					}
+
 					offsetPy := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
 					sizePy := bufferConsumeQueue.MappedByteBuffer.ReadInt32()
 					tagsCode := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
@@ -560,7 +566,7 @@ func (self *DefaultMessageStore) findConsumeQueue(topic string, queueId int32) *
 	if !ok {
 		storePathRootDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
 		consumeQueueMap.consumeQueuesMu.Lock()
-		logic = NewConsumeQueue(topic, queueId, storePathRootDir, int64(self.MessageStoreConfig.MapedFileSizeConsumeQueue), self)
+		logic = NewConsumeQueue(topic, queueId, storePathRootDir, int64(self.MessageStoreConfig.getMapedFileSizeConsumeQueue()), self)
 		consumeQueueMap.consumeQueues[queueId] = logic
 		consumeQueueMap.consumeQueuesMu.Unlock()
 	}
@@ -693,7 +699,6 @@ func (self *DefaultMessageStore) GetEarliestMessageTime(topic string, queueId in
 	logicQueue := self.findConsumeQueue(topic, queueId)
 	if logicQueue != nil {
 		result := logicQueue.getIndexBuffer(logicQueue.minLogicOffset / CQStoreUnitSize)
-		defer result.MappedByteBuffer.unmap()
 		if result != nil {
 			phyOffset := result.MappedByteBuffer.ReadInt64()
 			size := result.MappedByteBuffer.ReadInt32()
@@ -737,8 +742,6 @@ func (self *DefaultMessageStore) GetMessageStoreTimeStamp(topic string, queueId 
 	logicQueue := self.findConsumeQueue(topic, queueId)
 	if logicQueue != nil {
 		result := logicQueue.getIndexBuffer(offset)
-		defer result.MappedByteBuffer.unmap()
-
 		if result != nil {
 			phyOffset := result.MappedByteBuffer.ReadInt64()
 			size := result.MappedByteBuffer.ReadInt32()
@@ -828,8 +831,6 @@ func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minO
 			}
 
 			bufferConsumeQueue := consumeQueue.getIndexBuffer(nextOffset)
-			defer bufferConsumeQueue.MappedByteBuffer.unmap()
-
 			if bufferConsumeQueue != nil {
 				for i := 0; i < int(bufferConsumeQueue.Size); i += CQStoreUnitSize {
 					offsetPy := bufferConsumeQueue.MappedByteBuffer.ReadInt64()
@@ -857,10 +858,40 @@ func (self *DefaultMessageStore) Now() int64 {
 	return time.Now().UnixNano() / 1000000
 }
 
+func (self *DefaultMessageStore) putDispatchRequest(dispatchRequest *DispatchRequest) {
+	self.DispatchMessageService.putRequest(dispatchRequest)
+}
+
+func (self *DefaultMessageStore) truncateDirtyLogicFiles(phyOffset int64) {
+	for _, queueMap := range self.consumeTopicTable {
+		for _, logic := range queueMap.consumeQueues {
+			logic.truncateDirtyLogicFiles(phyOffset)
+		}
+	}
+}
+
+func (self *DefaultMessageStore) destroyLogics() {
+	for _, queueMap := range self.consumeTopicTable {
+		for _, logic := range queueMap.consumeQueues {
+			logic.destroy()
+		}
+	}
+}
+
 func (self *DefaultMessageStore) addScheduleTask() {
 	// TODO
 }
 
 func (self *DefaultMessageStore) recoverTopicQueueTable() {
-	// TODO
+	table := make(map[string]int64)
+	minPhyOffset := self.CommitLog.getMinOffset()
+	for _, consumeQueueTable := range self.consumeTopicTable {
+		for _, logic := range consumeQueueTable.consumeQueues {
+			key := fmt.Sprintf("%s-%d", logic.topic, logic.queueId) // 恢复写入消息时，记录的队列offset
+			table[key] = logic.getMaxOffsetInQueue()
+			logic.correctMinOffset(minPhyOffset) // 恢复每个队列的最小offset
+		}
+	}
+
+	self.CommitLog.TopicQueueTable = table
 }

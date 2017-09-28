@@ -33,6 +33,13 @@ func Int16ToBytes(n int16) []byte {
 	return bytesBuffer.Bytes()
 }
 
+func Int8ToBytes(n int8) []byte {
+	tmp := int8(n)
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	binary.Write(bytesBuffer, binary.BigEndian, tmp)
+	return bytesBuffer.Bytes()
+}
+
 // Int32ToBytes 字节转换成整形
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/7
@@ -53,6 +60,13 @@ func BytesToInt64(b []byte) int64 {
 func BytesToInt16(b []byte) int16 {
 	bytesBuffer := bytes.NewBuffer(b)
 	var tmp int16
+	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
+	return tmp
+}
+
+func BytesToInt8(b []byte) int8 {
+	bytesBuffer := bytes.NewBuffer(b)
+	var tmp int8
 	binary.Read(bytesBuffer, binary.BigEndian, &tmp)
 	return tmp
 }

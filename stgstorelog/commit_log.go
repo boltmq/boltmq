@@ -4,13 +4,12 @@ import (
 	"sync"
 	"time"
 
-	"bytes"
-	"container/list"
-
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"strconv"
 )
 
 const (
@@ -22,7 +21,7 @@ type CommitLog struct {
 	MapedFileQueue        *MapedFileQueue
 	DefaultMessageStore   *DefaultMessageStore
 	FlushCommitLogService FlushCommitLogService
-	AppendMessageCallback AppendMessageCallback
+	AppendMessageCallback *DefaultAppendMessageCallback
 	TopicQueueTable       map[string]int64
 	mutex                 *sync.Mutex
 }
@@ -180,26 +179,18 @@ func (self *CommitLog) recoverNormally() {
 			index = 0
 		}
 
-		var mapedFile *MapedFile
-		var element *list.Element
-		i := mapedFiles.Len()
-		for element := mapedFiles.Back(); element != nil; element = element.Prev() {
-			if i == index {
-				mapedFile = element.Value.(*MapedFile)
-			}
-			i--
-		}
-
-		byteBuffer := mapedFile.mappedByteBuffer.slice()
+		mapedFile := getMapedFileByIndex(mapedFiles, index)
+		mappedByteBuffer := NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+		mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
 		processOffset := mapedFile.fileFromOffset
 		mapedFileOffset := int64(0)
 		for {
-			dispatchRequest := self.checkMessageAndReturnSize(byteBuffer,
+			dispatchRequest := self.checkMessageAndReturnSize(mappedByteBuffer,
 				self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover, true)
 			size := dispatchRequest.msgSize
 			if size > 0 {
 				mapedFileOffset += size
-			} else if size == 1 {
+			} else if size == -1 {
 				logger.Info("recover physics file end, ", mapedFile.fileName)
 				break
 			} else if size == 0 {
@@ -208,8 +199,8 @@ func (self *CommitLog) recoverNormally() {
 					logger.Info("recover last 3 physics file over, last maped file ", mapedFile.fileName)
 					break
 				} else {
-					mapedFile = element.Next().Value.(*MapedFile)
-					byteBuffer = mapedFile.mappedByteBuffer.slice()
+					mapedFile = getMapedFileByIndex(mapedFiles, index)
+					mappedByteBuffer = NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
 					processOffset = mapedFile.fileFromOffset
 					mapedFileOffset = 0
 				}
@@ -258,11 +249,216 @@ func (self *CommitLog) removeQueurFromTopicQueueTable(topic string, queueId int3
 	delete(self.TopicQueueTable, key)
 }
 
-func (self *CommitLog) checkMessageAndReturnSize(byteBuffer *bytes.Buffer, checkCRC bool, readBody bool) *DispatchRequest {
-	// TODO
-	return nil
+func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuffer, checkCRC bool, readBody bool) *DispatchRequest {
+	// byteBufferMessage := self.AppendMessageCallback.msgStoreItemMemory
+	totalSize := mappedByteBuffer.ReadInt32() // 1 TOTALSIZE
+	magicCode := mappedByteBuffer.ReadInt32() // 2 MAGICCODE
+
+	messageMagicCode := MessageMagicCode
+	blankMagicCode := BlankMagicCode
+
+	switch magicCode {
+	case int32(messageMagicCode):
+		break
+	case int32(blankMagicCode):
+		return &DispatchRequest{msgSize: 0}
+	default:
+		logger.Warn("found a illegal magic code ", magicCode)
+		return &DispatchRequest{msgSize: -1}
+	}
+
+	bodyCRC := mappedByteBuffer.ReadInt32()                   // 3 BODYCRC
+	queueId := mappedByteBuffer.ReadInt32()                   // 4 QUEUEID
+	mappedByteBuffer.ReadInt32()                              // 5 FLAG
+	queueOffset := mappedByteBuffer.ReadInt64()               // 6 QUEUEOFFSET
+	physicOffset := mappedByteBuffer.ReadInt64()              // 7 PHYSICALOFFSET
+	sysFlag := mappedByteBuffer.ReadInt32()                   // 8 SYSFLAG
+	mappedByteBuffer.ReadInt64()                              // 9 BORNTIMESTAMP
+	mappedByteBuffer.Read(make([]byte, 8))                    // 10 BORNHOST（IP+PORT）
+	storeTimestamp := mappedByteBuffer.ReadInt64()            // 11 STORETIMESTAMP
+	mappedByteBuffer.Read(make([]byte, 8))                    // 12 STOREHOST（IP+PORT）
+	mappedByteBuffer.ReadInt32()                              // 13 RECONSUMETIMES
+	preparedTransactionOffset := mappedByteBuffer.ReadInt64() // 14 Prepared Transaction Offset
+	// 15 BODY
+	bodyLen := mappedByteBuffer.ReadInt32()
+	if bodyLen > 0 {
+		if readBody {
+			mappedByteBuffer.Read(make([]byte, bodyLen))
+
+			if checkCRC {
+				// TODO UtilAll.crc32(bytesContent, 0, bodyLen)
+				if bodyCRC != -1 {
+					//TODO
+				}
+
+			}
+		} else {
+			mappedByteBuffer.ReadPos = mappedByteBuffer.ReadPos + int(bodyLen)
+		}
+	}
+
+	// 16 TOPIC
+	topicLen := mappedByteBuffer.ReadInt8()
+	topic := ""
+	if topicLen > 0 {
+		topicBytes := make([]byte, topicLen)
+		mappedByteBuffer.Read(topicBytes)
+		topic = string(topicBytes)
+	}
+
+	tagsCode := int64(0)
+	keys := ""
+
+	// 17 properties
+	propertiesLength := mappedByteBuffer.ReadInt16()
+	if propertiesLength > 0 {
+		propertiesBytes := make([]byte, propertiesLength)
+		mappedByteBuffer.Read(propertiesBytes)
+		properties := string(propertiesBytes)
+		propertiesMap := message.String2messageProperties(properties)
+		keys = propertiesMap["PROPERTY_KEYS"]
+		tags := propertiesMap["PROPERTY_TAGS"]
+		if len(tags) > 0 {
+			tagsCode = TagsString2tagsCode(message.ParseTopicFilterType(sysFlag), tags)
+		}
+
+		// Timing message processing
+		delayLevelStr, ok := propertiesMap["PROPERTY_DELAY_TIME_LEVEL"]
+		if SCHEDULE_TOPIC == topic && ok {
+			delayLevelTemp, _ := strconv.Atoi(delayLevelStr)
+			delayLevel := int32(delayLevelTemp)
+
+			if delayLevel > self.DefaultMessageStore.ScheduleMessageService.maxDelayLevel {
+				delayLevel = self.DefaultMessageStore.ScheduleMessageService.maxDelayLevel
+			}
+
+			if delayLevel > 0 {
+				tagsCode = self.DefaultMessageStore.ScheduleMessageService.computeDeliverTimestamp(delayLevel, storeTimestamp)
+			}
+		}
+	}
+
+	return &DispatchRequest{
+		topic:                     topic,                     // 1
+		queueId:                   queueId,                   // 2
+		commitLogOffset:           physicOffset,              // 3
+		msgSize:                   int64(totalSize),          // 4
+		tagsCode:                  tagsCode,                  // 5
+		storeTimestamp:            storeTimestamp,            // 6
+		consumeQueueOffset:        queueOffset,               // 7
+		keys:                      keys,                      // 8
+		sysFlag:                   sysFlag,                   // 9
+		tranStateTableOffset:      int64(0),                  // 10
+		preparedTransactionOffset: preparedTransactionOffset, // 11
+		producerGroup:             "",                        // 12
+	}
 }
 
 func (self *CommitLog) recoverAbnormally() {
-	// TODO
+	checkCRCOnRecover := self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover
+	mapedFiles := self.MapedFileQueue.mapedFiles
+	if mapedFiles.Len() > 0 {
+		// Looking beginning to recover from which file
+		var mapedFile *MapedFile
+		index := mapedFiles.Len() - 1
+		for element := mapedFiles.Back(); element != nil; element = element.Prev() {
+			index--
+			mapedFile = element.Value.(*MapedFile)
+			if self.isMapedFileMatchedRecover(mapedFile) {
+				logger.Info("recover from this maped file ", mapedFile.fileName)
+				break
+			}
+		}
+
+		if mapedFile != nil {
+			mappedByteBuffer := NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+			mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
+			processOffset := mapedFile.fileFromOffset
+			mapedFileOffset := int64(0)
+
+			for {
+				dispatchRequest := self.checkMessageAndReturnSize(mappedByteBuffer, checkCRCOnRecover, true)
+				size := dispatchRequest.msgSize
+
+				if size > 0 { // Normal data
+					mapedFileOffset += size
+					self.DefaultMessageStore.putDispatchRequest(dispatchRequest)
+				} else if size == -1 { // Intermediate file read error
+					logger.Info("recover physics file end, ", mapedFile.fileName)
+					break
+				} else if size == 0 {
+					index++
+
+					if index >= mapedFiles.Len() { // The current branch under normal circumstances should
+						logger.Info("recover physics file over, last maped file ", mapedFile.fileName)
+						break
+					} else {
+						i := 0
+						for element := mapedFiles.Front(); element != nil; element = element.Next() {
+							if i == index {
+								mapedFile = element.Value.(*MapedFile)
+								mappedByteBuffer = NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+								processOffset = mapedFile.fileFromOffset
+								mapedFileOffset = 0
+								logger.Info("recover next physics file,", mapedFile.fileName)
+								break
+							}
+
+							i++
+						}
+					}
+				}
+			}
+
+			processOffset += mapedFileOffset
+			self.MapedFileQueue.committedWhere = processOffset
+			self.MapedFileQueue.truncateDirtyFiles(processOffset)
+
+			// Clear ConsumeQueue redundant data
+			self.DefaultMessageStore.truncateDirtyLogicFiles(processOffset)
+		} else {
+			// Commitlog case files are deleted
+			self.MapedFileQueue.committedWhere = 0
+			self.DefaultMessageStore.destroyLogics()
+		}
+	}
+}
+
+func (self *CommitLog) isMapedFileMatchedRecover(mapedFile *MapedFile) bool {
+	byteBuffer := mapedFile.mappedByteBuffer.Bytes()
+	if len(byteBuffer) == 0 {
+		return false
+	}
+
+	mappedByteBuffer := NewMappedByteBuffer(byteBuffer)
+	mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
+	mappedByteBuffer.ReadPos = message.MessageMagicCodePostion
+	magicCode := mappedByteBuffer.ReadInt32()
+	messageMagicCode := MessageMagicCode
+	if magicCode != int32(messageMagicCode) {
+		return false
+	}
+
+	mappedByteBuffer.ReadPos = message.MessageStoreTimestampPostion
+	storeTimestamp := mappedByteBuffer.ReadInt64()
+	if 0 == storeTimestamp {
+		return false
+	}
+
+	if self.DefaultMessageStore.MessageStoreConfig.MessageIndexEnable &&
+		self.DefaultMessageStore.MessageStoreConfig.MessageIndexSafe {
+		if storeTimestamp <= self.DefaultMessageStore.StoreCheckpoint.getMinTimestampIndex() {
+			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+				utils.TimeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
+			return true
+		}
+	} else {
+		if storeTimestamp <= self.DefaultMessageStore.StoreCheckpoint.getMinTimestamp() {
+			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+				utils.TimeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
+			return true
+		}
+	}
+
+	return false
 }

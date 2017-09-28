@@ -9,20 +9,22 @@ import (
 )
 
 var (
-	QUEUE_TOTAL = int32(100)
+	QUEUE_TOTAL = 100
 	StoreHost   string
 	BornHost    string
 )
 
 func Test_write_read(t *testing.T) {
-	totalMessages := 100
+	totalMessages := 500
+	QUEUE_TOTAL = 1
+
 	storeMessage := "Once, there was a chance for me!"
 	messageBody := []byte(storeMessage)
 
 	messageStoreConfig := NewMessageStoreConfig()
 
 	messageStoreConfig.MapedFileSizeCommitLog = 1024 * 8
-	messageStoreConfig.MapedFileSizeConsumeQueue = 1024 * 4
+	messageStoreConfig.MapedFileSizeConsumeQueue = 1024 * 1
 	messageStoreConfig.MaxHashSlotNum = 100
 	messageStoreConfig.MaxIndexNum = 100 * 10
 
@@ -45,7 +47,7 @@ func Test_write_read(t *testing.T) {
 	}
 
 	for i := 0; i < totalMessages; i++ {
-		time.Sleep(time.Duration(1000 * time.Millisecond))
+		time.Sleep(time.Duration(100 * time.Millisecond))
 		result := master.GetMessage("GROUP_A", "test", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
@@ -67,7 +69,7 @@ func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	msg.Message.PutProperty("KEYS", "Hello")
 	msg.Body = messageBody
 	msg.Message.PutProperty("KEYS", string(time.Now().UnixNano()/1000000))
-	msg.QueueId = int32(math.Abs(float64(atomic.AddInt32(queueId, 1) / QUEUE_TOTAL)))
+	msg.QueueId = int32(math.Abs(float64(atomic.AddInt32(queueId, 1) % int32(QUEUE_TOTAL))))
 	msg.SysFlag = int32(8)
 	msg.BornTimestamp = time.Now().UnixNano() / 1000000
 	msg.StoreHost = StoreHost
