@@ -43,3 +43,10 @@ func (self *GetMessageResult) addMessage(mapedBuffer *SelectMapedBufferResult) {
 	self.MessageBufferList.PushBack(mapedBuffer.MappedByteBuffer)
 	self.BufferTotalSize += int(mapedBuffer.Size)
 }
+
+func (self *GetMessageResult) release() {
+	for element := self.MessageMapedList.Front(); element != nil; element = element.Next() {
+		selectResult := element.Value.(*SelectMapedBufferResult)
+		selectResult.release()
+	}
+}
