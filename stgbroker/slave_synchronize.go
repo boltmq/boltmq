@@ -40,7 +40,7 @@ func (slave *SlaveSynchronize) syncTopicConfig() {
 		topicWrapper := slave.BrokerController.BrokerOuterAPI.GetAllTopicConfig(masterAddrBak)
 		if slave.BrokerController.TopicConfigManager.DataVersion != topicWrapper.DataVersion {
 			slave.BrokerController.TopicConfigManager.DataVersion.AssignNewOne(
-				stgcommon.DataVersion{Timestatmp: topicWrapper.DataVersion.Timestatmp, Counter: topicWrapper.DataVersion.Counter})
+				stgcommon.DataVersion{Timestamp: topicWrapper.DataVersion.Timestamp, Counter: topicWrapper.DataVersion.Counter})
 
 			slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Clear()
 			slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.PutAll(
@@ -90,7 +90,7 @@ func (slave *SlaveSynchronize) syncSubscriptionGroupConfig() {
 		if slave.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion != subscriptionWrapper.DataVersion {
 			subscriptionGroupManager := slave.BrokerController.SubscriptionGroupManager
 			subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(
-				stgcommon.DataVersion{Timestatmp: subscriptionWrapper.DataVersion.Timestatmp, Counter: subscriptionWrapper.DataVersion.Counter})
+				stgcommon.DataVersion{Timestamp: subscriptionWrapper.DataVersion.Timestamp, Counter: subscriptionWrapper.DataVersion.Counter})
 			subscriptionGroupManager.SubscriptionGroupTable.Clear()
 			subscriptionGroupManager.SubscriptionGroupTable.PutAll(subscriptionWrapper.SubscriptionGroupTable)
 			subscriptionGroupManager.ConfigManagerExt.Persist()

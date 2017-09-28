@@ -11,9 +11,10 @@ type TopicConfigTable struct {
 }
 
 func NewTopicConfigTable() *TopicConfigTable {
-	return &TopicConfigTable{
+	topicConfigTable := &TopicConfigTable{
 		TopicConfigs: make(map[string]*stgcommon.TopicConfig),
 	}
+	return topicConfigTable
 }
 
 func (table *TopicConfigTable) Size() int {

@@ -292,6 +292,9 @@ func (rc *RemotingCommand) Bytes() []byte {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (rc *RemotingCommand) ToString() string {
+	if rc == nil {
+		return "current RemotingCommand is nil"
+	}
 	flagBinary := fmt.Sprintf("%b", rc.Flag)
 	extFields := "{}"
 	if bf, err := ffjson.Marshal(rc.ExtFields); err == nil {
@@ -302,3 +305,13 @@ func (rc *RemotingCommand) ToString() string {
 	info := fmt.Sprintf(format, rc.Code, rc.Language, rc.Version, rc.Opaque, flagBinary, rc.Remark, extFields)
 	return info
 }
+
+//// DecodeCommand RemotingCommand转字符串
+//// Author: rongzhihong
+//// Since: 2017/9/19
+//func (self *RemotingCommand) DecodeCommand() []byte {
+//	if bf, err := ffjson.Marshal(self); err == nil {
+//		return bf
+//	}
+//	return nil
+//}

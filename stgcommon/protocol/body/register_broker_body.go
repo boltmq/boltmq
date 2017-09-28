@@ -13,9 +13,9 @@ type RegisterBrokerBody struct {
 	*protocol.RemotingSerializable
 }
 
-func NewRegisterBrokerBody() *RegisterBrokerBody {
+func NewRegisterBrokerBody(topicConfigWrapper *TopicConfigSerializeWrapper, filterServerList []string) *RegisterBrokerBody {
 	body := new(RegisterBrokerBody)
-	body.TopicConfigSerializeWrapper = NewTopicConfigSerializeWrapper()
-	body.RemotingSerializable = new(protocol.RemotingSerializable)
+	body.FilterServerList = filterServerList
+	body.TopicConfigSerializeWrapper = topicConfigWrapper
 	return body
 }

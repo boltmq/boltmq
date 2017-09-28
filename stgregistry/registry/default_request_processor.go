@@ -132,10 +132,8 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		}
 	} else {
 		logger.Info("registry default dataVersion with registerBrokerBody")
-		dataVersion := stgcommon.NewDataVersion()
-		dataVersion.Timestatmp = 0
-		registerBrokerBody.TopicConfigSerializeWrapper = new(body.TopicConfigSerializeWrapper)
-		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
+		dataVersion := stgcommon.NewDataVersion(0)
+		registerBrokerBody.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper(dataVersion)
 	}
 
 	result := self.NamesrvController.RouteInfoManager.registerBroker(
@@ -376,9 +374,7 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 			return response, err
 		}
 	} else {
-		dataVersion := stgcommon.NewDataVersion()
-		dataVersion.Timestatmp = 0
-		topicConfigWrapper.DataVersion = dataVersion
+		topicConfigWrapper.DataVersion = stgcommon.NewDataVersion(0)
 	}
 
 	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(

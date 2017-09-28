@@ -42,7 +42,7 @@ func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums i
 
 }
 
-func (tc *TopicConfig) ToString() string {
+func (self *TopicConfig) ToString() string {
 	format := "TopicConfig [topicName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicFilterType=%d, topicSysFlag=%d, order=%t]"
-	return fmt.Sprintf(format, tc.TopicName, tc.ReadQueueNums, tc.WriteQueueNums, tc.Perm, int(tc.TopicFilterType), tc.TopicSysFlag, tc.Order)
+	return fmt.Sprintf(format, self.TopicName, self.ReadQueueNums, self.WriteQueueNums, self.Perm, int(self.TopicFilterType), self.TopicSysFlag, self.Order)
 }
