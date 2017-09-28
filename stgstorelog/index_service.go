@@ -235,3 +235,7 @@ func (self *IndexService) flush(indexFile *IndexFile) {
 
 	}
 }
+
+func (self *IndexService) Shutdown() {
+	// TODO
+}

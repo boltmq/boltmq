@@ -129,3 +129,7 @@ func (self *AllocateMapedFileService) Start() {
 		}
 	}
 }
+
+func (self *AllocateMapedFileService) Shutdown() {
+	// TODO
+}
