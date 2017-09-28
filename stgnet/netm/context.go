@@ -11,6 +11,7 @@ import (
 type Context interface {
 	Read(b []byte) (n int, err error)
 	Write(b []byte) (n int, err error)
+	WriteSerialObject(s Serializable) (n int, e error)
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
 	Close() error
@@ -58,6 +59,15 @@ func (ctx *DefaultContext) Write(b []byte) (n int, e error) {
 	ctx.lastOptTime = time.Now()
 
 	return
+}
+
+// WriteSerialObject 写序列化数据
+func (ctx *DefaultContext) WriteSerialObject(s Serializable) (n int, e error) {
+	if s == nil {
+		return
+	}
+
+	return ctx.Write(s.Bytes())
 }
 
 // Close 关闭连接
@@ -112,6 +122,10 @@ func (ctx *DefaultContext) onError(e error) {
 
 // ToString 打印net.Conn的基本参数
 func (ctx *DefaultContext) ToString() string {
+	if ctx == nil || ctx.conn == nil {
+		return fmt.Sprintf("ctx or ctx.conn is nil")
+	}
+
 	format := "net.conn[localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
 	return fmt.Sprintf(format, ctx.conn.LocalAddr().String(), ctx.conn.RemoteAddr().String(), ctx.addr, ctx.isClosed)
 }

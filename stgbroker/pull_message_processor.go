@@ -78,12 +78,8 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 }
 
 func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingCommand, ctx netm.Context, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, &header.PullMessageResponseHeader{})
 	responseHeader := &header.PullMessageResponseHeader{}
-
-	if pullMessageResponseHeader, ok := response.CustomHeader.(*header.PullMessageResponseHeader); ok {
-		responseHeader = pullMessageResponseHeader
-	}
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	requestHeader := &header.PullMessageRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -102,7 +98,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	// 确保订阅组存在
-	subscriptionGroupConfig := pull.BrokerController.SubscriptionGroupManager.findSubscriptionGroupConfig(
+	subscriptionGroupConfig := pull.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(
 		requestHeader.ConsumerGroup)
 	if nil == subscriptionGroupConfig {
 		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
@@ -127,7 +123,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	// 检查topic是否存在
-	topicConfig := pull.BrokerController.TopicConfigManager.selectTopicConfig(requestHeader.Topic)
+	topicConfig := pull.BrokerController.TopicConfigManager.SelectTopicConfig(requestHeader.Topic)
 	if nil == topicConfig {
 		response.Code = commonprotocol.TOPIC_NOT_EXIST
 		response.Remark = "topic[" + requestHeader.Topic + "] not exist, apply first please!"
@@ -224,10 +220,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context.QueueId = requestHeader.QueueId
 
 				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
-				// TODO	messageIds :=pull.BrokerController.getMessageStore().getMessageIds(requestHeader.getTopic(), requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getQueueOffset() + getMessageResult.getMessageCount(), storeHost);
-				fmt.Println(storeHost)
-
-				messageIds := make(map[string]int64)
+				messageIds := pull.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, requestHeader.QueueOffset+int64(getMessageResult.GetMessageCount()), storeHost)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
 				pull.ExecuteConsumeMessageHookBefore(context)
@@ -289,8 +282,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			//	}
 			//	}
 			//	});
-
-			response = nil
+			// response = nil
 		case commonprotocol.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
@@ -299,8 +291,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
 				}
 
-				// TODO suspendTimestamp = pull.brokerController.messageStore.now()
-				suspendTimestamp := timeutil.CurrentTimeMillis()
+				suspendTimestamp := pull.BrokerController.MessageStore.Now()
 				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil

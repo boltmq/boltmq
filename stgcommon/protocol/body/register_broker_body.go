@@ -8,7 +8,14 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type RegisterBrokerBody struct {
-	TopicConfigSerializeWrapper *TopicConfigSerializeWrapper
-	FilterServerList            []string
+	TopicConfigSerializeWrapper *TopicConfigSerializeWrapper `json:"topicConfigSerializeWrapper"`
+	FilterServerList            []string                     `json:"filterServerList"`
 	*protocol.RemotingSerializable
+}
+
+func NewRegisterBrokerBody() *RegisterBrokerBody {
+	body := new(RegisterBrokerBody)
+	body.TopicConfigSerializeWrapper = NewTopicConfigSerializeWrapper()
+	body.RemotingSerializable = new(protocol.RemotingSerializable)
+	return body
 }

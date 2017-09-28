@@ -43,8 +43,13 @@ func (rs *DefalutRemotingServer) Start() {
 
 // Shutdown shutdown server
 func (rs *DefalutRemotingServer) Shutdown() {
-	rs.timeoutTimer.Stop()
-	rs.bootstrap.Shutdown()
+	if rs.timeoutTimer != nil {
+		rs.timeoutTimer.Stop()
+	}
+
+	if rs.bootstrap != nil {
+		rs.bootstrap.Shutdown()
+	}
 	rs.isRunning = false
 }
 

@@ -14,13 +14,13 @@ import (
 )
 
 type MappedByteBuffer struct {
-	MMapBuf  mmap.MemoryMap
+	MMapBuf  mmap.MMap
 	ReadPos  int // read at &buf[ReadPos]
 	WritePos int // write at &buf[WritePos]
 	Limit    int // MMapBuf's max Size
 }
 
-func NewMappedByteBuffer(mMap mmap.MemoryMap) *MappedByteBuffer {
+func NewMappedByteBuffer(mMap mmap.MMap) *MappedByteBuffer {
 	mappedByteBuffer := &MappedByteBuffer{}
 	mappedByteBuffer.MMapBuf = mMap
 	mappedByteBuffer.ReadPos = 0
@@ -34,14 +34,27 @@ func (m *MappedByteBuffer) Bytes() []byte { return m.MMapBuf[:m.WritePos] }
 // Write appends the contents of data to the buffer
 func (m *MappedByteBuffer) Write(data []byte) (n int, err error) {
 	if m.WritePos+len(data) > m.Limit {
-		logger.Error("m.WritePos + len(data)(%v > %v)", m.WritePos+len(data), m.Limit)
-		panic(errors.New("m.WritePos + len(data)"))
+		logger.Errorf("m.WritePos + len(data)(%v > %v) data: %s", m.WritePos+len(data), m.Limit, string(data))
+		//panic(errors.New("m.WritePos + len(data)"))
+		return 0, errors.New("m.WritePos + len(data)")
 	}
 	for index, value := range data {
 		m.MMapBuf[m.WritePos+index] = value
 	}
 	m.WritePos += len(data)
 	return len(data), nil
+}
+
+func (self *MappedByteBuffer) WriteInt8(i int8) (mappedByteBuffer *MappedByteBuffer) {
+	toBytes := byteutil.Int8ToBytes(i)
+	self.Write(toBytes)
+	return self
+}
+
+func (self *MappedByteBuffer) WriteInt16(i int16) (mappedByteBuffer *MappedByteBuffer) {
+	toBytes := byteutil.Int16ToBytes(i)
+	self.Write(toBytes)
+	return self
 }
 
 func (self *MappedByteBuffer) WriteInt32(i int32) (mappedByteBuffer *MappedByteBuffer) {
@@ -64,6 +77,20 @@ func (m *MappedByteBuffer) Read(data []byte) (n int, err error) {
 	n = copy(data, m.MMapBuf[m.ReadPos:])
 	m.ReadPos += n
 	return
+}
+
+func (self *MappedByteBuffer) ReadInt8() (i int8) {
+	int8bytes := make([]byte, 1)
+	self.Read(int8bytes)
+	i = byteutil.BytesToInt8(int8bytes)
+	return i
+}
+
+func (self *MappedByteBuffer) ReadInt16() (i int16) {
+	int16bytes := make([]byte, 2)
+	self.Read(int16bytes)
+	i = byteutil.BytesToInt16(int16bytes)
+	return i
 }
 
 func (self *MappedByteBuffer) ReadInt32() (i int32) {
@@ -93,4 +120,16 @@ func (self *MappedByteBuffer) flush() {
 
 func (self *MappedByteBuffer) unmap() {
 	self.MMapBuf.Unmap()
+}
+
+func (self *MappedByteBuffer) flip() {
+	self.Limit = self.WritePos
+	self.WritePos = 0
+}
+
+func (self *MappedByteBuffer) limit(newLimit int) {
+	self.Limit = newLimit
+	if self.WritePos > self.Limit {
+		self.WritePos = newLimit
+	}
 }

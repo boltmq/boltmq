@@ -37,3 +37,9 @@ type GetMessageResult struct {
 func (self *GetMessageResult) GetMessageCount() int {
 	return self.MessageMapedList.Len()
 }
+
+func (self *GetMessageResult) addMessage(mapedBuffer *SelectMapedBufferResult) {
+	self.MessageMapedList.PushBack(mapedBuffer)
+	self.MessageBufferList.PushBack(mapedBuffer.MappedByteBuffer)
+	self.BufferTotalSize += int(mapedBuffer.Size)
+}

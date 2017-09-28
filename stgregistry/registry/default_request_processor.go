@@ -118,25 +118,27 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	var registerBrokerBody body.RegisterBrokerBody
 	if request.Body != nil && len(request.Body) > 0 {
+		logger.Info("registerBroker.request.Body --> %s", string(request.Body))
 		err = registerBrokerBody.CustomDecode(request.Body, &registerBrokerBody)
 		if err != nil {
-			fmt.Printf("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
-			return nil, err
+			logger.Error("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
+			return response, err
 		}
 	} else {
+		logger.Info("registry default dataVersion with registerBrokerBody")
 		dataVersion := stgcommon.NewDataVersion()
 		dataVersion.Timestatmp = 0
 		registerBrokerBody.TopicConfigSerializeWrapper = new(body.TopicConfigSerializeWrapper)
 		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
 	}
 
-	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(
+	result := self.NamesrvController.RouteInfoManager.registerBroker(
 		requestHeader.ClusterName,                      // 1
 		requestHeader.BrokerAddr,                       // 2
 		requestHeader.BrokerName,                       // 3
@@ -146,10 +148,11 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		registerBrokerBody.FilterServerList,            // 7
 		ctx, // 8
 	)
+	logger.Info("registerBrokerBody.result ---> %s", result.ToString())
 
 	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	responseHeader.HaServerAddr = registerBrokerResult.HaServerAddr
-	responseHeader.MasterAddr = registerBrokerResult.MasterAddr
+	responseHeader.HaServerAddr = result.HaServerAddr
+	responseHeader.MasterAddr = result.MasterAddr
 	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表
@@ -158,6 +161,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
+	logger.Info("registerBrokerBody.response ---> %s", response.ToString())
 	return response, nil
 }
 
@@ -169,8 +173,8 @@ func (self *DefaultRequestProcessor) getKVListByNamespace(ctx netm.Context, requ
 	requestHeader := &namesrv.GetKVListByNamespaceRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	body := self.NamesrvController.KvConfigManager.getKVListByNamespace(requestHeader.Namespace)
@@ -194,8 +198,8 @@ func (self *DefaultRequestProcessor) deleteTopicInNamesrv(ctx netm.Context, requ
 	requestHeader := &namesrv.DeleteTopicInNamesrvRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	self.NamesrvController.RouteInfoManager.deleteTopic(requestHeader.Topic)
@@ -225,8 +229,8 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, req
 	requestHeader := &namesrv.WipeWritePermOfBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	wipeTopicCount := self.NamesrvController.RouteInfoManager.wipeWritePermOfBrokerByLock(requestHeader.BrokerName)
@@ -264,8 +268,8 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	topic := requestHeader.Topic
@@ -275,8 +279,8 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 		topicRouteData.OrderTopicConf = orderTopicConf
 		content, err := topicRouteData.Encode()
 		if err != nil {
-			fmt.Printf("topicRouteData.Encode() err: %s\n", err.Error())
-			return nil, err
+			logger.Error("topicRouteData.Encode() err: %s\n", err.Error())
+			return response, err
 		}
 		response.Body = content
 		response.Code = code.SUCCESS
@@ -298,8 +302,8 @@ func (self *DefaultRequestProcessor) putKVConfig(ctx netm.Context, request *prot
 	requestHeader := &namesrv.PutKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 	self.NamesrvController.KvConfigManager.putKVConfig(requestHeader.Namespace, requestHeader.Key, requestHeader.Value)
 	response.Code = code.SUCCESS
@@ -315,8 +319,8 @@ func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *prot
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	value := self.NamesrvController.KvConfigManager.getKVConfig(requestHeader.Namespace, requestHeader.Key)
@@ -342,8 +346,8 @@ func (self *DefaultRequestProcessor) deleteKVConfig(ctx netm.Context, request *p
 	requestHeader := &namesrv.DeleteKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 	self.NamesrvController.KvConfigManager.deleteKVConfig(requestHeader.Namespace, requestHeader.Key)
 	response.Code = code.SUCCESS
@@ -360,16 +364,16 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	topicConfigWrapper := new(body.TopicConfigSerializeWrapper)
 	if request.Body != nil && len(request.Body) > 0 {
 		err = topicConfigWrapper.CustomDecode(request.Body, topicConfigWrapper)
 		if err != nil {
-			fmt.Printf("topicConfigWrapper.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
-			return nil, err
+			logger.Error("topicConfigWrapper.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
+			return response, err
 		}
 	} else {
 		dataVersion := stgcommon.NewDataVersion()
@@ -412,8 +416,8 @@ func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request 
 	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	clusterName := requestHeader.ClusterName
@@ -435,8 +439,8 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, reques
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	value := self.NamesrvController.KvConfigManager.getKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
@@ -463,8 +467,8 @@ func (self *DefaultRequestProcessor) deleteKVConfigByValue(ctx netm.Context, req
 	requestHeader := &namesrv.DeleteKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	self.NamesrvController.KvConfigManager.deleteKVConfigByValue(requestHeader.Namespace, requestHeader.Key)
@@ -481,8 +485,8 @@ func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, reques
 	requestHeader := &header.GetTopicsByClusterRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return nil, err
+		logger.Error("error: %s\n", err.Error())
+		return response, err
 	}
 
 	body := self.NamesrvController.RouteInfoManager.getTopicsByCluster(requestHeader.Cluster)

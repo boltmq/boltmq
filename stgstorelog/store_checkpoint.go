@@ -6,6 +6,7 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
+	"math"
 )
 
 type StoreCheckpoint struct {
@@ -59,6 +60,7 @@ func NewStoreCheckpoint(scpPath string) (*StoreCheckpoint, error) {
 
 func (self *StoreCheckpoint) shutdown() {
 	self.flush()
+	self.mappedByteBuffer.unmap()
 }
 
 func (self *StoreCheckpoint) flush() {
@@ -67,4 +69,20 @@ func (self *StoreCheckpoint) flush() {
 	self.mappedByteBuffer.WriteInt64(self.logicsMsgTimestamp)
 	self.mappedByteBuffer.WriteInt64(self.indexMsgTimestamp)
 	self.mappedByteBuffer.flush()
+}
+
+func (self *StoreCheckpoint) getMinTimestampIndex() int64 {
+	result := math.Min(float64(self.getMinTimestamp()), float64(self.indexMsgTimestamp))
+	return int64(result)
+}
+
+func (self *StoreCheckpoint) getMinTimestamp() int64 {
+	min := math.Min(float64(self.physicMsgTimestamp), float64(self.logicsMsgTimestamp))
+
+	min -= 1000 * 3
+	if min < 0 {
+		min = 0
+	}
+
+	return int64(min)
 }

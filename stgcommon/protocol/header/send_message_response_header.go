@@ -4,10 +4,10 @@ package header
 // Author: yintongqiang
 // Since:  2017/8/16
 type SendMessageResponseHeader struct {
-	MsgId         string
-	QueueId       int32
-	QueueOffset   int64
-	TransactionId string
+	MsgId         string `json:"msgId"`
+	QueueId       int32  `json:"queueId"`
+	QueueOffset   int64  `json:"queueOffset"`
+	TransactionId string `json:"transactionId"`
 }
 
 func (header *SendMessageResponseHeader) CheckFields() error {

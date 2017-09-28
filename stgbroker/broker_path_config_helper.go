@@ -1,24 +1,32 @@
 package stgbroker
 
-import "os"
+import (
+	"os"
+)
 
-// getTopicConfigPath 获取topic路径
+const (
+	childDir  = "store"
+	configDir = "config"
+	separator = string(os.PathSeparator)
+)
+
+// GetTopicConfigPath 获取topic.json路径
 // Author gaoyanlei
 // Since 2017/8/21
 func GetTopicConfigPath(rootDir string) string {
-	return rootDir + string(os.PathSeparator) + "store" + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "topics.json"
+	return rootDir + separator + childDir + separator + configDir + separator + "topics.json"
 }
 
-// getConsumerOffsetPath 获取ConsumerOffset路径
+// GetConsumerOffsetPath 获取consumerOffset.json路径
 // Author gaoyanlei
 // Since 2017/8/21
 func GetConsumerOffsetPath(rootDir string) string {
-	return rootDir + string(os.PathSeparator) + "store" + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "consumerOffset1.json"
+	return rootDir + separator + childDir + separator + configDir + separator + "consumerOffset.json"
 }
 
-// getSubscriptionGroupPath 获取SubscriptionGroup路径
+// GetSubscriptionGroupPath 获取subscriptionGroup.json路径
 // Author gaoyanlei
 // Since 2017/8/21
 func GetSubscriptionGroupPath(rootDir string) string {
-	return rootDir + string(os.PathSeparator) + "store" + string(os.PathSeparator) + "config" + string(os.PathSeparator) + "subscriptionGroup.json"
+	return rootDir + separator + childDir + separator + configDir + separator + "subscriptionGroup.json"
 }

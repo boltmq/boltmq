@@ -128,8 +128,10 @@ func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
-		tb := &body.KVTable{}
-		tb.Table = kvTable
+		tb := body.NewKVTable()
+		for key, value := range kvTable {
+			tb.Table[key] = value
+		}
 		return tb.CustomEncode(tb)
 	}
 	self.ReadWriteLock.RUnlock()
@@ -192,7 +194,7 @@ func (self *KVConfigManager) load() error {
 		if !ok {
 			return fmt.Errorf("create %s failed, but err is nil", cfgName)
 		}
-		logger.Info("create %s successful.", cfgName)
+		logger.Info("create %s successful", cfgName)
 	}
 
 	// 读取kvConfig.json文件内容，并打印日志
@@ -211,6 +213,7 @@ func (self *KVConfigManager) load() error {
 		buf := []byte(strings.TrimSpace(content))
 		kvConfigSerializeWrapper := new(KVConfigSerializeWrapper)
 		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)
+
 		if err != nil {
 			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s \n\t %s", err.Error(), content)
 		}
@@ -218,8 +221,9 @@ func (self *KVConfigManager) load() error {
 			for k, v := range kvConfigSerializeWrapper.ConfigTable {
 				self.ConfigTable[k] = v
 			}
+			logger.Info("set kvConfigManager.configTable from %s to this", cfgName)
 		}
 	}
-	logger.Info("kvConfigManager load successful.")
+	logger.Info("kvConfigManager load successful")
 	return nil
 }

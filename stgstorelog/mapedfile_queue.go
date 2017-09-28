@@ -25,9 +25,9 @@ type MapedFileQueue struct {
 	// 每个文件的大小
 	mapedFileSize int64
 	// 各个文件
-	mapedFiles list.List
+	mapedFiles *list.List
 	// 读写锁（针对mapedFiles）
-	rwLock sync.RWMutex
+	rwLock *sync.RWMutex
 	// 预分配MapedFile对象服务
 	allocateMapedFileService *AllocateMapedFileService
 	// 刷盘刷到哪里
@@ -41,11 +41,13 @@ func NewMapedFileQueue(storePath string, mapedFileSize int64,
 	self := &MapedFileQueue{}
 	self.storePath = storePath         // 存储路径
 	self.mapedFileSize = mapedFileSize // 文件size
+	self.mapedFiles = list.New()
 	// 根据读写请求队列requestQueue/readQueue中的读写请求，创建对应的mappedFile文件
 	self.allocateMapedFileService = allocateMapedFileService
 	self.DeleteFilesBatchMax = 10
 	self.committedWhere = 0
 	self.storeTimestamp = 0
+	self.rwLock = new(sync.RWMutex)
 	return self
 }
 
@@ -88,15 +90,17 @@ func (self *MapedFileQueue) truncateDirtyFiles(offset int64) {
 	willRemoveFiles := list.New()
 	// Iterate through list and print its contents.
 	for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
-		mf := e.Value.(MapedFile)
+		mf := e.Value.(*MapedFile)
 		fileTailOffset := mf.fileFromOffset + mf.fileSize
-		if offset >= fileTailOffset {
-			pos := offset % int64(self.mapedFileSize)
-			mf.wrotePostion = pos
-			mf.committedPosition = pos
-		} else {
-			mf.destroy()
-			willRemoveFiles.PushBack(mf)
+		if fileTailOffset > offset {
+			if offset >= mf.fileFromOffset {
+				pos := offset % int64(self.mapedFileSize)
+				mf.wrotePostion = pos
+				mf.committedPosition = pos
+			} else {
+				mf.destroy()
+				willRemoveFiles.PushBack(mf)
+			}
 		}
 	}
 	self.deleteExpiredFile(willRemoveFiles)
@@ -124,7 +128,7 @@ func (self *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
 func (self *MapedFileQueue) load() bool {
 	exist, err := PathExists(self.storePath)
 	if err != nil {
-		logger.Info(err.Error())
+		logger.Info("maped file queue load store path error:", err.Error())
 		return false
 	}
 
@@ -134,18 +138,20 @@ func (self *MapedFileQueue) load() bool {
 			logger.Error(err.Error())
 			return false
 		}
-		if len(files) != 0 {
+		if len(files) > 0 {
 			// 按照文件名，升序排列
 			sort.Strings(files)
 			for _, path := range files {
-				file, error := os.OpenFile(path, os.O_RDONLY, 0666)
+				file, error := os.Stat(path)
 				if error != nil {
-					logger.Error(error.Error())
+					logger.Errorf("maped file queue load file %s error: %s", path, error.Error())
 				}
-				size, error := fileutil.FileSize(file)
-				if error != nil {
-					logger.Error(error.Error())
+
+				if file == nil {
+					logger.Error("maped file queue load file not exist: ", path)
 				}
+
+				size := file.Size()
 				// 校验文件大小是否匹配
 				if size != int64(self.mapedFileSize) {
 					logger.Warn("filesize(%d) mapedFileSize(%d) length not matched message store config value, ignore it", size, self.mapedFileSize)
@@ -153,13 +159,14 @@ func (self *MapedFileQueue) load() bool {
 				}
 
 				// 恢复队列
-				mapedFile, error := NewMapedFile(self.storePath, int64(self.mapedFileSize))
+				mapedFile, error := NewMapedFile(path, int64(self.mapedFileSize))
 				if error != nil {
 					logger.Error(error.Error())
 					return false
 				}
 				mapedFile.wrotePostion = self.mapedFileSize
 				mapedFile.committedPosition = self.mapedFileSize
+				mapedFile.mappedByteBuffer.WritePos = int(mapedFile.wrotePostion)
 				self.mapedFiles.PushBack(mapedFile)
 				logger.Info("load mapfiled %v success.", mapedFile.fileName)
 			}
@@ -197,17 +204,14 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 	var mapedFile, mapedFileLast *MapedFile
 	self.rwLock.RLock()
 	if self.mapedFiles.Len() == 0 {
-		// 此处createOffset即后续步骤中用来为文件命令用
 		createOffset = startOffset - (startOffset % int64(self.mapedFileSize))
 	} else {
-		// 如果mapedFile不为空，则获取list的最后一个文件
 		mapedFileLastObj := (self.mapedFiles.Back().Value).(*MapedFile)
 		mapedFileLast = mapedFileLastObj
 	}
 	self.rwLock.RUnlock()
 	if mapedFileLast != nil && mapedFileLast.isFull() {
 		createOffset = mapedFileLast.fileFromOffset + self.mapedFileSize
-
 	}
 
 	if createOffset != -1 {
@@ -218,12 +222,14 @@ func (self *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, err
 			var err error
 			mapedFile, err = self.allocateMapedFileService.putRequestAndReturnMapedFile(nextPath, nextNextPath, self.mapedFileSize)
 			if err != nil {
+				logger.Errorf("put request and return maped file, error:%s ", err.Error())
 				return nil, err
 			}
 		} else {
 			var err error
 			mapedFile, err = NewMapedFile(nextPath, self.mapedFileSize)
 			if err != nil {
+				logger.Errorf("maped file create maped file error: %s", err.Error())
 				return nil, err
 			}
 		}
@@ -258,8 +264,8 @@ func (self *MapedFileQueue) getMaxOffset() int64 {
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
 	if self.mapedFiles.Len() > 0 {
-		mappedfile := self.mapedFiles.Back().Value.(MapedFile)
-		return mappedfile.fileFromOffset
+		mappedfile := self.mapedFiles.Back().Value.(*MapedFile)
+		return mappedfile.fileFromOffset + mappedfile.wrotePostion
 	}
 
 	return 0
@@ -269,7 +275,7 @@ func (self *MapedFileQueue) getMaxOffset() int64 {
 func (self *MapedFileQueue) deleteLastMapedFile() {
 	if self.mapedFiles.Len() != 0 {
 		last := self.mapedFiles.Back()
-		lastMapedFile := last.Value.(MapedFile)
+		lastMapedFile := last.Value.(*MapedFile)
 		lastMapedFile.destroy()
 		self.mapedFiles.Remove(last)
 		logger.Info("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
@@ -369,30 +375,24 @@ func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNot
 	if mapedFile != nil {
 		index := (offset / self.mapedFileSize) - (mapedFile.fileFromOffset / self.mapedFileSize)
 		if index < 0 || index >= int64(self.mapedFiles.Len()) {
-			logger.Warnf("findMapedFileByOffset offset not matched, request Offset: %d, index: %d, mapedFileSize: %d, mapedFiles count: %d",
+			logger.Warnf("maped file queue find maped file by offset, offset not matched, request Offset: %d, index: %d, mapedFileSize: %d, mapedFiles count: %d",
 				offset, index, self.mapedFileSize, self.mapedFiles.Len())
 		}
 
-		if int(index) < (self.mapedFiles.Len() / 2) {
-			i := 0
-			for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
-				if i == int(index) {
-					return e.Value.(*MapedFile)
-				}
-				i++
+		i := 0
+		for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
+			if i == int(index) {
+				result := e.Value.(*MapedFile)
+				//logger.Info("maped file queue find maped file by offset: %#v", result)
+
+				return result
 			}
-		} else {
-			i := self.mapedFiles.Len() - 1
-			for e := self.mapedFiles.Back(); e != nil; e = e.Prev() {
-				if i == int(index) {
-					return e.Value.(*MapedFile)
-				}
-				i--
-			}
+			i++
 		}
+
 	}
 
-	return nil
+	return mapedFile
 }
 
 func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {
@@ -402,6 +402,20 @@ func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {
 
 	element := self.mapedFiles.Front()
 	result := element.Value.(*MapedFile)
+
+	return result
+}
+
+func (self *MapedFileQueue) getLastMapedFile2() *MapedFile {
+	if self.mapedFiles.Len() == 0 {
+		return nil
+	}
+
+	lastElement := self.mapedFiles.Back()
+	result, ok := lastElement.Value.(*MapedFile)
+	if !ok {
+		logger.Info("mapedfile queue get last maped file type conversion error")
+	}
 
 	return result
 }
@@ -426,7 +440,9 @@ func (self *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 }
 
 func (self *MapedFileQueue) getFirstMapedFileOnLock() *MapedFile {
-	return &MapedFile{}
+	self.rwLock.RLock()
+	defer self.rwLock.RUnlock()
+	return self.getFirstMapedFile()
 }
 
 // shutdown 关闭队列，队列数据还在，但是不能访问
@@ -436,5 +452,30 @@ func (self *MapedFileQueue) shutdown(intervalForcibly int64) {
 
 // destroy 销毁队列，队列数据被删除，此函数有可能不成功
 func (self *MapedFileQueue) destroy() {
+	self.rwLock.Lock()
+	self.rwLock.Unlock()
 
+	for element := self.mapedFiles.Front(); element != nil; element = element.Next() {
+		mapedFile, ok := element.Value.(*MapedFile)
+		if !ok {
+			logger.Warnf("maped file queue destroy type conversion error")
+			continue
+		}
+		mapedFile.destroy()
+	}
+
+	self.mapedFiles.Init()
+	self.committedWhere = 0
+
+	// delete parent director
+	exist, err := PathExists(self.storePath)
+	if err != nil {
+		logger.Warn("maped file queue destroy check store path is exists, error:", err.Error())
+	}
+
+	if exist {
+		if storeFile, _ := os.Stat(self.storePath); storeFile.IsDir() {
+			os.RemoveAll(self.storePath)
+		}
+	}
 }

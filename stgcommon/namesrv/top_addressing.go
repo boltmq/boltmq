@@ -4,8 +4,6 @@ package namesrv
 // Author gaoyanlei
 // Since 2017/8/9
 type TopAddressing struct {
-
-	// TODO Logger log = LoggerFactory.getLogger(LoggerName.CommonLoggerName);
 	nsAddr string
 	wsAddr string
 }

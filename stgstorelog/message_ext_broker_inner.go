@@ -14,7 +14,7 @@ type MessageExtBrokerInner struct {
 	TagsCode         int64
 }
 
-func TagsString2tagsCode(filterType *stgcommon.TopicFilterType, tags string) int64 {
+func TagsString2tagsCode(filterType stgcommon.TopicFilterType, tags string) int64 {
 	if tags == "" || len(tags) == 0 {
 		return 0
 	}

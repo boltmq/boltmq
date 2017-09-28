@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"time"
+
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"time"
 )
 
 func TaskSync() {
@@ -17,6 +18,7 @@ func TaskSync() {
 
 	}
 }
+
 func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("127.0.0.1:10911")

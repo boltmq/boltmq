@@ -59,6 +59,7 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mapedFile := new(MapedFile)
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
+	mapedFile.rwLock = new(sync.RWMutex)
 
 	commitRootDir := GetParentDirectory(filePath)
 	ensureDirOK(commitRootDir)
@@ -134,18 +135,19 @@ func (self *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageC
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
 func (self *MapedFile) appendMessage(data []byte) bool {
-	currPos := self.wrotePostion
-	if int64(currPos)+int64(len(data)) <= self.fileSize {
+	currPos := int64(self.wrotePostion)
+	if currPos+int64(len(data)) <= self.fileSize {
 		n, err := self.mappedByteBuffer.Write(data)
 		if err != nil {
-			panic(err)
+			logger.Error("maped file append message error:", err.Error())
+			//panic(err)
 			return false
 		}
 		atomic.AddInt64(&self.wrotePostion, int64(n))
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 // Commit 消息提交刷盘
@@ -207,6 +209,7 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) bool {
 }
 
 func (self *MapedFile) isFull() bool {
+	logger.Infof("maped file: %s wrote postion: %d", self.fileName, self.wrotePostion)
 	return self.fileSize == int64(self.wrotePostion)
 }
 
@@ -223,7 +226,25 @@ func (self *MapedFile) destroy() bool {
 
 func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	if pos < self.wrotePostion && pos >= 0 {
-		self.mappedByteBuffer.slice()
+		size := self.mappedByteBuffer.WritePos - int(pos)
+		newMmpBuffer := NewMappedByteBuffer(self.mappedByteBuffer.Bytes())
+		newMmpBuffer.WritePos = self.mappedByteBuffer.WritePos
+		return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
+	}
+
+	return nil
+}
+
+func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
+	if (pos + int64(size)) <= self.wrotePostion {
+		end := pos + int64(size-1)
+		byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[pos:end])
+		byteBuffer.WritePos = int(size)
+		return &SelectMapedBufferResult{StartOffset: self.fileFromOffset + pos,
+			MappedByteBuffer: byteBuffer, Size: size, MapedFile: self}
+	} else {
+		logger.Warnf("selectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
+			pos, size, self.fileFromOffset)
 	}
 
 	return nil

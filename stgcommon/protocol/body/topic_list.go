@@ -13,7 +13,8 @@ type TopicList struct {
 
 func NewTopicList() *TopicList {
 	topicList := &TopicList{
-		TopicList: set.NewSet(),
+		TopicList:            set.NewSet(),
+		RemotingSerializable: new(protocol.RemotingSerializable),
 	}
 	return topicList
 }

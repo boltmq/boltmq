@@ -4,16 +4,16 @@ package header
 // Author: yintongqiang
 // Since:  2017/8/14
 type PullMessageRequestHeader struct {
-	ConsumerGroup        string
-	Topic                string
-	QueueId              int32
-	QueueOffset          int64
-	MaxMsgNums           int
-	SysFlag              int
-	CommitOffset         int64
-	SuspendTimeoutMillis int
-	Subscription         string
-	SubVersion           int
+	ConsumerGroup        string `json:"consumerGroup"`
+	Topic                string `json:"topic"`
+	QueueId              int32  `json:"queueId"`
+	QueueOffset          int64  `json:"queueOffset"`
+	MaxMsgNums           int    `json:"maxMsgNums"`
+	SysFlag              int    `json:"sysFlag"`
+	CommitOffset         int64  `json:"commitOffset"`
+	SuspendTimeoutMillis int    `json:"suspendTimeoutMillis"`
+	Subscription         string `json:"subscription"`
+	SubVersion           int    `json:"subVersion"`
 }
 
 func (header *PullMessageRequestHeader) CheckFields() error {

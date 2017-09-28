@@ -3,10 +3,12 @@ package subscription
 import (
 	syncmap "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"sync"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 type SubscriptionGroupTable struct {
 	SubscriptionGroupTable map[string]*SubscriptionGroupConfig `json:"subscriptionGroupTable"`
+	DataVersion            stgcommon.DataVersion `json:"dataVersion"`
 	sync.RWMutex           `json:"-"`
 }
 
