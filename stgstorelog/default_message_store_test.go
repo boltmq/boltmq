@@ -82,12 +82,21 @@ func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	return msg
 }
 
-func initMessage(totalMessages int) *DefaultMessageStore {
+func putMessage(messageStore *DefaultMessageStore, totalMessages int) {
 	QUEUE_TOTAL = 1
-
 	storeMessage := "Once, there was a chance for me!"
 	messageBody := []byte(storeMessage)
+	queueId := int32(0)
 
+	for i := 0; i < totalMessages; i++ {
+		result := messageStore.PutMessage(buildMessage(messageBody, &queueId))
+		logger.Infof("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+	}
+
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+}
+
+func buildMessageStore() *DefaultMessageStore {
 	messageStoreConfig := buildMessageStoreConfig()
 	master := NewDefaultMessageStore(messageStoreConfig, nil)
 
@@ -100,21 +109,14 @@ func initMessage(totalMessages int) *DefaultMessageStore {
 
 	time.Sleep(time.Duration(1000 * time.Millisecond))
 
-	queueId := int32(0)
-
-	for i := 0; i < totalMessages; i++ {
-		result := master.PutMessage(buildMessage(messageBody, &queueId))
-		logger.Infof("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
-	}
-
-	time.Sleep(time.Duration(1000 * time.Millisecond))
-
 	return master
 }
 
 func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
-	master := initMessage(100)
+	master := buildMessageStore()
+	putMessage(master, 100)
 	offset := master.GetMaxOffsetInQueue("test", 0)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
 	if offset != 100 {
 		t.Fail()
 		t.Error("GetOffsetInQueueByTime method error, expection:0, actuality:", offset)
@@ -125,7 +127,8 @@ func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
 }
 
 func TestDefaultMessageStore_GetMinOffsetInQueue(t *testing.T) {
-	master := initMessage(100)
+	master := buildMessageStore()
+	putMessage(master, 100)
 	offset := master.GetMinOffsetInQueue("test", 0)
 	if offset != 0 {
 		t.Fail()
@@ -138,7 +141,8 @@ func TestDefaultMessageStore_GetMinOffsetInQueue(t *testing.T) {
 
 func TestDefaultMessageStore_GetOffsetInQueueByTime(t *testing.T) {
 	timestamp := time.Now().UnixNano() / 1000
-	master := initMessage(100)
+	master := buildMessageStore()
+	putMessage(master, 100)
 	offset := master.GetOffsetInQueueByTime("test", 0, timestamp)
 	if offset != 0 {
 		t.Fail()
