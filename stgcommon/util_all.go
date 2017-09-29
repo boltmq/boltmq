@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 )
 
 const (
@@ -64,7 +65,7 @@ func ComputNextHourTimeMillis() int64 {
 func GetDiskPartitionSpaceUsedPercent(path string) (percent float64) {
 	defer utils.RecoveredFn()
 
-	percent = -1.0
+	percent = 1.0
 	// TODO: unix环境，去掉注释
 	/*if path != "" {
 		isExits, err := isExists(path)
@@ -146,9 +147,11 @@ func IsNumber(content string) bool {
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
 // Since: 2017/9/19
 func Encode(v interface{}) []byte {
-	if value, err := ffjson.Marshal(v); err == nil {
+	value, err := ffjson.Marshal(v)
+	if err == nil {
 		return value
 	}
+	logger.Errorf("json.Encode error:%s", err.Error())
 	return nil
 }
 

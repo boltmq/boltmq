@@ -1,14 +1,14 @@
 package subscription
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	syncmap "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"sync"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 type SubscriptionGroupTable struct {
 	SubscriptionGroupTable map[string]*SubscriptionGroupConfig `json:"subscriptionGroupTable"`
-	DataVersion            stgcommon.DataVersion `json:"dataVersion"`
+	DataVersion            stgcommon.DataVersion               `json:"dataVersion"`
 	sync.RWMutex           `json:"-"`
 }
 
@@ -28,8 +28,9 @@ func (table *SubscriptionGroupTable) Size() int {
 func (table *SubscriptionGroupTable) Put(k string, v *SubscriptionGroupConfig) *SubscriptionGroupConfig {
 	table.Lock()
 	defer table.Unlock()
+	old := table.SubscriptionGroupTable[k]
 	table.SubscriptionGroupTable[k] = v
-	return v
+	return old
 }
 
 func (table *SubscriptionGroupTable) Get(k string) *SubscriptionGroupConfig {

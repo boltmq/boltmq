@@ -31,8 +31,7 @@ func NewBrokerStats(defaultMessageStore *stgstorelog.DefaultMessageStore) *Broke
 func (bs *BrokerStats) Record() {
 	bs.MsgPutTotalYesterdayMorning = bs.MsgPutTotalTodayMorning
 	bs.MsgGetTotalYesterdayMorning = bs.MsgGetTotalTodayMorning
-	// TODO
-	//bs.msgPutTotalTodayMorning = bs.defaultMessageStore.StoreStatsService.getPutMessageTimesTotal()
+	bs.MsgPutTotalTodayMorning = bs.DefaultMessageStore.StoreStatsService.GetPutMessageTimesTotal()
 	bs.MsgGetTotalTodayMorning = bs.DefaultMessageStore.StoreStatsService.GetGetMessageTransferedMsgCount()
 	logger.Infof("yesterday put message total: %d", bs.MsgPutTotalTodayMorning-bs.MsgPutTotalYesterdayMorning)
 	logger.Infof("yesterday get message total: %d", bs.MsgGetTotalTodayMorning-bs.MsgGetTotalYesterdayMorning)
@@ -42,8 +41,7 @@ func (bs *BrokerStats) Record() {
 // Author rongzhihong
 // Since 2017/9/12
 func (bs *BrokerStats) GetMsgPutTotalTodayNow() int64 {
-	// TODO bs.defaultMessageStore.StoreStatsService.getPutMessageTimesTotal()
-	return 0
+	return bs.DefaultMessageStore.StoreStatsService.GetPutMessageTimesTotal()
 }
 
 // GetMsgGetTotalTodayNow  获得当前get消息的次数

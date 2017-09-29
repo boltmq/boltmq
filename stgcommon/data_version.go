@@ -2,6 +2,7 @@ package stgcommon
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"github.com/pquerna/ffjson/ffjson"
 	"sync/atomic"
 	"time"
@@ -48,10 +49,10 @@ func (self *DataVersion) ToString() string {
 }
 
 func (self *DataVersion) ToJson() string {
-	if buf, err := ffjson.Marshal(self); err == nil {
-		fmt.Printf("dataVersion[%#v] ffjson.Marshal() err: %s \n", self, err.Error())
+	buf, err := ffjson.Marshal(self)
+	if err == nil {
 		return string(buf)
-
 	}
+	logger.Errorf("dataVersion[%#v] ffjson.Marshal() err: %s \n", self, err.Error())
 	return ""
 }

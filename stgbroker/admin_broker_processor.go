@@ -337,7 +337,7 @@ func (abp *AdminBrokerProcessor) getMinOffset(ctx netm.Context, request *protoco
 	return response, nil
 }
 
-// getMinOffset 获得最小偏移量
+// getEarliestMsgStoretime 获得最早消息存储时间
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getEarliestMsgStoretime(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -537,12 +537,12 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 	var writeQueueNums int = int(topicConfig.WriteQueueNums)
 	for i := 0; i < writeQueueNums; i++ {
-		mq := &message.MessageQueue{}
+		mq := message.NewMessageQueue()
 		mq.Topic = topic
 		mq.BrokerName = abp.BrokerController.BrokerConfig.BrokerName
 		mq.QueueId = i
 
-		topicOffset := &admin.TopicOffset{}
+		topicOffset := admin.NewTopicOffset()
 		min := abp.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(i))
 		if min < 0 {
 			min = 0
@@ -555,6 +555,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		timestamp := int64(0)
 		if max > 0 {
+			// TODO 方法查询有时会卡死 报错:unexpected fault address 0x301012c fatal error: fault
 			timestamp = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), (max - 1))
 		}
 
@@ -564,9 +565,9 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		topicStatsTable.OffsetTable[mq] = topicOffset
 	}
-
-	content := stgcommon.Encode(topicStatsTable)
-
+	fmt.Printf("%#v\n", topicStatsTable.OffsetTable)
+	content := stgcommon.Encode(&(topicStatsTable.OffsetTable))
+	fmt.Println(content)
 	response.Code = code.SUCCESS
 	response.Body = content
 	response.Remark = ""
@@ -956,7 +957,7 @@ func (abp *AdminBrokerProcessor) getSystemTopicListFromBroker(ctx netm.Context, 
 	return response, nil
 }
 
-// cleanExpiredConsumeQueue 删除失效队列
+// cleanExpiredConsumeQueue 删除失效消费队列
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) cleanExpiredConsumeQueue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
