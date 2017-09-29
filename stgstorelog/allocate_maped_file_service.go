@@ -131,5 +131,21 @@ func (self *AllocateMapedFileService) Start() {
 }
 
 func (self *AllocateMapedFileService) Shutdown() {
-	// TODO
+	for iterator := self.requestTable.Iterator(); iterator.HasNext(); {
+		_, value, ok := iterator.Next()
+		if ok {
+			request := value.(*AllocateRequest)
+			logger.Info("delete pre allocated maped file, ", request.mapedFile.fileName)
+			success := request.mapedFile.destroy()
+			if !success {
+				time.Sleep(time.Millisecond * 1)
+				for i := 0; i < 3; i++ {
+					if request.mapedFile.destroy() {
+						break
+					}
+				}
+			}
+		}
+	}
+
 }

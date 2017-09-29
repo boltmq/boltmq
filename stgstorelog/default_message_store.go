@@ -353,7 +353,11 @@ func (self *DefaultMessageStore) Shutdown() {
 }
 
 func (self *DefaultMessageStore) Destroy() {
-	// TODO
+	self.destroyLogics()
+	self.CommitLog.destroy()
+	self.IndexService.destroy()
+	self.deleteFile(config.GetAbortFile(self.MessageStoreConfig.StorePathRootDir))
+	self.deleteFile(config.GetStoreCheckpoint(self.MessageStoreConfig.StorePathRootDir))
 }
 
 func (self *DefaultMessageStore) PutMessage(msg *MessageExtBrokerInner) *PutMessageResult {
