@@ -340,8 +340,13 @@ func (bc *BrokerController) addDeleteTopicTask() {
 // Since 2017/9/12
 func (bc *BrokerController) UpdateAllConfig(properties []byte) {
 	defer utils.RecoveredFn()
-	bc.BrokerConfig.Decode(properties)
-	bc.MessageStoreConfig.Decode(properties)
+
+	allConfig := NewBrokerAllConfig()
+	stgcommon.Decode(properties, allConfig)
+
+	bc.BrokerConfig = allConfig.BrokerConfig
+	bc.MessageStoreConfig = allConfig.MessageStoreConfig
+
 	bc.ConfigDataVersion.NextVersion()
 	bc.flushAllConfig()
 }
@@ -352,7 +357,9 @@ func (bc *BrokerController) UpdateAllConfig(properties []byte) {
 func (bc *BrokerController) flushAllConfig() {
 	defer utils.RecoveredFn()
 	allConfig := bc.EncodeAllConfig()
-	stgcommon.String2File([]byte(allConfig), bc.ConfigFile)
+	logger.Infof("all config:%T", allConfig)
+	// TODO 当前配置信息是直接初始化的，所以暂时不写到文件中
+	//stgcommon.String2File([]byte(allConfig), bc.ConfigFile)
 	logger.Infof("flush broker config, %s OK", bc.ConfigFile)
 }
 
@@ -360,17 +367,18 @@ func (bc *BrokerController) flushAllConfig() {
 // Author rongzhihong
 // Since 2017/9/12
 func (bc *BrokerController) EncodeAllConfig() string {
-	bytesBuffer := &bytes.Buffer{}
+	bytesBuffer := bytes.NewBuffer([]byte{})
+	allConfig := NewBrokerAllConfig()
 	{
-		brokerConfigContent := bc.BrokerConfig.Encode()
-		bytesBuffer.WriteString(string(brokerConfigContent))
+		allConfig.BrokerConfig = bc.BrokerConfig
 	}
 
 	{
-		messageStoreConfigContent := bc.MessageStoreConfig.Encode()
-		bytesBuffer.WriteString(string(messageStoreConfigContent))
+		allConfig.MessageStoreConfig = bc.MessageStoreConfig
 	}
 
+	content := stgcommon.Encode(allConfig)
+	bytesBuffer.Write(content)
 	return bytesBuffer.String()
 }
 

@@ -14,7 +14,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
-	"strconv"
 	"strings"
 )
 
@@ -87,7 +86,7 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	}
 
 	offsetTable := make(map[*message.MessageQueue]int64)
-	writeQueueNums, _ := strconv.Atoi(fmt.Sprintf("%s", topicConfig.WriteQueueNums))
+	var writeQueueNums int = int(topicConfig.WriteQueueNums)
 	for i := 0; i < writeQueueNums; i++ {
 		mq := &message.MessageQueue{}
 		mq.BrokerName = b2c.BrokerController.BrokerConfig.BrokerName
@@ -115,9 +114,9 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	requestHeader.IsForce = isForce
 
 	request := protocol.CreateRequestCommand(commonprotocol.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
-	body := body2.NewResetOffsetBody()
-	body.OffsetTable = offsetTable
-	request.Body = body.Encode()
+	resetOffsetBody := body2.NewResetOffsetBody()
+	resetOffsetBody.OffsetTable = offsetTable
+	request.Body = stgcommon.Encode(resetOffsetBody)
 
 	consumerGroupInfo := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group)
 	// Consumer在线
@@ -128,7 +127,7 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 			_, val, _ := iterator.Next()
 			if channelInfo, ok := val.(*client.ChannelInfo); ok {
 				version := channelInfo.Version
-				if version > mqversion.V3_0_7_SNAPSHOT {
+				if version >= mqversion.V3_0_7_SNAPSHOT {
 					b2c.BrokerController.RemotingServer.InvokeSync(channelInfo.Context, request, 5000)
 
 					logger.Infof("[reset-offset] reset offset success. topic=%s, group=%s, clientId=%d",
@@ -161,7 +160,8 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	response.Code = commonprotocol.SUCCESS
 	resBody := body2.NewResetOffsetBody()
 	resBody.OffsetTable = offsetTable
-	response.Body = resBody.Encode()
+	content := stgcommon.Encode(resBody)
+	response.Body = content
 	return response
 }
 
@@ -179,7 +179,14 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 
 	consumerStatusTable := make(map[string]map[*message.MessageQueue]int64)
 
-	channelInfoTable := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group).ConnTable
+	consumerGroupInfo := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group)
+	if nil == consumerGroupInfo {
+		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Remark = fmt.Sprintf("No Any Consumer online in the consumer group: [%s]", group)
+		return response
+	}
+
+	channelInfoTable := consumerGroupInfo.ConnTable
 	if nil == channelInfoTable || channelInfoTable.Size() <= 0 {
 		response.Code = commonprotocol.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("No Any Consumer online in the consumer group: [%s]", group)
@@ -189,14 +196,15 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 	iterator := channelInfoTable.Iterator()
 	for iterator.HasNext() {
 		key, value, _ := iterator.Next()
-		channel, ok := key.(netm.Context)
-		if !ok {
-			logger.Warnf("The key=%s type is not netm.Context", key)
+		channel, kok := key.(netm.Context)
+		channelInfo, vok := value.(*client.ChannelInfo)
+
+		if !kok {
+			logger.Warnf("The key=%v type is not netm.Context", key)
 			continue
 		}
-		channelInfo, ok := value.(*client.ChannelInfo)
-		if !ok {
-			logger.Warnf("The value=%s type is not ChannelInfo", value)
+		if !vok {
+			logger.Warnf("The value=%v type is not ChannelInfo", value)
 			continue
 		}
 
@@ -221,8 +229,9 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 			switch response.Code {
 			case commonprotocol.SUCCESS:
 				if response.Body != nil && len(response.Body) > 0 {
-					statusBody := &body2.GetConsumerStatusBody{}
-					statusBody.Decode(response.Body)
+					statusBody := body2.NewGetConsumerStatusBody()
+					stgcommon.Decode(response.Body, statusBody)
+
 					consumerStatusTable[clientId] = statusBody.MessageQueueTable
 					logger.Infof(
 						"[get-consumer-status] get consumer status success. topic=%s, group=%s, channelRemoteAddr=%s",
@@ -238,9 +247,10 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 
 	}
 
-	resBody := &body2.GetConsumerStatusBody{}
+	resBody := body2.NewGetConsumerStatusBody()
 	resBody.ConsumerTable = consumerStatusTable
-	response.Body = resBody.Encode()
+	content := stgcommon.Encode(resBody)
+	response.Body = content
 
 	response.Code = commonprotocol.SUCCESS
 	response.Remark = ""

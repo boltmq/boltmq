@@ -1,9 +1,8 @@
 package stgstorelog
 
 import (
-	"math"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
+	"math"
 )
 
 // MessageStoreConfig 存储层配置文件类
@@ -65,7 +64,6 @@ type MessageStoreConfig struct {
 	MessageDelayLevel                      string               `json:"MessageDelayLevel"` // 定时消息相关
 	FlushDelayOffsetInterval               int64                `json:"FlushDelayOffsetInterval"`
 	CleanFileForciblyEnable                bool                 `json:"CleanFileForciblyEnable"` // 磁盘空间超过90%警戒水位，自动开始删除文件
-	*protocol.RemotingSerializable
 }
 
 func NewMessageStoreConfig() *MessageStoreConfig {
@@ -129,7 +127,6 @@ func NewMessageStoreConfig() *MessageStoreConfig {
 	conf.MessageDelayLevel = "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h"
 	conf.FlushDelayOffsetInterval = 1000 * 10
 	conf.CleanFileForciblyEnable = true
-	conf.RemotingSerializable = new(protocol.RemotingSerializable)
 	return conf
 }
 
