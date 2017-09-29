@@ -46,6 +46,25 @@ type BrokerData struct {
 	BrokerAddrsLock sync.RWMutex   `json:"-"`
 }
 
+func NewQueueData(brokerName string, topicConfig *stgcommon.TopicConfig) *QueueData {
+	queueData := &QueueData{
+		BrokerName:     brokerName,
+		WriteQueueNums: int(topicConfig.WriteQueueNums),
+		ReadQueueNums:  int(topicConfig.ReadQueueNums),
+		Perm:           topicConfig.Perm,
+		TopicSynFlag:   topicConfig.TopicSysFlag,
+	}
+	return queueData
+}
+
+func NewBrokerData(brokerName string) *BrokerData {
+	brokerData := &BrokerData{
+		BrokerName:  brokerName,
+		BrokerAddrs: make(map[int]string),
+	}
+	return brokerData
+}
+
 func (self *TopicRouteData) Decode(data []byte) error {
 	return ffjson.Unmarshal(data, self)
 }
@@ -359,7 +378,7 @@ func (self *BrokerData) ToString() string {
 			brokerAddrs = append(brokerAddrs, brokerAddr)
 		}
 	}
-	format := "QueueData [brokerName=%s, brokerAddrs=%s]"
+	format := "QueueData [brokerName:%s, brokerAddrs:%s]"
 	info := fmt.Sprintf(format, self.BrokerName, strings.Join(brokerAddrs, ","))
 	return info
 }

@@ -11,3 +11,11 @@ type RegisterBrokerResponseHeader struct {
 func (self *RegisterBrokerResponseHeader) CheckFields() error {
 	return nil
 }
+
+func NewRegisterBrokerResponseHeader(haServerAddr, masterAddr string) *RegisterBrokerResponseHeader {
+	registerBrokerResponseHeader := &RegisterBrokerResponseHeader{
+		HaServerAddr: haServerAddr,
+		MasterAddr:   masterAddr,
+	}
+	return registerBrokerResponseHeader
+}

@@ -148,9 +148,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	)
 	logger.Info("registerBrokerBody.result ---> %s", result.ToString())
 
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	responseHeader.HaServerAddr = result.HaServerAddr
-	responseHeader.MasterAddr = result.MasterAddr
+	responseHeader := namesrv.NewRegisterBrokerResponseHeader(result.HaServerAddr, result.MasterAddr)
 	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表
