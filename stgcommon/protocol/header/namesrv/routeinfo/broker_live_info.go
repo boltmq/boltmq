@@ -6,6 +6,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 )
 
+// BrokerLiveInfo 活动broker存储结构
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
 type BrokerLiveInfo struct {
 	LastUpdateTimestamp int64
 	DataVersion         *stgcommon.DataVersion
@@ -13,6 +16,9 @@ type BrokerLiveInfo struct {
 	HaServerAddr        string
 }
 
+// NewBrokerLiveInfo 初始化BrokerLiveInfo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
 func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, ctx netm.Context) *BrokerLiveInfo {
 	brokerLiveInfo := BrokerLiveInfo{
 		LastUpdateTimestamp: stgcommon.GetCurrentTimeMillis(),
@@ -23,8 +29,11 @@ func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, 
 	return &brokerLiveInfo
 }
 
+// ToString 打印BrokerLiveInfo结构体数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
 func (self *BrokerLiveInfo) ToString() string {
-	format := "BrokerLiveInfo [lastUpdateTimestamp=%d, dataVersion=%s, conn=%s, haServerAddr=%s]"
-	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Context, self.HaServerAddr)
+	format := "BrokerLiveInfo [lastUpdateTimestamp=%d, %s, %s, haServerAddr=%s]"
+	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Context.ToString(), self.HaServerAddr)
 	return info
 }
