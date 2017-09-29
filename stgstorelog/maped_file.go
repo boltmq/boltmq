@@ -236,7 +236,7 @@ func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 
 func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
 	if (pos + int64(size)) <= self.wrotePostion {
-		end := pos + int64(size-1)
+		end := pos + int64(size)
 		byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[pos:end])
 		byteBuffer.WritePos = int(size)
 		return &SelectMapedBufferResult{StartOffset: self.fileFromOffset + pos,
