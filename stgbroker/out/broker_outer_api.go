@@ -85,9 +85,8 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 // RegisterBroker 向nameService注册broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
-haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
-	filterServerList []string) *namesrv.RegisterBrokerResult {
+func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
+	topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) *namesrv.RegisterBrokerResult {
 
 	requestHeader := headerNamesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
@@ -137,7 +136,7 @@ haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSeriali
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	var registerBrokerResult *namesrv.RegisterBrokerResult
 

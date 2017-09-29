@@ -16,6 +16,9 @@ type RegisterBrokerResult struct {
 }
 
 func (self *RegisterBrokerResult) ToString() string {
+	if self == nil {
+		return ""
+	}
 	datas := make([]string, 0, len(self.KvTable.Table))
 	if self.KvTable.Table != nil {
 		for key, value := range self.KvTable.Table {
