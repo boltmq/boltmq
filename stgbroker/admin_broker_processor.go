@@ -181,6 +181,7 @@ func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request 
 		TopicName:       requestHeader.Topic,
 		ReadQueueNums:   requestHeader.ReadQueueNums,
 		WriteQueueNums:  requestHeader.WriteQueueNums,
+		TopicFilterType: requestHeader.TopicFilterType,
 		Perm:            requestHeader.Perm,
 	}
 	if requestHeader.TopicSysFlag != 0 {
@@ -236,6 +237,7 @@ func (adp *AdminBrokerProcessor) getAllTopicConfig(ctx netm.Context, request *pr
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	content := adp.BrokerController.TopicConfigManager.Encode(false)
+	logger.Infof("AllTopicConfig: %s", content)
 
 	if content != "" && len(content) > 0 {
 		response.Body = []byte(content)
@@ -251,7 +253,7 @@ func (adp *AdminBrokerProcessor) getAllTopicConfig(ctx netm.Context, request *pr
 	}
 }
 
-// updateBrokerConfig 更新Broker配置信息
+// updateBrokerConfig 更新Broker服务器端的BrokerConfig, MessageStoreConfig信息
 // Author rongzhihong
 // Since 2017/9/19
 func (adp *AdminBrokerProcessor) updateBrokerConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -259,6 +261,7 @@ func (adp *AdminBrokerProcessor) updateBrokerConfig(ctx netm.Context, request *p
 	logger.Infof("updateBrokerConfig called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
 
 	content := request.Body
+	logger.Infof("BrokerConfig:%s", string(content))
 	if content != nil {
 		logger.Infof("updateBrokerConfig, new config: %s, client: %s", string(content), ctx.RemoteAddr().String())
 		adp.BrokerController.UpdateAllConfig(content)
@@ -355,7 +358,7 @@ func (abp *AdminBrokerProcessor) getEarliestMsgStoretime(ctx netm.Context, reque
 	return response, nil
 }
 
-// getMinOffset 获得最小偏移量
+// getBrokerRuntimeInfo 获取Broker运行时信息
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -366,7 +369,7 @@ func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request 
 	kvTable := body.NewKVTable()
 	kvTable.Table = runtimeInfo
 
-	content := kvTable.Encode()
+	content := stgcommon.Encode(kvTable)
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -380,8 +383,8 @@ func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request 
 func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand(nil)
 
-	requestBody := &body.LockBatchRequestBody{}
-	err := requestBody.Decode(request.Body)
+	requestBody := body.NewLockBatchRequestBody()
+	err := stgcommon.Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -389,10 +392,11 @@ func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol
 	lockOKMQSet := abp.BrokerController.RebalanceLockManager.TryLockBatch(requestBody.ConsumerGroup,
 		requestBody.MqSet, requestBody.ClientId)
 
-	responseBody := &body.LockBatchResponseBody{}
+	responseBody := body.NewLockBatchResponseBody()
 	responseBody.LockOKMQSet = lockOKMQSet
 
-	response.Body = requestBody.Encode()
+	content := stgcommon.Encode(responseBody)
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -405,7 +409,7 @@ func (abp *AdminBrokerProcessor) unlockBatchMQ(ctx netm.Context, request *protoc
 	response := protocol.CreateDefaultResponseCommand(nil)
 
 	requestBody := body.NewUnlockBatchRequestBody()
-	err := requestBody.Decode(request.Body)
+	err := stgcommon.Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -454,7 +458,7 @@ func (abp *AdminBrokerProcessor) updateAndCreateSubscriptionGroup(ctx netm.Conte
 	logger.Infof("updateAndCreateSubscriptionGroup called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
 
 	config := &subscription.SubscriptionGroupConfig{}
-	err := config.Decode(request.Body)
+	err := stgcommon.Decode(request.Body, config)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -561,7 +565,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 		topicStatsTable.OffsetTable[mq] = topicOffset
 	}
 
-	content := topicStatsTable.Encode()
+	content := stgcommon.Encode(topicStatsTable)
 
 	response.Code = code.SUCCESS
 	response.Body = content
@@ -584,7 +588,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 
 	consumerGroupInfo := abp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 	if consumerGroupInfo != nil {
-		bodydata := &header.ConsumerConnection{}
+		bodydata := header.NewConsumerConnection()
 		bodydata.ConsumeFromWhere = consumerGroupInfo.ConsumeFromWhere
 		bodydata.ConsumeType = consumerGroupInfo.ConsumeType
 		bodydata.MessageModel = consumerGroupInfo.MessageModel
@@ -604,7 +608,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 			}
 		}
 
-		content := bodydata.Encode()
+		content := stgcommon.Encode(bodydata)
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
@@ -630,7 +634,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 
 	channelInfoHashMap := abp.BrokerController.ProducerManager.GroupChannelTable.Get(requestHeader.ProducerGroup)
 	if channelInfoHashMap != nil {
-		bodydata := &body.ProducerConnection{}
+		bodydata := body.NewProducerConnection()
 		for _, info := range channelInfoHashMap {
 			connection := &header.Connection{}
 			connection.ClientId = info.ClientId
@@ -641,7 +645,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 			bodydata.ConnectionSet.Add(connection)
 		}
 
-		content := bodydata.Encode()
+		content := stgcommon.Encode(bodydata)
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
@@ -665,10 +669,10 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 		logger.Error(err)
 	}
 
-	consumeStats := &admin.ConsumeStats{}
+	consumeStats := admin.NewConsumeStats()
 
 	topics := set.NewSet()
-	if !stgcommon.IsBlank(requestHeader.ConsumerGroup) {
+	if stgcommon.IsBlank(requestHeader.Topic) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.ConsumerGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -684,9 +688,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 				continue
 			}
 
-			/**
-			 * Consumer不在线的时候，也允许查询消费进度
-			 */
+			// Consumer不在线的时候，也允许查询消费进度
 			{
 				findSubscriptionData := abp.BrokerController.ConsumerManager.FindSubscriptionData(requestHeader.ConsumerGroup, topic)
 				// 如果Consumer在线，而且这个topic没有被订阅，那么就跳过
@@ -738,7 +740,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 		}
 	}
 
-	content := consumeStats.Encode()
+	content := stgcommon.Encode(consumeStats)
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -841,10 +843,10 @@ func (abp *AdminBrokerProcessor) queryTopicConsumeByWho(ctx netm.Context, reques
 		groups.Union(groupInOffset)
 	}
 
-	groupList := &body.GroupList{}
+	groupList := body.NewGroupList()
 	groupList.GroupList = groups
+	content := stgcommon.Encode(groupList)
 
-	content := groupList.Encode()
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -924,10 +926,11 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 		timeSpanSet.Add(timeSpan)
 	}
 
-	queryConsumeTimeSpanBody := &body.QueryConsumeTimeSpanBody{}
+	queryConsumeTimeSpanBody := body.NewQueryConsumeTimeSpanBody()
 	queryConsumeTimeSpanBody.ConsumeTimeSpanSet = timeSpanSet
+	content := stgcommon.Encode(queryConsumeTimeSpanBody)
 
-	response.Body = queryConsumeTimeSpanBody.Encode()
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
@@ -944,8 +947,9 @@ func (abp *AdminBrokerProcessor) getSystemTopicListFromBroker(ctx netm.Context, 
 
 	topicList := body.NewTopicList()
 	topicList.TopicList = topics
+	content := stgcommon.Encode(topicList)
 
-	response.Body = topicList.Encode()
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
@@ -1040,9 +1044,11 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 		}
 	}
 
-	correctionBody := &body.QueryCorrectionOffsetBody{}
+	correctionBody := body.NewQueryCorrectionOffsetBody()
 	correctionBody.CorrectionOffsets = correctionOffset
-	response.Body = correctionBody.Encode()
+	content := stgcommon.Encode(correctionBody)
+
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -1065,10 +1071,12 @@ func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, reques
 		return nil, nil
 	}
 	selectMapedBufferResult := abp.BrokerController.MessageStore.SelectOneMessageByOffset(int64(messageId.Offset))
-	length := selectMapedBufferResult.Size
-	readContent := make([]byte, length)
-	selectMapedBufferResult.MappedByteBuffer.Read(readContent)
-	request.Body = readContent
+	if nil != selectMapedBufferResult {
+		length := selectMapedBufferResult.Size
+		readContent := make([]byte, length)
+		selectMapedBufferResult.MappedByteBuffer.Read(readContent)
+		request.Body = readContent
+	}
 
 	return abp.callConsumer(code.CONSUME_MESSAGE_DIRECTLY, request, requestHeader.ConsumerGroup, requestHeader.ClientId)
 }
@@ -1087,7 +1095,7 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 
 	topics := set.NewSet()
 
-	if !stgcommon.IsBlank(requestHeader.Topic) {
+	if stgcommon.IsBlank(requestHeader.Topic) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.SrcGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -1172,7 +1180,9 @@ func (abp *AdminBrokerProcessor) ViewBrokerStatsData(ctx netm.Context, request *
 		brokerStatsData.StatsDay = item
 	}
 
-	response.Body = brokerStatsData.Encode()
+	content := stgcommon.Encode(brokerStatsData)
+
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil

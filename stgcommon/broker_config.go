@@ -2,7 +2,6 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"os"
 	"runtime"
 )
@@ -44,7 +43,6 @@ type BrokerConfig struct {
 	ShortPollingTimeMills              int    `json:"ShortPollingTimeMills"`              // 如果是短轮询，服务器挂起时间
 	NotifyConsumerIdsChangedEnable     bool   `json:"NotifyConsumerIdsChangedEnable"`     // notify consumerId changed 开关
 	OffsetCheckInSlave                 bool   `json:"OffsetCheckInSlave"`                 // slave 是否需要纠正位点
-	*protocol.RemotingSerializable     `json:"-"`
 }
 
 // NewDefaultBrokerConfig 初始化默认BrokerConfig
@@ -80,7 +78,6 @@ func NewDefaultBrokerConfig() *BrokerConfig {
 		ShortPollingTimeMills:              1000,
 		NotifyConsumerIdsChangedEnable:     true,
 		OffsetCheckInSlave:                 true,
-		RemotingSerializable:               new(protocol.RemotingSerializable),
 	}
 
 	return brokerConfig

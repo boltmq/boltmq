@@ -43,7 +43,7 @@ func Test_write_read(t *testing.T) {
 
 	for i := 0; i < totalMessages; i++ {
 		time.Sleep(time.Duration(100 * time.Millisecond))
-		result := master.GetMessage("GROUP_A", "test", 0, int64(i), 1024*1024, nil)
+		result := master.GetMessage("producer", "TestTopic", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
 		}
@@ -68,7 +68,7 @@ func buildMessageStoreConfig() *MessageStoreConfig {
 
 func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	msg := new(MessageExtBrokerInner)
-	msg.Topic = "test"
+	msg.Topic = "TestTopic"
 	msg.Message.PutProperty("TAGS", "TAG1")
 	msg.Message.PutProperty("KEYS", "Hello")
 	msg.Body = messageBody

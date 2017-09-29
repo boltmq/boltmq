@@ -4,9 +4,9 @@ package header
 // Author rongzhihong
 // Since 2017/9/19
 type SearchOffsetRequestHeader struct {
-	Topic     string
-	QueueId   int32
-	Timestamp int64
+	Topic     string `json:"topic"`
+	QueueId   int32  `json:"queueId"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 func (header *SearchOffsetRequestHeader) CheckFields() error {

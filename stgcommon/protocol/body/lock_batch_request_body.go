@@ -1,7 +1,6 @@
 package body
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
 )
 
@@ -12,12 +11,10 @@ type LockBatchRequestBody struct {
 	ConsumerGroup string  `json:"consumerGroup"`
 	ClientId      string  `json:"clientId"`
 	MqSet         set.Set `json:"mq_set"`
-	*protocol.RemotingSerializable
 }
 
 func NewLockBatchRequestBody() *LockBatchRequestBody {
 	body := new(LockBatchRequestBody)
 	body.MqSet = set.NewSet()
-	body.RemotingSerializable = new(protocol.RemotingSerializable)
 	return body
 }
