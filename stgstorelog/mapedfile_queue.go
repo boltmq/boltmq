@@ -57,11 +57,11 @@ func (self *MapedFileQueue) getMapedFileByTime(timestamp int64) (mf *MapedFile) 
 		return nil
 	}
 	for _, mf := range mapedFileSlice {
-		if mf.storeTimestamp >= timestamp {
-			return &mf
+		if mf != nil && mf.storeTimestamp >= timestamp {
+			return mf
 		}
 	}
-	return &mapedFileSlice[len(mapedFileSlice)-1]
+	return mapedFileSlice[len(mapedFileSlice)-1]
 }
 
 // copyMapedFiles 获取当前mapedFiles列表中的副本slice
@@ -69,8 +69,8 @@ func (self *MapedFileQueue) getMapedFileByTime(timestamp int64) (mf *MapedFile) 
 // Return: 返回大于等于reservedMapedFiles个元数的MapedFile切片
 // Author: tantexian, <tantexian@qq.com>
 // Since: 17/8/9
-func (self *MapedFileQueue) copyMapedFiles(reservedMapedFiles int) []MapedFile {
-	mapedFileSlice := make([]MapedFile, 10)
+func (self *MapedFileQueue) copyMapedFiles(reservedMapedFiles int) []*MapedFile {
+	mapedFileSlice := make([]*MapedFile, self.mapedFiles.Len())
 	self.rwLock.RLock()
 	defer self.rwLock.RUnlock()
 	if self.mapedFiles.Len() <= reservedMapedFiles {
@@ -78,7 +78,8 @@ func (self *MapedFileQueue) copyMapedFiles(reservedMapedFiles int) []MapedFile {
 	}
 	// Iterate through list and print its contents.
 	for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
-		mapedFileSlice = append(mapedFileSlice, e.Value.(MapedFile))
+		mf := e.Value.(*MapedFile)
+		mapedFileSlice = append(mapedFileSlice, mf)
 	}
 	return mapedFileSlice
 }
