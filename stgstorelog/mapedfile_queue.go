@@ -97,6 +97,7 @@ func (self *MapedFileQueue) truncateDirtyFiles(offset int64) {
 			if offset >= mf.fileFromOffset {
 				pos := offset % int64(self.mapedFileSize)
 				mf.wrotePostion = pos
+				mf.mappedByteBuffer.WritePos = int(pos)
 				mf.committedPosition = pos
 			} else {
 				mf.destroy()

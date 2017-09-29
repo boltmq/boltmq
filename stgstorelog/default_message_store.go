@@ -77,7 +77,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
 	ms.TransactionCheckExecuter = nil
-	ms.AllocateMapedFileService = NewAllocateMapedFileService()
+	ms.AllocateMapedFileService = nil
 	ms.consumeTopicTable = make(map[string]*ConsumeQueueTable)
 	ms.CommitLog = NewCommitLog(ms)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
@@ -112,7 +112,10 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	}
 
 	// load过程依赖此服务，所以提前启动
-	go ms.AllocateMapedFileService.Start()
+	if ms.AllocateMapedFileService != nil {
+		go ms.AllocateMapedFileService.Start()
+	}
+
 	go ms.DispatchMessageService.Start()
 
 	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
@@ -339,7 +342,10 @@ func (self *DefaultMessageStore) Shutdown() {
 		self.IndexService.Shutdown()
 		self.FlushConsumeQueueService.Shutdown()
 		self.CommitLog.Shutdown()
-		self.AllocateMapedFileService.Shutdown()
+
+		if self.AllocateMapedFileService != nil {
+			self.AllocateMapedFileService.Shutdown()
+		}
 
 		if self.ReputMessageService != nil {
 			self.ReputMessageService.Shutdown()
