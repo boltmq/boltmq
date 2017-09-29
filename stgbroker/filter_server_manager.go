@@ -3,12 +3,11 @@ package stgbroker
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/filtersrv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
-	"runtime"
-	"strings"
 	"time"
 )
 
@@ -91,7 +90,7 @@ func (fsm *FilterServerManager) buildStartCommand() string {
 		config += fmt.Sprintf(" -n %s", fsm.brokerController.BrokerConfig.NamesrvAddr)
 	}
 
-	if isWindowsOS() {
+	if stgcommon.IsWindowsOS() {
 		return fmt.Sprintf("start /b %s\\bin\\mqfiltersrv.exe %s", fsm.brokerController.BrokerConfig.SmartGoHome, config)
 	} else {
 		return fmt.Sprintf("sh %s/bin/startfsrv.sh %s", fsm.brokerController.BrokerConfig.SmartGoHome, config)
@@ -174,12 +173,4 @@ func (fsm *FilterServerManager) BuildNewFilterServerList() (filterServerAdds []s
 		}
 	}
 	return
-}
-
-// isWindowsOS check current os is windows
-// if current is windows operating system, return true ; otherwise return false
-// Author rongzhihong
-// Since 2017/9/8
-func isWindowsOS() bool {
-	return strings.EqualFold(runtime.GOOS, WINDOWS)
 }
