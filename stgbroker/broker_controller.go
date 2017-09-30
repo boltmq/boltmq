@@ -18,7 +18,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	storeStatis "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -194,6 +197,32 @@ func (bc *BrokerController) Initialize() bool {
 	return result
 }
 
+// shutdownHook 程序停止监听以及处理
+// Author rongzhihong
+// Since 2017/9/12
+func (bc *BrokerController) shutdownHook(stopChan chan bool) {
+	logger.Info("启动监听Broker关闭的程序...")
+
+	stopSignalChan := make(chan os.Signal, 1)
+
+	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+
+		//阻塞程序运行，直到收到终止的信号
+		s := <-stopSignalChan
+		close(stopSignalChan)
+
+		logger.Infof("收到Broker程序终止的信号, signal code:%d", s)
+
+		bc.Shutdown()
+
+		logger.Info("已成功关闭Broker所有服务!")
+
+		stopChan <- true
+	}()
+}
+
 // Shutdown BrokerController停止入口
 // Author rongzhihong
 // Since 2017/9/12
@@ -239,9 +268,12 @@ func (bc *BrokerController) Start() {
 		bc.MessageStore.Start()
 	}
 
+	// TODO RemotingServer.Start()启动之后，一直处于等待中，后续的其他服务不会启动
 	if bc.RemotingServer != nil {
 		bc.RemotingServer.Start()
 	}
+
+	logger.Infof("reading start BrokerOuterAPI")
 
 	if bc.BrokerOuterAPI != nil {
 		bc.BrokerOuterAPI.Start()

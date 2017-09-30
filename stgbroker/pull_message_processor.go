@@ -202,7 +202,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		switch getMessageResult.Status {
 		case stgstorelog.FOUND:
-			response.Code = (commonprotocol.SUCCESS)
+			response.Code = commonprotocol.SUCCESS
+
 			// 消息轨迹：记录客户端拉取的消息记录（不表示消费成功）
 			if pull.hasConsumeMessageHook() {
 				// 执行hook
@@ -255,10 +256,9 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		switch response.Code {
 		case commonprotocol.SUCCESS:
+			// 统计
 			pull.BrokerController.brokerStatsManager.IncGroupGetNums(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.GetMessageCount())
-
 			pull.BrokerController.brokerStatsManager.IncGroupGetSize(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.BufferTotalSize)
-
 			pull.BrokerController.brokerStatsManager.IncBrokerGetNums(getMessageResult.GetMessageCount())
 
 			manyMessageTransfer := pagecache.NewManyMessageTransfer(response, getMessageResult)

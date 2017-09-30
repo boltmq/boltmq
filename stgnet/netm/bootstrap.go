@@ -240,7 +240,9 @@ func (bootstrap *Bootstrap) Shutdown() {
 	bootstrap.mu.Unlock()
 
 	// 关闭listener
-	bootstrap.listener.Close()
+	if bootstrap.listener != nil {
+		bootstrap.listener.Close()
+	}
 
 	// 关闭所有连接
 	bootstrap.contextTableLock.Lock()
@@ -251,7 +253,7 @@ func (bootstrap *Bootstrap) Shutdown() {
 	bootstrap.contextTableLock.Unlock()
 
 	// 关闭定时器
-	if bootstrap.checkCtxIdleTimer == nil {
+	if bootstrap.checkCtxIdleTimer != nil {
 		bootstrap.checkCtxIdleTimer.Stop()
 		bootstrap.checkCtxIdleTimer = nil
 	}

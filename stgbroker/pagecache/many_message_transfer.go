@@ -35,8 +35,8 @@ func (mmt *ManyMessageTransfer) EncodeBody() {
 
 	bodyBuffer := bytes.NewBuffer([]byte{})
 	for e := mmt.getMessageResult.MessageBufferList.Front(); e != nil; e = e.Next() {
-		if mapedBufferResult, ok := e.Value.(*stgstorelog.SelectMapedBufferResult); ok {
-			bodyBuffer.Write(mapedBufferResult.MappedByteBuffer.Bytes())
+		if mapedBufferResult, ok := e.Value.(*stgstorelog.MappedByteBuffer); ok {
+			bodyBuffer.Write(mapedBufferResult.Bytes())
 		}
 	}
 	mmt.remotingCommand.Body = bodyBuffer.Bytes()

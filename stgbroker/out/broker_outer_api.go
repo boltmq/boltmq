@@ -6,6 +6,7 @@ import (
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	headerNamesrv "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
@@ -136,7 +137,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
+haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	var registerBrokerResult *namesrv.RegisterBrokerResult
 
@@ -159,6 +160,8 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
+	defer utils.RecoveredFn()
+
 	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
 		ClusterName: clusterName,
 		BrokerName:  brokerAddr,
@@ -168,13 +171,15 @@ func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAdd
 
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
 	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			return
+	if response != nil {
+		switch response.Code {
+		case code.SUCCESS:
+			{
+				return
+			}
+		default:
+			break
 		}
-	default:
-		break
 	}
 	return
 }

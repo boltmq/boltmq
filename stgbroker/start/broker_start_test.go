@@ -2,9 +2,10 @@ package main
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"testing"
 )
 
-func main() {
+func TestStartBroker(t *testing.T) {
 	stopChan := make(chan bool, 1)
 	stgbroker.Start(stopChan)
 
@@ -14,5 +15,4 @@ func main() {
 			return
 		}
 	}
-
 }

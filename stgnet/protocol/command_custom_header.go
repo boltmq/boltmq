@@ -56,7 +56,7 @@ func reflectSturctSetField(structValue reflect.Value, name string, value string)
 	case reflect.Int64:
 		fallthrough
 	case reflect.Int:
-		ival, err := strconv.ParseInt(value, 10, 32)
+		ival, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return errors.Wrap(err, 0)
 		}
