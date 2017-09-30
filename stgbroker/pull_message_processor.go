@@ -50,6 +50,8 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Since 2017/9/5
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
+		logger.Info("唤醒HoldPullRequest: %v", request)
+
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
 			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
@@ -107,6 +109,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		return response, nil
 	}
 
+	// TODO client端口每次只传SysFlag=4, 为测试HoldPull，将SysFlag = 6
+	requestHeader.SysFlag = 6
 	hasSuspendFlag := sysflag.HasSuspendFlag(requestHeader.SysFlag)
 	hasCommitOffsetFlag := sysflag.HasCommitOffsetFlag(requestHeader.SysFlag)
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)
@@ -185,6 +189,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
+	logger.Infof("getMessageResult:%#v", getMessageResult)
 
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
@@ -272,6 +277,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		case commonprotocol.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
+				logger.Infof("进入hold pull: %#v", request)
 				pollingTimeMills := suspendTimeoutMillisLong
 				if !pull.BrokerController.BrokerConfig.LongPollingEnable {
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
