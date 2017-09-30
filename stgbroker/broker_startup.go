@@ -15,7 +15,7 @@ import (
 // Start 启动BrokerController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
-func Start() *BrokerController {
+func Start(stopChan chan bool) *BrokerController {
 	controller := CreateBrokerController()
 	controller.Start()
 
@@ -27,6 +27,10 @@ func Start() *BrokerController {
 		tips = fmt.Sprintf(formatNamesrv, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr(), controller.BrokerConfig.NamesrvAddr)
 	}
 	fmt.Println(tips)
+
+	// 监听broker程序停止信号并shutdown对应服务
+	controller.shutdownHook(stopChan)
+
 	return controller
 }
 

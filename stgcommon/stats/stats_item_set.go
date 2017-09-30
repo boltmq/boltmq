@@ -40,6 +40,7 @@ func (stats *StatsItemSet) GetAndCreateStatsItem(statsKey string) *StatsItem {
 	if !ok || nil == statsItem {
 		statsItem = NewStatsItem()
 		statsItem.StatsName = stats.StatsName
+		statsItem.StatsKey = statsKey
 		stats.StatsItemTable[statsKey] = statsItem
 	}
 	return statsItem

@@ -16,6 +16,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
+	"fmt"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -171,6 +172,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 
 func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (*SendResult, error) {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
+	fmt.Printf("sendMessageSync response:%d \n", response.Code)
 	if err != nil {
 		logger.Errorf("sendMessageSync error=%v", err.Error())
 	}
