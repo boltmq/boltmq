@@ -162,6 +162,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 			format = "new broker registerd, brokerAddr: %s, HaServer: %s"
 		}
 		logger.Info(format, brokerAddr, haServerAddr)
+
 		self.BrokerLiveTable[brokerAddr] = brokerLiveInfo
 		self.printBrokerLiveTable()
 	}
@@ -178,8 +179,8 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	// 找到该BrokerName下面的主节点
 	if brokerId != stgcommon.MASTER_ID {
 		masterAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
-		logger.Info("------------> brokerId=%d, masterAddr=%s, ok=%t", stgcommon.MASTER_ID, masterAddr, ok)
-		self.printBrokerAddrTable()
+		//logger.Info("------------> brokerId=%d, masterAddr=%s, ok=%t", stgcommon.MASTER_ID, masterAddr, ok)
+		//self.printBrokerAddrTable()
 
 		if ok && masterAddr != "" {
 			brokerLiveInfo, ok := self.BrokerLiveTable[masterAddr]
