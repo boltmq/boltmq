@@ -94,7 +94,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	requestBody := body.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
 	content := requestBody.CustomEncode(requestBody)
 	request.Body = content
-	logger.Infof("register broker, request.body is %s", string(content))
+	//logger.Infof("register broker, request.body is %s", string(content))
 
 	if oneway {
 		self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
@@ -116,7 +116,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 		return nil
 	}
 
-	logger.Infof("register broker ok. %s", response.ToString())
+	//logger.Infof("register broker ok. %s", response.ToString())
 	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
