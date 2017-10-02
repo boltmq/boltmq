@@ -1,6 +1,7 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -25,4 +26,9 @@ func NewTopicConfigSerializeWrapper(dataVersion ...*stgcommon.DataVersion) *Topi
 		topicConfigSerializeWrapper.DataVersion = dataVersion[0]
 	}
 	return topicConfigSerializeWrapper
+}
+
+func (self *TopicConfigSerializeWrapper) ToString() string {
+	format := "TopicConfigSerializeWrapper [%s, %s]"
+	return fmt.Sprintf(format, self.DataVersion.ToString(), self.TopicConfigTable.ToString())
 }

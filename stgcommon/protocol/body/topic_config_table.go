@@ -1,7 +1,9 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"strings"
 	"sync"
 )
 
@@ -84,4 +86,24 @@ func (table *TopicConfigTable) PutAll(topicConfigTable map[string]*stgcommon.Top
 	for k, v := range topicConfigTable {
 		table.TopicConfigs[k] = v
 	}
+}
+
+// ToString 打印TopicConfigTable结构体的数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/3
+func (self *TopicConfigTable) ToString() string {
+	if self == nil || self.TopicConfigs == nil || self.Size() == 0 {
+		return ""
+	}
+
+	self.RLock()
+	defer self.RUnlock()
+
+	infos := make([]string, 0, self.Size())
+	for topic, topicConfig := range self.TopicConfigs {
+		info := fmt.Sprintf("[topic=%s, %s]", topic, topicConfig.ToString())
+		infos = append(infos, info)
+	}
+
+	return fmt.Sprintf("TopicConfigTable [%s]", strings.Join(infos, ","))
 }
