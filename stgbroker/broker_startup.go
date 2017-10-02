@@ -59,7 +59,7 @@ func CreateBrokerController() *BrokerController {
 		// 通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
 		// TODO:为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
 		brokerConfigPath = stgcommon.GetSmartgoConfigDir() + cfgName
-		logger.Info("idea special brokerConfigPath = %s", brokerConfigPath)
+		logger.Infof("idea special brokerConfigPath = %s", brokerConfigPath)
 	}
 
 	// 读取并转化*.toml配置项的值

@@ -151,7 +151,7 @@ func (self *DefaultNamesrvController) registerShutdownHook(stopChan chan bool) {
 	// 这种退出方式比较优雅，能够在退出之前做些收尾工作，清理任务和垃圾
 	// http://www.codeweblog.com/nsqlookupd入口文件分析
 	// http://www.cnblogs.com/jkkkk/p/6180016.html
-	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		//阻塞程序运行，直到收到终止的信号

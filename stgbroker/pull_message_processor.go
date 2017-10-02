@@ -299,7 +299,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					BrokerName: pull.BrokerController.BrokerConfig.BrokerName,
 				}
 
-				event := topic.OffsetMovedEvent{
+				event := &topic.OffsetMovedEvent{
 					ConsumerGroup: requestHeader.ConsumerGroup,
 					MessageQueue:  mq,
 					OffsetRequest: requestHeader.QueueOffset,
@@ -342,7 +342,7 @@ func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
 // generateOffsetMovedEvent 偏移量移动事件
 // Author rongzhihong
 // Since 2017/9/17
-func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMovedEvent) {
+func (pull *PullMessageProcessor) generateOffsetMovedEvent(event *topic.OffsetMovedEvent) {
 	defer utils.RecoveredFn()
 
 	msgInner := new(stgstorelog.MessageExtBrokerInner)
@@ -350,7 +350,7 @@ func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMov
 	msgInner.SetTags(event.ConsumerGroup)
 	msgInner.SetDelayTimeLevel(0)
 	msgInner.SetKeys(event.ConsumerGroup)
-	msgInner.Body = event.Encode()
+	msgInner.Body = event.CustomEncode(event)
 	msgInner.Flag = 0
 	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgInner.GetTags())
 

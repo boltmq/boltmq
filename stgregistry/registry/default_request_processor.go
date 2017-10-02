@@ -131,7 +131,6 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 			return response, err
 		}
 	} else {
-		//logger.Info("registry default dataVersion with registerBrokerBody")
 		dataVersion := stgcommon.NewDataVersion(0)
 		registerBrokerBody.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper(dataVersion)
 	}
@@ -157,7 +156,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
-	// logger.Info("registerBrokerBody.response ---> %s", response.ToString())
+	//logger.Info("registerBrokerBody.response ---> %s", response.ToString())
 	return response, nil
 }
 

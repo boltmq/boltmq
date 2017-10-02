@@ -320,7 +320,7 @@ func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request 
 	response := protocol.CreateDefaultResponseCommand()
 	runtimeInfo := abp.prepareRuntimeInfo()
 
-	kvTable := body.NewKVTable()
+	kvTable := &body.KVTable{}
 	kvTable.Table = runtimeInfo
 	content := stgcommon.Encode(kvTable)
 

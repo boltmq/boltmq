@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
-	"strconv"
-
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
+	"os"
+	"strconv"
 )
 
 // RemotingCommand 服务器与客户端通过传递RemotingCommand来交互
@@ -22,6 +21,7 @@ const (
 )
 
 var (
+	// 当前MQ配置版本号
 	configVersion int32 = mqversion.CurrentVersion
 )
 
@@ -244,7 +244,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 	// step 4 读取报文Body
 	bodyLength = length - 4 - headerLength
 	if buf.Len() < int(bodyLength) {
-		return nil, errors.Errorf("frame body[%d] incorrect，expect[%d]", buf.Len(), bodyLength)
+		return nil, errors.Errorf("frame body[%d] incorrect, expect[%d]", buf.Len(), bodyLength)
 	}
 
 	if bodyLength > 0 {
@@ -291,27 +291,16 @@ func (rc *RemotingCommand) Bytes() []byte {
 // ToString 打印RemotingCommand对象数据
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (rc *RemotingCommand) ToString() string {
-	if rc == nil {
+func (self *RemotingCommand) ToString() string {
+	if self == nil {
 		return "current RemotingCommand is nil"
 	}
-	flagBinary := fmt.Sprintf("%b", rc.Flag)
+	flagBinary := fmt.Sprintf("%b", self.Flag)
 	extFields := "{}"
-	if bf, err := ffjson.Marshal(rc.ExtFields); err == nil {
+	if bf, err := ffjson.Marshal(self.ExtFields); err == nil {
 		extFields = string(bf)
 	}
 
 	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s]"
-	info := fmt.Sprintf(format, rc.Code, rc.Language, rc.Version, rc.Opaque, flagBinary, rc.Remark, extFields)
-	return info
+	return fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields)
 }
-
-//// DecodeCommand RemotingCommand转字符串
-//// Author: rongzhihong
-//// Since: 2017/9/19
-//func (self *RemotingCommand) DecodeCommand() []byte {
-//	if bf, err := ffjson.Marshal(self); err == nil {
-//		return bf
-//	}
-//	return nil
-//}

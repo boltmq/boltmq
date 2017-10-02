@@ -100,7 +100,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	result := &namesrv.RegisterBrokerResult{}
 	self.ReadWriteLock.Lock()
 	defer self.ReadWriteLock.Unlock()
-	logger.Info("\n")
+	logger.Info("routeInfoManager.registerBroker() start ...")
 
 	/**
 	 * 更新集群信息，维护self.NamesrvController.RouteInfoManager.clusterAddrTable变量
@@ -113,7 +113,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 		self.ClusterAddrTable[clusterName] = brokerNames
 	}
 	brokerNames.Add(brokerName)
-	self.printClusterAddrTable()
+	//self.printClusterAddrTable()
 
 	/**
 	 *  更新主备信息, 维护RouteInfoManager.brokerAddrTable变量,该变量是维护BrokerAddr、BrokerId、BrokerName等信息
@@ -128,24 +128,19 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 		brokerData = route.NewBrokerData(brokerName)
 		self.BrokerAddrTable[brokerName] = brokerData
 	}
-	self.printBrokerAddrTable()
 
 	oldAddr, ok := brokerData.BrokerAddrs[int(brokerId)]
 	registerFirst = registerFirst || ok || oldAddr == ""
 	brokerData.BrokerAddrs[int(brokerId)] = brokerAddr
-	if brokerId == stgcommon.MASTER_ID {
-		logger.Info("++++++> brokerAddr=%s,  brokerId=%d, brokerName=%s", brokerAddr, brokerId, brokerName)
-	}
-	self.printBrokerAddrTable()
+	//self.printBrokerAddrTable()
 
 	// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)
 	if topicConfigWrapper != nil && brokerId == stgcommon.MASTER_ID {
 		isChanged := self.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.DataVersion)
 		if isChanged || registerFirst {
-			// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)
+			// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)，则搜集topic关联的queueData信息
 			if tcTable := topicConfigWrapper.TopicConfigTable; tcTable != nil && tcTable.TopicConfigs != nil {
 				tcTable.Foreach(func(topic string, topicConfig *stgcommon.TopicConfig) {
-					// TODO:遍历可能存在问题
 					self.createAndUpdateQueueData(brokerName, topicConfig)
 				})
 			}
@@ -162,9 +157,8 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 			format = "new broker registerd, brokerAddr: %s, HaServer: %s"
 		}
 		logger.Info(format, brokerAddr, haServerAddr)
-
 		self.BrokerLiveTable[brokerAddr] = brokerLiveInfo
-		self.printBrokerLiveTable()
+		//self.printBrokerLiveTable()
 	}
 
 	// 更新Filter Server列表: 对于filterServerList不为空的,以broker地址为key值存入
@@ -178,21 +172,16 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 
 	// 找到该BrokerName下面的主节点
 	if brokerId != stgcommon.MASTER_ID {
-		masterAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
-		//logger.Info("------------> brokerId=%d, masterAddr=%s, ok=%t", stgcommon.MASTER_ID, masterAddr, ok)
-		//self.printBrokerAddrTable()
-
-		if ok && masterAddr != "" {
-			brokerLiveInfo, ok := self.BrokerLiveTable[masterAddr]
-			if ok && brokerLiveInfo != nil {
+		if masterAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]; ok && masterAddr != "" {
+			if brokerLiveInfo, ok := self.BrokerLiveTable[masterAddr]; ok && brokerLiveInfo != nil {
 				// Broker主节点地址: 从brokerLiveTable中获取BrokerLiveInfo对象，取该对象的HaServerAddr值
 				result.HaServerAddr = brokerLiveInfo.HaServerAddr
 				result.MasterAddr = masterAddr
 			}
 		}
 	}
-	logger.Info("routeInfoManager.registerBroker() end ...")
 
+	logger.Info("routeInfoManager.registerBroker() end ...\n")
 	return result
 }
 
@@ -267,18 +256,15 @@ func (self *RouteInfoManager) wipeWritePermOfBroker(brokerName string) int {
 func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicConfig *stgcommon.TopicConfig) {
 	topic := topicConfig.TopicName
 	queueData := route.NewQueueData(brokerName, topicConfig)
-	logger.Info("createAndUpdateQueueData ---> brokerName=%s, %s", brokerName, topicConfig.ToString())
 
 	queueDataList, ok := self.TopicQueueTable[topic]
 	if !ok || queueDataList == nil {
-		logger.Info("self.TopicQueueTable[topic].queueDataList is nil ")
 		queueDataList = make([]*route.QueueData, 0)
 		queueDataList = append(queueDataList, queueData)
 		self.TopicQueueTable[topic] = queueDataList
 		logger.Info("new topic registerd, topic[%s], %s", topic, queueData.ToString())
-		self.printTopicQueueTable()
+		//self.printTopicQueueTable()
 	} else {
-		logger.Info("self.TopicQueueTable[topic].queueDataList has data ++++++++++ ")
 		addNewOne := true
 		for index, qd := range queueDataList {
 			if qd != nil && qd.BrokerName == brokerName {
@@ -294,7 +280,7 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 		if addNewOne {
 			queueDataList = append(queueDataList, queueData)
 			//再次打印日志，看看有多少数据
-			self.printTopicQueueTable()
+			//self.printTopicQueueTable()
 		}
 	}
 }
@@ -614,7 +600,7 @@ func (self *RouteInfoManager) printTopicQueueTable() {
 			}
 		}
 	}
-	logger.Info("\n")
+	logger.Info("")
 }
 
 // printClusterAddrTable 打印self.ClusterAddrTable 数据
@@ -639,7 +625,7 @@ func (self *RouteInfoManager) printClusterAddrTable() {
 		}
 		logger.Info("clusterAddrTable clusterName [%s],  brokerNames[%s]", clusterName, info)
 	}
-	logger.Info("\n")
+	logger.Info("")
 }
 
 // printBrokerLiveTable 打印self.BrokerLiveTable 数据
@@ -657,7 +643,7 @@ func (self *RouteInfoManager) printBrokerLiveTable() {
 		}
 		logger.Info("brokerLiveTable brokerAddr: %s %s", brokerAddr, info)
 	}
-	logger.Info("\n")
+	logger.Info("")
 }
 
 // printBrokerAddrTable 打印self.BrokerAddrTable 数据
@@ -675,7 +661,7 @@ func (self *RouteInfoManager) printBrokerAddrTable() {
 		}
 		logger.Info("brokerAddrTable brokerName: %s, %s", brokerName, info)
 	}
-	logger.Info("\n")
+	logger.Info("")
 }
 
 // getSystemTopicList 获取指定集群下的所有topic列表
@@ -707,7 +693,6 @@ func (self *RouteInfoManager) getSystemTopicList() []byte {
 				}
 			}
 		}
-
 	}
 	self.ReadWriteLock.RUnlock()
 	return topicList.CustomEncode(topicList)

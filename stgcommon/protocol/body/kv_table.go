@@ -8,11 +8,3 @@ type KVTable struct {
 	Table map[string]string `json:"table"`
 	*protocol.RemotingSerializable
 }
-
-func NewKVTable() *KVTable {
-	kvTable := &KVTable{
-		Table:                make(map[string]string),
-		RemotingSerializable: new(protocol.RemotingSerializable),
-	}
-	return kvTable
-}

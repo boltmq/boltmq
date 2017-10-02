@@ -93,7 +93,8 @@ func main() {
 
 	err = result.KvTable.CustomDecode(response.Body, result.KvTable)
 	if err != nil {
-		logger.Error("sync response REGISTER_BROKER body decode err: %s", err.Error())
+		format := "sync response REGISTER_BROKER body CustomDecode err: %s"
+		logger.Error(format, err.Error())
 		return
 	}
 	logger.Info("sync response REGISTER_BROKER success. %s", result.ToString())
