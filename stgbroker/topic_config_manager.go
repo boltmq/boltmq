@@ -275,13 +275,19 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTable *body.KVTabl
 
 	// set遍历
 	for val := range orderTopics.Iter() {
-		topicConfig := self.TopicConfigSerializeWrapper.TopicConfigTable.Get(val.(string))
-		topicConfig.Order = true
-		isChange = true
+		if value, ok := val.(string); ok {
+			topicConfig := self.TopicConfigSerializeWrapper.TopicConfigTable.Get(value)
+			if topicConfig != nil {
+				topicConfig.Order = true
+				isChange = true
+			} else {
+				// todo: 打印日志？
+			}
+		}
 	}
-	self.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(k string, v *stgcommon.TopicConfig) {
-		if !orderTopics.Contains(v) {
-			v.Order = true
+	self.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(topic string, topicConfig *stgcommon.TopicConfig) {
+		if topicConfig != nil && !orderTopics.Contains(topicConfig) {
+			topicConfig.Order = true
 			isChange = true
 		}
 	})
@@ -320,32 +326,42 @@ func (tcm *TopicConfigManager) DeleteTopicConfig(topic string) {
 // buildTopicConfigSerializeWrapper 创建TopicConfigSerializeWrapper
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) buildTopicConfigSerializeWrapper() *body.TopicConfigSerializeWrapper {
-	topicConfigSerializeWrapper := body.NewTopicConfigSerializeWrapper()
-	topicConfigSerializeWrapper.DataVersion = tcm.TopicConfigSerializeWrapper.DataVersion
-	topicConfigSerializeWrapper.TopicConfigTable = tcm.TopicConfigSerializeWrapper.TopicConfigTable
-	return topicConfigSerializeWrapper
+func (self *TopicConfigManager) buildTopicConfigSerializeWrapper() *body.TopicConfigSerializeWrapper {
+	topicConfigWrapper := body.NewTopicConfigSerializeWrapper()
+	topicConfigWrapper.DataVersion = self.TopicConfigSerializeWrapper.DataVersion
+	topicConfigWrapper.TopicConfigTable = self.TopicConfigSerializeWrapper.TopicConfigTable
+	return topicConfigWrapper
 }
 
 func (tcm *TopicConfigManager) Load() bool {
 	return tcm.ConfigManagerExt.Load()
 }
 
-func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
-	if str, err := json.Marshal(tcm.TopicConfigSerializeWrapper); err == nil {
-		return string(str)
+func (self *TopicConfigManager) Encode(prettyFormat bool) string {
+	if buf, err := json.Marshal(self.TopicConfigSerializeWrapper); err == nil {
+		return string(buf)
 	}
-
 	return ""
 }
 
-func (tcm *TopicConfigManager) Decode(content []byte) {
-	if content != nil && len(content) > 0 {
-		json.Unmarshal(content, tcm.TopicConfigSerializeWrapper)
+func (self *TopicConfigManager) Decode(content []byte) {
+	if content == nil || len(content) <= 0 {
+		logger.Errorf("TopicConfigManager.Decode() param content is nil")
+		return
+	}
+	if self == nil || self.TopicConfigSerializeWrapper == nil || self.TopicConfigSerializeWrapper.TopicConfigTable == nil {
+		logger.Errorf("TopicConfigManager.TopicConfigTable is nil")
+		return
+	}
+
+	err := json.Unmarshal(content, self.TopicConfigSerializeWrapper)
+	if err != nil {
+		logger.Errorf("TopicConfigSerializeWrapper.Decode() err: %s", err.Error())
+		return
 	}
 }
 
-func (tcm *TopicConfigManager) ConfigFilePath() string {
+func (self *TopicConfigManager) ConfigFilePath() string {
 	user, _ := user.Current()
 	return GetTopicConfigPath(user.HomeDir)
 }
