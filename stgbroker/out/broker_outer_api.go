@@ -131,9 +131,9 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 
 	result := namesrv.NewRegisterBrokerResult(responseHeader.HaServerAddr, responseHeader.MasterAddr)
 	if response.Body != nil && len(response.Body) > 0 {
-		err = result.KvTable.Decode(response.Body)
+		err = result.KvTable.CustomDecode(response.Body, result.KvTable)
 		if err != nil {
-			logger.Errorf("sync response REGISTER_BROKER body decode err: %s", err.Error())
+			logger.Errorf("sync response REGISTER_BROKER body CustomDecode err: %s", err.Error())
 			return nil, err
 		}
 	}
@@ -219,8 +219,8 @@ func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicCon
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			tcsw := &body.TopicConfigSerializeWrapper{}
-			err := tcsw.Decode(response.Body)
+			tcsw := body.NewTopicConfigSerializeWrapper()
+			err := tcsw.CustomDecode(response.Body, tcsw)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -241,8 +241,8 @@ func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.Consu
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			cosw := &body.ConsumerOffsetSerializeWrapper{}
-			err := cosw.Decode(response.Body)
+			cosw := body.NewConsumerOffsetSerializeWrapper()
+			err := cosw.CustomDecode(response.Body, cosw)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -280,8 +280,8 @@ func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *b
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			sgw := &body.SubscriptionGroupWrapper{}
-			err := sgw.Decode(response.Body)
+			sgw := body.NewSubscriptionGroupWrapper()
+			err := sgw.CustomDecode(response.Body, sgw)
 			if err != nil {
 				logger.Error(err)
 			}

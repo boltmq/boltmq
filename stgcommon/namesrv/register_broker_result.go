@@ -19,12 +19,13 @@ type RegisterBrokerResult struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
 func NewRegisterBrokerResult(haServerAddr, masterAddr string) *RegisterBrokerResult {
-	registerBrokerResult := &RegisterBrokerResult{
+	result := &RegisterBrokerResult{
 		HaServerAddr: haServerAddr,
 		MasterAddr:   masterAddr,
-		KvTable:      body.NewKVTable(),
+		KvTable:      &body.KVTable{},
 	}
-	return registerBrokerResult
+	result.KvTable.Table = make(map[string]string)
+	return result
 }
 
 func (self *RegisterBrokerResult) ToString() string {
