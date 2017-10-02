@@ -5,7 +5,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/toolkits/file"
-	"io/ioutil"
 	"sync"
 )
 
@@ -44,9 +43,9 @@ func (cme *ConfigManagerExt) Load() bool {
 		fmt.Printf("create %s successful. \n", fileName)
 	}
 
-	buf, err := ioutil.ReadFile(fileName)
+	buf, err := file.ToBytes(fileName)
 	if err != nil {
-		fmt.Println("ReadFile: ", err.Error())
+		fmt.Println("read file err: %s", err.Error())
 		return false
 	}
 

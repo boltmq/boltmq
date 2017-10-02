@@ -5,6 +5,12 @@ import (
 )
 
 func main() {
-	registry.Startup()
-	select {}
+	stopChannel := make(chan bool, 1) // the 'stopChannel' variable to handle controller.shutdownHook()
+	registry.Startup(stopChannel)
+	for {
+		select {
+		case <-stopChannel:
+			return
+		}
+	}
 }

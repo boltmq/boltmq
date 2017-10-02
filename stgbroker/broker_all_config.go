@@ -18,7 +18,7 @@ type BrokerAllConfig struct {
 // Since 2017/9/12
 func NewBrokerAllConfig() *BrokerAllConfig {
 	allConfig := new(BrokerAllConfig)
-	allConfig.BrokerConfig = stgcommon.NewBrokerConfig("", "")
+	allConfig.BrokerConfig = stgcommon.NewDefaultBrokerConfig()
 	allConfig.MessageStoreConfig = stgstorelog.NewMessageStoreConfig()
 	return allConfig
 }

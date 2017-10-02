@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
@@ -32,9 +32,9 @@ func NewQueryMessageProcessor(brokerController *BrokerController) *PullMessagePr
 func (qmp *QueryMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	switch request.Code {
-	case commonprotocol.QUERY_MESSAGE:
+	case code.QUERY_MESSAGE:
 		return qmp.QueryMessage(ctx, request)
-	case commonprotocol.VIEW_MESSAGE_BY_ID:
+	case code.VIEW_MESSAGE_BY_ID:
 		return qmp.ViewMessageById(ctx, request)
 	}
 	return nil, nil
@@ -62,7 +62,7 @@ func (qmp *QueryMessageProcessor) QueryMessage(ctx netm.Context, request *protoc
 		responseHeader.IndexLastUpdateTimestamp = queryMessageResult.IndexLastUpdateTimestamp
 
 		if queryMessageResult.BufferTotalSize > 0 {
-			response.Code = commonprotocol.SUCCESS
+			response.Code = code.SUCCESS
 			response.Remark = ""
 
 			queryMessageTransfer := pagecache.NewQueryMessageTransfer(response, queryMessageResult)
@@ -75,7 +75,7 @@ func (qmp *QueryMessageProcessor) QueryMessage(ctx netm.Context, request *protoc
 		}
 	}
 
-	response.Code = commonprotocol.QUERY_NOT_FOUND
+	response.Code = code.QUERY_NOT_FOUND
 	response.Remark = "can not find message, maybe time range not correct"
 	return response, nil
 }
@@ -96,7 +96,7 @@ func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *pro
 
 	selectMapedBufferResult := qmp.BrokerController.MessageStore.SelectOneMessageByOffset(requestHeader.Offset)
 	if selectMapedBufferResult != nil {
-		response.Code = commonprotocol.SUCCESS
+		response.Code = code.SUCCESS
 		response.Remark = ""
 
 		oneMessageTransfer := pagecache.NewOneMessageTransfer(response, selectMapedBufferResult)
@@ -108,7 +108,7 @@ func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *pro
 		return nil, nil
 	}
 
-	response.Code = commonprotocol.QUERY_NOT_FOUND
+	response.Code = code.QUERY_NOT_FOUND
 	response.Remark = fmt.Sprintf("can not find message by the offset:%d", requestHeader.Offset)
 	return response, nil
 }

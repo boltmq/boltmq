@@ -1,6 +1,7 @@
 package out
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -46,6 +47,7 @@ func NewDefaultBrokerOuterAPI(remotingClient *remoting.DefalutRemotingClient) *B
 func (self *BrokerOuterAPI) Start() {
 	if self.remotingClient != nil {
 		self.remotingClient.Start()
+		logger.Infof("brokerOuterAPI start successful")
 	}
 }
 
@@ -87,7 +89,7 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
-	topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) *namesrv.RegisterBrokerResult {
+	topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
 
 	requestHeader := headerNamesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
@@ -99,45 +101,50 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 
 	if oneway {
 		self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
-		return nil
+		return nil, nil
 	}
 
 	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
 	if err != nil {
 		logger.Errorf("register broker failed. err:[%s], %s", err.Error(), request.ToString())
-		return nil
+		return nil, err
 	}
 	if response == nil {
-		logger.Error("register broker end, but response nil")
-		return nil
+		errMsg := "register broker end, but response nil"
+		logger.Error(errMsg)
+		return nil, fmt.Errorf(errMsg)
 	}
 
 	if response.Code != code.SUCCESS {
-		logger.Errorf("register broker end, but not success. %s", response.ToString())
-		return nil
+		errMsg := "register broker end, but not success. %s"
+		logger.Errorf(errMsg, response.ToString())
+		return nil, fmt.Errorf(errMsg, response.ToString())
 	}
 
 	//logger.Infof("register broker ok. %s", response.ToString())
 	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
-		logger.Error("err: %s", err.Error())
+		logger.Errorf("err: %s", err.Error())
+		return nil, err
 	}
 
-	result := &namesrv.RegisterBrokerResult{}
-	result.MasterAddr = responseHeader.MasterAddr
-	result.HaServerAddr = responseHeader.HaServerAddr
-	if response.Body != nil {
-		result.KvTable.Decode(response.Body)
+	result := namesrv.NewRegisterBrokerResult(responseHeader.HaServerAddr, responseHeader.MasterAddr)
+	if response.Body != nil && len(response.Body) > 0 {
+		err = result.KvTable.Decode(response.Body)
+		if err != nil {
+			logger.Errorf("sync response REGISTER_BROKER body decode err: %s", err.Error())
+			return nil, err
+		}
 	}
-	return result
+	return result, nil
 }
 
 // RegisterBrokerAll 向每个nameservice注册
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	var registerBrokerResult *namesrv.RegisterBrokerResult
 
@@ -147,11 +154,15 @@ haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSeriali
 	}
 
 	for _, namesrvAddr := range nameServerAddressList {
-		result := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
+		result, err := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
+		if err != nil {
+			logger.Errorf("brokerOuterAPI.RegisterBrokerAll() err: %s", err.Error())
+			return nil
+		}
 		if result != nil {
 			registerBrokerResult = result
 		}
-		logger.Infof("register broker to name server %s OK, the result: %v", namesrvAddr, result)
+		logger.Infof("register broker to name server %s OK, the result: %s", namesrvAddr, result.ToString())
 	}
 	return registerBrokerResult
 }

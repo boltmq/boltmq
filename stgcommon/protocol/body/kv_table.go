@@ -10,8 +10,9 @@ type KVTable struct {
 }
 
 func NewKVTable() *KVTable {
-	var KVTable = new(KVTable)
-	KVTable.Table = make(map[string]string)
-	KVTable.RemotingSerializable = new(protocol.RemotingSerializable)
-	return KVTable
+	kvTable := &KVTable{
+		Table:                make(map[string]string),
+		RemotingSerializable: new(protocol.RemotingSerializable),
+	}
+	return kvTable
 }

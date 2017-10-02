@@ -19,8 +19,11 @@ func main() {
 
 	registerBrokerRequestList := initRegisterBrokerRequestHeader()
 	for _, r := range registerBrokerRequestList {
-		result := api.RegisterBroker(namesrvAddr, r.ClusterName, r.BrokerAddr, r.BrokerName, r.HaServerAddr, r.BrokerId, topicConfigWrapper, oneway, filter)
-		logger.Info("result--> %s", result.ToString())
+		result, err := api.RegisterBroker(namesrvAddr, r.ClusterName, r.BrokerAddr, r.BrokerName, r.HaServerAddr, r.BrokerId, topicConfigWrapper, oneway, filter)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		logger.Info("result --> %s", result.ToString())
 	}
 
 	select {}

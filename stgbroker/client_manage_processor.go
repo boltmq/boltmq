@@ -8,7 +8,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
@@ -25,23 +24,23 @@ type ClientManageProcessor struct {
 // NewClientManageProcessor 初始化ClientManageProcessor
 // Author gaoyanlei
 // Since 2017/8/9
-func NewClientManageProcessor(brokerController *BrokerController) *ClientManageProcessor {
+func NewClientManageProcessor(controller *BrokerController) *ClientManageProcessor {
 	var clientManageProcessor = new(ClientManageProcessor)
-	clientManageProcessor.BrokerController = brokerController
+	clientManageProcessor.BrokerController = controller
 	return clientManageProcessor
 }
 
 func (cmp *ClientManageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
-	case protocol2.HEART_BEAT:
+	case code.HEART_BEAT:
 		return cmp.heartBeat(ctx, request)
-	case protocol2.UNREGISTER_CLIENT:
+	case code.UNREGISTER_CLIENT:
 		return cmp.unregisterClient(ctx, request)
-	case protocol2.GET_CONSUMER_LIST_BY_GROUP:
+	case code.GET_CONSUMER_LIST_BY_GROUP:
 		return cmp.getConsumerListByGroup(ctx, request)
-	case protocol2.QUERY_CONSUMER_OFFSET:
+	case code.QUERY_CONSUMER_OFFSET:
 		return cmp.queryConsumerOffset(ctx, request)
-	case protocol2.UPDATE_CONSUMER_OFFSET:
+	case code.UPDATE_CONSUMER_OFFSET:
 		return cmp.updateConsumerOffset(ctx, request)
 	}
 	return nil, nil

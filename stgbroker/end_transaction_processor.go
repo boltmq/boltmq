@@ -4,7 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
@@ -94,21 +94,21 @@ func (etp *EndTransactionProcessor) ProcessRequest(ctx netm.Context, request *pr
 		// 校验Producer Group
 		pgroupRead, ok := msgExt.Properties[message.PROPERTY_PRODUCER_GROUP]
 		if !ok || !strings.EqualFold(pgroupRead, requestHeader.ProducerGroup) {
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "the producer group wrong"
 			return response, nil
 		}
 
 		// 校验Transaction State Table Offset
 		if msgExt.QueueOffset != requestHeader.TranStateTableOffset {
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "the transaction state table offset wrong"
 			return response, nil
 		}
 
 		// 校验Commit Log Offset
 		if msgExt.CommitLogOffset != requestHeader.CommitLogOffset {
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "the commit log offset wrong"
 			return response, nil
 		}
@@ -134,32 +134,32 @@ func (etp *EndTransactionProcessor) ProcessRequest(ctx netm.Context, request *pr
 			case stgstorelog.FLUSH_DISK_TIMEOUT:
 			case stgstorelog.FLUSH_SLAVE_TIMEOUT:
 			case stgstorelog.SLAVE_NOT_AVAILABLE:
-				response.Code = commonprotocol.SUCCESS
+				response.Code = code.SUCCESS
 				response.Remark = ""
 			case stgstorelog.CREATE_MAPEDFILE_FAILED:
-				response.Code = commonprotocol.SYSTEM_ERROR
+				response.Code = code.SYSTEM_ERROR
 				response.Remark = "create maped file failed."
 			case stgstorelog.MESSAGE_ILLEGAL:
-				response.Code = commonprotocol.SYSTEM_ERROR
+				response.Code = code.SYSTEM_ERROR
 				response.Remark = "the message is illegal, maybe length not matched."
 			case stgstorelog.SERVICE_NOT_AVAILABLE:
-				response.Code = commonprotocol.SYSTEM_ERROR
+				response.Code = code.SYSTEM_ERROR
 				response.Remark = "service not available now."
 			case stgstorelog.PUTMESSAGE_UNKNOWN_ERROR:
-				response.Code = commonprotocol.SYSTEM_ERROR
+				response.Code = code.SYSTEM_ERROR
 				response.Remark = "UNKNOWN_ERROR"
 			default:
-				response.Code = commonprotocol.SYSTEM_ERROR
+				response.Code = code.SYSTEM_ERROR
 				response.Remark = "UNKNOWN_ERROR DEFAULT"
 			}
 			return response, nil
 
 		} else {
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "store putMessage return null"
 		}
 	} else {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = "find prepared transaction message failed"
 		return response, nil
 	}

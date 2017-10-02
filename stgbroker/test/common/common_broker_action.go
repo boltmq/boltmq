@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
@@ -25,7 +25,7 @@ func CreateTopic(bc *stgbroker.BrokerController, ctx netm.Context, topicConfigOl
 	if topicConfigOld != nil {
 		requestHeader.TopicSysFlag = topicConfigOld.TopicSysFlag + 1
 	}
-	return ProcessRequest(bc, ctx, protocol2.UPDATE_AND_CREATE_TOPIC, requestHeader)
+	return ProcessRequest(bc, ctx, code.UPDATE_AND_CREATE_TOPIC, requestHeader)
 }
 
 func ProcessRequest(bc *stgbroker.BrokerController, ctx netm.Context, code int32, requestHeader protocol.CommandCustomHeader) (*protocol.RemotingCommand, error) {

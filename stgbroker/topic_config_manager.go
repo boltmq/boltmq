@@ -7,7 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
-	"github.com/deckarep/golang-set"
+	set "github.com/deckarep/golang-set"
 	"os/user"
 	lock "sync"
 )
@@ -17,7 +17,7 @@ type TopicConfigManager struct {
 	lockTopicConfigTable        lock.Mutex
 	BrokerController            *BrokerController
 	TopicConfigSerializeWrapper *body.TopicConfigSerializeWrapper
-	SystemTopicList             mapset.Set
+	SystemTopicList             set.Set
 	ConfigManagerExt            *ConfigManagerExt
 	DataVersion                 *stgcommon.DataVersion
 }
@@ -41,7 +41,7 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.SELF_TEST_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -56,7 +56,7 @@ func (self *TopicConfigManager) init() {
 		if autoCreateTopicEnable {
 			topicName := stgcommon.DEFAULT_TOPIC
 			topicConfig := stgcommon.NewTopicConfigByName(topicName)
-			self.SystemTopicList = mapset.NewSet()
+			self.SystemTopicList = set.NewSet()
 			self.SystemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.WriteQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
@@ -70,7 +70,7 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.BENCHMARK_TOPIC
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
@@ -82,7 +82,7 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if self.BrokerController.BrokerConfig.ClusterTopicEnable {
@@ -97,7 +97,7 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerName
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if self.BrokerController.BrokerConfig.BrokerTopicEnable {
@@ -114,7 +114,7 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.OFFSET_MOVED_EVENT
 		topicConfig := stgcommon.NewTopicConfigByName(topicName)
-		self.SystemTopicList = mapset.NewSet()
+		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -260,32 +260,35 @@ func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicCon
 // updateOrderTopicConfig 更新顺序topic
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) updateOrderTopicConfig(orderKVTableFromNs body.KVTable) {
-	if orderKVTableFromNs.Table != nil {
-		isChange := false
-		orderTopics := mapset.NewSet()
-		// 通过set集合去重
-		for k, _ := range orderKVTableFromNs.Table {
-			orderTopics.Add(k)
-		}
+func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTable *body.KVTable) {
+	if orderKVTable == nil || orderKVTable.Table == nil {
+		logger.Info("orderKVTable or orderKVTable.Table is nil")
+		return
+	}
 
-		// set遍历
-		for val := range orderTopics.Iter() {
-			topicConfig := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(val.(string))
-			topicConfig.Order = true
+	isChange := false
+	orderTopics := set.NewSet()
+	// 通过set集合去重
+	for k, _ := range orderKVTable.Table {
+		orderTopics.Add(k)
+	}
+
+	// set遍历
+	for val := range orderTopics.Iter() {
+		topicConfig := self.TopicConfigSerializeWrapper.TopicConfigTable.Get(val.(string))
+		topicConfig.Order = true
+		isChange = true
+	}
+	self.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(k string, v *stgcommon.TopicConfig) {
+		if !orderTopics.Contains(v) {
+			v.Order = true
 			isChange = true
 		}
-		tcm.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(k string, v *stgcommon.TopicConfig) {
-			if !orderTopics.Contains(v) {
-				v.Order = true
-				isChange = true
-			}
-		})
+	})
 
-		if isChange {
-			tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
-			tcm.ConfigManagerExt.Persist()
-		}
+	if isChange {
+		self.TopicConfigSerializeWrapper.DataVersion.NextVersion()
+		self.ConfigManagerExt.Persist()
 	}
 }
 
@@ -296,10 +299,8 @@ func (tcm *TopicConfigManager) IsOrderTopic(topic string) bool {
 	topicConfig := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	if topicConfig == nil {
 		return false
-	} else {
-		return topicConfig.Order
 	}
-	return false
+	return topicConfig.Order
 }
 
 // deleteTopicConfig 删除topic
@@ -334,6 +335,7 @@ func (tcm *TopicConfigManager) Encode(prettyFormat bool) string {
 	if str, err := json.Marshal(tcm.TopicConfigSerializeWrapper); err == nil {
 		return string(str)
 	}
+
 	return ""
 }
 
