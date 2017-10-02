@@ -3,6 +3,7 @@ package stgbroker
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
@@ -12,24 +13,38 @@ import (
 	"strings"
 )
 
+// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/26
+type SmartgoBrokerConfig struct {
+	BrokerClusterName string
+	BrokerName        string
+	DeleteWhen        int
+	FileReservedTime  int
+	BrokerRole        string
+	FlushDiskType     string
+}
+
 // Start 启动BrokerController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
 func Start(stopChan chan bool) *BrokerController {
+	// 构建BrokerController控制器
 	controller := CreateBrokerController()
+
+	// 注册ShutdownHook钩子
+	controller.registerShutdownHook(stopChan)
+
+	// 启动BrokerController
 	controller.Start()
 
-	formatBroker := "the broker[%s, %s] boot success."
-	tips := fmt.Sprintf(formatBroker, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr())
-
-	if "" != controller.BrokerConfig.NamesrvAddr {
-		formatNamesrv := "the broker[%s, %s] boot success, and the name server is %s"
-		tips = fmt.Sprintf(formatNamesrv, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr(), controller.BrokerConfig.NamesrvAddr)
+	format := "the broker[%s, %s] boot success."
+	tips := fmt.Sprintf(format, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr())
+	if controller.BrokerConfig.NamesrvAddr != "" {
+		format = "the broker[%s, %s] boot success, and the name server is %s"
+		tips = fmt.Sprintf(format, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr(), controller.BrokerConfig.NamesrvAddr)
 	}
-	fmt.Println(tips)
-
-	// 监听broker程序停止信号并shutdown对应服务
-	controller.shutdownHook(stopChan)
+	logger.Info(tips)
 
 	return controller
 }
@@ -44,13 +59,13 @@ func CreateBrokerController() *BrokerController {
 		// 通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
 		// TODO:为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
 		brokerConfigPath = stgcommon.GetSmartgoConfigDir() + cfgName
-		fmt.Printf("idea special brokerConfigPath = %s \n", brokerConfigPath)
+		logger.Info("idea special brokerConfigPath = %s", brokerConfigPath)
 	}
 
 	// 读取并转化*.toml配置项的值
 	var cfg SmartgoBrokerConfig
 	parseutil.ParseConf(brokerConfigPath, &cfg)
-	fmt.Println(cfg.ToString())
+	logger.Info(cfg.ToString())
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName)
@@ -72,11 +87,12 @@ func CreateBrokerController() *BrokerController {
 	// 初始化controller
 	initResult := controller.Initialize()
 	if !initResult {
-		fmt.Println("the broker initialize failed")
+		logger.Info("the broker initialize failed")
 		controller.Shutdown()
 		os.Exit(0)
 	}
 
+	logger.Info("create broker controller successful")
 	return controller
 }
 
@@ -86,30 +102,30 @@ func CreateBrokerController() *BrokerController {
 func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 	// 如果没有设置home环境变量，则启动失败
 	if "" == brokerConfig.SmartGoHome {
-		errMsg := fmt.Sprintf("Please set the '%s' variable in your environment to match the location of the Smartgo installation\n", stgcommon.SMARTGO_HOME_ENV)
-		fmt.Printf(errMsg)
+		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
+		logger.Info(format, stgcommon.SMARTGO_HOME_ENV)
 		return false
 	}
 
 	// 检测环境变量NAMESRV_ADDR
 	nameSrvAddr := brokerConfig.NamesrvAddr
 	if strings.TrimSpace(nameSrvAddr) == "" {
-		errMsg := fmt.Sprintf("Please set the '%s' variable in your environment\n", stgcommon.NAMESRV_ADDR_ENV)
-		fmt.Printf(errMsg)
+		format := "please set the '%s' variable in your environment"
+		logger.Info(format, stgcommon.NAMESRV_ADDR_ENV)
 		return false
 	}
 
 	// 检测NameServer环境变量设置是否正确 IP:PORT
 	addrs := strings.Split(strings.TrimSpace(nameSrvAddr), ";")
 	if addrs == nil || len(addrs) == 0 {
-		errMsg := fmt.Sprintf("the %s=%s environment variable is invalid. \n", stgcommon.NAMESRV_ADDR_ENV, addrs)
-		fmt.Printf(errMsg)
+		format := "the %s=%s environment variable is invalid."
+		logger.Info(format, stgcommon.NAMESRV_ADDR_ENV, addrs)
 		return false
 	}
 	for _, addr := range addrs {
 		if !stgcommon.CheckIpAndPort(addr) {
-			format := "The Name Server Address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\"\n"
-			fmt.Printf(format, addr)
+			format := "the name server address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\""
+			logger.Info(format, addr)
 			return false
 		}
 	}
@@ -135,25 +151,13 @@ func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig,
 		brokerConfig.BrokerId = stgcommon.MASTER_ID
 	case config.SLAVE:
 		if brokerConfig.BrokerId <= 0 {
-			fmt.Printf("Slave's brokerId[%d] must be > 0 \n", brokerConfig.BrokerId)
+			logger.Info("Slave's brokerId[%d] must be > 0", brokerConfig.BrokerId)
 			return false
 		}
 	default:
 
 	}
 	return true
-}
-
-// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-type SmartgoBrokerConfig struct {
-	BrokerClusterName string
-	BrokerName        string
-	DeleteWhen        int
-	FileReservedTime  int
-	BrokerRole        string
-	FlushDiskType     string
 }
 
 // ToString 打印smartgoBroker配置项

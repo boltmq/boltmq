@@ -17,7 +17,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	storeStatis "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
+	storeStats "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
 	"os"
 	"os/signal"
 	"strconv"
@@ -25,6 +25,20 @@ import (
 	"time"
 )
 
+const (
+	broker_ip   = "0.0.0.0"
+	broker_port = 10911
+	ten_second  = 10 * 1000
+	one_minute  = 60 * 1000
+	two_minute  = 2 * one_minute
+	ten_minute  = 10 * one_minute
+	one_hour    = 60 * one_minute
+	one_day     = 24 * one_hour
+)
+
+// BrokerController broker服务控制器
+// Author gaoyanlei
+// Since 2017/8/25
 type BrokerController struct {
 	BrokerConfig                         *stgcommon.BrokerConfig
 	MessageStoreConfig                   *stgstorelog.MessageStoreConfig
@@ -47,7 +61,7 @@ type BrokerController struct {
 	RemotingServer                       *remoting.DefalutRemotingServer
 	TopicConfigManager                   *TopicConfigManager
 	UpdateMasterHAServerAddrPeriodically bool
-	brokerStats                          *storeStatis.BrokerStats
+	brokerStats                          *storeStats.BrokerStats
 	FilterServerManager                  *FilterServerManager
 	brokerStatsManager                   *stats.BrokerStatsManager
 	StoreHost                            string
@@ -56,6 +70,9 @@ type BrokerController struct {
 	consumeMessageHookList               []mqtrace.ConsumeMessageHook
 }
 
+// NewBrokerController 初始化broker服务控制器
+// Author gaoyanlei
+// Since 2017/8/25
 func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfig *stgstorelog.MessageStoreConfig, remotingClient *remoting.DefalutRemotingClient) *BrokerController {
 	var brokerController = new(BrokerController)
 	brokerController.BrokerConfig = brokerConfig
@@ -115,11 +132,11 @@ func (bc *BrokerController) Initialize() bool {
 	result = result && bc.SubscriptionGroupManager.Load()
 	result = result && bc.ConsumerOffsetManager.Load()
 
-	bc.RemotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 10911)
+	bc.RemotingServer = remoting.NewDefalutRemotingServer(broker_ip, broker_port)
 
 	// Master监听Slave请求的端口，默认为服务端口+1
-	// bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
-	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
+	bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port() + 1
+	//bc.MessageStoreConfig.HaListenPort = bc.RemotingServer.Port()
 
 	bc.StoreHost = bc.GetStoreHost()
 
@@ -135,7 +152,7 @@ func (bc *BrokerController) Initialize() bool {
 	// 注册服务
 	bc.registerProcessor()
 
-	bc.brokerStats = storeStatis.NewBrokerStats(bc.MessageStore)
+	bc.brokerStats = storeStats.NewBrokerStats(bc.MessageStore)
 
 	// 定时统计
 	initialDelay, err := strconv.Atoi(fmt.Sprint(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()))
@@ -143,19 +160,19 @@ func (bc *BrokerController) Initialize() bool {
 		logger.Error(err)
 		return false
 	}
-	brokerStatsRecordTicker := timeutil.NewTicker(1000*60*60*24, initialDelay)
+	brokerStatsRecordTicker := timeutil.NewTicker(one_day, initialDelay)
 	go brokerStatsRecordTicker.Do(func(tm time.Time) {
 		bc.brokerStats.Record()
 	})
 
 	// 定时写入ConsumerOffset文件
-	consumerOffsetPersistTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, 1000*10)
+	consumerOffsetPersistTicker := timeutil.NewTicker(bc.BrokerConfig.FlushConsumerOffsetInterval, ten_second)
 	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
 		bc.ConsumerOffsetManager.configManagerExt.Persist()
 	})
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
-	scanUnsubscribedTopicTicker := timeutil.NewTicker(60*60*1000, 10*60*1000)
+	scanUnsubscribedTopicTicker := timeutil.NewTicker(one_hour, ten_minute)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
 		bc.ConsumerOffsetManager.ScanUnsubscribedTopic()
 	})
@@ -166,7 +183,7 @@ func (bc *BrokerController) Initialize() bool {
 	} else {
 		// 更新
 		if bc.BrokerConfig.FetchNamesrvAddrByAddressServer {
-			FetchNameServerAddrTicker := timeutil.NewTicker(1000*60*2, 1000*10)
+			FetchNameServerAddrTicker := timeutil.NewTicker(two_minute, ten_second)
 			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
 				bc.BrokerOuterAPI.FetchNameServerAddr()
 			})
@@ -183,12 +200,12 @@ func (bc *BrokerController) Initialize() bool {
 		}
 
 		// ScheduledTask syncAll slave
-		slaveSynchronizeTicker := timeutil.NewTicker(1000*60, 1000*10)
+		slaveSynchronizeTicker := timeutil.NewTicker(one_minute, ten_second)
 		go slaveSynchronizeTicker.Do(func(tm time.Time) {
 			bc.SlaveSynchronize.syncAll()
 		})
 	} else {
-		printMasterAndSlaveDiffTicker := timeutil.NewTicker(1000*60, 1000*10)
+		printMasterAndSlaveDiffTicker := timeutil.NewTicker(one_minute, ten_second)
 		go printMasterAndSlaveDiffTicker.Do(func(tm time.Time) {
 			bc.printMasterAndSlaveDiff()
 		})
@@ -200,24 +217,24 @@ func (bc *BrokerController) Initialize() bool {
 // shutdownHook 程序停止监听以及处理
 // Author rongzhihong
 // Since 2017/9/12
-func (bc *BrokerController) shutdownHook(stopChan chan bool) {
-	logger.Info("启动监听Broker关闭的程序...")
-
+func (self *BrokerController) registerShutdownHook(stopChan chan bool) {
+	logger.Info("register BrokerController.ShutdownHook() successful")
 	stopSignalChan := make(chan os.Signal, 1)
 
-	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM)
+	// 这种退出方式比较优雅，能够在退出之前做些收尾工作，清理任务和垃圾
+	// http://www.codeweblog.com/nsqlookupd入口文件分析
+	// http://www.cnblogs.com/jkkkk/p/6180016.html
+	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	go func() {
-
 		//阻塞程序运行，直到收到终止的信号
 		s := <-stopSignalChan
+
+		logger.Infof("receive signal code:%d", s)
+		self.Shutdown()
+
+		// 是否有必要close(stopSignalChan)??
 		close(stopSignalChan)
-
-		logger.Infof("收到Broker程序终止的信号, signal code:%d", s)
-
-		bc.Shutdown()
-
-		logger.Info("已成功关闭Broker所有服务!")
 
 		stopChan <- true
 	}()
@@ -227,6 +244,8 @@ func (bc *BrokerController) shutdownHook(stopChan chan bool) {
 // Author rongzhihong
 // Since 2017/9/12
 func (bc *BrokerController) Shutdown() {
+	begineTime := stgcommon.GetCurrentTimeMillis()
+
 	if bc.brokerStatsManager != nil {
 		bc.brokerStatsManager.Shutdown()
 	}
@@ -258,6 +277,9 @@ func (bc *BrokerController) Shutdown() {
 	if bc.FilterServerManager != nil {
 		bc.FilterServerManager.Shutdown()
 	}
+
+	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
+	logger.Info("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
 }
 
 // Start BrokerController启动入口
@@ -268,12 +290,12 @@ func (bc *BrokerController) Start() {
 		bc.MessageStore.Start()
 	}
 
-	// TODO RemotingServer.Start()启动之后，一直处于等待中，后续的其他服务不会启动
-	if bc.RemotingServer != nil {
-		bc.RemotingServer.Start()
-	}
-
-	logger.Infof("reading start BrokerOuterAPI")
+	go func() {
+		//  额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发broker主线程阻塞”情况
+		if bc.RemotingServer != nil {
+			bc.RemotingServer.Start()
+		}
+	}()
 
 	if bc.BrokerOuterAPI != nil {
 		bc.BrokerOuterAPI.Start()
@@ -303,6 +325,8 @@ func (bc *BrokerController) Start() {
 	}
 
 	bc.addDeleteTopicTask()
+
+	logger.Info("start broker controller successful")
 }
 
 // unRegisterBrokerAll 注销所有broker
@@ -318,6 +342,7 @@ func (bc *BrokerController) unRegisterBrokerAll() {
 // Author rongzhihong
 // Since 2017/9/12
 func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
+	logger.Info("register all broker start")
 	topicConfigWrapper := bc.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !constant.IsWriteable(bc.BrokerConfig.BrokerPermission) || !constant.IsReadable(bc.BrokerConfig.BrokerPermission) {
 		topicConfigTable := topicConfigWrapper.TopicConfigTable
@@ -326,7 +351,8 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 		})
 		topicConfigWrapper.TopicConfigTable = topicConfigTable
 	}
-	registerBrokerResult := bc.BrokerOuterAPI.RegisterBrokerAll(
+
+	result := bc.BrokerOuterAPI.RegisterBrokerAll(
 		bc.BrokerConfig.BrokerClusterName,
 		bc.GetBrokerAddr(),
 		bc.BrokerConfig.BrokerName,
@@ -336,17 +362,18 @@ func (bc *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool
 		oneway,
 		bc.FilterServerManager.BuildNewFilterServerList())
 
-	if registerBrokerResult != nil {
-		if bc.UpdateMasterHAServerAddrPeriodically && registerBrokerResult.HaServerAddr != "" {
-			bc.MessageStore.UpdateHaMasterAddress(registerBrokerResult.HaServerAddr)
+	if result != nil {
+		if bc.UpdateMasterHAServerAddrPeriodically && result.HaServerAddr != "" {
+			bc.MessageStore.UpdateHaMasterAddress(result.HaServerAddr)
 		}
 
-		bc.SlaveSynchronize.masterAddr = registerBrokerResult.MasterAddr
+		bc.SlaveSynchronize.masterAddr = result.MasterAddr
 
 		if checkOrderConfig {
-			bc.TopicConfigManager.updateOrderTopicConfig(registerBrokerResult.KvTable)
+			bc.TopicConfigManager.updateOrderTopicConfig(result.KvTable)
 		}
 	}
+	logger.Info("register all broker end")
 }
 
 // getHAServerAddr 获得HAServer的地址

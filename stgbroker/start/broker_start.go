@@ -5,12 +5,12 @@ import (
 )
 
 func main() {
-	stopChan := make(chan bool, 1)
-	stgbroker.Start(stopChan)
+	stopChannel := make(chan bool, 1) // the 'stopChannel' variable to handle controller.shutdownHook()
+	stgbroker.Start(stopChannel)
 
 	for {
 		select {
-		case <-stopChan:
+		case <-stopChannel:
 			return
 		}
 	}

@@ -15,16 +15,25 @@ const (
 // Startup 启动Namesrv控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
-func Startup() *DefaultNamesrvController {
+func Startup(stopChannel chan bool) *DefaultNamesrvController {
+	// 构建NamesrvController
 	controller := CreateNamesrvController()
+
+	// NamesrvController初始化
 	initResult := controller.initialize()
 	if !initResult {
 		logger.Info("the name server controller initialize failed")
 		controller.shutdown()
 		os.Exit(0)
 	}
+
+	// 注册ShutdownHook钩子
+	controller.registerShutdownHook(stopChannel)
+
+	// 启动
 	controller.start()
 	logger.Info("the name server boot success")
+
 	return controller
 }
 

@@ -84,23 +84,18 @@ func main() {
 		logger.Error("sync response REGISTER_BROKER failed. err: %s, response: %s", err.Error(), response.ToString())
 		return
 	}
-	result := namesrvBody.RegisterBrokerResult{
-		HaServerAddr: responseHeader.HaServerAddr,
-		MasterAddr:   responseHeader.MasterAddr,
-	}
+
+	result := namesrvBody.NewRegisterBrokerResult(responseHeader.HaServerAddr, responseHeader.MasterAddr)
 	if response.Body == nil || len(response.Body) == 0 {
 		logger.Info("sync response REGISTER_BROKER success. %s", result.ToString())
 		return
 	}
 
-	var kvTable body.KVTable
-	kvTable.Table = make(map[string]string)
-	err = kvTable.CustomDecode(response.Body, &kvTable)
+	err = result.KvTable.CustomDecode(response.Body, result.KvTable)
 	if err != nil {
 		logger.Error("sync response REGISTER_BROKER body decode err: %s", err.Error())
 		return
 	}
-	result.KvTable = kvTable
 	logger.Info("sync response REGISTER_BROKER success. %s", result.ToString())
 
 	select {}

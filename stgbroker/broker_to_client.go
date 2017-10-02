@@ -7,8 +7,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	body2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
@@ -44,7 +44,7 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGro
 	}
 
 	requestHeader := &header.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
-	request := protocol.CreateRequestCommand(commonprotocol.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
+	request := protocol.CreateRequestCommand(code.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
 	b2c.BrokerController.RemotingServer.InvokeOneway(ctx, request, 10)
 }
 
@@ -53,7 +53,7 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGro
 // Since 2017/9/11
 func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, requestHeader *header.CheckTransactionStateRequestHeader,
 	selectMapedBufferResult *stgstorelog.SelectMapedBufferResult) {
-	request := protocol.CreateRequestCommand(commonprotocol.CHECK_TRANSACTION_STATE, requestHeader)
+	request := protocol.CreateRequestCommand(code.CHECK_TRANSACTION_STATE, requestHeader)
 	request.MarkOnewayRPC()
 
 	// TODO WriteSerialObject不支持request请求
@@ -113,8 +113,8 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	requestHeader.Group = group
 	requestHeader.IsForce = isForce
 
-	request := protocol.CreateRequestCommand(commonprotocol.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
-	resetOffsetBody := body2.NewResetOffsetBody()
+	request := protocol.CreateRequestCommand(code.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
+	resetOffsetBody := body.NewResetOffsetBody()
 	resetOffsetBody.OffsetTable = offsetTable
 	request.Body = stgcommon.Encode(resetOffsetBody)
 
@@ -152,13 +152,13 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 		errorInfo := fmt.Sprintf("Consumer not online, so can not reset offset, Group: %s Topic: %s Timestamp: %d",
 			requestHeader.Group, requestHeader.Topic, requestHeader.Timestamp)
 		logger.Error(errorInfo)
-		response.Code = commonprotocol.CONSUMER_NOT_ONLINE
+		response.Code = code.CONSUMER_NOT_ONLINE
 		response.Remark = errorInfo
 		return response
 	}
 
-	response.Code = commonprotocol.SUCCESS
-	resBody := body2.NewResetOffsetBody()
+	response.Code = code.SUCCESS
+	resBody := body.NewResetOffsetBody()
 	resBody.OffsetTable = offsetTable
 	content := stgcommon.Encode(resBody)
 	response.Body = content
@@ -175,20 +175,20 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 	requestHeader.Topic = topic
 	requestHeader.Group = group
 
-	request := protocol.CreateRequestCommand(commonprotocol.GET_CONSUMER_STATUS_FROM_CLIENT, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_CONSUMER_STATUS_FROM_CLIENT, requestHeader)
 
 	consumerStatusTable := make(map[string]map[*message.MessageQueue]int64)
 
 	consumerGroupInfo := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("No Any Consumer online in the consumer group: [%s]", group)
 		return response
 	}
 
 	channelInfoTable := consumerGroupInfo.ConnTable
 	if nil == channelInfoTable || channelInfoTable.Size() <= 0 {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("No Any Consumer online in the consumer group: [%s]", group)
 		return response
 	}
@@ -212,7 +212,7 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 		clientId := channelInfo.ClientId
 		if version < mqversion.V3_0_7_SNAPSHOT {
 			// 如果有一个客户端是不支持该功能的，则直接返回错误，需要应用方升级。
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = fmt.Sprintf("the client does not support this feature. version=%s",
 				mqversion.GetVersionDesc(int(version)))
 			logger.Warnf("the client does not support this feature. version=%s",
@@ -227,9 +227,9 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 				logger.Error(err)
 			}
 			switch response.Code {
-			case commonprotocol.SUCCESS:
+			case code.SUCCESS:
 				if response.Body != nil && len(response.Body) > 0 {
-					statusBody := body2.NewGetConsumerStatusBody()
+					statusBody := body.NewGetConsumerStatusBody()
 					stgcommon.Decode(response.Body, statusBody)
 
 					consumerStatusTable[clientId] = statusBody.MessageQueueTable
@@ -247,12 +247,12 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 
 	}
 
-	resBody := body2.NewGetConsumerStatusBody()
+	resBody := body.NewGetConsumerStatusBody()
 	resBody.ConsumerTable = consumerStatusTable
 	content := stgcommon.Encode(resBody)
 	response.Body = content
 
-	response.Code = commonprotocol.SUCCESS
+	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response
 }
