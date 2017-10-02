@@ -1,25 +1,21 @@
 package stgstorelog
 
 import (
-	"io/ioutil"
-	"os"
-	"strconv"
-
-	"sync/atomic"
-	"time"
-
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/stats"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-
-	"sync"
-
+	"github.com/toolkits/file"
+	"io/ioutil"
 	"math"
-
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"fmt"
+	"os"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 const (
@@ -170,12 +166,12 @@ func (self *DefaultMessageStore) recover(lastExitOK bool) {
 
 	// 保证消息都能从DispatchService缓冲队列进入到真正的队列
 	/*
-	ticker := time.NewTicker(time.Millisecond * 500)
-	for _ = range ticker.C {
-		if !self.DispatchMessageService.hasRemainMessage() {
-			break
+		ticker := time.NewTicker(time.Millisecond * 500)
+		for _ = range ticker.C {
+			if !self.DispatchMessageService.hasRemainMessage() {
+				break
+			}
 		}
-	}
 	*/
 
 	// 恢复事务模块
@@ -193,6 +189,15 @@ func (self *DefaultMessageStore) recoverConsumeQueue() {
 
 func (self *DefaultMessageStore) loadConsumeQueue() bool {
 	dirLogicDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
+
+	if !file.IsExist(dirLogicDir) {
+		ok, err := stgcommon.CreateDir(dirLogicDir)
+		if err != nil || !ok {
+			logger.Infof("create dir [%s] err: %s", dirLogicDir, err)
+		}
+		logger.Infof("create %s successful", dirLogicDir)
+	}
+
 	files, err := ioutil.ReadDir(dirLogicDir)
 	if err != nil {
 		logger.Warnf("default message store load consume queue directory %s, error: %s", dirLogicDir, err.Error())

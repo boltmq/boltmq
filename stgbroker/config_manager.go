@@ -1,8 +1,8 @@
 package stgbroker
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/toolkits/file"
 	"sync"
@@ -33,19 +33,19 @@ func (cme *ConfigManagerExt) Load() bool {
 		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
 		ok, err := stgcommon.CreateFile(fileName)
 		if err != nil {
-			fmt.Printf("create %s failed. err: %s \n", fileName, err.Error())
+			logger.Infof("create %s failed. err: %s", fileName, err.Error())
 			return false
 		}
 		if !ok {
-			fmt.Printf("create %s failed, unknown reason. \n", fileName)
+			logger.Infof("create %s failed, unknown reason.", fileName)
 			return false
 		}
-		fmt.Printf("create %s successful. \n", fileName)
+		logger.Infof("create %s successful.", fileName)
 	}
 
 	buf, err := file.ToBytes(fileName)
 	if err != nil {
-		fmt.Println("read file err: %s", err.Error())
+		logger.Infof("read file err: %s", err.Error())
 		return false
 	}
 
