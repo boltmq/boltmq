@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -242,10 +243,15 @@ func GetGoPath() string {
 // GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
-func GetSmartgoConfigDir() string {
+func GetSmartgoConfigDir(config ...interface{}) string {
 	gopath := GetGoPath()
 	src := "/src"
-	smartgoConfigPath := gopath + src + SMARTGO_CONF_DIR
+
+	dirPath := SMARTGO_CONF_DIR
+	if config != nil && len(dirPath) > 0 {
+		dirPath = "/" + reflect.TypeOf(config[0]).PkgPath() + "/"
+	}
+	smartgoConfigPath := gopath + src + dirPath
 	return smartgoConfigPath
 }
 

@@ -24,7 +24,6 @@ func SetLog(log *logs.BeeLogger) {
 // SetConfig 配置
 func SetConfig(conf Config) {
 	logger = logs.NewLogger(conf.CacheSize)
-
 	logger.EnableFuncCallDepth(conf.EnableFuncCallDepth)
 	logger.SetLogFuncCallDepth(conf.FuncCallDepth)
 
@@ -32,6 +31,7 @@ func SetConfig(conf Config) {
 	if err != nil {
 		panic(err)
 	}
+	// 配置参数链接： http://blog.csdn.net/huwh_/article/details/77923570
 	logger.SetLogger(conf.Engine.Adapter, string(jsonString))
 }
 

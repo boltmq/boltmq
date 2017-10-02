@@ -24,6 +24,8 @@ type RemotingSerializable struct {
 //}
 
 // CustomEncode 默认序列化参数v对应的结构体
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/15
 func (self *RemotingSerializable) CustomEncode(v interface{}) []byte {
 	if value, err := ffjson.Marshal(v); err == nil {
 		return value
@@ -32,9 +34,6 @@ func (self *RemotingSerializable) CustomEncode(v interface{}) []byte {
 }
 
 // CustomDecode 反序列化为传入参数v结构体
-//
-// 注意： 参数v，只能是结构体&类型，而不能是*指针  ???
-//
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/15
 func (self *RemotingSerializable) CustomDecode(data []byte, v interface{}) error {
