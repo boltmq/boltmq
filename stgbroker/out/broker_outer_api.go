@@ -13,6 +13,10 @@ import (
 	"strings"
 )
 
+const (
+	timeout = 3000 // 默认超时时间：3秒
+)
+
 // BrokerOuterAPI Broker对外调用的API封装
 // Author gaoyanlei
 // Since 2017/8/22
@@ -26,19 +30,10 @@ type BrokerOuterAPI struct {
 // Author gaoyanlei
 // Since 2017/8/22
 func NewBrokerOuterAPI(defaultRemotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
-	brokerOuterAPI := &BrokerOuterAPI{
+	api := &BrokerOuterAPI{
 		remotingClient: defaultRemotingClient, // 参数defaultRemotingClient必须从外部传入，而不是直接调用remoting.NewDefalutRemotingClient()
 	}
-	return brokerOuterAPI
-}
-
-// NewDefaultBrokerOuterAPI 创建默认BrokerOuterAPI实例
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/29
-func NewDefaultBrokerOuterAPI(remotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
-	var brokerOuterAPI = new(BrokerOuterAPI)
-	brokerOuterAPI.remotingClient = remotingClient
-	return brokerOuterAPI
+	return api
 }
 
 // Start 启动
@@ -57,6 +52,7 @@ func (self *BrokerOuterAPI) Start() {
 func (self *BrokerOuterAPI) Shutdown() {
 	if self.remotingClient != nil {
 		self.remotingClient.Shutdown()
+		logger.Infof("brokerOuterAPI Shutdown successful")
 	}
 }
 
@@ -79,7 +75,8 @@ func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 		return self.nameSrvAddr
 	}
 
-	logger.Info("name server address changed, old: " + self.nameSrvAddr + ", new: " + addrs)
+	format := "name server address changed, old: %s, new: %s"
+	logger.Info(format, self.nameSrvAddr, addrs)
 	self.UpdateNameServerAddressList(addrs)
 	self.nameSrvAddr = addrs
 	return self.nameSrvAddr
@@ -100,11 +97,11 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	//logger.Infof("register broker, request.body is %s", string(content))
 
 	if oneway {
-		self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+		self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 		return nil, nil
 	}
 
-	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("register broker failed. err:[%s], %s", err.Error(), request.ToString())
 		return nil, err
@@ -181,7 +178,7 @@ func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAdd
 	}
 
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	if response != nil {
 		switch response.Code {
 		case code.SUCCESS:
@@ -215,7 +212,7 @@ func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerN
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
@@ -237,7 +234,7 @@ func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicCon
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
@@ -259,7 +256,7 @@ func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.Consu
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
@@ -276,7 +273,7 @@ func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{

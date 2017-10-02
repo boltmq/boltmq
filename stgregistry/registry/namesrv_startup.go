@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	port = 9876
+	default_port = 9876
+	default_ip   = "0.0.0.0"
 )
 
 // Startup 启动Namesrv控制器
@@ -52,7 +53,7 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	}
 
 	// 初始化NamesrvController
-	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
+	remotingServer := remoting.NewDefalutRemotingServer(default_ip, default_port)
 	controller := NewNamesrvController(cfg, remotingServer)
 
 	logger.Info("create name server controller success")

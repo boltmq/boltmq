@@ -22,9 +22,8 @@ func NewRegisterBrokerResult(haServerAddr, masterAddr string) *RegisterBrokerRes
 	result := &RegisterBrokerResult{
 		HaServerAddr: haServerAddr,
 		MasterAddr:   masterAddr,
-		KvTable:      &body.KVTable{},
+		KvTable:      body.NewKVTable(),
 	}
-	result.KvTable.Table = make(map[string]string)
 	return result
 }
 
