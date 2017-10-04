@@ -3,10 +3,10 @@
     "engine": {
       "adapter": "console",
       "config": {
-        "filename": "E:/source/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/registry/registry.log",
+        "filename": "E:/source/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/logs/registry.log",
         "level":6,
         "maxdays":30,
-        "enableFuncCallDepth":true,
+        "enableFuncCallDepth":false,
         "loggerFuncCallDepth":3
       }
     },
