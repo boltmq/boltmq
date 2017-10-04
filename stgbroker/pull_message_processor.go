@@ -87,7 +87,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	logger.Debug("receive PullMessage request command, ", request)
 
 	// 检查Broker权限
-	if !constant.IsReadable(pull.BrokerController.BrokerConfig.BrokerPermission) {
+	if !pull.BrokerController.BrokerConfig.HasReadable() {
 		response.Code = code.NO_PERMISSION
 		response.Remark = "the broker[" + pull.BrokerController.BrokerConfig.BrokerIP1 + "] pulling message is forbidden"
 		return response, nil

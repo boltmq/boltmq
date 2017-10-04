@@ -13,6 +13,10 @@ import (
 	"strings"
 )
 
+const (
+	cfgName = "smartgoBroker.toml"
+)
+
 // SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
@@ -29,7 +33,7 @@ type SmartgoBrokerConfig struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
 func Start(stopChan chan bool) *BrokerController {
-	// 构建BrokerController控制器
+	// 构建BrokerController控制器、初始化BrokerController
 	controller := CreateBrokerController()
 
 	// 注册ShutdownHook钩子
@@ -50,21 +54,27 @@ func Start(stopChan chan bool) *BrokerController {
 }
 
 // CreateBrokerController 创建BrokerController对象
+//
+// 注意：
+// (1)通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf/smartgoBroker.toml得到的相对路径有所区别
+// (2)如果在服务器通过cmd命令行读取conf/smartgoBroker.toml，则可以正常读取
+//
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
 func CreateBrokerController() *BrokerController {
-	cfgName := "smartgoBroker.toml"
-	brokerConfigPath := "../../conf/" + cfgName
-	if !file.IsExist(brokerConfigPath) {
-		// 通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf得到的相对路径有所区别;  如果在服务器通过cmd命令行编译打包，则可以正常读取
-		// TODO:为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录  Add: tianuliang,<tianuliang@gmail.com> Since: 2017/9/27
-		brokerConfigPath = stgcommon.GetSmartgoConfigDir() + cfgName
-		logger.Infof("idea special brokerConfigPath = %s", brokerConfigPath)
+	cfgPath := "../../conf/" + cfgName // 启动各种test用例读取路径
+	if !file.IsExist(cfgPath) {
+		cfgPath := "../" + cfgName // 通过集群部署，读取main函数读取路径
+		if !file.IsExist(cfgPath) {
+			// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
+			cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
+			logger.Infof("idea special brokerConfigPath = %s", cfgPath)
+		}
 	}
 
 	// 读取并转化*.toml配置项的值
 	var cfg SmartgoBrokerConfig
-	parseutil.ParseConf(brokerConfigPath, &cfg)
+	parseutil.ParseConf(cfgPath, &cfg)
 	logger.Info(cfg.ToString())
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
@@ -82,7 +92,7 @@ func CreateBrokerController() *BrokerController {
 	// 构建BrokerController结构体
 	remotingClient := remoting.NewDefalutRemotingClient()
 	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
-	controller.ConfigFile = brokerConfigPath
+	controller.ConfigFile = cfgPath
 
 	// 初始化controller
 	initResult := controller.Initialize()

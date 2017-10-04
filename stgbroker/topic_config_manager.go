@@ -215,8 +215,7 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 // createTopicInSendMessageBackMethod 该方法没有判断broker权限.
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string,
-	clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string, clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
 	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	// 是否新创建topic
 	createNew := false
