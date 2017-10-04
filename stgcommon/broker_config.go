@@ -2,6 +2,7 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"os"
 	"runtime"
 )
@@ -9,6 +10,8 @@ import (
 const (
 	defaultHostName          = "DEFAULT_BROKER"
 	defaultBrokerClusterName = "DefaultCluster"
+	defaultBrokerPermission  = 6
+	defaultTopicQueueNums    = 8
 )
 
 // BrokerConfig Broker配置项
@@ -57,8 +60,8 @@ func NewDefaultBrokerConfig() *BrokerConfig {
 		BrokerName:                         localHostName(),
 		BrokerClusterName:                  defaultBrokerClusterName,
 		BrokerId:                           MASTER_ID,
-		BrokerPermission:                   6,
-		DefaultTopicQueueNums:              8,
+		BrokerPermission:                   defaultBrokerPermission,
+		DefaultTopicQueueNums:              defaultTopicQueueNums,
 		AutoCreateTopicEnable:              true,
 		ClusterTopicEnable:                 true,
 		BrokerTopicEnable:                  true,
@@ -102,4 +105,18 @@ func localHostName() string {
 		return defaultHostName
 	}
 	return host
+}
+
+// HasReadable 校验Broker是否有读权限
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func (self *BrokerConfig) HasReadable() bool {
+	return constant.IsReadable(self.BrokerPermission)
+}
+
+// HasWriteable 校验Broker是否有写权限
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func (self *BrokerConfig) HasWriteable() bool {
+	return constant.IsWriteable(self.BrokerPermission)
 }

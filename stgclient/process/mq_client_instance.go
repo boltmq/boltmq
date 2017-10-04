@@ -419,7 +419,7 @@ func (mqClientInstance *MQClientInstance) isNeedUpdateTopicRouteInfo(topic strin
 	return result
 }
 
-// 路由信息转发布信息
+// topicRouteData2TopicPublishInfo 路由信息转发布信息
 func (mqClientInstance *MQClientInstance) topicRouteData2TopicPublishInfo(topic string, topicRouteData *route.TopicRouteData) *TopicPublishInfo {
 	info := &TopicPublishInfo{}
 	if !strings.EqualFold(topicRouteData.OrderTopicConf, "") {

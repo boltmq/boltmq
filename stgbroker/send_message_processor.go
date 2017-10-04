@@ -88,14 +88,15 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 
 	// 检查Broker权限
-	if !constant.IsWriteable(smp.BrokerController.BrokerConfig.BrokerPermission) {
+	if !smp.BrokerController.BrokerConfig.HasWriteable() {
 		response.Code = code.NO_PERMISSION
 		response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
 		return response
 	}
 
 	// 如果重试队列数目为0，则直接丢弃消息
-	if subscriptionGroupConfig.RetryQueueNums <= 0 {
+	retryQueueNums := subscriptionGroupConfig.RetryQueueNums
+	if retryQueueNums <= 0 {
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response
@@ -104,7 +105,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	newTopic := stgcommon.GetRetryTopic(requestHeader.Group)
 	var queueIdInt int32
 	if queueIdInt < 0 {
-		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % subscriptionGroupConfig.RetryQueueNums
+		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % retryQueueNums
 		if num > 0 {
 			queueIdInt = num
 		} else {
@@ -119,8 +120,8 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 
 	// 检查topic是否存在
-	topicConfig, err := smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
-		constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
+	perm := constant.PERM_WRITE | constant.PERM_READ
+	topicConfig, err := smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, retryQueueNums, perm, topicSysFlag)
 	if topicConfig == nil || err != nil {
 		response.Code = code.SYSTEM_ERROR
 		response.Remark = "topic[" + newTopic + "] not exist"
@@ -165,12 +166,10 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 			}
 		}
 
-		topicConfig, err =
-			smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(
-				newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
+		topicConfig, err = smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
 		if nil == topicConfig {
 			response.Code = code.SYSTEM_ERROR
-			response.Remark = "topic[" + newTopic + "] not exist"
+			response.Remark = fmt.Sprintf("topic[%s] not exist", newTopic)
 			return response
 		}
 	} else {

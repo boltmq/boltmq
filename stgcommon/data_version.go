@@ -14,7 +14,7 @@ type DataVersion struct {
 }
 
 func NewDataVersion(timestamp ...int64) *DataVersion {
-	var dataVersion = new(DataVersion)
+	dataVersion := new(DataVersion)
 	dataVersion.Timestamp = time.Now().UnixNano()
 	if timestamp != nil && len(timestamp) > 0 {
 		dataVersion.Timestamp = timestamp[0]
@@ -28,14 +28,16 @@ func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
 	self.Counter = dataVersion.Counter
 }
 
-func (self *DataVersion) Equals(dataVersion *DataVersion) bool {
-	if self == nil && dataVersion == nil {
+func (this *DataVersion) Equals(dataVersion *DataVersion) bool {
+	self := this == nil
+	param := dataVersion == nil
+	if self && param {
 		return true
 	}
-	if dataVersion == nil {
+	if (self && !param) || (!self && param) {
 		return false
 	}
-	return self.Timestamp == dataVersion.Timestamp && self.Counter == dataVersion.Counter
+	return this.Timestamp == dataVersion.Timestamp && this.Counter == dataVersion.Counter
 }
 
 func (self *DataVersion) NextVersion() {
