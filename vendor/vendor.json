@@ -3,10 +3,15 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "pPH/BoINXxzYDObljpsGZbysMrw=",
+			"checksumSHA1": "Pc2ORQp+VY3Un/dkh4QwLC7R6lE=",
 			"path": "github.com/BurntSushi/toml",
-			"revision": "b26d9c308763d68093482582cea63d69be07a0f0",
-			"revisionTime": "2017-03-28T06:15:53Z"
+			"revision": "a368813c5e648fee92e5f6c30e3944ff9d5e8895",
+			"revisionTime": "2017-06-26T11:06:00Z"
+		},
+		{
+			"checksumSHA1": "+MEWMsS4mJ9jNhwfVeyBMpdyVCQ=",
+			"path": "github.com/astaxie/beego/logs",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "1bK29RcAjCAMCYS2HS3O18w4m8k=",
@@ -41,32 +46,32 @@
 		{
 			"checksumSHA1": "1+T3s64i3hz9NXbXz4Mszg2Yl6I=",
 			"path": "github.com/coreos/etcd/client",
-			"revision": "4cbe2e8caefc97a31771594159835ffffdd533e8",
-			"revisionTime": "2017-09-05T23:50:39Z"
+			"revision": "c9f677c0eacaefd7e3645afc22f49afab44aba62",
+			"revisionTime": "2017-08-26T00:47:29Z"
 		},
 		{
 			"checksumSHA1": "mKIXx1kDwmVmdIpZ3pJtRBuUKso=",
 			"path": "github.com/coreos/etcd/pkg/pathutil",
-			"revision": "4cbe2e8caefc97a31771594159835ffffdd533e8",
-			"revisionTime": "2017-09-05T23:50:39Z"
+			"revision": "c9f677c0eacaefd7e3645afc22f49afab44aba62",
+			"revisionTime": "2017-08-26T00:47:29Z"
 		},
 		{
-			"checksumSHA1": "z+C4BtPa8wbOUKW5dmHyhNnTulg=",
+			"checksumSHA1": "in4X4M2FFl6+eAXgxdxxSOZi1Vw=",
 			"path": "github.com/coreos/etcd/pkg/srv",
-			"revision": "4cbe2e8caefc97a31771594159835ffffdd533e8",
-			"revisionTime": "2017-09-05T23:50:39Z"
+			"revision": "c9f677c0eacaefd7e3645afc22f49afab44aba62",
+			"revisionTime": "2017-08-26T00:47:29Z"
 		},
 		{
 			"checksumSHA1": "gx1gJIMU6T0UNQ0bPZ/drQ8cpCI=",
 			"path": "github.com/coreos/etcd/pkg/types",
-			"revision": "4cbe2e8caefc97a31771594159835ffffdd533e8",
-			"revisionTime": "2017-09-05T23:50:39Z"
+			"revision": "c9f677c0eacaefd7e3645afc22f49afab44aba62",
+			"revisionTime": "2017-08-26T00:47:29Z"
 		},
 		{
 			"checksumSHA1": "sp2FkEyaIGiQFOEZCTDkBZgyHOs=",
 			"path": "github.com/coreos/etcd/version",
-			"revision": "4cbe2e8caefc97a31771594159835ffffdd533e8",
-			"revisionTime": "2017-09-05T23:50:39Z"
+			"revision": "c9f677c0eacaefd7e3645afc22f49afab44aba62",
+			"revisionTime": "2017-08-26T00:47:29Z"
 		},
 		{
 			"checksumSHA1": "97BsbXOiZ8+Kr+LIuZkQFtSj7H4=",
@@ -95,47 +100,41 @@
 		{
 			"checksumSHA1": "FUxUO+S8gjDvCxbBeWxslNjMUNA=",
 			"path": "github.com/gunsluo/govalidator",
-			"revision": "b50b277a0be9d91c7b79cfbe5367a2f43698104f",
-			"revisionTime": "2017-04-01T03:46:26Z"
+			"revision": "fecc1dc4a1e7988d604aec15a53dccd0e003dfcc",
+			"revisionTime": "2017-06-22T07:49:03Z"
 		},
 		{
-			"checksumSHA1": "URFUehWDQuEO8mtf0gEpfkWs2Ro=",
+			"checksumSHA1": "g0/ug15tNeVqmsKS+TZoaVmouVI=",
 			"path": "github.com/gunsluo/govalidator/custom",
-			"revision": "b50b277a0be9d91c7b79cfbe5367a2f43698104f",
-			"revisionTime": "2017-04-01T03:46:26Z"
+			"revision": "fecc1dc4a1e7988d604aec15a53dccd0e003dfcc",
+			"revisionTime": "2017-06-22T07:49:03Z"
 		},
 		{
-			"checksumSHA1": "oOOoWMOCyOoZ594DKzopz9w9kew=",
-			"path": "github.com/kataras/go-errors",
-			"revision": "0f977b82cc78d5d31bb75fb6f903ad9e852c8bbd",
-			"revisionTime": "2016-09-18T10:12:19Z"
-		},
-		{
-			"checksumSHA1": "sKfYQurIIt+ldKDDF7TRbg9w20I=",
+			"checksumSHA1": "uTiyCSYgL+/p/M17L7rqVgP0RUU=",
 			"path": "github.com/pquerna/ffjson/ffjson",
-			"revision": "de51d9f018fa9a60153a04c94a031eff81ac4502",
-			"revisionTime": "2017-02-08T16:31:26Z"
+			"revision": "0a1032732ea92f86ab22e27b9d55cd182f2f4a1b",
+			"revisionTime": "2017-05-17T16:37:23Z"
 		},
 		{
-			"checksumSHA1": "NizrNME2NimBRFA7WnzwlXPzsL4=",
+			"checksumSHA1": "ilOmEPsT4Uwb3w+hre0VmrbP5dI=",
 			"path": "github.com/pquerna/ffjson/fflib/v1",
-			"revision": "de51d9f018fa9a60153a04c94a031eff81ac4502",
-			"revisionTime": "2017-02-08T16:31:26Z"
+			"revision": "0a1032732ea92f86ab22e27b9d55cd182f2f4a1b",
+			"revisionTime": "2017-05-17T16:37:23Z"
 		},
 		{
-			"checksumSHA1": "iZHmHPBzKJiS6ROUaVOf4DVOhbA=",
+			"checksumSHA1": "Yf+piZbsPVx/EA56+yJUWC7BAZw=",
 			"path": "github.com/pquerna/ffjson/fflib/v1/internal",
-			"revision": "de51d9f018fa9a60153a04c94a031eff81ac4502",
-			"revisionTime": "2017-02-08T16:31:26Z"
+			"revision": "0a1032732ea92f86ab22e27b9d55cd182f2f4a1b",
+			"revisionTime": "2017-05-17T16:37:23Z"
 		},
 		{
-			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"checksumSHA1": "HUXE+Nrcau8FSaVEvPYHMvDjxOE=",
 			"path": "github.com/satori/go.uuid",
-			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
-			"revisionTime": "2016-09-27T10:08:44Z"
+			"revision": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+			"revisionTime": "2017-03-21T23:07:31Z"
 		},
 		{
-			"checksumSHA1": "XqTDLy8bXAGifWuqK+OgvxOFgeU=",
+			"checksumSHA1": "NaoYWMJoqvHk9x3vUddGfovHUH8=",
 			"path": "github.com/toolkits/file",
 			"revision": "a5b3c5147e07f934d9f9d00b901a20b2529f1a57",
 			"revisionTime": "2016-03-25T03:37:39Z"
@@ -147,45 +146,10 @@
 			"revisionTime": "2017-08-26T15:59:43Z"
 		},
 		{
-			"checksumSHA1": "W0j4I7QpxXlChjyhAojZmFjU6Bg=",
-			"origin": "github.com/kataras/iris/vendor/golang.org/x/crypto/acme",
-			"path": "golang.org/x/crypto/acme",
-			"revision": "20f30022705b5b0728c71cdcc819a319224a636e",
-			"revisionTime": "2017-06-16T23:54:17Z"
-		},
-		{
-			"checksumSHA1": "oSIOyaAh0flaeiSxmcLHnuGMKDo=",
-			"origin": "github.com/kataras/iris/vendor/golang.org/x/crypto/acme/autocert",
-			"path": "golang.org/x/crypto/acme/autocert",
-			"revision": "20f30022705b5b0728c71cdcc819a319224a636e",
-			"revisionTime": "2017-06-16T23:54:17Z"
-		},
-		{
 			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
 			"path": "golang.org/x/net/context",
 			"revision": "6b27048ae5e6ad1ef927e72e437531493de612fe",
 			"revisionTime": "2017-02-17T08:49:01Z"
-		},
-		{
-			"checksumSHA1": "vqc3a+oTUGX8PmD0TS+qQ7gmN8I=",
-			"origin": "github.com/kataras/iris/vendor/golang.org/x/net/html",
-			"path": "golang.org/x/net/html",
-			"revision": "20f30022705b5b0728c71cdcc819a319224a636e",
-			"revisionTime": "2017-06-16T23:54:17Z"
-		},
-		{
-			"checksumSHA1": "z79z5msRzgU48FCZxSuxfU8b4rs=",
-			"origin": "github.com/kataras/iris/vendor/golang.org/x/net/html/atom",
-			"path": "golang.org/x/net/html/atom",
-			"revision": "20f30022705b5b0728c71cdcc819a319224a636e",
-			"revisionTime": "2017-06-16T23:54:17Z"
-		},
-		{
-			"checksumSHA1": "Xhsm+TevJogC8U4sG6FO+czBMps=",
-			"origin": "github.com/gunsluo/xorm/vendor/golang.org/x/sys/unix",
-			"path": "golang.org/x/sys/unix",
-			"revision": "7f920863a9d806d807f0bcfcadf4e64284f42082",
-			"revisionTime": "2017-07-13T09:38:16Z"
 		}
 	],
 	"rootPath": "git.oschina.net/cloudzone/smartgo"
