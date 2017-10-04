@@ -40,13 +40,12 @@ func TestCreateTopicInSendMessageBackMethod(t *testing.T) {
 func TestUpdateTopicConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
-	topicConfig := stgcommon.NewTopicConfig()
-	topicConfig.TopicName = "TestTopic_789"
+	topicConfig := stgcommon.NewTopicConfig("TestTopic_789")
 	topicConfig.ReadQueueNums = 3
 	topicConfig.WriteQueueNums = 3
 	topicConfig.Order = true
 	topicConfigProcessor.UpdateTopicConfig(topicConfig)
-	fmt.Println(topicConfigProcessor.TopicConfigSerializeWrapper.TopicConfigTable.Get("TestTopic_789").ReadQueueNums)
+	fmt.Println(topicConfigProcessor.TopicConfigSerializeWrapper.TopicConfigTable.Get("TestTopic_789").ToString())
 }
 
 func TestIsOrderTopic(t *testing.T) {

@@ -326,6 +326,10 @@ func (self BrokerDatas) Len() int {
 }
 
 func (self *TopicRouteData) ToString() string {
+	if self == nil {
+		return ""
+	}
+
 	data1 := ""
 	queueDatas := make([]string, 0, len(self.QueueDatas))
 	if self.QueueDatas != nil && len(self.QueueDatas) > 0 {
@@ -365,12 +369,20 @@ func (self *TopicRouteData) ToString() string {
 }
 
 func (self *QueueData) ToString() string {
+	if self == nil {
+		return ""
+	}
+
 	format := "QueueData [brokerName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicSynFlag=%d]"
 	info := fmt.Sprintf(format, self.BrokerName, self.ReadQueueNums, self.WriteQueueNums, self.Perm, self.TopicSynFlag)
 	return info
 }
 
 func (self *BrokerData) ToString() string {
+	if self == nil {
+		return ""
+	}
+
 	brokerAddrs := make([]string, 0, len(self.BrokerAddrs))
 	if self.BrokerAddrs != nil && len(self.BrokerAddrs) > 0 {
 		for k, v := range self.BrokerAddrs {

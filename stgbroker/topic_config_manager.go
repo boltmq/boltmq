@@ -9,12 +9,12 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	set "github.com/deckarep/golang-set"
 	"os/user"
-	lock "sync"
+	"sync"
 )
 
 type TopicConfigManager struct {
 	LockTimeoutMillis           int64
-	lockTopicConfigTable        lock.Mutex
+	lockTopicConfigTable        sync.Mutex
 	BrokerController            *BrokerController
 	TopicConfigSerializeWrapper *body.TopicConfigSerializeWrapper
 	SystemTopicList             set.Set
@@ -40,7 +40,7 @@ func (self *TopicConfigManager) init() {
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.SELF_TEST_TOPIC
-		topicConfig := stgcommon.NewTopicConfigByName(topicName)
+		topicConfig := stgcommon.NewTopicConfig(topicName)
 		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
@@ -55,7 +55,7 @@ func (self *TopicConfigManager) init() {
 		logger.Infof("self.BrokerController.BrokerConfig.AutoCreateTopicEnable=%t", autoCreateTopicEnable)
 		if autoCreateTopicEnable {
 			topicName := stgcommon.DEFAULT_TOPIC
-			topicConfig := stgcommon.NewTopicConfigByName(topicName)
+			topicConfig := stgcommon.NewTopicConfig(topicName)
 			self.SystemTopicList = set.NewSet()
 			self.SystemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
@@ -69,7 +69,7 @@ func (self *TopicConfigManager) init() {
 	// BENCHMARK_TOPIC
 	{
 		topicName := stgcommon.BENCHMARK_TOPIC
-		topicConfig := stgcommon.NewTopicConfigByName(topicName)
+		topicConfig := stgcommon.NewTopicConfig(topicName)
 		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
@@ -81,7 +81,7 @@ func (self *TopicConfigManager) init() {
 	// DefaultCluster
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
-		topicConfig := stgcommon.NewTopicConfigByName(topicName)
+		topicConfig := stgcommon.NewTopicConfig(topicName)
 		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
@@ -96,7 +96,7 @@ func (self *TopicConfigManager) init() {
 	// DEFAULT_BROKER
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerName
-		topicConfig := stgcommon.NewTopicConfigByName(topicName)
+		topicConfig := stgcommon.NewTopicConfig(topicName)
 		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
@@ -113,7 +113,7 @@ func (self *TopicConfigManager) init() {
 	// SELF_TEST_TOPIC
 	{
 		topicName := stgcommon.OFFSET_MOVED_EVENT
-		topicConfig := stgcommon.NewTopicConfigByName(topicName)
+		topicConfig := stgcommon.NewTopicConfig(topicName)
 		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
@@ -249,9 +249,9 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string, 
 func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicConfig) {
 	old := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if old != nil {
-		logger.Infof("update topic config, old:%v,new:%v", old, topicConfig)
+		logger.Infof("update topic config, old:%s, new:%s", old.ToString(), topicConfig.ToString())
 	}
-	logger.Infof("create new topic :%v", topicConfig)
+	logger.Infof("create new topic: %s", topicConfig.ToString())
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 	tcm.ConfigManagerExt.Persist()
 }

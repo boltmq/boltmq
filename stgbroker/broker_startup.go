@@ -64,12 +64,9 @@ func Start(stopChan chan bool) *BrokerController {
 func CreateBrokerController() *BrokerController {
 	cfgPath := "../../conf/" + cfgName // 启动各种test用例读取路径
 	if !file.IsExist(cfgPath) {
-		cfgPath := "../" + cfgName // 通过集群部署，读取main函数读取路径
-		if !file.IsExist(cfgPath) {
-			// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
-			cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
-			logger.Infof("idea special brokerConfigPath = %s", cfgPath)
-		}
+		// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
+		cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
+		logger.Infof("idea special brokerConfigPath = %s", cfgPath)
 	}
 
 	// 读取并转化*.toml配置项的值

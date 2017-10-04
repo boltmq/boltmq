@@ -56,9 +56,9 @@ func (cme *ConfigManagerExt) Load() bool {
 func (cme *ConfigManagerExt) Persist() {
 	defer utils.RecoveredFn()
 
-	jsonString := cme.ConfigManager.Encode(true)
-	if jsonString != "" {
+	buf := cme.ConfigManager.Encode(true)
+	if buf != "" && len(buf) > 0 {
 		fileName := cme.ConfigManager.ConfigFilePath()
-		stgcommon.String2File([]byte(jsonString), fileName)
+		stgcommon.String2File([]byte(buf), fileName)
 	}
 }

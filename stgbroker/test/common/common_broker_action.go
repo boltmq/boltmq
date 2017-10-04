@@ -19,7 +19,7 @@ func CreateTopic(bc *stgbroker.BrokerController, ctx netm.Context, topicConfigOl
 	requestHeader.ReadQueueNums = 12
 	requestHeader.WriteQueueNums = 12
 	requestHeader.Perm = 7
-	requestHeader.TopicFilterType = stgcommon.MULTI_TAG
+	requestHeader.TopicFilterType = stgcommon.SINGLE_TAG
 	requestHeader.Order = false
 	requestHeader.TopicSysFlag = 0
 	if topicConfigOld != nil {

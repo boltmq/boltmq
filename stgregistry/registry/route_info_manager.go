@@ -132,7 +132,7 @@ func (self *RouteInfoManager) registerBroker(clusterName, brokerAddr, brokerName
 	oldAddr, ok := brokerData.BrokerAddrs[int(brokerId)]
 	registerFirst = registerFirst || ok || oldAddr == ""
 	brokerData.BrokerAddrs[int(brokerId)] = brokerAddr
-	//self.printBrokerAddrTable()
+	self.printBrokerAddrTable()
 
 	// 更新Topic信息: 若Broker的注册请求消息中topic的配置不为空，并且该Broker是主(即brokerId=0)
 	if topicConfigWrapper != nil && brokerId == stgcommon.MASTER_ID {
@@ -263,7 +263,7 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 		queueDataList = append(queueDataList, queueData)
 		self.TopicQueueTable[topic] = queueDataList
 		logger.Info("new topic registerd, topic[%s], %s", topic, queueData.ToString())
-		//self.printTopicQueueTable()
+		self.printTopicQueueTable()
 	} else {
 		addNewOne := true
 		for index, qd := range queueDataList {
@@ -377,13 +377,13 @@ func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRouteData {
-	topicRouteData := &route.TopicRouteData{}
+	topicRouteData := new(route.TopicRouteData)
 
 	foundQueueData := false
 	foundBrokerData := false
 	brokerNameSet := set.NewSet()
 
-	brokerDataList := make([]*route.BrokerData, 0)
+	brokerDataList := make([]*route.BrokerData, 0, len(self.TopicQueueTable))
 	topicRouteData.BrokerDatas = brokerDataList
 
 	filterServerMap := make(map[string][]string, 0)
@@ -399,8 +399,14 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 			brokerNameSet.Add(qd.BrokerName)
 		}
 
-		for brokerName := range brokerNameSet.Iterator().C {
-			if brokerData, ok := self.BrokerAddrTable[brokerName.(string)]; ok && brokerData != nil {
+		for itor := range brokerNameSet.Iterator().C {
+			brokerName, ok := itor.(string)
+			logger.Info("brokerName=%s,  ok=%t", brokerName, ok)
+
+			brokerData, ok := self.BrokerAddrTable[brokerName]
+			logger.Info("brokerData=%s,  ok=%t", brokerData.ToString(), ok)
+
+			if ok && brokerData != nil {
 				brokerDataClone := brokerData.CloneBrokerData()
 				brokerDataList = append(brokerDataList, brokerDataClone)
 				foundBrokerData = true
@@ -417,7 +423,9 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 		}
 	}
 	self.ReadWriteLock.RUnlock()
-	logger.Info("pickupTopicRouteData[topic:%s], %s", topic, topicRouteData.ToString())
+
+	format := "pickupTopicRouteData() topic=%s, foundBrokerData=%t, foundQueueData=%t, brokerNameSet=%s, %s"
+	logger.Info(format, topic, foundBrokerData, foundQueueData, brokerNameSet.String(), topicRouteData.ToString())
 
 	if foundBrokerData && foundQueueData {
 		return topicRouteData
