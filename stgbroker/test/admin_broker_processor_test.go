@@ -4,7 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/test/common"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/filtersrv"
@@ -63,7 +63,7 @@ func TestDeleteTopic(t *testing.T) {
 	requestHeader := &header.DeleteTopicRequestHeader{}
 	requestHeader.Topic = deleteTopic
 
-	response, err := common.ProcessRequest(bc, ctx, protocol2.DELETE_TOPIC_IN_BROKER, requestHeader)
+	response, err := common.ProcessRequest(bc, ctx, code.DELETE_TOPIC_IN_BROKER, requestHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -82,7 +82,7 @@ func TestGetAllTopicConfig(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	response, err := common.ProcessRequest(bc, ctx, protocol2.GET_ALL_TOPIC_CONFIG, nil)
+	response, err := common.ProcessRequest(bc, ctx, code.GET_ALL_TOPIC_CONFIG, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +108,7 @@ func TestUpdateBrokerConfig(t *testing.T) {
 	allConfig.MessageStoreConfig.AccessMessageInMemoryMaxRatio = 50
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
-	request := protocol.CreateRequestCommand(protocol2.UPDATE_BROKER_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.UPDATE_BROKER_CONFIG, nil)
 	request.Body = stgcommon.Encode(allConfig)
 
 	_, err := adminProcessor.ProcessRequest(ctx, request)
@@ -135,7 +135,7 @@ func TestGetBrokerConfig(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
-	request := protocol.CreateRequestCommand(protocol2.GET_BROKER_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_BROKER_CONFIG, nil)
 
 	response, err := adminProcessor.ProcessRequest(ctx, request)
 	if err != nil || response.Body == nil {
@@ -155,7 +155,7 @@ func TestSearchOffsetByTimestamp(t *testing.T) {
 	requestHeader.QueueId = 0
 	requestHeader.Timestamp = 1506682913490
 
-	response, err := common.ProcessRequest(bc, ctx, protocol2.SEARCH_OFFSET_BY_TIMESTAMP, requestHeader)
+	response, err := common.ProcessRequest(bc, ctx, code.SEARCH_OFFSET_BY_TIMESTAMP, requestHeader)
 
 	if err != nil {
 		t.Fail()
@@ -174,7 +174,7 @@ func TestGetMaxOffset(t *testing.T) {
 	requestHeader.QueueId = 0
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_MAX_OFFSET, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_MAX_OFFSET, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -206,7 +206,7 @@ func TestGetMinOffset(t *testing.T) {
 	requestHeader.QueueId = 0
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_MIN_OFFSET, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_MIN_OFFSET, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -237,7 +237,7 @@ func TestGetEarliestMsgStoretime(t *testing.T) {
 	requestHeader.QueueId = 0
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_EARLIEST_MSG_STORETIME, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_EARLIEST_MSG_STORETIME, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -264,7 +264,7 @@ func TestGetBrokerRuntimeInfo(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.GET_BROKER_RUNTIME_INFO, nil)
+	request := protocol.CreateRequestCommand(code.GET_BROKER_RUNTIME_INFO, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -288,7 +288,7 @@ func TestUpdateAndCreateSubscriptionGroup(t *testing.T) {
 
 	subscriptionGroupConfigOld := bc.SubscriptionGroupManager.SubscriptionGroupTable.Get(newSubscriptionGroup)
 
-	request := protocol.CreateRequestCommand(protocol2.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
+	request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
 	config := &subscription.SubscriptionGroupConfig{GroupName: newSubscriptionGroup, ConsumeEnable: true,
 		ConsumeFromMinEnable: true, ConsumeBroadcastEnable: true, RetryQueueNums: 1, RetryMaxTimes: 15,
 		BrokerId: 0, WhichBrokerWhenConsumeSlowly: 0}
@@ -320,7 +320,7 @@ func TestGetAllSubscriptionGroup(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -345,7 +345,7 @@ func TestDeleteSubscriptionGroup(t *testing.T) {
 
 	subscriptionGroupConfigOld := bc.SubscriptionGroupManager.SubscriptionGroupTable.Get(deleteSubscriptionGroup)
 	if subscriptionGroupConfigOld == nil {
-		request := protocol.CreateRequestCommand(protocol2.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
+		request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
 		config := &subscription.SubscriptionGroupConfig{GroupName: deleteSubscriptionGroup, ConsumeEnable: true,
 			ConsumeFromMinEnable: true, ConsumeBroadcastEnable: true, RetryQueueNums: 1, RetryMaxTimes: 15,
 			BrokerId: 0, WhichBrokerWhenConsumeSlowly: 0}
@@ -366,7 +366,7 @@ func TestDeleteSubscriptionGroup(t *testing.T) {
 	requestHeader := &header.DeleteSubscriptionGroupRequestHeader{}
 	requestHeader.GroupName = deleteSubscriptionGroup
 
-	delRequest := protocol.CreateRequestCommand(protocol2.DELETE_SUBSCRIPTIONGROUP, requestHeader)
+	delRequest := protocol.CreateRequestCommand(code.DELETE_SUBSCRIPTIONGROUP, requestHeader)
 	delRequest.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -394,7 +394,7 @@ func TestGetTopicStatsInfo(t *testing.T) {
 	requestHeader := &header.GetTopicStatsInfoRequestHeader{}
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_TOPIC_STATS_INFO, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_TOPIC_STATS_INFO, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -413,7 +413,7 @@ func TestGetConsumerConnectionList(t *testing.T) {
 	requestHeader := &header.GetConsumerConnectionListRequestHeader{}
 	requestHeader.ConsumerGroup = "myConsumerGroup"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_CONSUMER_CONNECTION_LIST, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_CONSUMER_CONNECTION_LIST, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -438,7 +438,7 @@ func TestGetProducerConnectionList(t *testing.T) {
 	requestHeader := &header.GetProducerConnectionListRequestHeader{}
 	requestHeader.ProducerGroup = "producer"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_PRODUCER_CONNECTION_LIST, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_PRODUCER_CONNECTION_LIST, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -464,7 +464,7 @@ func TestGetConsumeStats(t *testing.T) {
 	requestHeader.ConsumerGroup = "myConsumerGroup"
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.GET_CONSUME_STATS, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_CONSUME_STATS, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -487,7 +487,7 @@ func TestGetAllConsumerOffset(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.GET_ALL_CONSUMER_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -508,7 +508,7 @@ func TestGetAllDelayOffset(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.GET_ALL_DELAY_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -535,7 +535,7 @@ func TestResetOffset(t *testing.T) {
 	requestHeader.Timestamp = timeutil.CurrentTimeMillis()
 	requestHeader.IsForce = false
 
-	request := protocol.CreateRequestCommand(protocol2.INVOKE_BROKER_TO_RESET_OFFSET, requestHeader)
+	request := protocol.CreateRequestCommand(code.INVOKE_BROKER_TO_RESET_OFFSET, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -563,7 +563,7 @@ func TestGetConsumerStatus(t *testing.T) {
 	requestHeader.Group = "myConsumerGroup"
 	requestHeader.ClientAddr = "127.0.0.1:56501"
 
-	request := protocol.CreateRequestCommand(protocol2.INVOKE_BROKER_TO_GET_CONSUMER_STATUS, requestHeader)
+	request := protocol.CreateRequestCommand(code.INVOKE_BROKER_TO_GET_CONSUMER_STATUS, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -589,7 +589,7 @@ func TestQueryTopicConsumeByWho(t *testing.T) {
 	requestHeader := &header.QueryTopicConsumeByWhoRequestHeader{}
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.QUERY_TOPIC_CONSUME_BY_WHO, requestHeader)
+	request := protocol.CreateRequestCommand(code.QUERY_TOPIC_CONSUME_BY_WHO, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -615,7 +615,7 @@ func TestRegisterFilterServer(t *testing.T) {
 	requestHeader := &filtersrv.RegisterFilterServerRequestHeader{}
 	requestHeader.FilterServerAddr = "127.0.0.1"
 
-	request := protocol.CreateRequestCommand(protocol2.REGISTER_FILTER_SERVER, requestHeader)
+	request := protocol.CreateRequestCommand(code.REGISTER_FILTER_SERVER, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -637,7 +637,7 @@ func TestQueryConsumeTimeSpan(t *testing.T) {
 	requestHeader.Topic = "TestTopic"
 	requestHeader.Group = "myConsumerGroup"
 
-	request := protocol.CreateRequestCommand(protocol2.QUERY_CONSUME_TIME_SPAN, requestHeader)
+	request := protocol.CreateRequestCommand(code.QUERY_CONSUME_TIME_SPAN, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -656,7 +656,7 @@ func TestGetSystemTopicListFromBroker(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.GET_SYSTEM_TOPIC_LIST_FROM_BROKER, nil)
+	request := protocol.CreateRequestCommand(code.GET_SYSTEM_TOPIC_LIST_FROM_BROKER, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -677,7 +677,7 @@ func TestCleanExpiredConsumeQueue(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(protocol2.CLEAN_EXPIRED_CONSUMEQUEUE, nil)
+	request := protocol.CreateRequestCommand(code.CLEAN_EXPIRED_CONSUMEQUEUE, nil)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -699,7 +699,7 @@ func TestGetConsumerRunningInfo(t *testing.T) {
 	requestHeader.ConsumerGroup = "myConsumerGroup"
 	requestHeader.JstackEnable = false
 
-	request := protocol.CreateRequestCommand(protocol2.GET_CONSUMER_RUNNING_INFO, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_CONSUMER_RUNNING_INFO, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -722,7 +722,7 @@ func TestQueryCorrectionOffset(t *testing.T) {
 	requestHeader.CompareGroup = "myConsumerGroup"
 	requestHeader.Topic = "TestTopic"
 
-	request := protocol.CreateRequestCommand(protocol2.QUERY_CORRECTION_OFFSET, requestHeader)
+	request := protocol.CreateRequestCommand(code.QUERY_CORRECTION_OFFSET, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -751,7 +751,7 @@ func TestConsumeMessageDirectly(t *testing.T) {
 	requestHeader.ClientId = "0"
 	requestHeader.MsgId = "0A7A011100002A9F000000000000007A"
 
-	request := protocol.CreateRequestCommand(protocol2.CONSUME_MESSAGE_DIRECTLY, requestHeader)
+	request := protocol.CreateRequestCommand(code.CONSUME_MESSAGE_DIRECTLY, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -775,7 +775,7 @@ func TestCloneGroupOffset(t *testing.T) {
 	requestHeader.SrcGroup = "myConsumerGroup"
 	requestHeader.DestGroup = "otherConsumerGroup"
 
-	request := protocol.CreateRequestCommand(protocol2.CLONE_GROUP_OFFSET, requestHeader)
+	request := protocol.CreateRequestCommand(code.CLONE_GROUP_OFFSET, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
@@ -797,7 +797,7 @@ func TestViewBrokerStatsData(t *testing.T) {
 	requestHeader.StatsKey = "TestTopic"
 	requestHeader.StatsName = "TOPIC_PUT_NUMS"
 
-	request := protocol.CreateRequestCommand(protocol2.VIEW_BROKER_STATS_DATA, requestHeader)
+	request := protocol.CreateRequestCommand(code.VIEW_BROKER_STATS_DATA, requestHeader)
 	request.EncodeHeader()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)

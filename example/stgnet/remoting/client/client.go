@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"time"
-
-	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"log"
+	"time"
 )
 
 var (
@@ -34,12 +33,12 @@ func main() {
 	topicStatsInfoRequestHeader.Topic = "testTopic"
 
 	// 同步消息
-	request = protocol.CreateRequestCommand(cmprotocol.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
+	request = protocol.CreateRequestCommand(code.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
 	response, err = remotingClient.InvokeSync(addr, request, 3000)
 	if err != nil {
 		fmt.Printf("Send Mssage[Sync] failed: %s\n", err)
 	} else {
-		if response.Code == cmprotocol.SUCCESS {
+		if response.Code == code.SUCCESS {
 			fmt.Printf("Send Mssage[Sync] success. response: body[%s]\n", string(response.Body))
 		} else {
 			fmt.Printf("Send Mssage[Sync] failed: code[%d] err[%s]\n", response.Code, response.Remark)
@@ -64,7 +63,7 @@ func main() {
 			return
 		}
 
-		if response.Code == cmprotocol.SUCCESS {
+		if response.Code == code.SUCCESS {
 			fmt.Printf("Send Mssage[Async] success. response: body[%s]\n", string(response.Body))
 		} else {
 			fmt.Printf("Send Mssage[Async] failed: code[%d] err[%s]\n", response.Code, response.Remark)
@@ -85,12 +84,12 @@ func main() {
 }
 
 func sendHearBeat(addr string) {
-	request := protocol.CreateRequestCommand(cmprotocol.HEART_BEAT, nil)
+	request := protocol.CreateRequestCommand(code.HEART_BEAT, nil)
 	response, err := remotingClient.InvokeSync(addr, request, 3000)
 	if err != nil {
 		fmt.Printf("Send HeartBeat[Sync] failed: %s\n", err)
 	} else {
-		if response.Code == cmprotocol.SUCCESS {
+		if response.Code == code.SUCCESS {
 			fmt.Printf("Send HeartBeat[Sync] success. response: body[%s]\n", string(response.Body))
 		} else {
 			fmt.Printf("Send HeartBeat[Sync] failed: code[%d] err[%s]\n", response.Code, response.Remark)

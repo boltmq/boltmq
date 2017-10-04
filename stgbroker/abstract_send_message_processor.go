@@ -2,23 +2,24 @@ package stgbroker
 
 import (
 	"fmt"
-	"math/rand"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"math/rand"
+	"strings"
 )
 
-const DLQ_NUMS_PER_GROUP = 1
+const (
+	DLQ_NUMS_PER_GROUP = 1
+)
 
 // AbstractSendMessageProcessor 发送处理类
 // Author gaoyanlei
@@ -45,18 +46,18 @@ func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.R
 
 	var requestHeader *header.SendMessageRequestHeader
 
-	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
+	if request.Code == code.SEND_MESSAGE_V2 {
 		err := request.DecodeCommandCustomHeader(requestHeaderV2)
 		if err != nil {
-			fmt.Println("error")
+			logger.Errorf("error: %s", err.Error())
 		}
 		requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
-	} else if request.Code == commonprotocol.SEND_MESSAGE {
+	} else if request.Code == code.SEND_MESSAGE {
 		requestHeader = &header.SendMessageRequestHeader{}
 		err := request.DecodeCommandCustomHeader(requestHeader)
 		if err != nil {
-			fmt.Println("error")
+			logger.Errorf("error: %s", err.Error())
 		}
 	}
 
@@ -79,13 +80,13 @@ func (asmp *AbstractSendMessageProcessor) buildMsgContext(ctx netm.Context, requ
 func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if !asmp.BrokerController.BrokerConfig.HasWriteable() && asmp.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
-		response.Code = commonprotocol.NO_PERMISSION
+		response.Code = code.NO_PERMISSION
 		response.Remark = fmt.Sprintf("the broker[%s] sending message is forbidden", asmp.BrokerController.BrokerConfig.BrokerIP1)
 		return response
 	}
 
 	if !asmp.BrokerController.TopicConfigManager.isTopicCanSendMessage(requestHeader.Topic) {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
 		return response
 	}
@@ -121,7 +122,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 		}
 
 		if topicConfig == nil {
-			response.Code = commonprotocol.TOPIC_NOT_EXIST
+			response.Code = code.TOPIC_NOT_EXIST
 			response.Remark = fmt.Sprintf("topic[%s] not exist, apply first please!", requestHeader.Topic)
 			return response
 		}
@@ -142,7 +143,7 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 
 		logger.Warn(errorInfo)
 		response.Remark = errorInfo
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		return response
 	}
 	return response

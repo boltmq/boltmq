@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
-
-	cmprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"log"
 )
 
 var (
@@ -29,7 +28,7 @@ func (processor *GetTopicStatsInfoProcessor) ProcessRequest(ctx netm.Context,
 	}
 	fmt.Printf("DecodeCommandCustomHeader %v\n", topicStatsInfoRequestHeader)
 
-	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
+	response := protocol.CreateResponseCommand(code.SUCCESS, "success")
 	response.Opaque = request.Opaque
 
 	return response, nil
@@ -42,7 +41,7 @@ func (processor *OtherProcessor) ProcessRequest(ctx netm.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	fmt.Printf("OtherProcessor %d %d\n", request.Code, request.Opaque)
 
-	response := protocol.CreateResponseCommand(cmprotocol.SUCCESS, "success")
+	response := protocol.CreateResponseCommand(code.SUCCESS, "success")
 	response.Opaque = request.Opaque
 
 	return response, nil
@@ -74,16 +73,16 @@ func main() {
 
 func initServer() {
 	remotingServer = remoting.NewDefalutRemotingServer("0.0.0.0", 10911)
-	remotingServer.RegisterProcessor(cmprotocol.HEART_BEAT, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.SEND_MESSAGE_V2, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.GET_TOPIC_STATS_INFO, &GetTopicStatsInfoProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.GET_MAX_OFFSET, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.QUERY_CONSUMER_OFFSET, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.PULL_MESSAGE, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.UPDATE_CONSUMER_OFFSET, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.GET_CONSUMER_LIST_BY_GROUP, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.GET_ROUTEINTO_BY_TOPIC, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.UPDATE_AND_CREATE_TOPIC, &OtherProcessor{})
-	remotingServer.RegisterProcessor(cmprotocol.GET_KV_CONFIG, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.HEART_BEAT, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.SEND_MESSAGE_V2, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.GET_TOPIC_STATS_INFO, &GetTopicStatsInfoProcessor{})
+	remotingServer.RegisterProcessor(code.GET_MAX_OFFSET, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.QUERY_CONSUMER_OFFSET, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.PULL_MESSAGE, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.UPDATE_CONSUMER_OFFSET, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.GET_CONSUMER_LIST_BY_GROUP, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.GET_ROUTEINTO_BY_TOPIC, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.UPDATE_AND_CREATE_TOPIC, &OtherProcessor{})
+	remotingServer.RegisterProcessor(code.GET_KV_CONFIG, &OtherProcessor{})
 	remotingServer.RegisterContextListener(&ServerContextListener{})
 }
