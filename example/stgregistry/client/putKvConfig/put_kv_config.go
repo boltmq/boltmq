@@ -67,5 +67,4 @@ func main() {
 		}
 	}
 
-	select {}
 }

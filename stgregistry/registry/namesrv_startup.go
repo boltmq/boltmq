@@ -10,7 +10,7 @@ import (
 
 const (
 	default_port = 9876
-	default_ip   = "0.0.0.0"
+	default_ip   = "127.0.0.1"
 )
 
 // Startup 启动Namesrv控制器

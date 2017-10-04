@@ -99,5 +99,4 @@ func main() {
 	}
 	logger.Info("sync response REGISTER_BROKER success. %s", result.ToString())
 
-	select {}
 }

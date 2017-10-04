@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	broker_ip   = "0.0.0.0"
+	broker_ip   = "127.0.0.1"
 	broker_port = 10911
 	ten_second  = 10 * 1000
 	one_minute  = 60 * 1000
@@ -349,7 +349,7 @@ func (self *BrokerController) unRegisterBrokerAll() {
 // Author rongzhihong
 // Since 2017/9/12
 func (self *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
-	logger.Info("register all broker start")
+	logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
 	topicConfigWrapper := self.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !self.BrokerConfig.HasWriteable() || !self.BrokerConfig.HasReadable() {
 		topicConfigTable := topicConfigWrapper.TopicConfigTable

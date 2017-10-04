@@ -31,9 +31,10 @@ type AdminBrokerProcessor struct {
 // Author gaoyanlei
 // Since 2017/8/23
 func NewAdminBrokerProcessor(controller *BrokerController) *AdminBrokerProcessor {
-	var adminBrokerProcessor = new(AdminBrokerProcessor)
-	adminBrokerProcessor.BrokerController = controller
-	return adminBrokerProcessor
+	adminProcessor := &AdminBrokerProcessor{
+		BrokerController: controller,
+	}
+	return adminProcessor
 }
 
 // ProcessRequest 请求入口
@@ -42,7 +43,7 @@ func NewAdminBrokerProcessor(controller *BrokerController) *AdminBrokerProcessor
 func (self *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
 	case code.UPDATE_AND_CREATE_TOPIC:
-		return self.updateAndCreateTopic(ctx, request) // 创建或更新Topic
+		return self.updateAndCreateTopic(ctx, request) // 更新创建Topic
 	case code.DELETE_TOPIC_IN_BROKER:
 		return self.deleteTopic(ctx, request) // 删除Topic
 	case code.GET_ALL_TOPIC_CONFIG:
@@ -116,38 +117,39 @@ func (self *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *prot
 // updateAndCreateTopic 更新创建TOPIC
 // Author rongzhihong
 // Since 2017/8/23
-func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
+func (self *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.CreateTopicRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("err: %s", err.Error())
+		return response, err
 	}
 
 	// Topic名字是否与保留字段冲突
-	if strings.EqualFold(requestHeader.Topic, abp.BrokerController.BrokerConfig.BrokerClusterName) {
+	topic := requestHeader.Topic
+	logger.Infof("requestHeader.Topic=%s,   self.BrokerController.BrokerConfig.BrokerClusterName=%s", topic, self.BrokerController.BrokerConfig.BrokerClusterName)
+	if strings.EqualFold(topic, self.BrokerController.BrokerConfig.BrokerClusterName) {
 		format := "the topic[%s] is conflict with system reserved words."
-		logger.Warnf(format, requestHeader.Topic)
-		response.Code = code.SYSTEM_ERROR
-		response.Remark = fmt.Sprintf(format, requestHeader.Topic)
+		logger.Infof(format, topic)
+		response.Remark = fmt.Sprintf(format, topic)
 		return response, nil
 	}
 
-	topicConfig := &stgcommon.TopicConfig{
-		TopicName:       requestHeader.Topic,
-		ReadQueueNums:   requestHeader.ReadQueueNums,
-		WriteQueueNums:  requestHeader.WriteQueueNums,
-		TopicFilterType: requestHeader.TopicFilterType,
-		Perm:            requestHeader.Perm,
-	}
+	readQueueNums := requestHeader.ReadQueueNums
+	writeQueueNums := requestHeader.WriteQueueNums
+	brokerPermission := requestHeader.Perm
+	topicFilterType := requestHeader.TopicFilterType
+	topicConfig := stgcommon.NewDefaultTopicConfig(topic, readQueueNums, writeQueueNums, brokerPermission, topicFilterType)
 	if requestHeader.TopicSysFlag != 0 {
 		topicConfig.TopicSysFlag = requestHeader.TopicSysFlag
 	}
-	abp.BrokerController.TopicConfigManager.UpdateTopicConfig(topicConfig)
-	abp.BrokerController.RegisterBrokerAll(false, true)
+	self.BrokerController.TopicConfigManager.UpdateTopicConfig(topicConfig)
+	self.BrokerController.RegisterBrokerAll(false, true)
 
 	response.Code = code.SUCCESS
 	response.Remark = ""
+	logger.Infof("updateAndCreateTopic successful")
 	return response, nil
 }
 

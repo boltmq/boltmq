@@ -106,5 +106,5 @@ func main() {
 	//if err != nil {
 	//	logger.Error(err.Error())
 	//}
-	select {}
+
 }

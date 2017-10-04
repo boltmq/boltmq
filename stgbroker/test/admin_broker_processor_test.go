@@ -4,6 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/test/common"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
@@ -20,24 +21,26 @@ func TestUpdateAndCreateTopic(t *testing.T) {
 		newTopic string = "TopicExample2"
 	)
 
-	bc := InitBrokerController()
+	conntroller := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	topicConfigOld := bc.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Get(newTopic)
-	response, err := common.CreateTopic(bc, ctx, topicConfigOld, newTopic)
+	topicConfigOld := conntroller.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Get(newTopic)
+	response, err := common.CreateTopic(conntroller, ctx, topicConfigOld, newTopic)
 	if err != nil {
+		logger.Errorf("common.CreateTopic() err: %s", err.Error())
 		t.Fail()
-		t.Error(err)
+		return
 	}
 
-	topicConfigNew := bc.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Get(newTopic)
+	topicConfigNew := conntroller.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Get(newTopic)
 	if (topicConfigOld == nil && topicConfigNew != nil) || (*topicConfigOld == *topicConfigNew) {
+		logger.Errorf("UpdateAndCreateTopic Failure!")
 		t.Fail()
-		t.Error("UpdateAndCreateTopic Failure!")
+		return
 	}
 
-	t.Logf("old:%v, new:%v", topicConfigOld, topicConfigNew)
-	t.Logf(" body:%s, response:%#v", response.Body, response)
+	logger.Infof("old:%s, new:%s", topicConfigOld.ToString(), topicConfigNew.ToString())
+	logger.Infof("body:%s, response:%s", string(response.Body), response.ToString())
 }
 
 func TestDeleteTopic(t *testing.T) {
