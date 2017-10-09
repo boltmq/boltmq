@@ -62,6 +62,8 @@ func (self *DispatchMessageService) putRequest(dispatchRequest *DispatchRequest)
 
 		logger.Info("dispatch message service put request,request size: ", self.requestSize)
 
+		self.defaultMessageStore.StoreStatsService.setDispatchMaxBuffer(int64(atomic.LoadInt32(&self.requestSize)))
+
 		putMsgIndexHightWater := self.defaultMessageStore.MessageStoreConfig.PutMsgIndexHightWater
 		if atomic.LoadInt32(&self.requestSize) > putMsgIndexHightWater {
 			logger.Infof("Message index buffer size %d > high water %d", atomic.LoadInt32(&self.requestSize),

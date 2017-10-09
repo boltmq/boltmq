@@ -181,7 +181,7 @@ func TestDefaultMessageStore_LookMessageByOffset(t *testing.T) {
 
 	if message.CommitLogOffset != 0 {
 		t.Fail()
-		t.Error("look message by offset error, expection:0, actuality:")
+		t.Error("look message by offset error, expection:0, actuality:", message.CommitLogOffset)
 	}
 
 	message = master.LookMessageByOffset(12637)
@@ -192,7 +192,7 @@ func TestDefaultMessageStore_LookMessageByOffset(t *testing.T) {
 
 	if message.CommitLogOffset != 12637 {
 		t.Fail()
-		t.Error("look message by offset error, expection:12637, actuality:")
+		t.Error("look message by offset error, expection:12637, actuality:", message.CommitLogOffset)
 	}
 
 	message = master.LookMessageByOffset(12638)
@@ -274,6 +274,24 @@ func TestDefaultMessageStore_GetRuntimeInfo(t *testing.T) {
 	if infoMap == nil {
 		t.Fail()
 		t.Error("get runtime info error, runtime info is nil")
+	}
+
+	if infoMap["putMessageTimesTotal"] != "100" {
+		t.Fail()
+		t.Error("get runtime info putMessageTimesTotal error, expection:100, actuality:",
+			infoMap["putMessageTimesTotal"])
+	}
+
+	if infoMap["putMessageSizeTotal"] != "12700" {
+		t.Fail()
+		t.Error("get runtime info putMessageTimesTotal error, expection:12700, actuality:",
+			infoMap["putMessageSizeTotal"])
+	}
+
+	if infoMap["putMessageAverageSize"] != "127" {
+		t.Fail()
+		t.Error("get runtime info putMessageTimesTotal error, expection:127, actuality:",
+			infoMap["putMessageAverageSize"])
 	}
 
 	master.Shutdown()

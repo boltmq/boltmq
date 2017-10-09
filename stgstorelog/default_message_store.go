@@ -388,9 +388,22 @@ func (self *DefaultMessageStore) PutMessage(msg *MessageExtBrokerInner) *PutMess
 		return &PutMessageResult{PutMessageStatus: MESSAGE_ILLEGAL}
 	}
 
+	beginTime := time.Now().UnixNano() / 1000000
 	result := self.CommitLog.putMessage(msg)
 
 	// TODO 性能数据统计以及更新存在服务状态
+	eclipseTime := time.Now().UnixNano()/1000000 - beginTime
+	if eclipseTime > 1000 {
+		logger.Warn("putMessage not in lock eclipse time(ms) ", eclipseTime)
+	}
+
+	self.StoreStatsService.setPutMessageEntireTimeMax(eclipseTime)
+	size := self.StoreStatsService.getSinglePutMessageTopicTimesTotal(msg.Topic)
+	self.StoreStatsService.setSinglePutMessageTopicTimesTotal(msg.Topic, atomic.AddInt64(&size, 1))
+
+	if nil == result || !result.isOk() {
+		atomic.AddInt64(&self.StoreStatsService.putMessageFailedTimes, 1)
+	}
 
 	return result
 }

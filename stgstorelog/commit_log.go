@@ -4,12 +4,14 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
+	"strconv"
+	"sync/atomic"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
-	"strconv"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
 
 const (
@@ -130,8 +132,9 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 
 	putMessageResult := &PutMessageResult{PutMessageStatus: PUTMESSAGE_PUT_OK, AppendMessageResult: result}
 
-	// TODO self.DefaultMessageStore.StoreStatsService
-	// TODO
+	// Statistics
+	size := self.DefaultMessageStore.StoreStatsService.getSinglePutMessageTopicSizeTotal(msg.Topic)
+	self.DefaultMessageStore.StoreStatsService.setSinglePutMessageTopicSizeTotal(msg.Topic, atomic.AddInt64(&size, result.WroteBytes))
 
 	// Synchronization flush
 	if config.SYNC_FLUSH == self.DefaultMessageStore.MessageStoreConfig.FlushDiskType {

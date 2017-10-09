@@ -42,6 +42,11 @@ type StoreStatsService struct {
 
 func NewStoreStatsService() *StoreStatsService {
 	service := new(StoreStatsService)
+	service.putMessageTopicTimesTotal = make(map[string]int64, 128)
+	service.putMessageTopicSizeTotal = make(map[string]int64, 128)
+	service.getMessageTimesTotalFound = 0
+	service.getMessageTransferedMsgCount = 0
+	service.getMessageTimesTotalMiss = 0
 	service.putMessageDistributeTime = make([]int64, 7)
 	service.putTimesList = list.New()
 	service.getTimesFoundList = list.New()
@@ -50,8 +55,15 @@ func NewStoreStatsService() *StoreStatsService {
 	service.lockPut = new(sync.Mutex)
 	service.lockGet = new(sync.Mutex)
 	service.lockSampling = new(sync.Mutex)
-	atomic.StoreInt64(&service.messageStoreBootTimestamp, time.Now().UnixNano()/1000000)
-	atomic.StoreInt64(&service.lastPrintTimestamp, time.Now().UnixNano()/1000000)
+	service.messageStoreBootTimestamp = time.Now().UnixNano() / 1000000
+	service.putMessageEntireTimeMax = 0
+	service.getMessageEntireTimeMax = 0
+	service.dispatchMaxBuffer = 0
+	service.lastPrintTimestamp = time.Now().UnixNano() / 1000000
+
+	for i := 0; i < len(service.putMessageDistributeTime); i++ {
+		service.putMessageDistributeTime[i] = 0
+	}
 
 	return service
 }
@@ -74,7 +86,7 @@ func (self *StoreStatsService) GetGetMessageTransferedMsgCount() int64 {
 
 func (self *StoreStatsService) GetPutMessageTimesTotal() int64 {
 	result := int64(0)
-	for _, data := range self.putMessageTopicSizeTotal {
+	for _, data := range self.putMessageTopicTimesTotal {
 		atomic.AddInt64(&result, atomic.LoadInt64(&data))
 	}
 
@@ -371,6 +383,64 @@ func (self *StoreStatsService) GetRuntimeInfo() map[string]string {
 	result["getTransferedTps"] = self.getGetTransferedTps()
 
 	return result
+}
+
+func (self *StoreStatsService) setSinglePutMessageTopicSizeTotal(topic string, value int64) {
+	self.putMessageTopicSizeTotal[topic] = value
+}
+
+func (self *StoreStatsService) getSinglePutMessageTopicSizeTotal(topic string) int64 {
+	result, ok := self.putMessageTopicSizeTotal[topic]
+	if !ok {
+		result = int64(0)
+		self.putMessageTopicSizeTotal[topic] = result
+	}
+
+	return result
+}
+
+func (self *StoreStatsService) setPutMessageEntireTimeMax(value int64) {
+	if value <= 0 {
+		atomic.AddInt64(&self.putMessageDistributeTime[0], 1)
+	} else if value < 10 {
+		atomic.AddInt64(&self.putMessageDistributeTime[1], 1)
+	} else if value < 100 {
+		atomic.AddInt64(&self.putMessageDistributeTime[2], 1)
+	} else if value < 500 {
+		atomic.AddInt64(&self.putMessageDistributeTime[3], 1)
+	} else if value < 1000 {
+		atomic.AddInt64(&self.putMessageDistributeTime[4], 1)
+	} else if value < 10000 {
+		atomic.AddInt64(&self.putMessageDistributeTime[5], 1)
+	} else {
+		atomic.AddInt64(&self.putMessageDistributeTime[6], 1)
+	}
+
+	if value > self.putMessageEntireTimeMax {
+		self.lockPut.Lock()
+		defer self.lockPut.Unlock()
+		self.putMessageEntireTimeMax = value
+	}
+}
+
+func (self *StoreStatsService) setSinglePutMessageTopicTimesTotal(topic string, value int64) {
+	self.putMessageTopicTimesTotal[topic] = value
+}
+
+func (self *StoreStatsService) getSinglePutMessageTopicTimesTotal(topic string) int64 {
+	result, ok := self.putMessageTopicTimesTotal[topic]
+	if !ok {
+		result = 0
+		self.putMessageTopicTimesTotal[topic] = result
+	}
+
+	return result
+}
+
+func (self *StoreStatsService) setDispatchMaxBuffer(value int64) {
+	if value > self.dispatchMaxBuffer {
+		self.dispatchMaxBuffer = value
+	}
 }
 
 func (self *StoreStatsService) Shutdown() {
