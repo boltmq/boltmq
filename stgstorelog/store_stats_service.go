@@ -1,7 +1,6 @@
 package stgstorelog
 
 import (
-	"github.com/fanliao/go-concurrentMap"
 	"container/list"
 	"sync"
 	"sync/atomic"
@@ -16,8 +15,8 @@ const (
 
 type StoreStatsService struct {
 	putMessageFailedTimes        int64
-	putMessageTopicTimesTotal    *concurrent.ConcurrentMap
-	putMessageTopicSizeTotal     *concurrent.ConcurrentMap
+	putMessageTopicTimesTotal    map[string]int64
+	putMessageTopicSizeTotal     map[string]int64
 	getMessageTimesTotalFound    int64
 	getMessageTransferedMsgCount int64
 	getMessageTimesTotalMiss     int64
@@ -66,4 +65,17 @@ func (self *StoreStatsService) setGetMessageEntireTimeMax(value int64) {
 
 func (self *StoreStatsService) GetGetMessageTransferedMsgCount() int64 {
 	return atomic.LoadInt64(&self.getMessageTransferedMsgCount)
+}
+
+func (self *StoreStatsService) GetPutMessageTimesTotal() int64 {
+	result := int64(0)
+	for _, data := range self.putMessageTopicSizeTotal {
+		atomic.AddInt64(&result, atomic.LoadInt64(&data))
+	}
+
+	return result
+}
+
+func (self *StoreStatsService) Shutdown() {
+	// TODO
 }

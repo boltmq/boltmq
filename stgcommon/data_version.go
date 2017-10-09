@@ -1,55 +1,60 @@
 package stgcommon
 
 import (
-	"encoding/json"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"github.com/pquerna/ffjson/ffjson"
 	"sync/atomic"
 	"time"
 )
 
 type DataVersion struct {
-	Timestatmp int64 `json:"timestatmp"`
-	Counter    int64 `json:"counter"`
+	Timestamp int64 `json:"timestamp"`
+	Counter   int64 `json:"counter"`
 }
 
-func NewDataVersion() *DataVersion {
-	var dataVersion = new(DataVersion)
-	dataVersion.Timestatmp = time.Now().UnixNano()
+func NewDataVersion(timestamp ...int64) *DataVersion {
+	dataVersion := new(DataVersion)
+	dataVersion.Timestamp = time.Now().UnixNano()
+	if timestamp != nil && len(timestamp) > 0 {
+		dataVersion.Timestamp = timestamp[0]
+	}
 	dataVersion.Counter = atomic.AddInt64(&dataVersion.Counter, 0)
 	return dataVersion
 }
 
 func (self *DataVersion) AssignNewOne(dataVersion DataVersion) {
-	self.Timestatmp = dataVersion.Timestatmp
+	self.Timestamp = dataVersion.Timestamp
 	self.Counter = dataVersion.Counter
 }
 
-func (self *DataVersion) Equal(dataVersion *DataVersion) bool {
-	if dataVersion == nil {
+func (this *DataVersion) Equals(dataVersion *DataVersion) bool {
+	self := this == nil
+	param := dataVersion == nil
+	if self && param {
+		return true
+	}
+	if (self && !param) || (!self && param) {
 		return false
 	}
-	return self.Timestatmp == dataVersion.Timestatmp && self.Counter == dataVersion.Counter
+	return this.Timestamp == dataVersion.Timestamp && this.Counter == dataVersion.Counter
 }
 
 func (self *DataVersion) NextVersion() {
-	self.Timestatmp = time.Now().UnixNano()
+	self.Timestamp = time.Now().UnixNano()
 	self.Counter = atomic.AddInt64(&self.Counter, 1)
 }
 
 func (self *DataVersion) ToString() string {
-	info := fmt.Sprintf("dataVersion[timestatmp=%d, counter=%d]", self.Timestatmp, self.Counter)
+	info := fmt.Sprintf("dataVersion [timestamp=%d, counter=%d]", self.Timestamp, self.Counter)
 	return info
 }
 
-// ToJson DataVersion转json字符串
-// Author rongzhihong
-// Since 2017/9/8
 func (self *DataVersion) ToJson() string {
-	byteArray, err := json.Marshal(self)
-	if err != nil {
-		logger.Error(err)
-		return ""
+	buf, err := ffjson.Marshal(self)
+	if err == nil {
+		return string(buf)
 	}
-	return string(byteArray)
+	logger.Errorf("dataVersion[%#v] ffjson.Marshal() err: %s \n", self, err.Error())
+	return ""
 }

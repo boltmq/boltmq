@@ -2,7 +2,6 @@ package subscription
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
 // SubscriptionGroupConfig 订阅关系配置
@@ -32,8 +31,6 @@ type SubscriptionGroupConfig struct {
 
 	// 发现消息堆积后，将Consumer的消费请求重定向到另外一台Slave机器
 	WhichBrokerWhenConsumeSlowly int64 `json:"whichBrokerWhenConsumeSlowly"`
-
-	*protocol.RemotingSerializable
 }
 
 // NewSubscriptionGroupConfig 初始化SubscriptionGroupConfig
@@ -47,7 +44,6 @@ func NewSubscriptionGroupConfig() *SubscriptionGroupConfig {
 		RetryQueueNums:         1,
 		RetryMaxTimes:          16,
 		BrokerId:               stgcommon.MASTER_ID,
-		RemotingSerializable:   new(protocol.RemotingSerializable),
 	}
 
 }

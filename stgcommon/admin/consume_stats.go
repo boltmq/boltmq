@@ -2,7 +2,6 @@ package admin
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
 // OffsetWrapper 消费者统计
@@ -11,7 +10,6 @@ import (
 type ConsumeStats struct {
 	ConsumeTps  int64                                    `json:"consumeTps"`
 	OffsetTable map[*message.MessageQueue]*OffsetWrapper `json:"offsetTable"`
-	*protocol.RemotingSerializable
 }
 
 // NewConsumeStats 初始化
@@ -20,7 +18,6 @@ type ConsumeStats struct {
 func NewConsumeStats() *ConsumeStats {
 	consumeStats := new(ConsumeStats)
 	consumeStats.OffsetTable = make(map[*message.MessageQueue]*OffsetWrapper)
-	consumeStats.RemotingSerializable = new(protocol.RemotingSerializable)
 	return consumeStats
 }
 

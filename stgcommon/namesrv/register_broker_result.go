@@ -12,17 +12,32 @@ import (
 type RegisterBrokerResult struct {
 	HaServerAddr string
 	MasterAddr   string
-	KvTable      body.KVTable
+	KvTable      *body.KVTable
+}
+
+// NewRegisterBrokerResult 初始化RegisterBrokerResult
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func NewRegisterBrokerResult(haServerAddr, masterAddr string) *RegisterBrokerResult {
+	result := &RegisterBrokerResult{
+		HaServerAddr: haServerAddr,
+		MasterAddr:   masterAddr,
+		KvTable:      body.NewKVTable(),
+	}
+	return result
 }
 
 func (self *RegisterBrokerResult) ToString() string {
+	if self == nil {
+		return ""
+	}
 	datas := make([]string, 0, len(self.KvTable.Table))
-	if self.KvTable.Table != nil {
+	if self.KvTable != nil && self.KvTable.Table != nil {
 		for key, value := range self.KvTable.Table {
 			kv := fmt.Sprintf("[key=%s, value=%s]", key, value)
 			datas = append(datas, kv)
 		}
 	}
-	format := "RegisterBrokerResult[haServerAddr=%s, masterAddr=%s, kvTable=%s]"
+	format := "registerBrokerResult [haServerAddr=%s, masterAddr=%s, kvTable=%s]"
 	return fmt.Sprintf(format, self.HaServerAddr, self.MasterAddr, strings.Join(datas, ","))
 }

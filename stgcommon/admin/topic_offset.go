@@ -5,3 +5,8 @@ type TopicOffset struct {
 	MaxOffset           int64 `json:"maxOffset"`
 	LastUpdateTimestamp int64 `json:"lastUpdateTimestamp"`
 }
+
+func NewTopicOffset() *TopicOffset {
+	topicOffset := new(TopicOffset)
+	return topicOffset
+}

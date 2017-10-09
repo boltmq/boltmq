@@ -124,18 +124,15 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 
 	var registerBrokerBody body.RegisterBrokerBody
 	if request.Body != nil && len(request.Body) > 0 {
-		logger.Info("registerBroker.request.Body --> %s", string(request.Body))
+		//logger.Info("registerBroker.request.Body --> %s", string(request.Body))
 		err = registerBrokerBody.CustomDecode(request.Body, &registerBrokerBody)
 		if err != nil {
 			logger.Error("registerBrokerBody.Decode() err: %s, request.Body:%+v", err.Error(), request.Body)
 			return response, err
 		}
 	} else {
-		logger.Info("registry default dataVersion with registerBrokerBody")
-		dataVersion := stgcommon.NewDataVersion()
-		dataVersion.Timestatmp = 0
-		registerBrokerBody.TopicConfigSerializeWrapper = new(body.TopicConfigSerializeWrapper)
-		registerBrokerBody.TopicConfigSerializeWrapper.DataVersion = dataVersion
+		dataVersion := stgcommon.NewDataVersion(0)
+		registerBrokerBody.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper(dataVersion)
 	}
 
 	result := self.NamesrvController.RouteInfoManager.registerBroker(
@@ -148,11 +145,9 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 		registerBrokerBody.FilterServerList,            // 7
 		ctx, // 8
 	)
-	logger.Info("registerBrokerBody.result ---> %s", result.ToString())
+	//logger.Info("registerBrokerBody.result ---> %s", result.ToString())
 
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
-	responseHeader.HaServerAddr = result.HaServerAddr
-	responseHeader.MasterAddr = result.MasterAddr
+	responseHeader := namesrv.NewRegisterBrokerResponseHeader(result.HaServerAddr, result.MasterAddr)
 	response.CustomHeader = responseHeader
 
 	// 获取顺序消息 topic 列表
@@ -161,7 +156,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
-	logger.Info("registerBrokerBody.response ---> %s", response.ToString())
+	//logger.Info("registerBrokerBody.response ---> %s", response.ToString())
 	return response, nil
 }
 
@@ -376,9 +371,7 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 			return response, err
 		}
 	} else {
-		dataVersion := stgcommon.NewDataVersion()
-		dataVersion.Timestatmp = 0
-		topicConfigWrapper.DataVersion = dataVersion
+		topicConfigWrapper.DataVersion = stgcommon.NewDataVersion(0)
 	}
 
 	registerBrokerResult := self.NamesrvController.RouteInfoManager.registerBroker(

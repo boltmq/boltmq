@@ -1,6 +1,7 @@
 package process
 
 import (
+	"errors"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
@@ -8,7 +9,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	set "github.com/deckarep/golang-set"
-	"github.com/kataras/go-errors"
 	"strconv"
 	"strings"
 	"time"

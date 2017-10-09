@@ -9,22 +9,35 @@ import (
 )
 
 const (
-	port = 9876
+	default_port = 9876
+	default_ip   = "127.0.0.1"
 )
 
 // Startup 启动Namesrv控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
-func Startup() *DefaultNamesrvController {
+func Startup(stopChannel chan bool) *DefaultNamesrvController {
+	// 构建NamesrvController
 	controller := CreateNamesrvController()
+
+	// NamesrvController初始化
 	initResult := controller.initialize()
 	if !initResult {
 		logger.Info("the name server controller initialize failed")
 		controller.shutdown()
 		os.Exit(0)
 	}
-	controller.start()
+
+	// 注册ShutdownHook钩子
+	controller.registerShutdownHook(stopChannel)
+
+	// 启动
+	go func() {
+		// 额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发namesrv主线程阻塞”情况
+		controller.start()
+	}()
 	logger.Info("the name server boot success")
+
 	return controller
 }
 
@@ -43,9 +56,9 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	}
 
 	// 初始化NamesrvController
-	remotingServer := remoting.NewDefalutRemotingServer("0.0.0.0", port)
+	remotingServer := remoting.NewDefalutRemotingServer(default_ip, default_port)
 	controller := NewNamesrvController(cfg, remotingServer)
 
-	logger.Info("create default namesrv controller success")
+	logger.Info("create name server controller success")
 	return controller
 }

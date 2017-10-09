@@ -108,7 +108,7 @@ func (ctx *DefaultContext) Idle() time.Duration {
 	return time.Since(ctx.lastOptTime)
 }
 
-// 错误通知
+// onError 错误通知
 func (ctx *DefaultContext) onError(e error) {
 	if e == io.EOF {
 		ctx.bootstrap.onContextClose(ctx)
@@ -126,6 +126,6 @@ func (ctx *DefaultContext) ToString() string {
 		return fmt.Sprintf("ctx or ctx.conn is nil")
 	}
 
-	format := "net.conn[localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
+	format := "net.conn [localAddr=%s, remoteAddr=%s, addr=%s, isClosed=%t]"
 	return fmt.Sprintf(format, ctx.conn.LocalAddr().String(), ctx.conn.RemoteAddr().String(), ctx.addr, ctx.isClosed)
 }

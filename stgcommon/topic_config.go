@@ -1,11 +1,13 @@
 package stgcommon
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	DefaultReadQueueNums  = 16
 	DefaultWriteQueueNums = 16
-	SEPARATOR             = " "
+	separator             = " "
 )
 
 type TopicConfig struct {
@@ -19,30 +21,32 @@ type TopicConfig struct {
 	Order           bool            `json:"order"`
 }
 
-func NewTopicConfig() *TopicConfig {
-	return &TopicConfig{
-		ReadQueueNums:  DefaultReadQueueNums,
+func NewTopicConfig(topicName string) *TopicConfig {
+	topicConfig := &TopicConfig{
+		TopicName:      topicName,
 		WriteQueueNums: DefaultWriteQueueNums,
-		SEPARATOR:      SEPARATOR,
+		ReadQueueNums:  DefaultReadQueueNums,
+		SEPARATOR:      separator,
 	}
-}
-
-func NewTopicConfigByName(topicName string) *TopicConfig {
-	topicConfig := NewTopicConfig()
-	topicConfig.TopicName = topicName
 	return topicConfig
 }
 
-func NewTopicConfigByAttribute(topicName string, readQueueNums, writeQueueNums int32, perm int) *TopicConfig {
-	topicConfig := NewTopicConfigByName(topicName)
-	topicConfig.ReadQueueNums = readQueueNums
-	topicConfig.WriteQueueNums = writeQueueNums
-	topicConfig.Perm = perm
+func NewDefaultTopicConfig(topicName string, readQueueNums, writeQueueNums int32, perm int, topicFilterType TopicFilterType) *TopicConfig {
+	topicConfig := &TopicConfig{
+		TopicName:       topicName,
+		WriteQueueNums:  writeQueueNums,
+		ReadQueueNums:   readQueueNums,
+		SEPARATOR:       separator,
+		Perm:            perm,
+		TopicFilterType: topicFilterType,
+	}
 	return topicConfig
-
 }
 
-func (tc *TopicConfig) ToString() string {
+func (self *TopicConfig) ToString() string {
+	if self == nil {
+		return ""
+	}
 	format := "TopicConfig [topicName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicFilterType=%d, topicSysFlag=%d, order=%t]"
-	return fmt.Sprintf(format, tc.TopicName, tc.ReadQueueNums, tc.WriteQueueNums, tc.Perm, int(tc.TopicFilterType), tc.TopicSysFlag, tc.Order)
+	return fmt.Sprintf(format, self.TopicName, self.ReadQueueNums, self.WriteQueueNums, self.Perm, int(self.TopicFilterType), self.TopicSysFlag, self.Order)
 }

@@ -1,9 +1,9 @@
 package stgcommon
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/pquerna/ffjson/ffjson"
-	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -21,12 +21,8 @@ const (
 // Since 2017/9/5
 func ComputNextMorningTimeMillis() int64 {
 	currentTime := time.Now()
-
-	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day()+1,
-		0, 0, 0, 0, currentTime.Location())
-
+	nextMorning := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day()+1, 0, 0, 0, 0, currentTime.Location())
 	nextMorningTimeMillis := nextMorning.UnixNano() / 1000000
-
 	return nextMorningTimeMillis
 }
 
@@ -64,7 +60,7 @@ func ComputNextHourTimeMillis() int64 {
 func GetDiskPartitionSpaceUsedPercent(path string) (percent float64) {
 	defer utils.RecoveredFn()
 
-	percent = -1.0
+	percent = 1.0
 	// TODO: unix环境，去掉注释
 	/*if path != "" {
 		isExits, err := isExists(path)
@@ -91,20 +87,6 @@ func GetDiskPartitionSpaceUsedPercent(path string) (percent float64) {
 	return
 }
 
-// FileOrDirIsExists 校验文件或文件夹是否存在
-// Author: rongzhihong, <rongzhihong@gome.com.cn>
-// Since: 2017/9/13
-func isExists(fileFullPath string) (bool, error) {
-	_, err := os.Stat(fileFullPath)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
 // isWindowsOS check current os is windows
 // if current is windows operating system, return true ; otherwise return false
 // Author rongzhihong
@@ -123,6 +105,8 @@ func MilliTime2String(millisecond int64) string {
 
 var blankReg = regexp.MustCompile(`\S+?`)
 
+var numberReg = regexp.MustCompile(`^[0-9]+?$`)
+
 // IsBlank 是否为空:false:不为空, true:为空
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
 // Since: 2017/9/19
@@ -132,8 +116,6 @@ func IsBlank(content string) bool {
 	}
 	return true
 }
-
-var numberReg = regexp.MustCompile(`^[0-9]+?$`)
 
 // IsNumber 是否是数字:true:是, false:否
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
@@ -146,10 +128,12 @@ func IsNumber(content string) bool {
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
 // Since: 2017/9/19
 func Encode(v interface{}) []byte {
-	if value, err := ffjson.Marshal(v); err == nil {
-		return value
+	value, err := ffjson.Marshal(v)
+	if err != nil {
+		logger.Errorf("json.Encode err: %s", err.Error())
+		return nil
 	}
-	return nil
+	return value
 }
 
 // Decode Json Decode

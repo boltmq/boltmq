@@ -1,11 +1,15 @@
 package registry
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -74,6 +78,7 @@ func (self *DefaultNamesrvController) initialize() bool {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) shutdown() {
+	begineTime := stgcommon.GetCurrentTimeMillis()
 	if self.scanBrokerTicker != nil {
 		self.scanBrokerTicker.Stop()
 	}
@@ -83,7 +88,9 @@ func (self *DefaultNamesrvController) shutdown() {
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
 	}
-	logger.Info("namesrv controller shutdown successful")
+
+	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
+	logger.Info("namesrv controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
 }
 
 // start 启动Namesrv控制服务
@@ -132,4 +139,30 @@ func (self *DefaultNamesrvController) startPrintAllPeriodically() {
 // Since: 2017/9/18
 func (self *DefaultNamesrvController) registerContextListener() {
 	self.RemotingServer.RegisterContextListener(self.BrokerHousekeepingService)
+}
+
+// registerShutdownHook 注册Shutdown钩子
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func (self *DefaultNamesrvController) registerShutdownHook(stopChan chan bool) {
+	logger.Info("register NamesrvController.ShutdownHook() successful")
+	stopSignalChan := make(chan os.Signal, 1)
+
+	// 这种退出方式比较优雅，能够在退出之前做些收尾工作，清理任务和垃圾
+	// http://www.codeweblog.com/nsqlookupd入口文件分析
+	// http://www.cnblogs.com/jkkkk/p/6180016.html
+	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		//阻塞程序运行，直到收到终止的信号
+		s := <-stopSignalChan
+
+		logger.Info("receive signal code:%d", s)
+		self.shutdown()
+
+		// 是否有必要close(stopSignalChan)??
+		close(stopSignalChan)
+
+		stopChan <- true
+	}()
 }

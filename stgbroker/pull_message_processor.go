@@ -1,8 +1,6 @@
 package stgbroker
 
 import (
-	"bytes"
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
@@ -11,7 +9,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/filter"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/topic"
@@ -52,27 +50,25 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Since 2017/9/5
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
+		logger.Info("唤醒HoldPullRequest: %v", request)
+
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
 			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
 			return
 		}
 
-		if response != nil {
-			response.Opaque = request.Opaque
-			response.MarkResponseType()
-			// TODO
-			/*			channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
-						public void operationComplete(ChannelFuture future) throws Exception {
-							if (!future.isSuccess()) {
-								log.error("processRequestWrapper response to "
-								+ future.channel().remoteAddress() + " failed",
-									future.cause());
-							log.error(request.toString());
-							log.error(response.toString());
-						}
-						}
-					});*/
+		if response == nil {
+			return
+		}
+
+		response.Opaque = request.Opaque
+		response.MarkResponseType()
+
+		_, err = ctx.WriteSerialObject(response)
+		if err != nil {
+			logger.Errorf("processRequestWrapper response to %s failed %s. \n request:%s, response:%s",
+				ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
 	}()
 }
@@ -91,8 +87,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	logger.Debug("receive PullMessage request command, ", request)
 
 	// 检查Broker权限
-	if !constant.IsReadable(pull.BrokerController.BrokerConfig.BrokerPermission) {
-		response.Code = commonprotocol.NO_PERMISSION
+	if !pull.BrokerController.BrokerConfig.HasReadable() {
+		response.Code = code.NO_PERMISSION
 		response.Remark = "the broker[" + pull.BrokerController.BrokerConfig.BrokerIP1 + "] pulling message is forbidden"
 		return response, nil
 	}
@@ -101,18 +97,20 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	subscriptionGroupConfig := pull.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(
 		requestHeader.ConsumerGroup)
 	if nil == subscriptionGroupConfig {
-		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
+		response.Code = code.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist, " + requestHeader.ConsumerGroup
 		return response, nil
 	}
 
 	// 这个订阅组是否可以消费消息
 	if !subscriptionGroupConfig.ConsumeEnable {
-		response.Code = commonprotocol.NO_PERMISSION
+		response.Code = code.NO_PERMISSION
 		response.Remark = "subscription group no permission, " + requestHeader.ConsumerGroup
 		return response, nil
 	}
 
+	// TODO client端口每次只传SysFlag=4, 为测试HoldPull，将SysFlag = 6
+	requestHeader.SysFlag = 6
 	hasSuspendFlag := sysflag.HasSuspendFlag(requestHeader.SysFlag)
 	hasCommitOffsetFlag := sysflag.HasCommitOffsetFlag(requestHeader.SysFlag)
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)
@@ -125,14 +123,14 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	// 检查topic是否存在
 	topicConfig := pull.BrokerController.TopicConfigManager.SelectTopicConfig(requestHeader.Topic)
 	if nil == topicConfig {
-		response.Code = commonprotocol.TOPIC_NOT_EXIST
+		response.Code = code.TOPIC_NOT_EXIST
 		response.Remark = "topic[" + requestHeader.Topic + "] not exist, apply first please!"
 		return response, nil
 	}
 
 	// 检查topic权限
 	if !constant.IsReadable(topicConfig.Perm) {
-		response.Code = commonprotocol.NO_PERMISSION
+		response.Code = code.NO_PERMISSION
 		response.Remark = "the topic[" + requestHeader.Topic + "] pulling message is forbidden"
 		return response, nil
 	}
@@ -141,7 +139,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	if requestHeader.QueueId < 0 || requestHeader.QueueId >= topicConfig.ReadQueueNums {
 		errorInfo := "queueId[" + strconv.Itoa(int(requestHeader.QueueId)) + "] is illagal,Topic :" + requestHeader.Topic + " topicConfig.readQueueNums: " + strconv.Itoa(int(topicConfig.ReadQueueNums))
 		logger.Warn(errorInfo)
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = errorInfo
 		return response, nil
 	}
@@ -152,7 +150,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		subscriptionData, err = filter.BuildSubscriptionData4Ponit(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.Subscription)
 		if err != nil {
 			logger.Warnf("parse the consumer's subscription %s failed, group: %s", requestHeader.Subscription, requestHeader.ConsumerGroup)
-			response.Code = commonprotocol.SUBSCRIPTION_PARSE_FAILED
+			response.Code = code.SUBSCRIPTION_PARSE_FAILED
 			response.Remark = "parse the consumer's subscription failed"
 			return response, nil
 		}
@@ -161,13 +159,13 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		consumerGroupInfo := pull.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 		if nil == consumerGroupInfo {
 			logger.Warnf("the consumer's group info not exist, group: %s", requestHeader.ConsumerGroup)
-			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
+			response.Code = code.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's group info not exist"
 			return response, nil
 		}
 
 		if !subscriptionGroupConfig.ConsumeBroadcastEnable && consumerGroupInfo.MessageModel == heartbeat.BROADCASTING {
-			response.Code = commonprotocol.NO_PERMISSION
+			response.Code = code.NO_PERMISSION
 			response.Remark = "the consumer group[" + requestHeader.ConsumerGroup
 			return response, nil
 		}
@@ -175,7 +173,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		subscriptionData = consumerGroupInfo.FindSubscriptionData(requestHeader.Topic)
 		if nil == subscriptionData {
 			logger.Warnf("the consumer's subscription not exist, group: %s", requestHeader.ConsumerGroup)
-			response.Code = commonprotocol.SUBSCRIPTION_NOT_EXIST
+			response.Code = code.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's subscription not exist"
 			return response, nil
 		}
@@ -183,7 +181,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		// 判断Broker的订阅关系版本是否最新
 		if subscriptionData.SubVersion < requestHeader.SubVersion {
 			logger.Warnf("the broker's subscription is not latest, group: %s %s", requestHeader.ConsumerGroup, subscriptionData.SubString)
-			response.Code = commonprotocol.SUBSCRIPTION_NOT_LATEST
+			response.Code = code.SUBSCRIPTION_NOT_LATEST
 			response.Remark = "the consumer's subscription not latestGetMessageResult"
 			return response, nil
 		}
@@ -191,6 +189,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
+	logger.Infof("getMessageResult:%#v", getMessageResult)
 
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
@@ -208,7 +207,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		switch getMessageResult.Status {
 		case stgstorelog.FOUND:
-			response.Code = (commonprotocol.SUCCESS)
+			response.Code = code.SUCCESS
+
 			// 消息轨迹：记录客户端拉取的消息记录（不表示消费成功）
 			if pull.hasConsumeMessageHook() {
 				// 执行hook
@@ -219,19 +219,19 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
-				storeHost := pull.BrokerController.BrokerConfig.BrokerIP1 + ":" + pull.BrokerController.RemotingServer.GetListenPort()
+				storeHost := pull.BrokerController.GetStoreHost()
 				messageIds := pull.BrokerController.MessageStore.GetMessageIds(requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, requestHeader.QueueOffset+int64(getMessageResult.GetMessageCount()), storeHost)
 				context.MessageIds = messageIds
 				context.BodyLength = getMessageResult.BufferTotalSize / getMessageResult.GetMessageCount()
 				pull.ExecuteConsumeMessageHookBefore(context)
 			}
 		case stgstorelog.MESSAGE_WAS_REMOVING:
-			response.Code = commonprotocol.PULL_RETRY_IMMEDIATELY
+			response.Code = code.PULL_RETRY_IMMEDIATELY
 			// 这两个返回值都表示服务器暂时没有这个队列，应该立刻将客户端Offset重置为0
 		case stgstorelog.NO_MATCHED_LOGIC_QUEUE:
 		case stgstorelog.NO_MESSAGE_IN_QUEUE:
 			if 0 != requestHeader.QueueOffset {
-				response.Code = commonprotocol.PULL_OFFSET_MOVED
+				response.Code = code.PULL_OFFSET_MOVED
 				// XXX: warn and notify me
 				logger.Warnf("the broker store no queue data, "+
 					"fix the request offset %d to %d, Topic: %s QueueId: %d Consumer Group: %s",
@@ -242,50 +242,42 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					requestHeader.ConsumerGroup,
 				)
 			} else {
-				response.Code = commonprotocol.PULL_NOT_FOUND
+				response.Code = code.PULL_NOT_FOUND
 			}
 		case stgstorelog.NO_MATCHED_MESSAGE:
-			response.Code = commonprotocol.PULL_RETRY_IMMEDIATELY
+			response.Code = code.PULL_RETRY_IMMEDIATELY
 		case stgstorelog.OFFSET_FOUND_NULL:
-			response.Code = commonprotocol.PULL_NOT_FOUND
+			response.Code = code.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_OVERFLOW_BADLY:
-			response.Code = commonprotocol.PULL_OFFSET_MOVED
+			response.Code = code.PULL_OFFSET_MOVED
 			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, ctx.LocalAddr().String())
 		case stgstorelog.OFFSET_OVERFLOW_ONE:
-			response.Code = commonprotocol.PULL_NOT_FOUND
+			response.Code = code.PULL_NOT_FOUND
 		case stgstorelog.OFFSET_TOO_SMALL:
-			response.Code = commonprotocol.PULL_OFFSET_MOVED
+			response.Code = code.PULL_OFFSET_MOVED
 			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, ctx.LocalAddr().String())
 		default:
 		}
 
 		switch response.Code {
-		case commonprotocol.SUCCESS:
+		case code.SUCCESS:
+			// 统计
 			pull.BrokerController.brokerStatsManager.IncGroupGetNums(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.GetMessageCount())
-
 			pull.BrokerController.brokerStatsManager.IncGroupGetSize(requestHeader.ConsumerGroup, requestHeader.Topic, getMessageResult.BufferTotalSize)
-
 			pull.BrokerController.brokerStatsManager.IncBrokerGetNums(getMessageResult.GetMessageCount())
 
-			byteBufferHeader := bytes.NewBuffer(response.Body)
-			fileRegion := pagecache.NewManyMessageTransfer(byteBufferHeader, getMessageResult)
-			fmt.Println(fileRegion)
-
-			// TODO
-			//	channel.writeAndFlush(fileRegion).addListener(new ChannelFutureListener() {
-			//	public void operationComplete(ChannelFuture future) throws Exception {
-			//	getMessageResult.release();
-			//	if (!future.isSuccess()) {
-			//	log.error(
-			//	"transfer many message by pagecache failed, " + channel.remoteAddress(),
-			//	future.cause());
-			//	}
-			//	}
-			//	});
-			// response = nil
-		case commonprotocol.PULL_NOT_FOUND:
+			manyMessageTransfer := pagecache.NewManyMessageTransfer(response, getMessageResult)
+			_, err = ctx.WriteSerialObject(manyMessageTransfer)
+			if err != nil {
+				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
+					ctx.RemoteAddr().String(), err.Error())
+			}
+			// TODO getMessageResult.Release()
+			response = nil
+		case code.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
+				logger.Infof("进入hold pull: %#v", request)
 				pollingTimeMills := suspendTimeoutMillisLong
 				if !pull.BrokerController.BrokerConfig.LongPollingEnable {
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
@@ -296,8 +288,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				pull.BrokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil
 			}
-		case commonprotocol.PULL_RETRY_IMMEDIATELY:
-		case commonprotocol.PULL_OFFSET_MOVED:
+		case code.PULL_RETRY_IMMEDIATELY:
+		case code.PULL_OFFSET_MOVED:
 			if pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE ||
 				pull.BrokerController.BrokerConfig.OffsetCheckInSlave {
 
@@ -307,7 +299,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 					BrokerName: pull.BrokerController.BrokerConfig.BrokerName,
 				}
 
-				event := topic.OffsetMovedEvent{
+				event := &topic.OffsetMovedEvent{
 					ConsumerGroup: requestHeader.ConsumerGroup,
 					MessageQueue:  mq,
 					OffsetRequest: requestHeader.QueueOffset,
@@ -317,7 +309,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				pull.generateOffsetMovedEvent(event)
 			} else {
 				responseHeader.SuggestWhichBrokerId = subscriptionGroupConfig.BrokerId
-				response.Code = commonprotocol.PULL_RETRY_IMMEDIATELY
+				response.Code = code.PULL_RETRY_IMMEDIATELY
 			}
 
 			logger.Warnf("PULL_OFFSET_MOVED:topic=%s, groupId=%d, clientId=%d, offset=%d, suggestBrokerId=%d",
@@ -325,7 +317,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		default:
 		}
 	} else {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = "store getMessage return null"
 	}
 
@@ -350,7 +342,7 @@ func (pull *PullMessageProcessor) hasConsumeMessageHook() bool {
 // generateOffsetMovedEvent 偏移量移动事件
 // Author rongzhihong
 // Since 2017/9/17
-func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMovedEvent) {
+func (pull *PullMessageProcessor) generateOffsetMovedEvent(event *topic.OffsetMovedEvent) {
 	defer utils.RecoveredFn()
 
 	msgInner := new(stgstorelog.MessageExtBrokerInner)
@@ -358,9 +350,9 @@ func (pull *PullMessageProcessor) generateOffsetMovedEvent(event topic.OffsetMov
 	msgInner.SetTags(event.ConsumerGroup)
 	msgInner.SetDelayTimeLevel(0)
 	msgInner.SetKeys(event.ConsumerGroup)
-	msgInner.Body = event.Encode()
+	msgInner.Body = event.CustomEncode(event)
 	msgInner.Flag = 0
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgInner.GetTags())
 
 	msgInner.QueueId = int32(0)
 	msgInner.SysFlag = 0

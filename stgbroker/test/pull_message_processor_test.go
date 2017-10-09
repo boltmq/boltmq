@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"testing"
 )
@@ -70,15 +71,14 @@ func createRequest() *protocol.RemotingCommand {
 
 func InitBrokerController() *stgbroker.BrokerController {
 	// 初始化brokerConfig
-	brokerConfig := stgcommon.NewBrokerConfig()
+	brokerConfig := stgcommon.NewBrokerConfig("BrokerName", "BrokerClusterName")
 
-	brokerConfig.BrokerName = "BrokerName"
-	brokerConfig.BrokerClusterName = "BrokerClusterName"
-
-	// 初始化brokerConfig
+	// 初始化messageStoreConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 
-	controller := stgbroker.NewBrokerController(*brokerConfig, messageStoreConfig)
+	// 创建BrokerController结构体
+	remotingClient := remoting.NewDefalutRemotingClient()
+	controller := stgbroker.NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
 
 	// 初始化controller
 	initResult := controller.Initialize()
@@ -96,8 +96,8 @@ func createCtx() netm.Context {
 	bootstrap := netm.NewBootstrap()
 	go bootstrap.Bind("127.0.0.1", 18001).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
-		remoteContext = ctx
-	}).Sync()
+			remoteContext = ctx
+		}).Sync()
 
 	clientBootstrap := netm.NewBootstrap()
 	err := clientBootstrap.Connect("127.0.0.1", 18001)

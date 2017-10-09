@@ -28,7 +28,7 @@ func (table *ConsumerTable) put(k string, v *ConsumerGroupInfo) {
 	table.GroupChannelTable[k] = v
 }
 
-func (table *ConsumerTable) get(k string) *ConsumerGroupInfo{
+func (table *ConsumerTable) get(k string) *ConsumerGroupInfo {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -49,7 +49,7 @@ func (table *ConsumerTable) remove(k string) *ConsumerGroupInfo {
 		return nil
 	}
 
-		delete(table.GroupChannelTable, k)
+	delete(table.GroupChannelTable, k)
 	return v
 }
 

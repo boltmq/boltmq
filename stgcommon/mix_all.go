@@ -7,9 +7,12 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/fileutil"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -230,6 +233,9 @@ func ExistsFile(fileFullPath string) (bool, error) {
 	return false, err // 不确定是否在存在
 }
 
+// GetGoPath 获取GoPath路径
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
 func GetGoPath() string {
 	return os.Getenv("GOPATH")
 }
@@ -237,9 +243,34 @@ func GetGoPath() string {
 // GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
-func GetSmartgoConfigDir() string {
+func GetSmartgoConfigDir(config ...interface{}) string {
 	gopath := GetGoPath()
 	src := "/src"
-	smartgoConfigPath := gopath + src + SMARTGO_CONF_DIR
+
+	dirPath := SMARTGO_CONF_DIR
+	if config != nil && len(dirPath) > 0 {
+		dirPath = "/" + reflect.TypeOf(config[0]).PkgPath() + "/"
+	}
+	smartgoConfigPath := gopath + src + dirPath
 	return smartgoConfigPath
+}
+
+// CheckIpAndPort 校验ip:port是否有效
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func CheckIpAndPort(addr string) bool {
+	if addr == "" {
+		return false
+	}
+	ipAndPort := strings.Split(addr, ":")
+	if ipAndPort == nil || len(ipAndPort) != 2 {
+		return false
+	}
+	if tmpIp := net.ParseIP(ipAndPort[0]); tmpIp == nil {
+		return false
+	}
+	if tmpPort, err := strconv.Atoi(ipAndPort[1]); err != nil || (tmpPort <= 1 || tmpPort >= 100000) {
+		return false
+	}
+	return true
 }

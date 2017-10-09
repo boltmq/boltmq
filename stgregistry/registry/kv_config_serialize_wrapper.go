@@ -16,8 +16,8 @@ type KVConfigSerializeWrapper struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
 func NewKVConfigSerializeWrapper(configTable map[string]map[string]string) *KVConfigSerializeWrapper {
-	kvConfigSerializeWrapper := &KVConfigSerializeWrapper{
+	kvConfigWrapper := &KVConfigSerializeWrapper{
 		ConfigTable: configTable,
 	}
-	return kvConfigSerializeWrapper
+	return kvConfigWrapper
 }

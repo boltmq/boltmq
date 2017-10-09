@@ -78,3 +78,8 @@ func (self *ScheduleMessageService) Load() bool {
 func (self *ScheduleMessageService) Start() {
 	// TODO
 }
+
+func (self *ScheduleMessageService) Shutdown() {
+	self.ticker.Stop()
+	logger.Info("shutdown schedule message service")
+}

@@ -58,10 +58,6 @@ func (self *CommitLog) Load() bool {
 	return result
 }
 
-func (self *CommitLog) Start() {
-	// TODO
-}
-
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
 	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
 	// TOD0 crc32
@@ -461,4 +457,18 @@ func (self *CommitLog) isMapedFileMatchedRecover(mapedFile *MapedFile) bool {
 	}
 
 	return false
+}
+
+func (self *CommitLog) destroy() {
+	if self.MapedFileQueue != nil {
+		self.MapedFileQueue.destroy()
+	}
+}
+
+func (self *CommitLog) Start() {
+	// TODO
+}
+
+func (self *CommitLog) Shutdown() {
+	// TODO
 }

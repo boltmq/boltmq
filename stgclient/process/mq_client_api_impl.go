@@ -2,17 +2,19 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	namesrvUtil "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
-	cprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
@@ -37,10 +39,8 @@ func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQCli
 
 // 调用romoting的start
 func (impl *MQClientAPIImpl) Start() {
-	defer func() {
-		if e := recover(); e != nil {
-		}
-	}()
+	defer utils.RecoveredFn()
+
 	impl.DefalutRemotingClient.Start()
 	value, err := impl.getProjectGroupByIp(stgclient.GetLocalAddress(), 3000)
 	if err != nil && !strings.EqualFold(value, "") {
@@ -73,12 +73,12 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 			producerData.GroupName = stgclient.BuildWithProjectGroup(producerData.GroupName, impl.ProjectGroupPrefix)
 		}
 	}
-	request := protocol.CreateRequestCommand(cprotocol.HEART_BEAT, nil)
+	request := protocol.CreateRequestCommand(code.HEART_BEAT, nil)
 	request.Body = heartbeatData.Encode()
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 		}
 	} else {
 		logger.Errorf("sendHeartbeat error")
@@ -88,13 +88,13 @@ func (impl *MQClientAPIImpl) sendHeartbeat(addr string, heartbeatData *heartbeat
 
 func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
 	requestHeader := namesrv.GetRouteInfoRequestHeader{Topic: topic}
-	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_ROUTEINTO_BY_TOPIC, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.TOPIC_NOT_EXIST:
+		case code.TOPIC_NOT_EXIST:
 			logger.Warnf("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			body := response.Body
 			if len(body) > 0 {
 				topicRouteData := &route.TopicRouteData{}
@@ -116,11 +116,11 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
-	request := protocol.CreateRequestCommand(cprotocol.GET_ROUTEINTO_BY_TOPIC, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_ROUTEINTO_BY_TOPIC, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			body := response.Body
 			if len(body) > 0 {
 				topicRouteData := &route.TopicRouteData{}
@@ -151,7 +151,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 	}
 	// 默认send采用v2版本
 	requestHeaderV2 := header.CreateSendMessageRequestHeaderV2(&requestHeader)
-	request := protocol.CreateRequestCommand(cprotocol.SEND_MESSAGE_V2, requestHeaderV2)
+	request := protocol.CreateRequestCommand(code.SEND_MESSAGE_V2, requestHeaderV2)
 	request.Body = msg.Body
 	switch communicationMode {
 	case ONEWAY:
@@ -171,6 +171,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 
 func (impl *MQClientAPIImpl) sendMessageSync(addr string, brokerName string, msg *message.Message, timeoutMillis int64, request *protocol.RemotingCommand) (*SendResult, error) {
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
+	fmt.Printf("sendMessageSync response:%d \n", response.Code)
 	if err != nil {
 		logger.Errorf("sendMessageSync error=%v", err.Error())
 	}
@@ -192,20 +193,20 @@ func (impl *MQClientAPIImpl) sendMessageASync(addr string, brokerName string, ms
 func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message.Message, response *protocol.RemotingCommand) (*SendResult, error) {
 	if response != nil {
 		switch response.Code {
-		case cprotocol.FLUSH_DISK_TIMEOUT:
-		case cprotocol.FLUSH_SLAVE_TIMEOUT:
-		case cprotocol.SLAVE_NOT_AVAILABLE:
+		case code.FLUSH_DISK_TIMEOUT:
+		case code.FLUSH_SLAVE_TIMEOUT:
+		case code.SLAVE_NOT_AVAILABLE:
 			logger.Warnf("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			sendStatus := SEND_OK
 			switch response.Code {
-			case cprotocol.FLUSH_DISK_TIMEOUT:
+			case code.FLUSH_DISK_TIMEOUT:
 				sendStatus = FLUSH_DISK_TIMEOUT
-			case cprotocol.FLUSH_SLAVE_TIMEOUT:
+			case code.FLUSH_SLAVE_TIMEOUT:
 				sendStatus = FLUSH_SLAVE_TIMEOUT
-			case cprotocol.SLAVE_NOT_AVAILABLE:
+			case code.SLAVE_NOT_AVAILABLE:
 				sendStatus = SLAVE_NOT_AVAILABLE
-			case cprotocol.SUCCESS:
+			case code.SUCCESS:
 				sendStatus = SEND_OK
 			default:
 			}
@@ -227,7 +228,7 @@ func (impl *MQClientAPIImpl) UpdateConsumerOffsetOneway(addr string, requestHead
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
-	request := protocol.CreateRequestCommand(cprotocol.UPDATE_CONSUMER_OFFSET, &requestHeader)
+	request := protocol.CreateRequestCommand(code.UPDATE_CONSUMER_OFFSET, &requestHeader)
 	// oneway 特殊处理
 	request.MarkOnewayRPC()
 	impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
@@ -239,11 +240,11 @@ func (impl *MQClientAPIImpl) GetConsumerIdListByGroup(addr string, consumerGroup
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
 	requestHeader := header.GetConsumerListByGroupRequestHeader{ConsumerGroup: consumerGroupWithProjectGroup}
-	request := protocol.CreateRequestCommand(cprotocol.GET_CONSUMER_LIST_BY_GROUP, &requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_CONSUMER_LIST_BY_GROUP, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			if len(response.Body) > 0 {
 				responseBody := &header.GetConsumerListByGroupResponseBody{}
 				responseBody.Decode(response.Body)
@@ -261,11 +262,11 @@ func (impl *MQClientAPIImpl) GetMaxOffset(addr string, topic string, queueId int
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
 	requestHeader := header.GetMaxOffsetRequestHeader{Topic: topicWithProjectGroup, QueueId: queueId}
-	request := protocol.CreateRequestCommand(cprotocol.GET_MAX_OFFSET, &requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_MAX_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			responseHeader := &header.GetMaxOffsetResponseHeader{}
 			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Offset
@@ -282,7 +283,7 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
-	request := protocol.CreateRequestCommand(cprotocol.PULL_MESSAGE, &requestHeader)
+	request := protocol.CreateRequestCommand(code.PULL_MESSAGE, &requestHeader)
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
@@ -300,14 +301,14 @@ func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader head
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
-	request := protocol.CreateRequestCommand(cprotocol.QUERY_CONSUMER_OFFSET, &requestHeader)
+	request := protocol.CreateRequestCommand(code.QUERY_CONSUMER_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
 		logger.Errorf("queryConsumerOffset error=%v", err.Error())
 	}
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			responseHeader := &header.QueryConsumerOffsetResponseHeader{}
 			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Offset
@@ -344,11 +345,11 @@ func (impl *MQClientAPIImpl) consumerSendMessageBack(addr string, msg *message.M
 		DelayLevel:  int32(delayLevel),
 		OriginMsgId: msg.MsgId,
 	}
-	request := protocol.CreateRequestCommand(cprotocol.CONSUMER_SEND_MSG_BACK, &requestHeader)
+	request := protocol.CreateRequestCommand(code.CONSUMER_SEND_MSG_BACK, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 		default:
 			break
 		}
@@ -385,11 +386,11 @@ func (impl *MQClientAPIImpl) unRegisterClient(addr, clientID, producerGroup, con
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
 	requestHeader := header.UnregisterClientRequestHeader{ClientID: clientID, ProducerGroup: producerGroupWithProjectGroup, ConsumerGroup: consumerGroupWithProjectGroup}
-	request := protocol.CreateRequestCommand(cprotocol.UNREGISTER_CLIENT, &requestHeader)
+	request := protocol.CreateRequestCommand(code.UNREGISTER_CLIENT, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 		default:
 		}
 	} else {
@@ -400,13 +401,13 @@ func (impl *MQClientAPIImpl) unRegisterClient(addr, clientID, producerGroup, con
 func (impl *MQClientAPIImpl) processPullResponse(response *protocol.RemotingCommand) *PullResultExt {
 	pullStatus := consumer.NO_NEW_MSG
 	switch response.Code {
-	case cprotocol.SUCCESS:
+	case code.SUCCESS:
 		pullStatus = consumer.FOUND
-	case cprotocol.PULL_NOT_FOUND:
+	case code.PULL_NOT_FOUND:
 		pullStatus = consumer.NO_NEW_MSG
-	case cprotocol.PULL_RETRY_IMMEDIATELY:
+	case code.PULL_RETRY_IMMEDIATELY:
 		pullStatus = consumer.NO_MATCHED_MSG
-	case cprotocol.PULL_OFFSET_MOVED:
+	case code.PULL_OFFSET_MOVED:
 		pullStatus = consumer.OFFSET_ILLEGAL
 	}
 	reponseHeader := &header.PullMessageResponseHeader{}
@@ -425,11 +426,11 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 		DefaultTopic: defaultTopic, ReadQueueNums: topicConfig.ReadQueueNums, WriteQueueNums: topicConfig.WriteQueueNums,
 		TopicFilterType: topicConfig.TopicFilterType, TopicSysFlag: topicConfig.TopicSysFlag, Order: topicConfig.Order,
 		Perm: topicConfig.Perm}
-	request := protocol.CreateRequestCommand(cprotocol.UPDATE_AND_CREATE_TOPIC, &requestHeader)
+	request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_TOPIC, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, int64(timeoutMillis))
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 		default:
 		}
 	} else {
@@ -440,17 +441,17 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 
 // 从namesrv查询客户端IP信息
 func (impl *MQClientAPIImpl) getProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
-	return impl.getKVConfigValue(namesrvUtil.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
+	return impl.getKVConfigValue(util.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
 }
 
 // 获取配置信息
 func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
 	requestHeader := &namesrv.GetKVConfigRequestHeader{Namespace: namespace, Key: key}
-	request := protocol.CreateRequestCommand(cprotocol.GET_KV_CONFIG, requestHeader)
+	request := protocol.CreateRequestCommand(code.GET_KV_CONFIG, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil && err == nil {
 		switch response.Code {
-		case cprotocol.SUCCESS:
+		case code.SUCCESS:
 			responseHeader := &namesrv.GetKVConfigResponseHeader{}
 			response.DecodeCommandCustomHeader(responseHeader)
 			return responseHeader.Value, err

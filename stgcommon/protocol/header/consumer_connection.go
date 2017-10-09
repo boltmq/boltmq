@@ -3,7 +3,6 @@ package header
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
 )
 
@@ -16,7 +15,6 @@ type ConsumerConnection struct {
 	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
 	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
 	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
-	*protocol.RemotingSerializable
 }
 
 // NewConsumerConnection 初始化
@@ -26,7 +24,6 @@ func NewConsumerConnection() *ConsumerConnection {
 	connect := new(ConsumerConnection)
 	connect.ConnectionSet = set.NewSet()
 	connect.SubscriptionTable = sync.NewMap()
-	connect.RemotingSerializable = new(protocol.RemotingSerializable)
 	return connect
 }
 

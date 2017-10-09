@@ -4,10 +4,10 @@ package header
 // Author rongzhihong
 // Since 2017/9/18
 type ResetOffsetRequestHeader struct {
-	Topic     string `json:"topic"`
-	Group     string `json:"group"`
-	Timestamp int64  `json:"timestamp"`
-	IsForce   bool   `json:"isForce"`
+	Topic     string
+	Group     string
+	Timestamp int64
+	IsForce   bool
 }
 
 func (req *ResetOffsetRequestHeader) CheckFields() error {

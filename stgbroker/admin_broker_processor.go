@@ -9,7 +9,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	protocol2 "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/filtersrv"
@@ -31,153 +30,126 @@ type AdminBrokerProcessor struct {
 // NewAdminBrokerProcessor 初始化
 // Author gaoyanlei
 // Since 2017/8/23
-func NewAdminBrokerProcessor(brokerController *BrokerController) *AdminBrokerProcessor {
-	var adminBrokerProcessor = new(AdminBrokerProcessor)
-	adminBrokerProcessor.BrokerController = brokerController
-	return adminBrokerProcessor
+func NewAdminBrokerProcessor(controller *BrokerController) *AdminBrokerProcessor {
+	adminProcessor := &AdminBrokerProcessor{
+		BrokerController: controller,
+	}
+	return adminProcessor
 }
 
-func (abp *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+// ProcessRequest 请求入口
+// Author rongzhihong
+// Since 2017/8/23
+func (self *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	switch request.Code {
-	// 更新创建Topic
-	case protocol2.UPDATE_AND_CREATE_TOPIC:
-		return abp.updateAndCreateTopic(ctx, request)
+	case code.UPDATE_AND_CREATE_TOPIC:
+		return self.updateAndCreateTopic(ctx, request) // 更新创建Topic
+	case code.DELETE_TOPIC_IN_BROKER:
+		return self.deleteTopic(ctx, request) // 删除Topic
+	case code.GET_ALL_TOPIC_CONFIG:
+		return self.getAllTopicConfig(ctx, request) // 获取所有Topic配置
+	case code.UPDATE_BROKER_CONFIG:
+		return self.updateBrokerConfig(ctx, request) // TODO: 更新Broker配置,可能存在并发问题
+	case code.GET_BROKER_CONFIG:
+		return self.getBrokerConfig(ctx, request) // 获取Broker配置
+	case code.SEARCH_OFFSET_BY_TIMESTAMP:
+		return self.searchOffsetByTimestamp(ctx, request) // 根据时间戳查询Offset
+	case code.GET_MAX_OFFSET:
+		return self.getMaxOffset(ctx, request) // 获取最大Offset
+	case code.GET_MIN_OFFSET:
+		return self.getMinOffset(ctx, request) // 获取小Offset
+	case code.GET_EARLIEST_MSG_STORETIME:
+		return self.getEarliestMsgStoretime(ctx, request) // 查询消息最早存储时间
+	case code.GET_BROKER_RUNTIME_INFO:
+		return self.getBrokerRuntimeInfo(ctx, request) // 获取Broker运行时信息
+	case code.LOCK_BATCH_MQ:
+		return self.lockBatchMQ(ctx, request) // 锁队列
+	case code.UNLOCK_BATCH_MQ:
+		return self.unlockBatchMQ(ctx, request) // 解锁队列
+	case code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP:
+		return self.updateAndCreateSubscriptionGroup(ctx, request) // 订阅组配置
+	case code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG:
+		return self.getAllSubscriptionGroup(ctx, request)
+	case code.DELETE_SUBSCRIPTIONGROUP:
+		return self.deleteSubscriptionGroup(ctx, request)
+	case code.GET_TOPIC_STATS_INFO:
+		return self.getTopicStatsInfo(ctx, request) // 统计信息，获取Topic统计信息
+	case code.GET_CONSUMER_CONNECTION_LIST:
+		return self.getConsumerConnectionList(ctx, request) // Consumer连接管理
+	case code.GET_PRODUCER_CONNECTION_LIST:
+		return self.getProducerConnectionList(ctx, request) // Producer连接管理
+	case code.GET_CONSUME_STATS:
+		return self.getConsumeStats(ctx, request) // 查询消费进度，订阅组下的所有Topic
+	case code.GET_ALL_CONSUMER_OFFSET:
+		return self.getAllConsumerOffset(ctx, request)
+	case code.GET_ALL_DELAY_OFFSET:
+		return self.getAllDelayOffset(ctx, request) // 定时进度
+	case code.INVOKE_BROKER_TO_RESET_OFFSET:
+		return self.resetOffset(ctx, request) // 调用客户端重置 offset
+	case code.INVOKE_BROKER_TO_GET_CONSUMER_STATUS:
+		return self.getConsumerStatus(ctx, request) // 调用客户端订阅消息处理
+	case code.QUERY_TOPIC_CONSUME_BY_WHO:
+		return self.queryTopicConsumeByWho(ctx, request) // 查询Topic被哪些消费者消费
+	case code.REGISTER_FILTER_SERVER:
+		return self.registerFilterServer(ctx, request)
+	case code.QUERY_CONSUME_TIME_SPAN:
+		return self.queryConsumeTimeSpan(ctx, request) // 根据 topic 和 group 获取消息的时间跨度
+	case code.GET_SYSTEM_TOPIC_LIST_FROM_BROKER:
+		return self.getSystemTopicListFromBroker(ctx, request)
+	case code.CLEAN_EXPIRED_CONSUMEQUEUE:
+		return self.cleanExpiredConsumeQueue(ctx, request) // 删除失效队列
+	case code.GET_CONSUMER_RUNNING_INFO:
+		return self.getConsumerRunningInfo(ctx, request)
+	case code.QUERY_CORRECTION_OFFSET:
+		return self.queryCorrectionOffset(ctx, request) // 查找被修正 offset (转发组件）
+	case code.CONSUME_MESSAGE_DIRECTLY:
+		return self.consumeMessageDirectly(ctx, request)
+	case code.CLONE_GROUP_OFFSET:
+		return self.cloneGroupOffset(ctx, request)
+	case code.VIEW_BROKER_STATS_DATA:
+		return self.ViewBrokerStatsData(ctx, request) // 查看Broker统计信息
+	default:
 
-		// 删除Topic
-	case protocol2.DELETE_TOPIC_IN_BROKER:
-		return abp.deleteTopic(ctx, request)
-
-		// 获取Topic配置
-	case protocol2.GET_ALL_TOPIC_CONFIG:
-		return abp.getAllTopicConfig(ctx, request)
-
-		// 更新Broker配置 TODO 可能存在并发问题
-	case protocol2.UPDATE_BROKER_CONFIG:
-		return abp.updateBrokerConfig(ctx, request)
-
-		// 获取Broker配置
-	case protocol2.GET_BROKER_CONFIG:
-		return abp.getBrokerConfig(ctx, request)
-
-		// 根据时间查询Offset
-	case protocol2.SEARCH_OFFSET_BY_TIMESTAMP:
-		return abp.searchOffsetByTimestamp(ctx, request)
-	case protocol2.GET_MAX_OFFSET:
-		return abp.getMaxOffset(ctx, request)
-	case protocol2.GET_MIN_OFFSET:
-		return abp.getMinOffset(ctx, request)
-	case protocol2.GET_EARLIEST_MSG_STORETIME:
-		return abp.getEarliestMsgStoretime(ctx, request)
-
-		// 获取Broker运行时信息
-	case protocol2.GET_BROKER_RUNTIME_INFO:
-		return abp.getBrokerRuntimeInfo(ctx, request)
-
-		// 锁队列与解锁队列
-	case protocol2.LOCK_BATCH_MQ:
-		return abp.lockBatchMQ(ctx, request)
-	case protocol2.UNLOCK_BATCH_MQ:
-		return abp.unlockBatchMQ(ctx, request)
-
-		// 订阅组配置
-	case protocol2.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP:
-		return abp.updateAndCreateSubscriptionGroup(ctx, request)
-	case protocol2.GET_ALL_SUBSCRIPTIONGROUP_CONFIG:
-		return abp.getAllSubscriptionGroup(ctx, request)
-	case protocol2.DELETE_SUBSCRIPTIONGROUP:
-		return abp.deleteSubscriptionGroup(ctx, request)
-
-		// 统计信息，获取Topic统计信息
-	case protocol2.GET_TOPIC_STATS_INFO:
-		return abp.getTopicStatsInfo(ctx, request)
-
-		// Consumer连接管理
-	case protocol2.GET_CONSUMER_CONNECTION_LIST:
-		return abp.getConsumerConnectionList(ctx, request)
-
-		// Producer连接管理
-	case protocol2.GET_PRODUCER_CONNECTION_LIST:
-		return abp.getProducerConnectionList(ctx, request)
-
-		// 查询消费进度，订阅组下的所有Topic
-	case protocol2.GET_CONSUME_STATS:
-		return abp.getConsumeStats(ctx, request)
-	case protocol2.GET_ALL_CONSUMER_OFFSET:
-		return abp.getAllConsumerOffset(ctx, request)
-
-		// 定时进度
-	case protocol2.GET_ALL_DELAY_OFFSET:
-		return abp.getAllDelayOffset(ctx, request)
-
-		// 调用客户端重置 offset
-	case protocol2.INVOKE_BROKER_TO_RESET_OFFSET:
-		return abp.resetOffset(ctx, request)
-
-		// 调用客户端订阅消息处理
-	case protocol2.INVOKE_BROKER_TO_GET_CONSUMER_STATUS:
-		return abp.getConsumerStatus(ctx, request)
-
-		// 查询Topic被哪些消费者消费
-	case protocol2.QUERY_TOPIC_CONSUME_BY_WHO:
-		return abp.queryTopicConsumeByWho(ctx, request)
-
-	case protocol2.REGISTER_FILTER_SERVER:
-		return abp.registerFilterServer(ctx, request)
-
-		// 根据 topic 和 group 获取消息的时间跨度
-	case protocol2.QUERY_CONSUME_TIME_SPAN:
-		return abp.queryConsumeTimeSpan(ctx, request)
-	case protocol2.GET_SYSTEM_TOPIC_LIST_FROM_BROKER:
-		return abp.getSystemTopicListFromBroker(ctx, request)
-
-		// 删除失效队列
-	case protocol2.CLEAN_EXPIRED_CONSUMEQUEUE:
-		return abp.cleanExpiredConsumeQueue(ctx, request)
-
-	case protocol2.GET_CONSUMER_RUNNING_INFO:
-		return abp.getConsumerRunningInfo(ctx, request)
-
-		// 查找被修正 offset (转发组件）
-	case protocol2.QUERY_CORRECTION_OFFSET:
-		return abp.queryCorrectionOffset(ctx, request)
-
-	case protocol2.CONSUME_MESSAGE_DIRECTLY:
-		return abp.consumeMessageDirectly(ctx, request)
-	case protocol2.CLONE_GROUP_OFFSET:
-		return abp.cloneGroupOffset(ctx, request)
-
-		// 查看Broker统计信息
-	case protocol2.VIEW_BROKER_STATS_DATA:
-		return abp.ViewBrokerStatsData(ctx, request)
 	}
 	return nil, nil
 }
 
-func (abp *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := &protocol.RemotingCommand{}
+// updateAndCreateTopic 更新创建TOPIC
+// Author rongzhihong
+// Since 2017/8/23
+func (self *AdminBrokerProcessor) updateAndCreateTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.CreateTopicRequestHeader{}
-	if strings.EqualFold(requestHeader.Topic, abp.BrokerController.BrokerConfig.BrokerClusterName) {
-		errorMsg :=
-			"the topic[" + requestHeader.Topic + "] is conflict with system reserved words."
-		logger.Warn(errorMsg)
-		response.Code = code.SYSTEM_ERROR
-		response.Remark = errorMsg
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Errorf("err: %s", err.Error())
+		return response, err
+	}
+
+	// Topic名字是否与保留字段冲突
+	topic := requestHeader.Topic
+	logger.Infof("requestHeader.Topic=%s,   self.BrokerController.BrokerConfig.BrokerClusterName=%s", topic, self.BrokerController.BrokerConfig.BrokerClusterName)
+	if strings.EqualFold(topic, self.BrokerController.BrokerConfig.BrokerClusterName) {
+		format := "the topic[%s] is conflict with system reserved words."
+		logger.Infof(format, topic)
+		response.Remark = fmt.Sprintf(format, topic)
 		return response, nil
 	}
 
-	topicConfig := &stgcommon.TopicConfig{
-		ReadQueueNums:   requestHeader.ReadQueueNums,
-		WriteQueueNums:  requestHeader.WriteQueueNums,
-		TopicFilterType: requestHeader.TopicFilterType,
-		Perm:            requestHeader.Perm,
-	}
+	readQueueNums := requestHeader.ReadQueueNums
+	writeQueueNums := requestHeader.WriteQueueNums
+	brokerPermission := requestHeader.Perm
+	topicFilterType := requestHeader.TopicFilterType
+	topicConfig := stgcommon.NewDefaultTopicConfig(topic, readQueueNums, writeQueueNums, brokerPermission, topicFilterType)
 	if requestHeader.TopicSysFlag != 0 {
 		topicConfig.TopicSysFlag = requestHeader.TopicSysFlag
 	}
-	abp.BrokerController.TopicConfigManager.UpdateTopicConfig(topicConfig)
-	abp.BrokerController.RegisterBrokerAll(false, true)
+	self.BrokerController.TopicConfigManager.UpdateTopicConfig(topicConfig)
+	self.BrokerController.RegisterBrokerAll(false, true)
+
 	response.Code = code.SUCCESS
 	response.Remark = ""
+	logger.Infof("updateAndCreateTopic successful")
 	return response, nil
 }
 
@@ -200,8 +172,13 @@ func (abp *AdminBrokerProcessor) getMaxOffset(ctx netm.Context, request *protoco
 }
 func (abp *AdminBrokerProcessor) deleteTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
-	responseHeader := &header.DeleteTopicRequestHeader{}
-	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(responseHeader.Topic)
+	requestHeader := &header.DeleteTopicRequestHeader{}
+	err := request.DecodeCommandCustomHeader(requestHeader)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(requestHeader.Topic)
 	abp.BrokerController.addDeleteTopicTask()
 
 	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())
@@ -218,29 +195,30 @@ func (adp *AdminBrokerProcessor) getAllTopicConfig(ctx netm.Context, request *pr
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	content := adp.BrokerController.TopicConfigManager.Encode(false)
+	logger.Infof("all topic config is %s", content)
 
 	if content != "" && len(content) > 0 {
 		response.Body = []byte(content)
 		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response, nil
-
-	} else {
-		logger.Errorf("No topic in this broker, client: %s", ctx.RemoteAddr().String())
-		response.Code = code.SYSTEM_ERROR
-		response.Remark = "No topic in this broker"
-		return response, nil
 	}
+
+	logger.Errorf("no topic in this broker, client: %s", ctx.RemoteAddr().String())
+	response.Code = code.SYSTEM_ERROR
+	response.Remark = "no topic in this broker"
+	return response, nil
 }
 
-// updateBrokerConfig 更新Broker配置信息
+// updateBrokerConfig 更新Broker服务器端的BrokerConfig, MessageStoreConfig信息
 // Author rongzhihong
 // Since 2017/9/19
 func (adp *AdminBrokerProcessor) updateBrokerConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	logger.Infof("updateBrokerConfig called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
 
 	content := request.Body
+	logger.Infof("BrokerConfig:%s", string(content))
 	if content != nil {
 		logger.Infof("updateBrokerConfig, new config: %s, client: %s", string(content), ctx.RemoteAddr().String())
 		adp.BrokerController.UpdateAllConfig(content)
@@ -316,7 +294,7 @@ func (abp *AdminBrokerProcessor) getMinOffset(ctx netm.Context, request *protoco
 	return response, nil
 }
 
-// getMinOffset 获得最小偏移量
+// getEarliestMsgStoretime 获得最早消息存储时间
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getEarliestMsgStoretime(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -337,18 +315,17 @@ func (abp *AdminBrokerProcessor) getEarliestMsgStoretime(ctx netm.Context, reque
 	return response, nil
 }
 
-// getMinOffset 获得最小偏移量
+// getBrokerRuntimeInfo 获取Broker运行时信息
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
-
+	response := protocol.CreateDefaultResponseCommand()
 	runtimeInfo := abp.prepareRuntimeInfo()
 
-	kvTable := body.NewKVTable()
+	kvTable := &body.KVTable{}
 	kvTable.Table = runtimeInfo
+	content := stgcommon.Encode(kvTable)
 
-	content := kvTable.Encode()
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -360,10 +337,10 @@ func (abp *AdminBrokerProcessor) getBrokerRuntimeInfo(ctx netm.Context, request 
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
-	requestBody := &body.LockBatchRequestBody{}
-	err := requestBody.Decode(request.Body)
+	requestBody := body.NewLockBatchRequestBody()
+	err := stgcommon.Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -371,10 +348,11 @@ func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol
 	lockOKMQSet := abp.BrokerController.RebalanceLockManager.TryLockBatch(requestBody.ConsumerGroup,
 		requestBody.MqSet, requestBody.ClientId)
 
-	responseBody := &body.LockBatchResponseBody{}
+	responseBody := body.NewLockBatchResponseBody()
 	responseBody.LockOKMQSet = lockOKMQSet
 
-	response.Body = requestBody.Encode()
+	content := stgcommon.Encode(responseBody)
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -384,10 +362,10 @@ func (abp *AdminBrokerProcessor) lockBatchMQ(ctx netm.Context, request *protocol
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) unlockBatchMQ(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestBody := body.NewUnlockBatchRequestBody()
-	err := requestBody.Decode(request.Body)
+	err := stgcommon.Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -402,27 +380,20 @@ func (abp *AdminBrokerProcessor) unlockBatchMQ(ctx netm.Context, request *protoc
 // prepareRuntimeInfo 组装运行中的Broker的信息
 // Author rongzhihong
 // Since 2017/9/19
-func (abp *AdminBrokerProcessor) prepareRuntimeInfo() map[string]string {
-	runtimeInfo := abp.BrokerController.MessageStore.GetRuntimeInfo()
+func (self *AdminBrokerProcessor) prepareRuntimeInfo() map[string]string {
+	runtimeInfo := self.BrokerController.MessageStore.GetRuntimeInfo()
 	runtimeInfo["brokerVersionDesc"] = mqversion.GetVersionDesc(mqversion.CurrentVersion)
 	runtimeInfo["brokerVersion"] = fmt.Sprintf("%d", mqversion.CurrentVersion)
 
-	runtimeInfo["msgPutTotalYesterdayMorning"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.MsgPutTotalYesterdayMorning)
-	runtimeInfo["msgPutTotalTodayMorning"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.MsgPutTotalTodayMorning)
-	runtimeInfo["msgPutTotalTodayNow"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.GetMsgPutTotalTodayNow())
+	runtimeInfo["msgPutTotalYesterdayMorning"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.MsgPutTotalYesterdayMorning)
+	runtimeInfo["msgPutTotalTodayMorning"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.MsgPutTotalTodayMorning)
+	runtimeInfo["msgPutTotalTodayNow"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.GetMsgPutTotalTodayNow())
 
-	runtimeInfo["msgGetTotalYesterdayMorning"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.MsgGetTotalYesterdayMorning)
-	runtimeInfo["msgGetTotalTodayMorning"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.MsgGetTotalTodayMorning)
-	runtimeInfo["msgGetTotalTodayNow"] =
-		fmt.Sprintf("%d", abp.BrokerController.brokerStats.GetMsgGetTotalTodayNow())
+	runtimeInfo["msgGetTotalYesterdayMorning"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.MsgGetTotalYesterdayMorning)
+	runtimeInfo["msgGetTotalTodayMorning"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.MsgGetTotalTodayMorning)
+	runtimeInfo["msgGetTotalTodayNow"] = fmt.Sprintf("%d", self.BrokerController.brokerStats.GetMsgGetTotalTodayNow())
 
-	runtimeInfo["sendThreadPoolQueueCapacity"] =
-		fmt.Sprintf("%d", abp.BrokerController.BrokerConfig.SendThreadPoolQueueCapacity)
+	runtimeInfo["sendThreadPoolQueueCapacity"] = fmt.Sprintf("%d", self.BrokerController.BrokerConfig.SendThreadPoolQueueCapacity)
 
 	return runtimeInfo
 }
@@ -431,12 +402,12 @@ func (abp *AdminBrokerProcessor) prepareRuntimeInfo() map[string]string {
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) updateAndCreateSubscriptionGroup(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	logger.Infof("updateAndCreateSubscriptionGroup called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
 
 	config := &subscription.SubscriptionGroupConfig{}
-	err := config.Decode(request.Body)
+	err := stgcommon.Decode(request.Body, config)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -454,20 +425,19 @@ func (abp *AdminBrokerProcessor) updateAndCreateSubscriptionGroup(ctx netm.Conte
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getAllSubscriptionGroup(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	content := abp.BrokerController.SubscriptionGroupManager.Encode(false)
 
 	if content != "" && len(content) > 0 {
 		response.Body = []byte(content)
-	} else {
-		logger.Errorf("No subscription group in this broker, client: %s", ctx.RemoteAddr().String())
-		response.Code = code.SYSTEM_ERROR
-		response.Remark = "No subscription group in this broker"
+		response.Code = code.SUCCESS
+		response.Remark = ""
 		return response, nil
 	}
 
-	response.Code = code.SUCCESS
-	response.Remark = ""
+	logger.Errorf("No subscription group in this broker, client: %s", ctx.RemoteAddr().String())
+	response.Code = code.SYSTEM_ERROR
+	response.Remark = "No subscription group in this broker"
 	return response, nil
 }
 
@@ -475,7 +445,7 @@ func (abp *AdminBrokerProcessor) getAllSubscriptionGroup(ctx netm.Context, reque
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) deleteSubscriptionGroup(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.DeleteSubscriptionGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -484,7 +454,6 @@ func (abp *AdminBrokerProcessor) deleteSubscriptionGroup(ctx netm.Context, reque
 	}
 
 	logger.Infof("deleteSubscriptionGroup called by %s", remotingUtil.ParseChannelRemoteAddr(ctx))
-
 	abp.BrokerController.SubscriptionGroupManager.DeleteSubscriptionGroupConfig(requestHeader.GroupName)
 
 	response.Code = code.SUCCESS
@@ -496,7 +465,7 @@ func (abp *AdminBrokerProcessor) deleteSubscriptionGroup(ctx netm.Context, reque
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.GetTopicStatsInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
@@ -515,12 +484,12 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 	var writeQueueNums int = int(topicConfig.WriteQueueNums)
 	for i := 0; i < writeQueueNums; i++ {
-		mq := &message.MessageQueue{}
+		mq := message.NewMessageQueue()
 		mq.Topic = topic
 		mq.BrokerName = abp.BrokerController.BrokerConfig.BrokerName
 		mq.QueueId = i
 
-		topicOffset := &admin.TopicOffset{}
+		topicOffset := admin.NewTopicOffset()
 		min := abp.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(i))
 		if min < 0 {
 			min = 0
@@ -533,6 +502,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		timestamp := int64(0)
 		if max > 0 {
+			// TODO 方法查询有时会卡死 报错:unexpected fault address 0x301012c fatal error: fault
 			timestamp = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), (max - 1))
 		}
 
@@ -542,9 +512,9 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		topicStatsTable.OffsetTable[mq] = topicOffset
 	}
-
-	content := topicStatsTable.Encode()
-
+	fmt.Printf("%#v\n", topicStatsTable.OffsetTable)
+	content := stgcommon.Encode(&(topicStatsTable.OffsetTable))
+	fmt.Println(content)
 	response.Code = code.SUCCESS
 	response.Body = content
 	response.Remark = ""
@@ -556,7 +526,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.GetConsumerConnectionListRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -566,7 +536,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 
 	consumerGroupInfo := abp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 	if consumerGroupInfo != nil {
-		bodydata := &header.ConsumerConnection{}
+		bodydata := header.NewConsumerConnection()
 		bodydata.ConsumeFromWhere = consumerGroupInfo.ConsumeFromWhere
 		bodydata.ConsumeType = consumerGroupInfo.ConsumeType
 		bodydata.MessageModel = consumerGroupInfo.MessageModel
@@ -586,7 +556,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 			}
 		}
 
-		content := bodydata.Encode()
+		content := stgcommon.Encode(bodydata)
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
@@ -602,7 +572,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.GetProducerConnectionListRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -612,7 +582,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 
 	channelInfoHashMap := abp.BrokerController.ProducerManager.GroupChannelTable.Get(requestHeader.ProducerGroup)
 	if channelInfoHashMap != nil {
-		bodydata := &body.ProducerConnection{}
+		bodydata := body.NewProducerConnection()
 		for _, info := range channelInfoHashMap {
 			connection := &header.Connection{}
 			connection.ClientId = info.ClientId
@@ -623,7 +593,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 			bodydata.ConnectionSet.Add(connection)
 		}
 
-		content := bodydata.Encode()
+		content := stgcommon.Encode(bodydata)
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
@@ -639,7 +609,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.GetConsumeStatsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -647,10 +617,10 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 		logger.Error(err)
 	}
 
-	consumeStats := &admin.ConsumeStats{}
+	consumeStats := admin.NewConsumeStats()
 
 	topics := set.NewSet()
-	if !stgcommon.IsBlank(requestHeader.ConsumerGroup) {
+	if stgcommon.IsBlank(requestHeader.Topic) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.ConsumerGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -666,9 +636,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 				continue
 			}
 
-			/**
-			 * Consumer不在线的时候，也允许查询消费进度
-			 */
+			// Consumer不在线的时候，也允许查询消费进度
 			{
 				findSubscriptionData := abp.BrokerController.ConsumerManager.FindSubscriptionData(requestHeader.ConsumerGroup, topic)
 				// 如果Consumer在线，而且这个topic没有被订阅，那么就跳过
@@ -720,7 +688,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 		}
 	}
 
-	content := consumeStats.Encode()
+	content := stgcommon.Encode(consumeStats)
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -732,7 +700,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getAllConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	content := abp.BrokerController.ConsumerOffsetManager.Encode(false)
 	if content != "" && len(content) > 0 {
@@ -753,7 +721,7 @@ func (abp *AdminBrokerProcessor) getAllConsumerOffset(ctx netm.Context, request 
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getAllDelayOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	content := abp.BrokerController.MessageStore.ScheduleMessageService.Encode()
 	if len(content) > 0 {
@@ -806,7 +774,7 @@ func (abp *AdminBrokerProcessor) getConsumerStatus(ctx netm.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) queryTopicConsumeByWho(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.QueryTopicConsumeByWhoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -823,10 +791,10 @@ func (abp *AdminBrokerProcessor) queryTopicConsumeByWho(ctx netm.Context, reques
 		groups.Union(groupInOffset)
 	}
 
-	groupList := &body.GroupList{}
+	groupList := body.NewGroupList()
 	groupList.GroupList = groups
+	content := stgcommon.Encode(groupList)
 
-	content := groupList.Encode()
 	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
@@ -861,7 +829,7 @@ func (abp *AdminBrokerProcessor) registerFilterServer(ctx netm.Context, request 
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.QueryConsumeTimeSpanRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -906,10 +874,11 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 		timeSpanSet.Add(timeSpan)
 	}
 
-	queryConsumeTimeSpanBody := &body.QueryConsumeTimeSpanBody{}
+	queryConsumeTimeSpanBody := body.NewQueryConsumeTimeSpanBody()
 	queryConsumeTimeSpanBody.ConsumeTimeSpanSet = timeSpanSet
+	content := stgcommon.Encode(queryConsumeTimeSpanBody)
 
-	response.Body = queryConsumeTimeSpanBody.Encode()
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
@@ -920,21 +889,22 @@ func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request 
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getSystemTopicListFromBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	topics := abp.BrokerController.TopicConfigManager.SystemTopicList
 
 	topicList := body.NewTopicList()
 	topicList.TopicList = topics
+	content := stgcommon.Encode(topicList)
 
-	response.Body = topicList.Encode()
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 
 	return response, nil
 }
 
-// cleanExpiredConsumeQueue 删除失效队列
+// cleanExpiredConsumeQueue 删除失效消费队列
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) cleanExpiredConsumeQueue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -942,7 +912,7 @@ func (abp *AdminBrokerProcessor) cleanExpiredConsumeQueue(ctx netm.Context, requ
 	abp.BrokerController.MessageStore.CleanExpiredConsumerQueue()
 	logger.Warn("invoke cleanExpiredConsumeQueue end.")
 
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -964,20 +934,20 @@ func (abp *AdminBrokerProcessor) getConsumerRunningInfo(ctx netm.Context, reques
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) callConsumer(requestCode int32, request *protocol.RemotingCommand, consumerGroup, clientId string) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	clientChannelInfo := abp.BrokerController.ConsumerManager.FindChannel(consumerGroup, clientId)
 	if nil == clientChannelInfo {
 		response.Code = code.SYSTEM_ERROR
-		response.Remark = fmt.Sprintf("The Consumer <%s> <%s> not online", consumerGroup, clientId)
+		format := "The Consumer <%s> <%s> not online"
+		response.Remark = fmt.Sprintf(format, consumerGroup, clientId)
 		return response, nil
 	}
 
 	if clientChannelInfo.Version < mqversion.V3_1_8_SNAPSHOT {
 		response.Code = code.SYSTEM_ERROR
-		response.Remark =
-			fmt.Sprintf("The Consumer <%s> Version <%s> too low to finish, please upgrade it to V3_1_8_SNAPSHOT",
-				clientId, mqversion.GetVersionDesc(int(clientChannelInfo.Version)))
+		format := "The Consumer <%s> Version <%s> too low to finish, please upgrade it to V3_1_8_SNAPSHOT"
+		response.Remark = fmt.Sprintf(format, clientId, mqversion.GetVersionDesc(int(clientChannelInfo.Version)))
 		return response, nil
 	}
 
@@ -988,8 +958,8 @@ func (abp *AdminBrokerProcessor) callConsumer(requestCode int32, request *protoc
 	consumerResponse, err := abp.BrokerController.Broker2Client.CallClient(clientChannelInfo.Context, newRequest)
 	if err != nil {
 		response.Code = code.SYSTEM_ERROR
-		response.Remark = fmt.Sprintf("invoke consumer <%s> <%s> Exception: %s", consumerGroup,
-			clientId, err.Error())
+		format := "invoke consumer <%s> <%s> Exception: %s"
+		response.Remark = fmt.Sprintf(format, consumerGroup, clientId, err.Error())
 		return response, nil
 	}
 	return consumerResponse, nil
@@ -999,7 +969,7 @@ func (abp *AdminBrokerProcessor) callConsumer(requestCode int32, request *protoc
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.QueryCorrectionOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -1007,8 +977,7 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 		logger.Error(err)
 	}
 
-	correctionOffset := abp.BrokerController.ConsumerOffsetManager.QueryMinOffsetInAllGroup(
-		requestHeader.Topic, requestHeader.FilterGroups)
+	correctionOffset := abp.BrokerController.ConsumerOffsetManager.QueryMinOffsetInAllGroup(requestHeader.Topic, requestHeader.FilterGroups)
 
 	compareOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffsetByGreoupAndTopic(requestHeader.CompareGroup, requestHeader.Topic)
 
@@ -1022,9 +991,11 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 		}
 	}
 
-	correctionBody := &body.QueryCorrectionOffsetBody{}
+	correctionBody := body.NewQueryCorrectionOffsetBody()
 	correctionBody.CorrectionOffsets = correctionOffset
-	response.Body = correctionBody.Encode()
+	content := stgcommon.Encode(correctionBody)
+
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -1047,10 +1018,12 @@ func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, reques
 		return nil, nil
 	}
 	selectMapedBufferResult := abp.BrokerController.MessageStore.SelectOneMessageByOffset(int64(messageId.Offset))
-	length := selectMapedBufferResult.Size
-	readContent := make([]byte, length)
-	selectMapedBufferResult.MappedByteBuffer.Read(readContent)
-	request.Body = readContent
+	if nil != selectMapedBufferResult {
+		length := selectMapedBufferResult.Size
+		readContent := make([]byte, length)
+		selectMapedBufferResult.MappedByteBuffer.Read(readContent)
+		request.Body = readContent
+	}
 
 	return abp.callConsumer(code.CONSUME_MESSAGE_DIRECTLY, request, requestHeader.ConsumerGroup, requestHeader.ClientId)
 }
@@ -1059,7 +1032,7 @@ func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, reques
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.CloneGroupOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -1069,7 +1042,7 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 
 	topics := set.NewSet()
 
-	if !stgcommon.IsBlank(requestHeader.Topic) {
+	if stgcommon.IsBlank(requestHeader.Topic) {
 		topics = abp.BrokerController.ConsumerOffsetManager.WhichTopicByConsumer(requestHeader.SrcGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -1087,10 +1060,10 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 			if !requestHeader.Offline {
 				// 如果Consumer在线，而且这个topic没有被订阅，那么就跳过
 				findSubscriptionData := abp.BrokerController.ConsumerManager.FindSubscriptionData(requestHeader.SrcGroup, topic)
-				if nil == findSubscriptionData && abp.BrokerController.ConsumerManager.FindSubscriptionDataCount(
-					requestHeader.SrcGroup) > 0 {
-					logger.Warnf("[cloneGroupOffset], the consumer group[%s], topic[%s] not exist",
-						requestHeader.SrcGroup, topic)
+				subscriptionDataCount := abp.BrokerController.ConsumerManager.FindSubscriptionDataCount(requestHeader.SrcGroup)
+				if nil == findSubscriptionData && subscriptionDataCount > 0 {
+					format := "[cloneGroupOffset], the consumer group[%s], topic[%s] not exist"
+					logger.Warnf(format, requestHeader.SrcGroup, topic)
 					continue
 				}
 			}
@@ -1108,7 +1081,7 @@ func (abp *AdminBrokerProcessor) cloneGroupOffset(ctx netm.Context, request *pro
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) ViewBrokerStatsData(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.ViewBrokerStatsDataRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -1154,7 +1127,9 @@ func (abp *AdminBrokerProcessor) ViewBrokerStatsData(ctx netm.Context, request *
 		brokerStatsData.StatsDay = item
 	}
 
-	response.Body = brokerStatsData.Encode()
+	content := stgcommon.Encode(brokerStatsData)
+
+	response.Body = content
 	response.Code = code.SUCCESS
 	response.Remark = ""
 	return response, nil

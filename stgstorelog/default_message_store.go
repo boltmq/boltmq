@@ -1,25 +1,21 @@
 package stgstorelog
 
 import (
-	"io/ioutil"
-	"os"
-	"strconv"
-
-	"sync/atomic"
-	"time"
-
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/stats"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
-
-	"sync"
-
+	"github.com/toolkits/file"
+	"io/ioutil"
 	"math"
-
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"fmt"
+	"os"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
 const (
@@ -77,7 +73,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
 	ms.TransactionCheckExecuter = nil
-	ms.AllocateMapedFileService = NewAllocateMapedFileService()
+	ms.AllocateMapedFileService = nil
 	ms.consumeTopicTable = make(map[string]*ConsumeQueueTable)
 	ms.CommitLog = NewCommitLog(ms)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
@@ -112,7 +108,10 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	}
 
 	// load过程依赖此服务，所以提前启动
-	go ms.AllocateMapedFileService.Start()
+	if ms.AllocateMapedFileService != nil {
+		go ms.AllocateMapedFileService.Start()
+	}
+
 	go ms.DispatchMessageService.Start()
 
 	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
@@ -167,12 +166,12 @@ func (self *DefaultMessageStore) recover(lastExitOK bool) {
 
 	// 保证消息都能从DispatchService缓冲队列进入到真正的队列
 	/*
-	ticker := time.NewTicker(time.Millisecond * 500)
-	for _ = range ticker.C {
-		if !self.DispatchMessageService.hasRemainMessage() {
-			break
+		ticker := time.NewTicker(time.Millisecond * 500)
+		for _ = range ticker.C {
+			if !self.DispatchMessageService.hasRemainMessage() {
+				break
+			}
 		}
-	}
 	*/
 
 	// 恢复事务模块
@@ -190,6 +189,15 @@ func (self *DefaultMessageStore) recoverConsumeQueue() {
 
 func (self *DefaultMessageStore) loadConsumeQueue() bool {
 	dirLogicDir := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
+
+	if !file.IsExist(dirLogicDir) {
+		ok, err := stgcommon.CreateDir(dirLogicDir)
+		if err != nil || !ok {
+			logger.Infof("create dir [%s] err: %s", dirLogicDir, err)
+		}
+		logger.Infof("create %s successful", dirLogicDir)
+	}
+
 	files, err := ioutil.ReadDir(dirLogicDir)
 	if err != nil {
 		logger.Warnf("default message store load consume queue directory %s, error: %s", dirLogicDir, err.Error())
@@ -309,16 +317,58 @@ func (self *DefaultMessageStore) createTempFile() error {
 	return nil
 }
 
+func (self *DefaultMessageStore) deleteFile(fileName string) {
+	exist, _ := PathExists(fileName)
+	if exist {
+		if err := os.Remove(fileName); err != nil {
+			logger.Errorf("message store delete file %s error: ", fileName, err.Error())
+		}
+	}
+}
+
 func (self *DefaultMessageStore) Shutdown() {
 	if !self.ShutdownFlag {
 		self.ShutdownFlag = true
 
-		// TODO
+		// TODO self.scheduledExecutorService.shutdown()
+
+		time.After(time.Millisecond * 3) // 等待其他调用停止
+
+		if self.ScheduleMessageService != nil {
+			self.ScheduleMessageService.Shutdown()
+		}
+
+		if self.HAService != nil {
+			self.HAService.Shutdown()
+		}
+
+		self.StoreStatsService.Shutdown()
+		self.DispatchMessageService.Shutdown()
+		self.IndexService.Shutdown()
+		self.FlushConsumeQueueService.Shutdown()
+		self.CommitLog.Shutdown()
+
+		if self.AllocateMapedFileService != nil {
+			self.AllocateMapedFileService.Shutdown()
+		}
+
+		if self.ReputMessageService != nil {
+			self.ReputMessageService.Shutdown()
+		}
+
+		self.StoreCheckpoint.flush()
+		self.StoreCheckpoint.shutdown()
+
+		self.deleteFile(config.GetAbortFile(self.MessageStoreConfig.StorePathRootDir))
 	}
 }
 
 func (self *DefaultMessageStore) Destroy() {
-	// TODO
+	self.destroyLogics()
+	self.CommitLog.destroy()
+	self.IndexService.destroy()
+	self.deleteFile(config.GetAbortFile(self.MessageStoreConfig.StorePathRootDir))
+	self.deleteFile(config.GetStoreCheckpoint(self.MessageStoreConfig.StorePathRootDir))
 }
 
 func (self *DefaultMessageStore) PutMessage(msg *MessageExtBrokerInner) *PutMessageResult {

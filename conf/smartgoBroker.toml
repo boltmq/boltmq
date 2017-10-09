@@ -5,5 +5,5 @@ brokerClusterName="DefaultCluster"
 brokerName="broker-a"
 deleteWhen=04
 fileReservedTime=48
-brokerRole="ASYNC_MASTER"
-flushDiskType="ASYNC_FLUSH"
+brokerRole="SYNC_MASTER"
+flushDiskType="SYNC_FLUSH"

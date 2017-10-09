@@ -77,3 +77,7 @@ func (self *FlushConsumeQueueService) Start() {
 	// 正常shutdown时，要保证全部刷盘才退出
 	self.doFlush(int32(RetryTimesOver))
 }
+
+func (self *FlushConsumeQueueService) Shutdown() {
+	// TODO
+}

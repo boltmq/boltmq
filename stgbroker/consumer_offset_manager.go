@@ -2,13 +2,12 @@ package stgbroker
 
 import (
 	"fmt"
-	"os/user"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
+	"os/user"
+	"strings"
 	"sync"
 )
 
