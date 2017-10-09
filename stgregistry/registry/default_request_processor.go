@@ -269,23 +269,29 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 
 	topic := requestHeader.Topic
 	topicRouteData := self.NamesrvController.RouteInfoManager.pickupTopicRouteData(topic)
+
 	if topicRouteData != nil {
 		orderTopicConf := self.NamesrvController.KvConfigManager.getKVConfig(util.NAMESPACE_ORDER_TOPIC_CONFIG, topic)
+
 		topicRouteData.OrderTopicConf = orderTopicConf
 		content, err := topicRouteData.Encode()
 		if err != nil {
 			logger.Error("topicRouteData.Encode() err: %s\n", err.Error())
 			return response, err
 		}
+
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
+		logger.Info("getRouteInfoByTopic() end. response is %s, body is %s", response.ToString(), string(content))
 		return response, nil
 	}
 
 	response.Code = code.TOPIC_NOT_EXIST
-	remark := "[No topic route info in name server for the topic: %s], faq: %s"
+	remark := "[no topic route info in name server for the topic: %s], faq: %s"
 	response.Remark = fmt.Sprintf(remark, topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
+	logger.Info("getRouteInfoByTopic() end. response is %s", response.ToString())
+
 	return response, nil
 }
 
