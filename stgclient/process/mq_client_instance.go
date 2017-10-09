@@ -10,15 +10,15 @@ import (
 	"strings"
 	lock "sync"
 	//"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
-	"strconv"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
-	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"sort"
+	"strconv"
+	"time"
 )
 
 // MQClientInstance: producer和consumer核心
@@ -167,7 +167,7 @@ func (mqClientInstance *MQClientInstance) unregisterClient(producerGroup, consum
 				if !strings.EqualFold(addr, "") {
 					mqClientInstance.MQClientAPIImpl.unRegisterClient(addr, mqClientInstance.ClientId, producerGroup, consumerGroup, 3000)
 					logger.Infof(
-						"unregister client[producer: %v Consumer: %v] from broker[%v %v %v] success", producerGroup, consumerGroup, brokerName, brokerId, addr);
+						"unregister client[producer: %v Consumer: %v] from broker[%v %v %v] success", producerGroup, consumerGroup, brokerName, brokerId, addr)
 				}
 			}
 		}
@@ -195,7 +195,7 @@ func (mqClientInstance *MQClientInstance) SendHeartbeatToAllBrokerWithLock() {
 func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 	heartbeatData := mqClientInstance.prepareHeartbeatData()
 	if len(heartbeatData.ProducerDataSet.ToSlice()) == 0 && len(heartbeatData.ConsumerDataSet.ToSlice()) == 0 {
-		logger.Warnf("sending hearbeat, but no consumer and no producer");
+		logger.Warnf("sending hearbeat, but no consumer and no producer")
 		return
 	}
 	for mapIterator := mqClientInstance.BrokerAddrTable.Iterator(); mapIterator.HasNext(); {
@@ -237,11 +237,11 @@ func (mqClientInstance *MQClientInstance) prepareHeartbeatData() *heartbeat.Hear
 		if v != nil && l {
 			impl := v.(consumer.MQConsumerInner)
 			consumerData := heartbeat.ConsumerData{GroupName: impl.GroupName(),
-				ConsumeType: impl.ConsumeType(),
-				ConsumeFromWhere: impl.ConsumeFromWhere(),
-				MessageModel: impl.MessageModel(),
+				ConsumeType:         impl.ConsumeType(),
+				ConsumeFromWhere:    impl.ConsumeFromWhere(),
+				MessageModel:        impl.MessageModel(),
 				SubscriptionDataSet: set.NewSet(),
-				UnitMode: impl.IsUnitMode()}
+				UnitMode:            impl.IsUnitMode()}
 			for data := range impl.Subscriptions().Iterator().C {
 				consumerData.SubscriptionDataSet.Add(data)
 			}
@@ -570,12 +570,7 @@ func (mqClientInstance *MQClientInstance) findConsumerIdList(topic string, group
 		brokerAddr = mqClientInstance.findBrokerAddrByTopic(topic)
 	}
 	if !strings.EqualFold(brokerAddr, "") {
-		// todo 测试
-		if strings.EqualFold(topic, "TestTopic") {
-			return []string{mqClientInstance.ClientId}
-		} else {
-			return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
-		}
+		return mqClientInstance.MQClientAPIImpl.GetConsumerIdListByGroup(brokerAddr, group, 3000)
 	}
 	return []string{}
 }

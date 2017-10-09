@@ -17,6 +17,15 @@ type ConsumerData struct {
 	UnitMode            bool             `json:"unitMode"`
 }
 
+type ConsumerDataPlus struct {
+	GroupName           string                 `json:"groupName"`
+	ConsumeType         ConsumeType            `json:"consumeType"`
+	MessageModel        MessageModel           `json:"messageModel"`
+	ConsumeFromWhere    ConsumeFromWhere       `json:"consumeFromWhere"`
+	SubscriptionDataSet []SubscriptionDataPlus `json:"subscriptionDataSet"`
+	UnitMode            bool                   `json:"unitMode"`
+}
+
 // ConsumerData 消费者
 // Author: rongzhihong
 // Since:  2017/9/14

@@ -13,6 +13,11 @@ type HeartbeatData struct {
 	ProducerDataSet set.Set `json:"producerDataSet"`
 	ConsumerDataSet set.Set `json:"consumerDataSet"`
 }
+type HeartbeatDataPlus struct {
+	ClientID        string             `json:"clientID"`
+	ProducerDataSet []ProducerData     `json:"producerDataSet"`
+	ConsumerDataSet []ConsumerDataPlus `json:"consumerDataSet"`
+}
 
 // NewHeartbeatData 初始化broker心跳结构体
 // Author: rongzhihong

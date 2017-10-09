@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 
@@ -21,11 +20,11 @@ func TaskSync() {
 
 func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
-	defaultMQProducer.SetNamesrvAddr("127.0.0.1:10911")
+	defaultMQProducer.SetNamesrvAddr("10.122.2.28:9876")
 	defaultMQProducer.Start()
-	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "TestTopic", 8)
+	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
 	for i := 0; i < 100; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("TestTopic", "tagA", []byte("I'm so diao!")))
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone1", "tagA", []byte("I'm so diao!")))
 		if err != nil {
 			fmt.Println(err)
 		}

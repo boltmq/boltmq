@@ -15,3 +15,13 @@ type SubscriptionData struct {
 	CodeSet         set.Set `json:"codeSet"`
 	SubVersion      int     `json:"subVersion"`
 }
+
+type SubscriptionDataPlus struct {
+	SUB_ALL         string   `json:"-"`
+	ClassFilterMode bool     `json:"classFilterMode"`
+	Topic           string   `json:"topic"`
+	SubString       string   `json:"subString"`
+	TagsSet         []string `json:"tagsSet"`
+	CodeSet         []int32  `json:"codeSet"`
+	SubVersion      int      `json:"subVersion"`
+}
