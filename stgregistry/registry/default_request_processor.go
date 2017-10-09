@@ -42,68 +42,48 @@ func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *p
 
 	switch request.Code {
 	case code.PUT_KV_CONFIG:
-		// code=100, 向Namesrv追加KV配置
-		return self.putKVConfig(ctx, request)
+		return self.putKVConfig(ctx, request) // code=100, 向Namesrv追加KV配置
 	case code.GET_KV_CONFIG:
-		// code=101, 从Namesrv获取KV配置
-		return self.getKVConfig(ctx, request)
+		return self.getKVConfig(ctx, request) // code=101, 从Namesrv获取KV配置
 	case code.DELETE_KV_CONFIG:
-		// code=102, 从Namesrv删除KV配置
-		return self.deleteKVConfig(ctx, request)
+		return self.deleteKVConfig(ctx, request) // code=102, 从Namesrv删除KV配置
 	case code.REGISTER_BROKER:
-		// code=103, 注册Broker，数据都是持久化的，如果存在则覆盖配置
-		brokerVersion := mqversion.Value2Version(request.Version)
+		brokerVersion := mqversion.Value2Version(request.Version) // code=103, 注册Broker，数据都是持久化的，如果存在则覆盖配置
 		if brokerVersion >= mqversion.V3_0_11 {
-			// 注：高版本注册Broker(支持FilterServer过滤)
-			return self.registerBrokerWithFilterServer(ctx, request)
+			return self.registerBrokerWithFilterServer(ctx, request) // 注：高版本注册Broker(支持FilterServer过滤)
 		} else {
-			// 注：低版本注册Broke(不支持FilterServer)
-			return self.registerBroker(ctx, request)
+			return self.registerBroker(ctx, request) // 注：低版本注册Broke(不支持FilterServer)
 		}
 	case code.UNREGISTER_BROKER:
-		// code=104, 卸指定的Broker，数据都是持久化的
-		return self.unRegisterBroker(ctx, request)
+		return self.unRegisterBroker(ctx, request) // code=104, 卸指定的Broker，数据都是持久化的
 	case code.GET_ROUTEINTO_BY_TOPIC:
-		// code=105, 根据Topic获取BrokerName、队列数(包含读队列与写队列)
-		return self.getRouteInfoByTopic(ctx, request)
+		return self.getRouteInfoByTopic(ctx, request) // code=105, 根据Topic获取BrokerName、队列数(包含读队列与写队列)
 	case code.GET_BROKER_CLUSTER_INFO:
-		// code=106, 获取注册到NameServer的所有Broker集群信息
-		return self.getBrokerClusterInfo(ctx, request)
+		return self.getBrokerClusterInfo(ctx, request) // code=106, 获取注册到NameServer的所有Broker集群信息
 	case code.WIPE_WRITE_PERM_OF_BROKER:
-		// code=205, 优雅地向Broker写数据
-		return self.wipeWritePermOfBroker(ctx, request)
+		return self.wipeWritePermOfBroker(ctx, request) // code=205, 优雅地向Broker写数据
 	case code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
-		// code=206, 从NameServer获取完整Topic列表
-		return self.getAllTopicListFromNamesrv(ctx, request)
+		return self.getAllTopicListFromNamesrv(ctx, request) // code=206, 从NameServer获取完整Topic列表
 	case code.DELETE_TOPIC_IN_NAMESRV:
-		// code=216, 从Namesrv删除Topic配置
-		return self.deleteTopicInNamesrv(ctx, request)
+		return self.deleteTopicInNamesrv(ctx, request) // code=216, 从Namesrv删除Topic配置
 	case code.GET_KV_CONFIG_BY_VALUE:
-		// code=217, Namesrv通过 project 获取所有的 server ip 信息
-		return self.getKVConfigByValue(ctx, request)
+		return self.getKVConfigByValue(ctx, request) // code=217, Namesrv通过 project 获取所有的 server ip 信息
 	case code.DELETE_KV_CONFIG_BY_VALUE:
-		// code=218, Namesrv删除指定 project group 下的所有 server ip 信息
-		return self.deleteKVConfigByValue(ctx, request)
+		return self.deleteKVConfigByValue(ctx, request) // code=218, Namesrv删除指定 project group 下的所有 server ip 信息
 	case code.GET_KVLIST_BY_NAMESPACE:
-		// code=219, 通过NameSpace获取所有的KV List
-		return self.getKVListByNamespace(ctx, request)
+		return self.getKVListByNamespace(ctx, request) // code=219, 通过NameSpace获取所有的KV List
 	case code.GET_TOPICS_BY_CLUSTER:
-		// code=224, 获取指定集群下的全部Topic列表
-		return self.getTopicsByCluster(ctx, request)
+		return self.getTopicsByCluster(ctx, request) // code=224, 获取指定集群下的全部Topic列表
 	case code.GET_SYSTEM_TOPIC_LIST_FROM_NS:
-		// code=304, 获取所有系统内置 Topic 列表
-		return self.getSystemTopicListFromNamesrv(ctx, request)
+		return self.getSystemTopicListFromNamesrv(ctx, request) // code=304, 获取所有系统内置 Topic 列表
 	case code.GET_UNIT_TOPIC_LIST:
-		// code=311, 单元化相关Topic
-		return self.getUnitTopicList(ctx, request)
+		return self.getUnitTopicList(ctx, request) // code=311, 单元化相关Topic
 	case code.GET_HAS_UNIT_SUB_TOPIC_LIST:
-		// code=312, 获取含有单元化订阅组的 Topic 列表
-		return self.getHasUnitSubTopicList(ctx, request)
+		return self.getHasUnitSubTopicList(ctx, request) // code=312, 获取含有单元化订阅组的 Topic 列表
 	case code.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
-		// code=313, 获取含有单元化订阅组的非单元化 Topic 列表
-		return self.getHasUnitSubUnUnitTopicList(ctx, request)
+		return self.getHasUnitSubUnUnitTopicList(ctx, request) // code=313, 获取含有单元化订阅组的非单元化 Topic 列表
 	default:
-
+		logger.Warn("invalid request. %s", request.ToString())
 	}
 
 	return nil, nil
@@ -283,7 +263,7 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 		response.Body = content
 		response.Code = code.SUCCESS
 		response.Remark = ""
-		logger.Info("getRouteInfoByTopic() end. response is %s, body is %s", response.ToString(), string(content))
+		logger.Info("getRouteInfoByTopic() end. response is %s", response.ToString())
 		return response, nil
 	}
 
@@ -335,7 +315,7 @@ func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *prot
 	}
 
 	response.Code = code.QUERY_NOT_FOUND
-	response.Remark = fmt.Sprintf("No config item, Namespace: %s Key: %s", requestHeader.Namespace, requestHeader.Key)
+	response.Remark = fmt.Sprintf("no config item, namespace: %s Key: %s", requestHeader.Namespace, requestHeader.Key)
 	return response, nil
 }
 
@@ -453,7 +433,7 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, reques
 	}
 
 	response.Code = code.QUERY_NOT_FOUND
-	remark := "No config item, Namespace: %s Key: %s"
+	remark := "no config item, namespace: %s Key: %s"
 	response.Remark = fmt.Sprintf(remark, requestHeader.Namespace, requestHeader.Key)
 	return response, nil
 }
