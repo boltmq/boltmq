@@ -132,14 +132,13 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	} else {
 		logger.Errorf("GetTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
 	}
-	//todo 测试
-	routeData := &route.TopicRouteData{}
-	routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
-	mapBrokerAddrs := make(map[int]string)
-	mapBrokerAddrs[0] = "127.0.0.1:10911"
-	//mapBrokerAddrs[1] = "10.122.1.210:10911"
-	routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
-	return routeData
+	////todo 测试
+	//routeData := &route.TopicRouteData{}
+	//routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
+	//mapBrokerAddrs := make(map[int]string)
+	//mapBrokerAddrs[0] = "127.0.0.1:10911"
+	//routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
+	return nil
 }
 
 func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,
@@ -458,6 +457,8 @@ func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMill
 		default:
 
 		}
+	} else {
+		return "", errors.New("invokesync error=" + err.Error())
 	}
-	return "", errors.New("invokesync error=" + err.Error())
+	return "", nil
 }
