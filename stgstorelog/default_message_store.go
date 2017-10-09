@@ -576,7 +576,7 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 }
 
 func (self *DefaultMessageStore) checkInDiskByCommitOffset(offsetPy, maxOffsetPy int64) bool {
-	memory := TotalPhysicalMemorySize * (self.MessageStoreConfig.AccessMessageInMemoryMaxRatio / 100.0)
+	memory := TotalPhysicalMemorySize * (float64(self.MessageStoreConfig.AccessMessageInMemoryMaxRatio) / 100.0)
 	return (maxOffsetPy - offsetPy) > int64(memory)
 }
 

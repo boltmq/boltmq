@@ -297,3 +297,17 @@ func TestDefaultMessageStore_GetRuntimeInfo(t *testing.T) {
 	master.Shutdown()
 	master.Destroy()
 }
+
+func TestDefaultMessageStore_CheckInDiskByConsumeOffset(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	flag := master.CheckInDiskByConsumeOffset("test", 0, 0)
+	if flag {
+
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
