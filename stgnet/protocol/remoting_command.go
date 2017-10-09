@@ -37,7 +37,7 @@ type RemotingCommand struct {
 	Remark       string              `json:"remark"`
 	ExtFields    map[string]string   `json:"extFields"` // 请求拓展字段
 	CustomHeader CommandCustomHeader `json:"-"`         // 修改字段类型,"CustomHeader"字段不序列化 2017/8/24 Modify by jerrylou, <gunsluo@gmail.com>
-	Body         []byte              `json:"-"`         // body字段不序列化
+	Body         []byte              `json:"-"`         // body字段不会被Encode()并进行网络传输，仅仅在ToString()打印日志内部有序列化处理
 }
 
 // CreateResponseCommand 只有通信层内部会调用，业务不会调用
@@ -259,6 +259,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 	return decodeRemotingCommand(header, body)
 }
 
+// decodeRemotingCommand 解析header
 func decodeRemotingCommand(header, body []byte) (*RemotingCommand, error) {
 	cmd := &RemotingCommand{}
 	cmd.ExtFields = make(map[string]string)
@@ -295,12 +296,18 @@ func (self *RemotingCommand) ToString() string {
 	if self == nil {
 		return "current RemotingCommand is nil"
 	}
+
 	flagBinary := fmt.Sprintf("%b", self.Flag)
 	extFields := "{}"
 	if bf, err := ffjson.Marshal(self.ExtFields); err == nil {
 		extFields = string(bf)
 	}
 
-	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s]"
-	return fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields)
+	body := ""
+	if self.Body != nil && len(self.Body) > 0 {
+		body = string(self.Body)
+	}
+
+	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s, body=%s ]"
+	return fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields, body)
 }

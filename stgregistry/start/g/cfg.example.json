@@ -1,9 +1,9 @@
 {
   "log": {
     "engine": {
-      "adapter": "console",
+      "adapter": "file",
       "config": {
-        "filename": "E:/source/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/logs/registry.log",
+        "filename": "./logs/registry.log",
         "level":6,
         "maxdays":30,
         "enableFuncCallDepth":false,
