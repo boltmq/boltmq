@@ -43,7 +43,7 @@ func Test_write_read(t *testing.T) {
 
 	for i := 0; i < totalMessages; i++ {
 		time.Sleep(time.Duration(100 * time.Millisecond))
-		result := master.GetMessage("producer", "TestTopic", 0, int64(i), 1024*1024, nil)
+		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
 		if result == nil {
 			fmt.Printf("result == nil %d \r\n", i)
 		}
@@ -68,7 +68,7 @@ func buildMessageStoreConfig() *MessageStoreConfig {
 
 func buildMessage(messageBody []byte, queueId *int32) *MessageExtBrokerInner {
 	msg := new(MessageExtBrokerInner)
-	msg.Topic = "TestTopic"
+	msg.Topic = "test"
 	msg.Message.PutProperty("TAGS", "TAG1")
 	msg.Message.PutProperty("KEYS", "Hello")
 	msg.Body = messageBody
@@ -119,7 +119,7 @@ func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
 	time.Sleep(time.Duration(1000 * time.Millisecond))
 	if offset != 100 {
 		t.Fail()
-		t.Error("GetOffsetInQueueByTime method error, expection:0, actuality:", offset)
+		t.Error("GetOffsetInQueueByTime method error, expection:100, actuality:", offset)
 	}
 
 	master.Shutdown()
