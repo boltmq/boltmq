@@ -384,10 +384,7 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 	brokerNameSet := set.NewSet()
 
 	brokerDataList := make([]*route.BrokerData, 0, len(self.TopicQueueTable))
-	topicRouteData.BrokerDatas = brokerDataList
-
 	filterServerMap := make(map[string][]string, 0)
-	topicRouteData.FilterServerTable = filterServerMap
 
 	self.ReadWriteLock.RLock()
 	if queueDataList, ok := self.TopicQueueTable[topic]; ok && queueDataList != nil {
@@ -400,23 +397,24 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 		}
 
 		for itor := range brokerNameSet.Iterator().C {
-			brokerName, ok := itor.(string)
-			logger.Info("brokerName=%s,  ok=%t", brokerName, ok)
+			if brokerName, ok := itor.(string); ok {
+				brokerData, ok := self.BrokerAddrTable[brokerName]
+				logger.Info("brokerName=%s, brokerData=%s,  ok=%t", brokerName, brokerData.ToString(), ok)
 
-			brokerData, ok := self.BrokerAddrTable[brokerName]
-			logger.Info("brokerData=%s,  ok=%t", brokerData.ToString(), ok)
+				if ok && brokerData != nil {
+					brokerDataClone := brokerData.CloneBrokerData()
+					brokerDataList = append(brokerDataList, brokerDataClone)
+					topicRouteData.BrokerDatas = brokerDataList // FIXME:修复“topicRouteData.BrokerDatas”节点为空的问题
+					foundBrokerData = true
 
-			if ok && brokerData != nil {
-				brokerDataClone := brokerData.CloneBrokerData()
-				brokerDataList = append(brokerDataList, brokerDataClone)
-				foundBrokerData = true
-
-				if brokerDataClone.BrokerAddrs != nil && len(brokerDataClone.BrokerAddrs) > 0 {
-					// 增加FilterServer
-					for _, brokerAddr := range brokerDataClone.BrokerAddrs {
-						if filterServerList, ok := self.FilterServerTable[brokerAddr]; ok {
-							filterServerMap[brokerAddr] = filterServerList
+					if brokerDataClone.BrokerAddrs != nil && len(brokerDataClone.BrokerAddrs) > 0 {
+						// 增加FilterServer
+						for _, brokerAddr := range brokerDataClone.BrokerAddrs {
+							if filterServerList, ok := self.FilterServerTable[brokerAddr]; ok {
+								filterServerMap[brokerAddr] = filterServerList
+							}
 						}
+						topicRouteData.FilterServerTable = filterServerMap
 					}
 				}
 			}
