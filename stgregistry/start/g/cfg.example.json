@@ -1,0 +1,18 @@
+{
+  "log": {
+    "engine": {
+      "adapter": "file",
+      "config": {
+        "filename": "./logs/registry.log",
+        "level":6,
+        "maxdays":30,
+        "enableFuncCallDepth":false,
+        "loggerFuncCallDepth":3
+      }
+    },
+    "path": "",
+    "cache_size": 10000,
+    "enable_func_call_depth": true,
+    "func_call_depth": 3
+  }
+}
