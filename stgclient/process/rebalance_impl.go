@@ -10,6 +10,7 @@ import (
 	set "github.com/deckarep/golang-set"
 	"sort"
 	"strings"
+	"fmt"
 )
 
 // RebalanceImpl: rebalance接口
@@ -89,6 +90,11 @@ func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 		}
 	case heartbeat.CLUSTERING:
 		mqSet, _ := ext.TopicSubscribeInfoTable.Get(topic)
+		if mqSet!=nil {
+			fmt.Println(len(mqSet.(set.Set).ToSlice()))
+		}else{
+			fmt.Println(nil)
+		}
 		cidAll := ext.MQClientFactory.findConsumerIdList(topic, ext.ConsumerGroup)
 		if mqSet != nil && len(mqSet.(set.Set).ToSlice()) > 0 && len(cidAll) > 0 {
 			mqAll := []*message.MessageQueue{}
@@ -179,9 +185,7 @@ func (ext *RebalanceImplExt) updateProcessQueueTableInRebalance(topic string, mq
 				ProcessQueue:  consumer.NewProcessQueue(),
 			}
 			nextOffset := ext.RebalanceImpl.ComputePullFromWhere(mq.(*message.MessageQueue))
-			//if nextOffset >= 0 {
-			//todo 测试
-			if nextOffset >= -1 {
+			if nextOffset >= 0 {
 				pullRequest.NextOffset = nextOffset
 				pullRequestList = append(pullRequestList, pullRequest)
 				changed = true
