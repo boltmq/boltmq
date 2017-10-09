@@ -78,7 +78,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.CommitLog = NewCommitLog(ms)
 	ms.CleanCommitLogService = new(CleanCommitLogService)
 	ms.CleanConsumeQueueService = new(CleanConsumeQueueService)
-	ms.StoreStatsService = new(StoreStatsService)
+	ms.StoreStatsService = NewStoreStatsService()
 	ms.IndexService = NewIndexService(ms)
 	ms.HAService = NewHAService(ms)
 	ms.DispatchMessageService = NewDispatchMessageService(ms.MessageStoreConfig.PutMsgIndexHightWater, ms)
@@ -764,15 +764,20 @@ func (self *DefaultMessageStore) GetEarliestMessageTime(topic string, queueId in
 // Since: 2017/9/21
 func (self *DefaultMessageStore) GetRuntimeInfo() map[string]string {
 	result := make(map[string]string)
+
+	if self.StoreStatsService != nil {
+		result = self.StoreStatsService.GetRuntimeInfo()
+	}
+
 	// 检测物理文件磁盘空间
 	storePathPhysic := self.MessageStoreConfig.StorePathCommitLog
 	physicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
-	result[stgcommon.COMMIT_LOG_DISK_RATIO.String()] = strconv.FormatFloat(physicRatio, 'E', -1, 32)
+	result[stgcommon.COMMIT_LOG_DISK_RATIO.String()] = fmt.Sprintf("%f", physicRatio)
 
 	// 检测逻辑文件磁盘空间
 	storePathLogic := config.GetStorePathConsumeQueue(self.MessageStoreConfig.StorePathRootDir)
 	logicRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathLogic)
-	result[stgcommon.CONSUME_QUEUE_DISK_RATIO.String()] = strconv.FormatFloat(logicRatio, 'E', -1, 32)
+	result[stgcommon.CONSUME_QUEUE_DISK_RATIO.String()] = fmt.Sprintf("%f", logicRatio)
 
 	// 延时进度
 	if self.ScheduleMessageService != nil {
