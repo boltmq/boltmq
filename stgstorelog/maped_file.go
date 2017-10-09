@@ -14,7 +14,6 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
-	"github.com/toolkits/file"
 )
 
 const (
@@ -216,9 +215,9 @@ func (self *MapedFile) isFull() bool {
 func (self *MapedFile) destroy() bool {
 	// TODO: 次数没有使用this.shutdown(intervalForcibly)，是否有问题？？？
 	self.Unmap()
-	error := file.Remove(self.file.Name())
-	if error != nil {
-		logger.Error(error.Error())
+
+	if err := os.Remove(self.file.Name()); err != nil {
+		logger.Errorf("message store delete file %s error: ", self.file.Name(), err.Error())
 		return false
 	}
 	return true
@@ -237,7 +236,7 @@ func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 
 func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
 	if (pos + int64(size)) <= self.wrotePostion {
-		end := pos + int64(size-1)
+		end := pos + int64(size)
 		byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[pos:end])
 		byteBuffer.WritePos = int(size)
 		return &SelectMapedBufferResult{StartOffset: self.fileFromOffset + pos,

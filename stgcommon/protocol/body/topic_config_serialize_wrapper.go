@@ -1,6 +1,7 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -14,10 +15,20 @@ type TopicConfigSerializeWrapper struct {
 	*protocol.RemotingSerializable
 }
 
-func NewTopicConfigSerializeWrapper() *TopicConfigSerializeWrapper {
-	return &TopicConfigSerializeWrapper{
+func NewTopicConfigSerializeWrapper(dataVersion ...*stgcommon.DataVersion) *TopicConfigSerializeWrapper {
+	topicConfigSerializeWrapper := &TopicConfigSerializeWrapper{
 		TopicConfigTable:     NewTopicConfigTable(),
-		DataVersion:          stgcommon.NewDataVersion(),
 		RemotingSerializable: new(protocol.RemotingSerializable),
 	}
+
+	topicConfigSerializeWrapper.DataVersion = stgcommon.NewDataVersion()
+	if dataVersion != nil && len(dataVersion) > 0 {
+		topicConfigSerializeWrapper.DataVersion = dataVersion[0]
+	}
+	return topicConfigSerializeWrapper
+}
+
+func (self *TopicConfigSerializeWrapper) ToString() string {
+	format := "TopicConfigSerializeWrapper [%s, %s]"
+	return fmt.Sprintf(format, self.DataVersion.ToString(), self.TopicConfigTable.ToString())
 }

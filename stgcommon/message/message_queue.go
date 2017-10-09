@@ -12,6 +12,11 @@ type MessageQueue struct {
 	QueueId    int    `json:"queueId"`
 }
 
+func NewMessageQueue() *MessageQueue {
+	messageQueue := new(MessageQueue)
+	return messageQueue
+}
+
 func (mq MessageQueue) HashBytes() []byte {
 	return []byte(strconv.Itoa(mq.hashCode()))
 }

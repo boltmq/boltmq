@@ -1,7 +1,6 @@
 package body
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
 )
 
@@ -10,12 +9,10 @@ import (
 // Since 2017/9/19
 type QueryConsumeTimeSpanBody struct {
 	ConsumeTimeSpanSet set.Set `json:"consumeTimeSpanSet"`
-	*protocol.RemotingSerializable
 }
 
 func NewQueryConsumeTimeSpanBody() *QueryConsumeTimeSpanBody {
 	body := new(QueryConsumeTimeSpanBody)
 	body.ConsumeTimeSpanSet = set.NewSet()
-	body.RemotingSerializable = new(protocol.RemotingSerializable)
 	return body
 }

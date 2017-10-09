@@ -2,23 +2,24 @@ package stgbroker
 
 import (
 	"fmt"
-	"math/rand"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/remotingUtil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"math/rand"
+	"strings"
 )
 
-const DLQ_NUMS_PER_GROUP = 1
+const (
+	DLQ_NUMS_PER_GROUP = 1
+)
 
 // AbstractSendMessageProcessor 发送处理类
 // Author gaoyanlei
@@ -45,18 +46,18 @@ func (asmp *AbstractSendMessageProcessor) parseRequestHeader(request *protocol.R
 
 	var requestHeader *header.SendMessageRequestHeader
 
-	if request.Code == commonprotocol.SEND_MESSAGE_V2 {
+	if request.Code == code.SEND_MESSAGE_V2 {
 		err := request.DecodeCommandCustomHeader(requestHeaderV2)
 		if err != nil {
-			fmt.Println("error")
+			logger.Errorf("error: %s", err.Error())
 		}
 		requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
-	} else if request.Code == commonprotocol.SEND_MESSAGE {
+	} else if request.Code == code.SEND_MESSAGE {
 		requestHeader = &header.SendMessageRequestHeader{}
 		err := request.DecodeCommandCustomHeader(requestHeader)
 		if err != nil {
-			fmt.Println("error")
+			logger.Errorf("error: %s", err.Error())
 		}
 	}
 
@@ -78,15 +79,14 @@ func (asmp *AbstractSendMessageProcessor) buildMsgContext(ctx netm.Context, requ
 // Since 2017/8/16
 func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
-	if !constant.IsWriteable(asmp.BrokerController.BrokerConfig.BrokerPermission) &&
-		asmp.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
-		response.Code = commonprotocol.NO_PERMISSION
-		response.Remark = "the broker[" + asmp.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
+	if !asmp.BrokerController.BrokerConfig.HasWriteable() && asmp.BrokerController.TopicConfigManager.IsOrderTopic(requestHeader.Topic) {
+		response.Code = code.NO_PERMISSION
+		response.Remark = fmt.Sprintf("the broker[%s] sending message is forbidden", asmp.BrokerController.BrokerConfig.BrokerIP1)
 		return response
 	}
 
 	if !asmp.BrokerController.TopicConfigManager.isTopicCanSendMessage(requestHeader.Topic) {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
 		return response
 	}
@@ -95,25 +95,35 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 	if topicConfig == nil {
 		topicSysFlag := 0
 		if requestHeader.UnitMode {
+			topicSysFlag = sysflag.TopicBuildSysFlag(true, false)
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
 				topicSysFlag = sysflag.TopicBuildSysFlag(false, true)
-			} else {
-				topicSysFlag = sysflag.TopicBuildSysFlag(true, false)
 			}
 		}
 
-		topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageMethod(requestHeader.Topic, requestHeader.DefaultTopic,
-			ctx.LocalAddr().String(), requestHeader.DefaultTopicQueueNums, topicSysFlag)
+		topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageMethod(
+			requestHeader.Topic,                 // 1
+			requestHeader.DefaultTopic,          // 2
+			ctx.LocalAddr().String(),            // 3
+			requestHeader.DefaultTopicQueueNums, // 4
+			topicSysFlag,                        // 5
+		)
+
 		if topicConfig == nil {
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
-				topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(requestHeader.Topic,
-					1, constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
+				permNum := constant.PERM_WRITE | constant.PERM_READ
+				topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(
+					requestHeader.Topic, // 1
+					1,                   // 2
+					permNum,             // 3
+					topicSysFlag,        // 4
+				)
 			}
 		}
 
 		if topicConfig == nil {
-			response.Code = commonprotocol.TOPIC_NOT_EXIST
-			response.Remark = "topic[" + requestHeader.Topic + "] not exist, apply first please!"
+			response.Code = code.TOPIC_NOT_EXIST
+			response.Remark = fmt.Sprintf("topic[%s] not exist, apply first please!", requestHeader.Topic)
 			return response
 		}
 
@@ -128,14 +138,12 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 	}
 
 	if queueIdInt >= idValid {
-		errorInfo := fmt.Sprintf("request queueId[%d] is illagal, %s producer: %s", //
-			queueIdInt, //
-			topicConfig.ToString(),
-			remotingUtil.ParseChannelRemoteAddr(ctx)) //
+		format := "request queueId[%d] is illagal, %s producer: %s"
+		errorInfo := fmt.Sprintf(format, queueIdInt, topicConfig.ToString(), remotingUtil.ParseChannelRemoteAddr(ctx))
 
 		logger.Warn(errorInfo)
 		response.Remark = errorInfo
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		return response
 	}
 	return response
@@ -144,8 +152,11 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 func DoResponse(ctx netm.Context,
 	request *protocol.RemotingCommand, response *protocol.RemotingCommand) {
 	if !request.IsOnewayRPC() {
-		// ctx.Write([]byte(response.ToString()))
-		ctx.Write(response.DecodeCommand())
+		_, err := ctx.WriteSerialObject(response)
+		if err != nil {
+			logger.Errorf("DoResponse:%s", err.Error())
+			return
+		}
 	}
 }
 

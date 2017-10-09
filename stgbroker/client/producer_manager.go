@@ -196,7 +196,7 @@ func (pm *ProducerManager) PickProducerChannelRandomly(producerGroupHashCode int
 // Since 2017/9/17
 func contains(lst *list.List, value *ChannelInfo) (bool, *list.Element) {
 	for e := lst.Front(); e != nil; e = e.Next() {
-		if e.Value == value {
+		if info, ok := (e.Value).(*ChannelInfo); ok && info == value {
 			return true, e
 		}
 	}
@@ -214,7 +214,7 @@ func remove(lst *list.List, value *ChannelInfo) bool {
 	return false
 }
 
-// remove 删除列表中某元素
+// remove 获得列表中某元素
 // Author rongzhihong
 // Since 2017/9/17
 func get(lst *list.List, index int) interface{} {
@@ -223,6 +223,7 @@ func get(lst *list.List, index int) interface{} {
 		if index == pos {
 			return e.Value
 		}
+		pos ++
 	}
 	return nil
 }

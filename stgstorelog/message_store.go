@@ -11,7 +11,7 @@ import (
 type MessageStore interface {
 	Load() bool
 	Start() error
-	Shutdown()
+	Shutdown() // 关闭存储服务
 	Destroy()
 	PutMessage(msg *MessageExtBrokerInner) *PutMessageResult
 	GetMessage(group string, topic string, queueId int32, offset int64, maxMsgNums int32, subscriptionData *heartbeat.SubscriptionData) *GetMessageResult

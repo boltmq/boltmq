@@ -14,3 +14,14 @@ type RegisterBrokerRequestHeader struct {
 func (self *RegisterBrokerRequestHeader) CheckFields() error {
 	return nil
 }
+
+func NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64) *RegisterBrokerRequestHeader {
+	registerBrokerRequestHeader := &RegisterBrokerRequestHeader{
+		BrokerName:   brokerName,
+		BrokerAddr:   brokerAddr,
+		ClusterName:  clusterName,
+		HaServerAddr: haServerAddr,
+		BrokerId:     brokerId,
+	}
+	return registerBrokerRequestHeader
+}

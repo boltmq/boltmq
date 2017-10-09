@@ -143,3 +143,7 @@ func (self *IndexFile) indexKeyHashCode(key string) int32 {
 	h.Write([]byte(key))
 	return int32(h.Sum32())
 }
+
+func (self *IndexFile) destroy(intervalForcibly int64) bool {
+	return self.mapedFile.destroy()
+}

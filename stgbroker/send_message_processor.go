@@ -8,7 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	commonprotocol "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
@@ -36,7 +36,7 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 
 func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
-	if request.Code == commonprotocol.CONSUMER_SEND_MSG_BACK {
+	if request.Code == code.CONSUMER_SEND_MSG_BACK {
 		return smp.consumerSendMsgBack(ctx, request), nil
 	}
 
@@ -82,21 +82,22 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	// 确保订阅组存在
 	subscriptionGroupConfig := smp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(requestHeader.Group)
 	if subscriptionGroupConfig == nil {
-		response.Code = commonprotocol.SUBSCRIPTION_GROUP_NOT_EXIST
+		response.Code = code.SUBSCRIPTION_GROUP_NOT_EXIST
 		response.Remark = "subscription group not exist"
 		return response
 	}
 
 	// 检查Broker权限
-	if !constant.IsWriteable(smp.BrokerController.BrokerConfig.BrokerPermission) {
-		response.Code = commonprotocol.NO_PERMISSION
+	if !smp.BrokerController.BrokerConfig.HasWriteable() {
+		response.Code = code.NO_PERMISSION
 		response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending message is forbidden"
 		return response
 	}
 
 	// 如果重试队列数目为0，则直接丢弃消息
-	if subscriptionGroupConfig.RetryQueueNums <= 0 {
-		response.Code = commonprotocol.SUCCESS
+	retryQueueNums := subscriptionGroupConfig.RetryQueueNums
+	if retryQueueNums <= 0 {
+		response.Code = code.SUCCESS
 		response.Remark = ""
 		return response
 	}
@@ -104,7 +105,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	newTopic := stgcommon.GetRetryTopic(requestHeader.Group)
 	var queueIdInt int32
 	if queueIdInt < 0 {
-		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % subscriptionGroupConfig.RetryQueueNums
+		num := (smp.abstractSendMessageProcessor.Rand.Int31() % 99999999) % retryQueueNums
 		if num > 0 {
 			queueIdInt = num
 		} else {
@@ -119,17 +120,17 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	}
 
 	// 检查topic是否存在
-	topicConfig, err := smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, subscriptionGroupConfig.RetryQueueNums,
-		constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
+	perm := constant.PERM_WRITE | constant.PERM_READ
+	topicConfig, err := smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, retryQueueNums, perm, topicSysFlag)
 	if topicConfig == nil || err != nil {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = "topic[" + newTopic + "] not exist"
 		return response
 	}
 
 	// 检查topic权限
 	if !constant.IsWriteable(topicConfig.Perm) {
-		response.Code = commonprotocol.NO_PERMISSION
+		response.Code = code.NO_PERMISSION
 		response.Remark = "the topic[" + newTopic + "] sending message is forbidden"
 		return response
 	}
@@ -138,7 +139,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	// 另外如果频繁调用，是否会引起gc问题，需要关注
 	msgExt := smp.BrokerController.MessageStore.LookMessageByOffset(requestHeader.Offset)
 	if nil == msgExt {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = "look message by offset failed, " + string(requestHeader.Offset)
 		return response
 	}
@@ -165,12 +166,10 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 			}
 		}
 
-		topicConfig, err =
-			smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(
-				newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
+		topicConfig, err = smp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod(newTopic, DLQ_NUMS_PER_GROUP, constant.PERM_WRITE, 0)
 		if nil == topicConfig {
-			response.Code = commonprotocol.SYSTEM_ERROR
-			response.Remark = "topic[" + newTopic + "] not exist"
+			response.Code = code.SYSTEM_ERROR
+			response.Remark = fmt.Sprintf("topic[%s] not exist", newTopic)
 			return response
 		}
 	} else {
@@ -187,7 +186,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 	msgInner.Flag = msgExt.Flag
 	message.SetPropertiesMap(&msgInner.Message, msgExt.Properties)
 	msgInner.PropertiesString = message.MessageProperties2String(msgExt.Properties)
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(nil, msgExt.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgExt.GetTags())
 
 	msgInner.QueueId = int32(queueIdInt)
 	msgInner.SysFlag = msgExt.SysFlag
@@ -216,18 +215,18 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 
 			smp.BrokerController.brokerStatsManager.IncSendBackNums(requestHeader.Group, backTopic)
 
-			response.Code = commonprotocol.SUCCESS
+			response.Code = code.SUCCESS
 			response.Remark = ""
 
 			return response
 		default:
 			break
 		}
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = putMessageResult.PutMessageStatus.PutMessageString()
 		return response
 	}
-	response.Code = commonprotocol.SYSTEM_ERROR
+	response.Code = code.SYSTEM_ERROR
 	response.Remark = "putMessageResult is null"
 	return response
 }
@@ -238,8 +237,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	responseHeader := new(header.SendMessageResponseHeader)
-	response := protocol.CreateRequestCommand(commonprotocol.SYSTEM_ERROR, responseHeader)
-
+	response := protocol.CreateDefaultResponseCommand(responseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
 	smp.abstractSendMessageProcessor.msgCheck(ctx, requestHeader, response)
@@ -273,7 +271,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	msgInner.Flag = requestHeader.Flag
 	message.SetPropertiesMap(&msgInner.Message, message.String2messageProperties(requestHeader.Properties))
 	msgInner.PropertiesString = requestHeader.Properties
-	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(&topicConfig.TopicFilterType, msgInner.GetTags())
+	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(topicConfig.TopicFilterType, msgInner.GetTags())
 	msgInner.QueueId = queueIdInt
 	msgInner.SysFlag = sysFlag
 	msgInner.BornTimestamp = requestHeader.BornTimestamp
@@ -288,7 +286,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	if smp.BrokerController.BrokerConfig.RejectTransactionMessage {
 		traFlag := msgInner.GetProperty(message.PROPERTY_TRANSACTION_PREPARED)
 		if len(traFlag) > 0 {
-			response.Code = commonprotocol.NO_PERMISSION
+			response.Code = code.NO_PERMISSION
 			response.Remark = "the broker[" + smp.BrokerController.BrokerConfig.BrokerIP1 + "] sending transaction message is forbidden"
 			return response
 		}
@@ -301,31 +299,31 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 		switch putMessageResult.PutMessageStatus {
 		case stgstorelog.PUTMESSAGE_PUT_OK:
 			sendOK = true
-			response.Code = commonprotocol.SUCCESS
+			response.Code = code.SUCCESS
 		case stgstorelog.FLUSH_DISK_TIMEOUT:
-			response.Code = commonprotocol.FLUSH_DISK_TIMEOUT
+			response.Code = code.FLUSH_DISK_TIMEOUT
 			sendOK = true
 		case stgstorelog.FLUSH_SLAVE_TIMEOUT:
-			response.Code = commonprotocol.FLUSH_SLAVE_TIMEOUT
+			response.Code = code.FLUSH_SLAVE_TIMEOUT
 			sendOK = true
 		case stgstorelog.SLAVE_NOT_AVAILABLE:
-			response.Code = commonprotocol.SLAVE_NOT_AVAILABLE
+			response.Code = code.SLAVE_NOT_AVAILABLE
 			sendOK = true
 
 		case stgstorelog.CREATE_MAPEDFILE_FAILED:
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "create maped file failed, please make sure OS and JDK both 64bit."
 		case stgstorelog.MESSAGE_ILLEGAL:
-			response.Code = commonprotocol.MESSAGE_ILLEGAL
+			response.Code = code.MESSAGE_ILLEGAL
 			response.Remark = "the message is illegal, maybe length not matched."
 		case stgstorelog.SERVICE_NOT_AVAILABLE:
-			response.Code = commonprotocol.SERVICE_NOT_AVAILABLE
+			response.Code = code.SERVICE_NOT_AVAILABLE
 			response.Remark = "service not available now, maybe disk full, " + smp.diskUtil() + ", maybe your broker machine memory too small."
 		case stgstorelog.PUTMESSAGE_UNKNOWN_ERROR:
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "UNKNOWN_ERROR"
 		default:
-			response.Code = commonprotocol.SYSTEM_ERROR
+			response.Code = code.SYSTEM_ERROR
 			response.Remark = "UNKNOWN_ERROR DEFAULT"
 		}
 
@@ -339,7 +337,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 			responseHeader.QueueId = queueIdInt
 			responseHeader.QueueOffset = putMessageResult.AppendMessageResult.LogicsOffset
 
-			// TODO DoResponse(ctx, request, response)
+			DoResponse(ctx, request, response)
 			if smp.BrokerController.BrokerConfig.LongPollingEnable {
 				smp.BrokerController.PullRequestHoldService.notifyMessageArriving(
 					requestHeader.Topic, queueIdInt, putMessageResult.AppendMessageResult.LogicsOffset+1)
@@ -352,11 +350,11 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
 			logger.Infof("response:%#v", response)
-			return response
+			return nil
 		}
 
 	} else {
-		response.Code = commonprotocol.SYSTEM_ERROR
+		response.Code = code.SYSTEM_ERROR
 		response.Remark = "store putMessage return null"
 	}
 

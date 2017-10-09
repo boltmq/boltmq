@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/example/stgregistry/client"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
@@ -26,7 +25,7 @@ func main() {
 		request  *protocol.RemotingCommand
 		response *protocol.RemotingCommand
 		err      error
-		topic    = "jcpt-example-200"
+		topic    = "SELF_TEST_TOPIC"
 	)
 
 	// 初始化
@@ -34,7 +33,7 @@ func main() {
 
 	// 启动
 	cmd.Start()
-	fmt.Println("remoting client start success")
+	logger.Info("remoting client start success")
 
 	// 请求custom header
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{
@@ -75,5 +74,4 @@ func main() {
 	format := "sync handle GET_ROUTEINTO_BY_TOPIC failed. code=%d, remark=%s"
 	logger.Info(format, response.Code, response.Remark)
 
-	select {}
 }

@@ -2,7 +2,7 @@ package stgcommon
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
-	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"os"
 	"runtime"
 )
@@ -10,6 +10,8 @@ import (
 const (
 	defaultHostName          = "DEFAULT_BROKER"
 	defaultBrokerClusterName = "DefaultCluster"
+	defaultBrokerPermission  = 6
+	defaultTopicQueueNums    = 8
 )
 
 // BrokerConfig Broker配置项
@@ -44,14 +46,13 @@ type BrokerConfig struct {
 	ShortPollingTimeMills              int    `json:"ShortPollingTimeMills"`              // 如果是短轮询，服务器挂起时间
 	NotifyConsumerIdsChangedEnable     bool   `json:"NotifyConsumerIdsChangedEnable"`     // notify consumerId changed 开关
 	OffsetCheckInSlave                 bool   `json:"OffsetCheckInSlave"`                 // slave 是否需要纠正位点
-	*protocol.RemotingSerializable     `json:"-"`
 }
 
-// NewBrokerConfig 初始化BrokerConfig
+// NewDefaultBrokerConfig 初始化默认BrokerConfig
 // Author gaoyanlei
 // Since 2017/8/9
-func NewBrokerConfig() *BrokerConfig {
-	return &BrokerConfig{
+func NewDefaultBrokerConfig() *BrokerConfig {
+	brokerConfig := &BrokerConfig{
 		SmartGoHome:                        os.Getenv(SMARTGO_HOME_ENV),
 		NamesrvAddr:                        os.Getenv(NAMESRV_ADDR_ENV),
 		BrokerIP1:                          stgclient.GetLocalAddress(),
@@ -59,8 +60,8 @@ func NewBrokerConfig() *BrokerConfig {
 		BrokerName:                         localHostName(),
 		BrokerClusterName:                  defaultBrokerClusterName,
 		BrokerId:                           MASTER_ID,
-		BrokerPermission:                   6,
-		DefaultTopicQueueNums:              8,
+		BrokerPermission:                   defaultBrokerPermission,
+		DefaultTopicQueueNums:              defaultTopicQueueNums,
 		AutoCreateTopicEnable:              true,
 		ClusterTopicEnable:                 true,
 		BrokerTopicEnable:                  true,
@@ -80,8 +81,19 @@ func NewBrokerConfig() *BrokerConfig {
 		ShortPollingTimeMills:              1000,
 		NotifyConsumerIdsChangedEnable:     true,
 		OffsetCheckInSlave:                 true,
-		RemotingSerializable:               new(protocol.RemotingSerializable),
 	}
+
+	return brokerConfig
+}
+
+// NewBrokerConfig 初始化BrokerConfig
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/28
+func NewBrokerConfig(brokerName, brokerClusterName string) *BrokerConfig {
+	brokerConfig := NewDefaultBrokerConfig()
+	brokerConfig.BrokerName = brokerName
+	brokerConfig.BrokerClusterName = brokerClusterName
+	return brokerConfig
 }
 
 // localHostName 获取当前机器hostName
@@ -93,4 +105,18 @@ func localHostName() string {
 		return defaultHostName
 	}
 	return host
+}
+
+// HasReadable 校验Broker是否有读权限
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func (self *BrokerConfig) HasReadable() bool {
+	return constant.IsReadable(self.BrokerPermission)
+}
+
+// HasWriteable 校验Broker是否有写权限
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func (self *BrokerConfig) HasWriteable() bool {
+	return constant.IsWriteable(self.BrokerPermission)
 }

@@ -1,21 +1,25 @@
 package out
 
 import (
-	"strings"
-
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	headerNamesrv "git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"github.com/pquerna/ffjson/ffjson"
+	"strings"
+)
+
+const (
+	timeout = 3000 // 默认超时时间：3秒
 )
 
 // BrokerOuterAPI Broker对外调用的API封装
-// @author gaoyanlei
-// @since 2017/8/9
+// Author gaoyanlei
+// Since 2017/8/22
 type BrokerOuterAPI struct {
 	topAddressing  *namesrv.TopAddressing
 	remotingClient *remoting.DefalutRemotingClient
@@ -23,26 +27,33 @@ type BrokerOuterAPI struct {
 }
 
 // NewBrokerOuterAPI 初始化
-// @author gaoyanlei
-// @since 2017/8/9
-func NewBrokerOuterAPI( /** NettyClientConfig nettyClientConfig */ ) *BrokerOuterAPI {
-	var brokerController = new(BrokerOuterAPI)
-	brokerController.remotingClient = remoting.NewDefalutRemotingClient()
-	return brokerController
+// Author gaoyanlei
+// Since 2017/8/22
+func NewBrokerOuterAPI(defaultRemotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
+	api := &BrokerOuterAPI{
+		remotingClient: defaultRemotingClient, // 参数defaultRemotingClient必须从外部传入，而不是直接调用remoting.NewDefalutRemotingClient()
+	}
+	return api
 }
 
 // Start 启动
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) Start() {
-	self.remotingClient.Start()
+	if self.remotingClient != nil {
+		self.remotingClient.Start()
+		logger.Infof("brokerOuterAPI start successful")
+	}
 }
 
 // Shutdown 关闭
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) Shutdown() {
-	self.remotingClient.Shutdown()
+	if self.remotingClient != nil {
+		self.remotingClient.Shutdown()
+		logger.Infof("brokerOuterAPI Shutdown successful")
+	}
 }
 
 // UpdateNameServerAddressList 更新nameService地址
@@ -50,7 +61,7 @@ func (self *BrokerOuterAPI) Shutdown() {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 	addrArray := strings.Split(addrs, ";")
-	if addrArray != nil {
+	if addrArray != nil && len(addrArray) > 0 {
 		self.remotingClient.UpdateNameServerAddressList(addrArray)
 	}
 }
@@ -60,74 +71,70 @@ func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) FetchNameServerAddr() string {
 	addrs := self.topAddressing.FetchNSAddr()
-	if addrs != "" {
-		if !strings.EqualFold(addrs, self.nameSrvAddr) {
-			logger.Info("name server address changed, old: " + self.nameSrvAddr + " new: " + addrs)
-			self.UpdateNameServerAddressList(addrs)
-			self.nameSrvAddr = addrs
-			return self.nameSrvAddr
-		}
+	if addrs == "" || strings.EqualFold(addrs, self.nameSrvAddr) {
+		return self.nameSrvAddr
 	}
+
+	format := "name server address changed, old: %s, new: %s"
+	logger.Info(format, self.nameSrvAddr, addrs)
+	self.UpdateNameServerAddressList(addrs)
+	self.nameSrvAddr = addrs
 	return self.nameSrvAddr
 }
 
 // RegisterBroker 向nameService注册broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName,
-	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
-	filterServerList []string) *namesrv.RegisterBrokerResult {
+func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
+	topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
 
-	requestHeader := &headerNamesrv.RegisterBrokerRequestHeader{
-		BrokerAddr : brokerAddr,
-		BrokerId : brokerId,
-		BrokerName : brokerName,
-		ClusterName : clusterName,
-		HaServerAddr : haServerAddr,
-	}
-
+	requestHeader := headerNamesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
-	requestBody := body.RegisterBrokerBody{}
-	requestBody.TopicConfigSerializeWrapper = topicConfigWrapper
-	requestBody.FilterServerList = filterServerList
-	if b, err := ffjson.Marshal(requestBody); err == nil {
-		request.Body = b
-	}
+
+	requestBody := body.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
+	content := requestBody.CustomEncode(requestBody)
+	request.Body = content
+	//logger.Infof("register broker, request.body is %s", string(content))
 
 	if oneway {
-		self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
-		return nil
+		self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+		return nil, nil
 	}
 
-	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("register broker failed. %s, err [%s]", request.ToString(), err.Error())
-		return nil
+		logger.Errorf("register broker failed. err:[%s], %s", err.Error(), request.ToString())
+		return nil, err
 	}
 	if response == nil {
-		logger.Error("register broker end, but response nil")
-		return nil
+		errMsg := "register broker end, but response nil"
+		logger.Error(errMsg)
+		return nil, fmt.Errorf(errMsg)
 	}
 
 	if response.Code != code.SUCCESS {
-		logger.Errorf("register broker end, but not success. %s", response.ToString())
-		return nil
+		errMsg := "register broker end, but not success. %s"
+		logger.Errorf(errMsg, response.ToString())
+		return nil, fmt.Errorf(errMsg, response.ToString())
 	}
 
-	logger.Infof("register broker ok. %s", response.ToString())
+	//logger.Infof("register broker ok. %s", response.ToString())
 	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
-		logger.Error("err: %s", err.Error())
+		logger.Errorf("err: %s", err.Error())
+		return nil, err
 	}
 
-	result := &namesrv.RegisterBrokerResult{}
-	result.MasterAddr = responseHeader.MasterAddr
-	result.HaServerAddr = responseHeader.HaServerAddr
-	if response.Body != nil {
-		result.KvTable.Decode(response.Body)
+	result := namesrv.NewRegisterBrokerResult(responseHeader.HaServerAddr, responseHeader.MasterAddr)
+	if response.Body != nil && len(response.Body) > 0 {
+		err = result.KvTable.CustomDecode(response.Body, result.KvTable)
+		if err != nil {
+			logger.Errorf("sync response REGISTER_BROKER body CustomDecode err: %s", err.Error())
+			return nil, err
+		}
 	}
-	return result
+	return result, nil
 }
 
 // RegisterBrokerAll 向每个nameservice注册
@@ -136,27 +143,33 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
 	haServerAddr string, brokerId int64, topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
-	registerBrokerResult := &namesrv.RegisterBrokerResult{}
+	var registerBrokerResult *namesrv.RegisterBrokerResult
 
-	// 获取那么service地址
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
-	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
-		for _, namesrvAddr := range nameServerAddressList {
-			result := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId,
-				topicConfigWrapper, oneway, filterServerList)
-			if result != nil {
-				registerBrokerResult = result
-			}
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
+	if nameServerAddressList == nil || len(nameServerAddressList) == 0 {
+		return registerBrokerResult
+	}
+
+	for _, namesrvAddr := range nameServerAddressList {
+		result, err := self.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
+		if err != nil {
+			logger.Errorf("brokerOuterAPI.RegisterBrokerAll() err: %s", err.Error())
+			return nil
 		}
+		if result != nil {
+			registerBrokerResult = result
+		}
+		logger.Infof("register broker to name server %s OK, the result: %s", namesrvAddr, result.ToString())
 	}
 	return registerBrokerResult
 }
 
-// UnregisterBroker 注销broker
+// UnRegisterBroker 注销broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
+func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
+	defer utils.RecoveredFn()
+
 	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
 		ClusterName: clusterName,
 		BrokerName:  brokerAddr,
@@ -165,28 +178,32 @@ func (self *BrokerOuterAPI) UnregisterBroker(namesrvAddr, clusterName, brokerAdd
 	}
 
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			return
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+	if response != nil {
+		switch response.Code {
+		case code.SUCCESS:
+			{
+				return
+			}
+		default:
+			break
 		}
-	default:
-		break
 	}
 	return
 }
 
-// UnregisterBrokerAll 注销全部Broker
+// UnRegisterBrokerAll 注销全部Broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerName string, brokerId int) {
+func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerName string, brokerId int) {
 	nameServerAddressList := self.remotingClient.GetNameServerAddressList()
-	if nameServerAddressList != nil && len(nameServerAddressList) > 0 {
-		for _, namesrvAddr := range nameServerAddressList {
-			self.UnregisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-			logger.Infof("register broker to name server %s OK", namesrvAddr)
-		}
+	if nameServerAddressList == nil || len(nameServerAddressList) == 0 {
+		return
+	}
+
+	for _, namesrvAddr := range nameServerAddressList {
+		self.UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
+		logger.Infof("register broker to name server %s OK", namesrvAddr)
 	}
 }
 
@@ -195,12 +212,12 @@ func (self *BrokerOuterAPI) UnregisterBrokerAll(clusterName, brokerAddr, brokerN
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			tcsw := &body.TopicConfigSerializeWrapper{}
-			err := tcsw.Decode(response.Body)
+			tcsw := body.NewTopicConfigSerializeWrapper()
+			err := tcsw.CustomDecode(response.Body, tcsw)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -217,12 +234,12 @@ func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicCon
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			cosw := &body.ConsumerOffsetSerializeWrapper{}
-			err := cosw.Decode(response.Body)
+			cosw := body.NewConsumerOffsetSerializeWrapper()
+			err := cosw.CustomDecode(response.Body, cosw)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -239,7 +256,7 @@ func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.Consu
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
@@ -256,12 +273,12 @@ func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, 3000)
+	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	switch response.Code {
 	case code.SUCCESS:
 		{
-			sgw := &body.SubscriptionGroupWrapper{}
-			err := sgw.Decode(response.Body)
+			sgw := body.NewSubscriptionGroupWrapper()
+			err := sgw.CustomDecode(response.Body, sgw)
 			if err != nil {
 				logger.Error(err)
 			}

@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"github.com/toolkits/file"
 	"strings"
 	"sync"
 )
@@ -42,7 +43,7 @@ func (self *KVConfigManager) printAllPeriodically() {
 		for namespace, kvTable := range self.ConfigTable {
 			if kvTable != nil {
 				for key, value := range kvTable {
-					logger.Info("configTable Namespace: %s Key: %s Value: %s", namespace, key, value)
+					logger.Info("configTable namespace=%s, key=%s, value=%s", namespace, key, value)
 				}
 			}
 		}
@@ -55,12 +56,14 @@ func (self *KVConfigManager) printAllPeriodically() {
 // Since: 2017/9/6
 func (self *KVConfigManager) persist() {
 	self.ReadWriteLock.RLock()
-	kvConfigSerializeWrapper := NewKVConfigSerializeWrapper(self.ConfigTable)
-	content := kvConfigSerializeWrapper.CustomEncode(kvConfigSerializeWrapper)
-	if content != nil && len(content) > 0 {
-		kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
-		stgcommon.String2File(content, kvConfigPath)
+	kvConfigWrapper := NewKVConfigSerializeWrapper(self.ConfigTable)
+	content := kvConfigWrapper.CustomEncode(kvConfigWrapper)
+	if content == nil || len(content) == 0 {
+		logger.Info("kvConfigWrapper.bytes is nil, nothing to persist to file.")
+		return
 	}
+	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
+	stgcommon.String2File(content, kvConfigPath)
 	self.ReadWriteLock.RUnlock()
 }
 
@@ -129,8 +132,8 @@ func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		tb := body.NewKVTable()
-		for key, value := range kvTable {
-			tb.Table[key] = value
+		for topic, value := range kvTable {
+			tb.Table[topic] = value
 		}
 		return tb.CustomEncode(tb)
 	}
@@ -186,7 +189,7 @@ func (self *KVConfigManager) load() error {
 	cfgPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
 	logger.Info("get kvConfigPath = %s", cfgPath)
 	cfgName := self.NamesrvController.NamesrvConfig.GetKvConfigName()
-	if ok, err := stgcommon.ExistsFile(cfgPath); err != nil || !ok {
+	if !file.IsExist(cfgPath) {
 		ok, err := stgcommon.CreateFile(cfgPath)
 		if err != nil {
 			return fmt.Errorf("create %s failed. err: %s", cfgName, err.Error())
@@ -211,18 +214,18 @@ func (self *KVConfigManager) load() error {
 	if strings.TrimSpace(content) != "" {
 		// kvConfig.json文件内容有数据，则反序列化为KVConfigSerializeWrapper
 		buf := []byte(strings.TrimSpace(content))
-		kvConfigSerializeWrapper := new(KVConfigSerializeWrapper)
-		err := kvConfigSerializeWrapper.CustomDecode(buf, kvConfigSerializeWrapper)
-
+		kvConfigWrapper := new(KVConfigSerializeWrapper)
+		err := kvConfigWrapper.CustomDecode(buf, kvConfigWrapper)
 		if err != nil {
 			return fmt.Errorf("kvConfigSerializeWrapper decode err: %s \n\t %s", err.Error(), content)
 		}
-		if kvConfigSerializeWrapper != nil && kvConfigSerializeWrapper.ConfigTable != nil {
-			for k, v := range kvConfigSerializeWrapper.ConfigTable {
-				self.ConfigTable[k] = v
-			}
-			logger.Info("set kvConfigManager.configTable from %s to this", cfgName)
+		if kvConfigWrapper == nil || kvConfigWrapper.ConfigTable == nil {
+			return fmt.Errorf("kvConfigSerializeWrapper is nil")
 		}
+		for k, v := range kvConfigWrapper.ConfigTable {
+			self.ConfigTable[k] = v
+		}
+		logger.Info("set kvConfigManager.configTable from %s to self", cfgName)
 	}
 	logger.Info("kvConfigManager load successful")
 	return nil

@@ -207,6 +207,18 @@ func (self *IndexService) getAndCreateLastIndexFile() *IndexFile {
 	return indexFile
 }
 
+func (self *IndexService) destroy() {
+	self.readWriteLock.RLock()
+	defer self.readWriteLock.RUnlock()
+
+	for element := self.indexFileList.Front(); element != nil; element = element.Next() {
+		indexFile := element.Value.(*IndexFile)
+		indexFile.destroy(1000 * 3)
+	}
+
+	self.indexFileList = list.New()
+}
+
 func (self *IndexService) queryOffset(topic, key string, maxNum int32, begin, end int64) *QueryMessageResult {
 	// TODO
 	return nil
@@ -234,4 +246,8 @@ func (self *IndexService) flush(indexFile *IndexFile) {
 		self.defaultMessageStore.StoreCheckpoint.indexMsgTimestamp = indexMsgTimestamp
 
 	}
+}
+
+func (self *IndexService) Shutdown() {
+	// TODO
 }
