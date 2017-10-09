@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	broker_ip   = "127.0.0.1"
+	broker_ip   = "0.0.0.0"
 	broker_port = 10911
 	ten_second  = 10 * 1000
 	one_minute  = 60 * 1000

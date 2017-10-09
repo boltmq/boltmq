@@ -216,7 +216,6 @@ func (self *CommitLog) pickupStoretimestamp(offset int64, size int32) int64 {
 		if result != nil {
 			result.MappedByteBuffer.ReadPos = message.MessageStoreTimestampPostion
 			storeTimestamp := result.MappedByteBuffer.ReadInt64()
-			result.MappedByteBuffer.unmap()
 			return storeTimestamp
 		}
 	}
