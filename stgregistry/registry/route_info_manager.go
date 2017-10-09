@@ -575,7 +575,7 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 
 }
 
-// printAllPeriodically 定期打印当前类的数据结构
+// printAllPeriodically 定期打印当前类的数据结构(常用于业务调试)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) printAllPeriodically() {
@@ -606,7 +606,7 @@ func (self *RouteInfoManager) printTopicQueueTable() {
 			}
 		}
 	}
-	logger.Info("")
+	logger.Info("") // 额外打印换行符
 }
 
 // printClusterAddrTable 打印self.ClusterAddrTable 数据
@@ -631,7 +631,7 @@ func (self *RouteInfoManager) printClusterAddrTable() {
 		}
 		logger.Info("clusterAddrTable clusterName [%s],  brokerNames[%s]", clusterName, info)
 	}
-	logger.Info("")
+	logger.Info("") // 额外打印换行符
 }
 
 // printBrokerLiveTable 打印self.BrokerLiveTable 数据
@@ -649,7 +649,7 @@ func (self *RouteInfoManager) printBrokerLiveTable() {
 		}
 		logger.Info("brokerLiveTable brokerAddr: %s %s", brokerAddr, info)
 	}
-	logger.Info("")
+	logger.Info("") // 额外打印换行符
 }
 
 // printBrokerAddrTable 打印self.BrokerAddrTable 数据
@@ -667,7 +667,7 @@ func (self *RouteInfoManager) printBrokerAddrTable() {
 		}
 		logger.Info("brokerAddrTable brokerName: %s, %s", brokerName, info)
 	}
-	logger.Info("")
+	logger.Info("") // 额外打印换行符
 }
 
 // getSystemTopicList 获取指定集群下的所有topic列表
@@ -680,8 +680,8 @@ func (self *RouteInfoManager) getSystemTopicList() []byte {
 		for cluster, brokerNameSet := range self.ClusterAddrTable {
 			topicList.TopicList.Add(cluster)
 			if brokerNameSet != nil && brokerNameSet.Cardinality() > 0 {
-				for value := range brokerNameSet.Iterator().C {
-					if brokerName, ok := value.(string); ok {
+				for itor := range brokerNameSet.Iterator().C {
+					if brokerName, ok := itor.(string); ok {
 						topicList.TopicList.Add(brokerName)
 					}
 				}
@@ -711,8 +711,8 @@ func (self *RouteInfoManager) getTopicsByCluster(cluster string) []byte {
 	topicList := body.NewTopicList()
 	self.ReadWriteLock.RLock()
 	if brokerNameSet, ok := self.ClusterAddrTable[cluster]; ok && brokerNameSet != nil {
-		for value := range brokerNameSet.Iterator().C {
-			if brokerName, ok := value.(string); ok {
+		for itor := range brokerNameSet.Iterator().C {
+			if brokerName, ok := itor.(string); ok {
 				for topic, queueDatas := range self.TopicQueueTable {
 					if queueDatas != nil && len(queueDatas) > 0 {
 						for _, queueData := range queueDatas {
