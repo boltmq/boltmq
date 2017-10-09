@@ -57,8 +57,17 @@ func (self *MapedFileQueue) getMapedFileByTime(timestamp int64) (mf *MapedFile) 
 		return nil
 	}
 	for _, mf := range mapedFileSlice {
-		if mf != nil && mf.storeTimestamp >= timestamp {
-			return mf
+		if mf != nil {
+			fileInfo, err := os.Stat(mf.fileName)
+			if err != nil {
+				logger.Warn("maped file queue get maped file by time error:", err.Error())
+				continue
+			}
+
+			modifiedTime := fileInfo.ModTime().UnixNano() / 1000000
+			if modifiedTime >= timestamp {
+				return mf
+			}
 		}
 	}
 	return mapedFileSlice[len(mapedFileSlice)-1]

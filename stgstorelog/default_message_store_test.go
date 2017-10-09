@@ -90,7 +90,7 @@ func putMessage(messageStore *DefaultMessageStore, totalMessages int) {
 
 	for i := 0; i < totalMessages; i++ {
 		result := messageStore.PutMessage(buildMessage(messageBody, &queueId))
-		logger.Infof("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+		logger.Infof("%d\t%s\t%d", i, result.AppendMessageResult.MsgId, result.AppendMessageResult.StoreTimestamp)
 	}
 
 	time.Sleep(time.Duration(1000 * time.Millisecond))
@@ -116,10 +116,16 @@ func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
 	master := buildMessageStore()
 	putMessage(master, 100)
 	offset := master.GetMaxOffsetInQueue("test", 0)
-	time.Sleep(time.Duration(1000 * time.Millisecond))
 	if offset != 100 {
 		t.Fail()
 		t.Error("GetOffsetInQueueByTime method error, expection:100, actuality:", offset)
+	}
+
+	putMessage(master, 100)
+	offset = master.GetMaxOffsetInQueue("test", 0)
+	if offset != 200 {
+		t.Fail()
+		t.Error("GetOffsetInQueueByTime method error, expection:200, actuality:", offset)
 	}
 
 	master.Shutdown()
@@ -129,6 +135,8 @@ func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
 func TestDefaultMessageStore_GetMinOffsetInQueue(t *testing.T) {
 	master := buildMessageStore()
 	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
 	offset := master.GetMinOffsetInQueue("test", 0)
 	if offset != 0 {
 		t.Fail()
@@ -140,13 +148,20 @@ func TestDefaultMessageStore_GetMinOffsetInQueue(t *testing.T) {
 }
 
 func TestDefaultMessageStore_GetOffsetInQueueByTime(t *testing.T) {
-	timestamp := time.Now().UnixNano() / 1000
+	timestampStart := time.Now().UnixNano() / 1000000
 	master := buildMessageStore()
 	putMessage(master, 100)
-	offset := master.GetOffsetInQueueByTime("test", 0, timestamp)
+	offset := master.GetOffsetInQueueByTime("test", 0, timestampStart)
 	if offset != 0 {
 		t.Fail()
 		t.Error("GetOffsetInQueueByTime method error, expection:0, actuality:", offset)
+	}
+
+	timestampEnd := time.Now().UnixNano() / 1000000
+	offset = master.GetOffsetInQueueByTime("test", 0, timestampEnd)
+	if offset != 99 {
+		t.Fail()
+		t.Error("GetOffsetInQueueByTime method error, expection:99, actuality:", offset)
 	}
 
 	master.Shutdown()

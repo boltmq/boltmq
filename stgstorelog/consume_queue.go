@@ -206,53 +206,56 @@ func (self *ConsumeQueue) getOffsetInQueueByTime(timestamp int64) int64 {
 		selectBuffer := mapedFile.selectMapedBuffer(0)
 		if selectBuffer != nil {
 			buffer := selectBuffer.MappedByteBuffer
-			high = buffer.Limit - CQStoreUnitSize
+			high = buffer.WritePos - CQStoreUnitSize
 
 			for {
-				if high >= low {
-					midOffset = (low + high) / (2 * CQStoreUnitSize) * CQStoreUnitSize
-					buffer.ReadPos = midOffset
-					phyOffset := buffer.ReadInt64()
-					size := buffer.ReadInt32()
-
-					storeTime := self.defaultMessageStore.CommitLog.pickupStoretimestamp(phyOffset, size)
-					if storeTime < 0 { // 没有从物理文件找到消息，此时直接返回0
-						return 0
-					} else if storeTime == timestamp {
-						targetOffset = midOffset
-						break
-					} else if storeTime > timestamp {
-						high = midOffset - CQStoreUnitSize
-						rightOffset = midOffset
-						rightIndexValue = storeTime
-					} else {
-						low = midOffset + CQStoreUnitSize
-						leftOffset = midOffset
-						leftIndexValue = storeTime
-					}
+				if high < low {
+					break
 				}
 
-				// 查询的时间正好是消息索引记录写入的时间
-				if targetOffset != -1 {
-					offset = targetOffset
+				midOffset = (low + high) / (2 * CQStoreUnitSize) * CQStoreUnitSize
+				buffer.ReadPos = midOffset
+				phyOffset := buffer.ReadInt64()
+				size := buffer.ReadInt32()
+
+				storeTime := self.defaultMessageStore.CommitLog.pickupStoretimestamp(phyOffset, size)
+				if storeTime < 0 { // 没有从物理文件找到消息，此时直接返回0
+					return 0
+				} else if storeTime == timestamp {
+					targetOffset = midOffset
+					break
+				} else if storeTime > timestamp {
+					high = midOffset - CQStoreUnitSize
+					rightOffset = midOffset
+					rightIndexValue = storeTime
 				} else {
-					// timestamp 时间小于该MapedFile中第一条记录记录的时间
-					if leftIndexValue == -1 {
+					low = midOffset + CQStoreUnitSize
+					leftOffset = midOffset
+					leftIndexValue = storeTime
+				}
+			}
+
+			// 查询的时间正好是消息索引记录写入的时间
+			if targetOffset != -1 {
+				offset = targetOffset
+			} else {
+				// timestamp 时间小于该MapedFile中第一条记录记录的时间
+				if leftIndexValue == -1 {
+					offset = rightOffset
+				} else if rightIndexValue == -1 { // timestamp 时间大于该MapedFile中最后一条记录记录的时间
+					offset = leftOffset
+				} else {
+					// 取最接近timestamp的offset
+					if math.Abs(float64(timestamp-leftIndexValue)) > math.Abs(float64(timestamp-rightIndexValue)) {
 						offset = rightOffset
-					} else if rightIndexValue == -1 { // timestamp 时间大于该MapedFile中最后一条记录记录的时间
-						offset = leftOffset
 					} else {
-						// 取最接近timestamp的offset
-						if math.Abs(float64(timestamp-leftIndexValue)) > math.Abs(float64(timestamp-rightIndexValue)) {
-							offset = rightOffset
-						} else {
-							offset = leftOffset
-						}
+						offset = leftOffset
 					}
 				}
-
-				return mapedFile.fileFromOffset + int64(offset)/CQStoreUnitSize
 			}
+
+			return (mapedFile.fileFromOffset + int64(offset)) / CQStoreUnitSize
+
 		}
 	}
 
