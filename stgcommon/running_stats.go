@@ -13,15 +13,15 @@ const (
 func (state RunningStats) String() string {
 	switch state {
 	case COMMIT_LOG_MAX_OFFSET:
-		return "COMMIT_LOG_MAX_OFFSET"
+		return "commitLogMaxOffset"
 	case COMMIT_LOG_MIN_OFFSET:
-		return "COMMIT_LOG_MIN_OFFSET"
+		return "commitLogMinOffset"
 	case COMMIT_LOG_DISK_RATIO:
-		return "COMMIT_LOG_DISK_RATIO"
+		return "commitLogDiskRatio"
 	case CONSUME_QUEUE_DISK_RATIO:
-		return "CONSUME_QUEUE_DISK_RATIO"
+		return "consumeQueueDiskRatio"
 	case SCHEDULE_MESSAGE_OFFSET:
-		return "SCHEDULE_MESSAGE_OFFSET"
+		return "scheduleMessageOffset"
 	default:
 		return "Unknow"
 	}
