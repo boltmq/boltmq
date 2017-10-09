@@ -64,6 +64,8 @@ func (self *KVConfigManager) persist() {
 	}
 	kvConfigPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
 	stgcommon.String2File(content, kvConfigPath)
+	logger.Info("persist kvConfigWrapper successful.")
+
 	self.ReadWriteLock.RUnlock()
 }
 

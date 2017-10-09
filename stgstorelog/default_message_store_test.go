@@ -167,3 +167,115 @@ func TestDefaultMessageStore_GetOffsetInQueueByTime(t *testing.T) {
 	master.Shutdown()
 	master.Destroy()
 }
+
+func TestDefaultMessageStore_LookMessageByOffset(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	message := master.LookMessageByOffset(0)
+	if message == nil {
+		t.Fail()
+		t.Error("look message by offset error, message is nil")
+	}
+
+	if message.CommitLogOffset != 0 {
+		t.Fail()
+		t.Error("look message by offset error, expection:0, actuality:")
+	}
+
+	message = master.LookMessageByOffset(12637)
+	if message == nil {
+		t.Fail()
+		t.Error("look message by offset error, message is nil")
+	}
+
+	if message.CommitLogOffset != 12637 {
+		t.Fail()
+		t.Error("look message by offset error, expection:12637, actuality:")
+	}
+
+	message = master.LookMessageByOffset(12638)
+	if message != nil {
+		t.Fail()
+		t.Error("look message by offset error")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_SelectOneMessageByOffset(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	selectResult := master.SelectOneMessageByOffset(0)
+	if selectResult == nil {
+		t.Fail()
+		t.Error("select one message by offset error, message is nil")
+	}
+
+	selectResult = master.SelectOneMessageByOffset(12637)
+	if selectResult == nil {
+		t.Fail()
+		t.Error("select one message by offset error, message is nil")
+	}
+
+	selectResult = master.SelectOneMessageByOffset(12638)
+	if selectResult != nil {
+		t.Fail()
+		t.Error("select one message by offset error")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_SelectOneMessageByOffsetAndSize(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	selectResult := master.SelectOneMessageByOffsetAndSize(0, 127)
+	if selectResult == nil {
+		t.Fail()
+		t.Error("select one message by offset error, message is nil")
+	}
+
+	selectResult = master.SelectOneMessageByOffsetAndSize(12637, 127)
+	if selectResult == nil {
+		t.Fail()
+		t.Error("select one message by offset error, message is nil")
+	}
+
+	selectResult = master.SelectOneMessageByOffsetAndSize(12637, 128)
+	if selectResult != nil {
+		t.Fail()
+		t.Error("select one message by offset error, message is nil")
+	}
+
+	selectResult = master.SelectOneMessageByOffsetAndSize(12638, 127)
+	if selectResult != nil {
+		t.Fail()
+		t.Error("select one message by offset error")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_GetRuntimeInfo(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	infoMap := master.GetRuntimeInfo()
+	if infoMap == nil {
+		t.Fail()
+		t.Error("get runtime info error, runtime info is nil")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
