@@ -1,12 +1,14 @@
 package process
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"strings"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"sort"
+	"strings"
 )
+
 // MQAdminImpl: 运维方法
 // Author: yintongqiang
 // Since:  2017/8/13
@@ -17,25 +19,25 @@ type MQAdminImpl struct {
 
 func NewMQAdminImpl(mQClientFactory *MQClientInstance) *MQAdminImpl {
 	return &MQAdminImpl{
-		mQClientFactory:mQClientFactory    }
+		mQClientFactory: mQClientFactory}
 }
 
-func (adminImpl *MQAdminImpl)MaxOffset(mq *message.MessageQueue) int64 {
+func (adminImpl *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
 	brokerAddr := adminImpl.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
 		adminImpl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
 		brokerAddr = adminImpl.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	}
 	if !strings.EqualFold(brokerAddr, "") {
-		return adminImpl.mQClientFactory.MQClientAPIImpl.GetMaxOffset(brokerAddr, mq.Topic, mq.QueueId, 1000 * 3)
+		return adminImpl.mQClientFactory.MQClientAPIImpl.GetMaxOffset(brokerAddr, mq.Topic, mq.QueueId, 1000*3)
 	} else {
 		panic("The broker[" + mq.BrokerName + "] not exist")
 	}
 	return -1
 }
 
-func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
-	topicRouteData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000 * 3)
+func (adminImpl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
+	topicRouteData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
 	brokerDataList := topicRouteData.BrokerDatas
 	if brokerDataList != nil && len(brokerDataList) > 0 {
 		var brokers route.BrokerDatas = brokerDataList
@@ -43,16 +45,16 @@ func (adminImpl *MQAdminImpl)CreateTopic(key, newTopic string, queueNum, topicSy
 		for _, brokerData := range brokerDataList {
 			addr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 			if !strings.EqualFold(addr, "") {
-				topicConfig := stgcommon.TopicConfig{TopicName:newTopic, ReadQueueNums:int32(queueNum), WriteQueueNums:int32(queueNum), TopicSysFlag:topicSysFlag}
-				adminImpl.mQClientFactory.MQClientAPIImpl.CreateTopic(addr, key, topicConfig, 1000 * 3)
+				topicConfig := stgcommon.TopicConfig{TopicName: newTopic, ReadQueueNums: int32(queueNum), WriteQueueNums: int32(queueNum), Perm: constant.PERM_READ | constant.PERM_WRITE, TopicSysFlag: topicSysFlag}
+				adminImpl.mQClientFactory.MQClientAPIImpl.CreateTopic(addr, key, topicConfig, 1000*3)
 			}
 		}
 	}
 }
 
-func (adminImpl *MQAdminImpl)FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
+func (adminImpl *MQAdminImpl) FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	mqList := []*message.MessageQueue{}
-	routeData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000 * 3)
+	routeData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
 	if routeData != nil {
 		mqSet := adminImpl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic, routeData)
 		if mqSet != nil {
