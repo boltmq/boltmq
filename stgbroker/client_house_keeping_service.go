@@ -22,7 +22,7 @@ type ClientHouseKeepingService struct {
 func NewClientHousekeepingService(controller *BrokerController) *ClientHouseKeepingService {
 	clientHouseKeepingService := new(ClientHouseKeepingService)
 	clientHouseKeepingService.brokerController = controller
-	clientHouseKeepingService.ticker = timeutil.NewTicker(1000*10, 1000*10)
+	clientHouseKeepingService.ticker = timeutil.NewTicker(ten_second, ten_second)
 	return clientHouseKeepingService
 }
 
@@ -33,8 +33,8 @@ func (self *ClientHouseKeepingService) Start() {
 	// 定时扫描过期的连接
 	go self.ticker.Do(func(tm time.Time) {
 		self.scanExceptionChannel()
-		logger.Info("ClientHouseKeepingService start successful")
 	})
+	logger.Infof("ClientHouseKeepingService start successful")
 }
 
 // Shutdown 停止定时扫描过期的连接的服务
@@ -43,7 +43,7 @@ func (self *ClientHouseKeepingService) Start() {
 func (self *ClientHouseKeepingService) Shutdown() {
 	if self.ticker != nil {
 		self.ticker.Stop()
-		logger.Info("ClientHouseKeepingService shutdown successful")
+		logger.Infof("ClientHouseKeepingService shutdown successful")
 	}
 }
 

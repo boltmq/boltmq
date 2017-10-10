@@ -165,8 +165,8 @@ func (serv *PullRequestHoldService) run() {
 func (serv *PullRequestHoldService) Start() {
 	go func() {
 		serv.run()
-		logger.Info("PullRequestHoldService start successful")
 	}()
+	logger.Info("PullRequestHoldService start successful")
 }
 
 // Shutdown  停止

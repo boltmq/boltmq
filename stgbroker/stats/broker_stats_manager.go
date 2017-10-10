@@ -51,7 +51,7 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Start() {
-	logger.Info("BrokerStatsManager start successful")
+
 }
 
 // Start  BrokerStatsManager停止入口

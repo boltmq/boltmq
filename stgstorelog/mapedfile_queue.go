@@ -139,7 +139,7 @@ func (self *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
 func (self *MapedFileQueue) load() bool {
 	exist, err := PathExists(self.storePath)
 	if err != nil {
-		logger.Info("maped file queue load store path error:", err.Error())
+		logger.Infof("maped file queue load store path error:", err.Error())
 		return false
 	}
 
@@ -159,7 +159,7 @@ func (self *MapedFileQueue) load() bool {
 				}
 
 				if file == nil {
-					logger.Error("maped file queue load file not exist: ", path)
+					logger.Errorf("maped file queue load file not exist: ", path)
 				}
 
 				size := file.Size()
@@ -179,7 +179,7 @@ func (self *MapedFileQueue) load() bool {
 				mapedFile.committedPosition = self.mapedFileSize
 				mapedFile.mappedByteBuffer.WritePos = int(mapedFile.wrotePostion)
 				self.mapedFiles.PushBack(mapedFile)
-				logger.Info("load mapfiled %v success.", mapedFile.fileName)
+				logger.Infof("load mapfiled %v success.", mapedFile.fileName)
 			}
 		}
 	}
