@@ -51,7 +51,7 @@ func (pushImpl *RebalancePushImpl)ComputePullFromWhere(mq *message.MessageQueue)
 	switch consumeFromWhere {
 	case heartbeat.CONSUME_FROM_LAST_OFFSET:
 		lastOffset := offsetStore.ReadOffset(mq, store.READ_FROM_STORE)
-		if lastOffset > 0 {
+		if lastOffset >= 0 {
 			result = lastOffset
 		} else if lastOffset == -1 {
 			if strings.HasPrefix(mq.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
