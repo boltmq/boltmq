@@ -20,7 +20,7 @@ func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
-	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone0", 8)
+	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone10", 8)
 	go TaskSync()
 	time.Sleep(time.Second * 10)
 	defaultMQProducer.Shutdown()

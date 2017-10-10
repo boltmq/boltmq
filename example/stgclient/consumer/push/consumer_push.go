@@ -15,7 +15,8 @@ type MessageListenerImpl struct {
 
 func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	for _, msg := range msgs {
-		fmt.Println(msg)
+		//fmt.Println(msg)
+		fmt.Println(string(msg.Body))
 	}
 	return listener.CONSUME_SUCCESS
 }
@@ -34,7 +35,7 @@ func main() {
 	defaultMQPushConsumer.SetConsumeFromWhere(heartbeat.CONSUME_FROM_LAST_OFFSET)
 	defaultMQPushConsumer.SetMessageModel(heartbeat.CLUSTERING)
 	defaultMQPushConsumer.SetNamesrvAddr("10.112.68.189:9876")
-	defaultMQPushConsumer.Subscribe("cloudzone4", "tagA")
+	defaultMQPushConsumer.Subscribe("cloudzone10", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
 	defaultMQPushConsumer.Start()
 	time.Sleep(time.Second * 6000)
