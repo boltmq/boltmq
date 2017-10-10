@@ -298,6 +298,47 @@ func TestDefaultMessageStore_GetRuntimeInfo(t *testing.T) {
 	master.Destroy()
 }
 
+func TestDefaultMessageStore_GetEarliestMessageTime(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	timestamp := master.GetEarliestMessageTime("test", 0)
+	if -1 == timestamp {
+		// t.Fail()
+		// t.Error("get earliest message time error")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_CleanExpiredConsumerQueue(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	master.CleanExpiredConsumerQueue()
+
+	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_GetMessageIds(t *testing.T) {
+	master := buildMessageStore()
+	putMessage(master, 100)
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	idMap := master.GetMessageIds("test", 0, 0, 100, StoreHost)
+	if idMap == nil {
+		t.Fail()
+		t.Error("get message ids error, result is nil")
+	}
+
+	master.Shutdown()
+	master.Destroy()
+}
+
 func TestDefaultMessageStore_CheckInDiskByConsumeOffset(t *testing.T) {
 	master := buildMessageStore()
 	putMessage(master, 100)
