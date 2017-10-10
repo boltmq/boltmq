@@ -163,8 +163,9 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		// TODO 事务消息处理
 		break
 	case sysflag.TransactionNotType:
+		fallthrough
 	case sysflag.TransactionCommitType:
-		atomic.AddInt64(&queryOffset, 1)
+		atomic.AddInt64(&queryOffset, 1) // The next update ConsumeQueue information
 		self.commitLog.TopicQueueTable[key] = atomic.LoadInt64(&queryOffset)
 		break
 	default:

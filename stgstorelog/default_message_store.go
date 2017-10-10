@@ -92,6 +92,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 		ms.ScheduleMessageService = NewScheduleMessageService(ms)
 		break
 	case config.ASYNC_MASTER:
+		fallthrough
 	case config.SYNC_MASTER:
 		ms.ReputMessageService = nil
 		ms.ScheduleMessageService = NewScheduleMessageService(ms)

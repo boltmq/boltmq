@@ -80,6 +80,8 @@ func (self *ScheduleMessageService) Start() {
 }
 
 func (self *ScheduleMessageService) Shutdown() {
-	self.ticker.Stop()
+	if self.ticker != nil {
+		self.ticker.Stop()
+	}
 	logger.Info("shutdown schedule message service")
 }
