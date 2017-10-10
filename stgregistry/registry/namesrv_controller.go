@@ -81,12 +81,15 @@ func (self *DefaultNamesrvController) shutdown() {
 	begineTime := stgcommon.GetCurrentTimeMillis()
 	if self.scanBrokerTicker != nil {
 		self.scanBrokerTicker.Stop()
+		logger.Info("stop scanNotActiveBroker task successful")
 	}
 	if self.printNamesrvTicker != nil {
 		self.printNamesrvTicker.Stop()
+		logger.Info("stop printAllPeriodically task successful")
 	}
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
+		logger.Info("shutdown remotingServer successful")
 	}
 
 	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
@@ -157,7 +160,7 @@ func (self *DefaultNamesrvController) registerShutdownHook(stopChan chan bool) {
 		//阻塞程序运行，直到收到终止的信号
 		s := <-stopSignalChan
 
-		logger.Info("receive signal code:%d", s)
+		logger.Info("receive signal code = %d", s)
 		self.shutdown()
 
 		// 是否有必要close(stopSignalChan)??
