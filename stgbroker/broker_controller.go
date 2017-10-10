@@ -164,7 +164,7 @@ func (self *BrokerController) Initialize() bool {
 	// 定时统计
 	initialDelay, err := strconv.Atoi(fmt.Sprint(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()))
 	if err != nil {
-		logger.Error(err)
+		logger.Error(err.Error())
 		return false
 	}
 	brokerStatsRecordTicker := timeutil.NewTicker(one_day, initialDelay)
