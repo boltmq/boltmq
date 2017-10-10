@@ -1,13 +1,15 @@
 package stgclient
 
 import (
-	"os"
-	"runtime"
 	"fmt"
 	"net"
-	"strings"
+	"os"
+	"runtime"
 	"strconv"
+	"strings"
+	"time"
 )
+
 // 发送状态枚举
 // Author: yintongqiang
 // Since:  2017/8/8
@@ -27,13 +29,13 @@ func NewClientConfig(namesrvAddr string) *ClientConfig {
 	if strings.EqualFold(instanceName, "") {
 		instanceName = "DEFAULT"
 	}
-	return &ClientConfig{NamesrvAddr:namesrvAddr,
-		InstanceName: instanceName,
-		ClientIP:GetLocalAddress(),
-		ClientCallbackExecutorThreads:runtime.NumCPU(),
-		PollNameServerInterval:1000 * 30,
-		HeartbeatBrokerInterval:1000 * 30,
-		PersistConsumerOffsetInterval:1000 * 5}
+	return &ClientConfig{NamesrvAddr: namesrvAddr,
+		InstanceName:                  instanceName,
+		ClientIP:                      GetLocalAddress(),
+		ClientCallbackExecutorThreads: runtime.NumCPU(),
+		PollNameServerInterval:        1000 * 30,
+		HeartbeatBrokerInterval:       1000 * 30,
+		PersistConsumerOffsetInterval: 1000 * 5}
 }
 
 func GetLocalAddress() string {
@@ -57,8 +59,11 @@ func isIntranetIpv4(ip string) bool {
 	return false
 }
 
-func (client *ClientConfig) BuildMQClientId() string {
-	return fmt.Sprintf("%s@%s", client.ClientIP, client.InstanceName)
+func (conf *ClientConfig) BuildMQClientId() string {
+	unixNano := time.Now().UnixNano()
+	hashCode := hashCode(conf.NamesrvAddr)
+	return fmt.Sprintf("%s@%d#%d#%d", conf.ClientIP, os.Getpid(), hashCode, unixNano)
+	//return fmt.Sprintf("%s@%s", conf.ClientIP, conf.InstanceName)
 }
 
 func (client *ClientConfig) ChangeInstanceNameToPID() {
@@ -68,24 +73,29 @@ func (client *ClientConfig) ChangeInstanceNameToPID() {
 }
 
 func (client *ClientConfig) CloneClientConfig() *ClientConfig {
-	return &ClientConfig{NamesrvAddr:client.NamesrvAddr,
-		InstanceName: client.InstanceName,
-		ClientIP:client.ClientIP,
-		ClientCallbackExecutorThreads:client.ClientCallbackExecutorThreads,
-		PollNameServerInterval:client.PollNameServerInterval,
-		HeartbeatBrokerInterval:client.HeartbeatBrokerInterval,
-		PersistConsumerOffsetInterval:client.PersistConsumerOffsetInterval}
+	return &ClientConfig{NamesrvAddr: client.NamesrvAddr,
+		InstanceName:                  client.InstanceName,
+		ClientIP:                      client.ClientIP,
+		ClientCallbackExecutorThreads: client.ClientCallbackExecutorThreads,
+		PollNameServerInterval:        client.PollNameServerInterval,
+		HeartbeatBrokerInterval:       client.HeartbeatBrokerInterval,
+		PersistConsumerOffsetInterval: client.PersistConsumerOffsetInterval}
 }
 
-func (client *ClientConfig) ResetClientConfig(cc*ClientConfig) {
-	client.NamesrvAddr = cc.NamesrvAddr;
-	client.ClientIP = cc.ClientIP;
-	client.InstanceName = cc.InstanceName;
-	client.ClientCallbackExecutorThreads = cc.ClientCallbackExecutorThreads;
-	client.PollNameServerInterval = cc.PollNameServerInterval;
-	client.HeartbeatBrokerInterval = cc.HeartbeatBrokerInterval;
-	client.PersistConsumerOffsetInterval = cc.PersistConsumerOffsetInterval;
+func (client *ClientConfig) ResetClientConfig(cc *ClientConfig) {
+	client.NamesrvAddr = cc.NamesrvAddr
+	client.ClientIP = cc.ClientIP
+	client.InstanceName = cc.InstanceName
+	client.ClientCallbackExecutorThreads = cc.ClientCallbackExecutorThreads
+	client.PollNameServerInterval = cc.PollNameServerInterval
+	client.HeartbeatBrokerInterval = cc.HeartbeatBrokerInterval
+	client.PersistConsumerOffsetInterval = cc.PersistConsumerOffsetInterval
 }
 
-
-
+func hashCode(s string) int64 {
+	var h int64
+	for i := 0; i < len(s); i++ {
+		h = 31*h + int64(s[i])
+	}
+	return h
+}

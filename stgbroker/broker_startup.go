@@ -21,12 +21,13 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
 type SmartgoBrokerConfig struct {
-	BrokerClusterName string
-	BrokerName        string
-	DeleteWhen        int
-	FileReservedTime  int
-	BrokerRole        string
-	FlushDiskType     string
+	BrokerClusterName     string
+	BrokerName            string
+	DeleteWhen            int
+	FileReservedTime      int
+	BrokerRole            string
+	FlushDiskType         string
+	AutoCreateTopicEnable bool
 }
 
 // Start 启动BrokerController
@@ -75,7 +76,7 @@ func CreateBrokerController() *BrokerController {
 	logger.Info(cfg.ToString())
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
-	brokerConfig := stgcommon.NewBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName)
+	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName, cfg.AutoCreateTopicEnable)
 	if !checkBrokerConfig(brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
@@ -146,22 +147,23 @@ func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 // checkMessageStoreConfig 校验messageStoreConfig配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) bool {
+func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcommon.BrokerConfig) bool {
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
-	if messageStoreConfig.BrokerRole == config.SLAVE {
-		ratio := messageStoreConfig.AccessMessageInMemoryMaxRatio - 10
-		messageStoreConfig.AccessMessageInMemoryMaxRatio = ratio
+	if mscfg.BrokerRole == config.SLAVE {
+		ratio := mscfg.AccessMessageInMemoryMaxRatio - 10
+		mscfg.AccessMessageInMemoryMaxRatio = ratio
 	}
 
-	// BrokerId的处理（switch-case语法：只要匹配到一个case，则顺序往下执行，直到遇到break，因此若没有break则不管后续case匹配与否都会执行）
-	switch messageStoreConfig.BrokerRole {
+	// BrokerId的处理 switch-case语法：
+	// 只要匹配到一个case，则顺序往下执行，直到遇到break，因此若没有break则不管后续case匹配与否都会执行
+	switch mscfg.BrokerRole {
 	//如果是同步master也会执行下述case中brokerConfig.setBrokerId(MixAll.MASTER_ID);语句，直到遇到break
 	case config.ASYNC_MASTER:
 	case config.SYNC_MASTER:
-		brokerConfig.BrokerId = stgcommon.MASTER_ID
+		bcfg.BrokerId = stgcommon.MASTER_ID
 	case config.SLAVE:
-		if brokerConfig.BrokerId <= 0 {
-			logger.Infof("Slave's brokerId[%d] must be > 0", brokerConfig.BrokerId)
+		if bcfg.BrokerId <= 0 {
+			logger.Infof("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
 			return false
 		}
 	default:
@@ -174,8 +176,10 @@ func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig,
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
 func (self *SmartgoBrokerConfig) ToString() string {
-	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s]"
-	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime, self.BrokerRole, self.FlushDiskType)
+	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, " +
+		"BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t]"
+	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime,
+		self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable)
 	return info
 }
 

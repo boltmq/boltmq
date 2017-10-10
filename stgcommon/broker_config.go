@@ -48,7 +48,7 @@ type BrokerConfig struct {
 	OffsetCheckInSlave                 bool   `json:"OffsetCheckInSlave"`                 // slave 是否需要纠正位点
 }
 
-// NewDefaultBrokerConfig 初始化默认BrokerConfig
+// NewDefaultBrokerConfig 初始化默认BrokerConfig（默认AutoCreateTopicEnable=true）
 // Author gaoyanlei
 // Since 2017/8/9
 func NewDefaultBrokerConfig() *BrokerConfig {
@@ -86,7 +86,18 @@ func NewDefaultBrokerConfig() *BrokerConfig {
 	return brokerConfig
 }
 
-// NewBrokerConfig 初始化BrokerConfig
+// NewCustomBrokerConfig 初始化BrokerConfig（根据传入参数autoCreateTopicEnable来标记：是否自动创建Topic）
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/28
+func NewCustomBrokerConfig(brokerName, brokerClusterName string, autoCreateTopicEnable bool) *BrokerConfig {
+	brokerConfig := NewDefaultBrokerConfig()
+	brokerConfig.BrokerName = brokerName
+	brokerConfig.BrokerClusterName = brokerClusterName
+	brokerConfig.AutoCreateTopicEnable = autoCreateTopicEnable
+	return brokerConfig
+}
+
+// NewBrokerConfig 初始化BrokerConfig（默认AutoCreateTopicEnable=true）
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/28
 func NewBrokerConfig(brokerName, brokerClusterName string) *BrokerConfig {

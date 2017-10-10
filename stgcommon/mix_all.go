@@ -93,6 +93,12 @@ func HashCode(s string) int64 {
 	return h
 }
 
+// UnixNano return current time unix
+func UnixNano() int64 {
+	return time.Now().UnixNano()
+}
+
+
 // GetCurrentTimeMillis 得到当前时间的毫秒数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
@@ -238,6 +244,20 @@ func ExistsFile(fileFullPath string) (bool, error) {
 // Since: 2017/9/27
 func GetGoPath() string {
 	return os.Getenv("GOPATH")
+}
+
+// GetNamesrvAddr 获取环境变量“NAMESRV_ADDR”的值
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetNamesrvAddr() string {
+	return os.Getenv(NAMESRV_ADDR_ENV)
+}
+
+// GetSmartGoHome 获取环境变量“SMARTGO_HOME”的值
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetSmartGoHome() string {
+	return os.Getenv(SMARTGO_HOME_ENV)
 }
 
 // GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符
