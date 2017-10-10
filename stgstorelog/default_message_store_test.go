@@ -305,7 +305,8 @@ func TestDefaultMessageStore_CheckInDiskByConsumeOffset(t *testing.T) {
 
 	flag := master.CheckInDiskByConsumeOffset("test", 0, 0)
 	if flag {
-
+		t.Fail()
+		t.Error("check in disk by consume offset error")
 	}
 
 	master.Shutdown()
