@@ -4,12 +4,12 @@ import (
 	"container/list"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"math/rand"
 	"sync"
 	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 )
 
 type ProducerManager struct {
@@ -88,8 +88,8 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 	bClientChannelInfoFound, _ = contains(channelList, channelInfo)
 	if !bClientChannelInfoFound {
 		channelList.PushBack(channelInfo)
-		logger.Infof("new producer connected, group: %s group hashcode: %s channel: %v", group,
-			groupdHashCode, channelInfo)
+		format := "new producer connected, group: %s, group.hashcode: %d, %s"
+		logger.Infof(format, group, groupdHashCode, channelInfo.ToString())
 	}
 
 	if bClientChannelInfoFound {
@@ -169,8 +169,9 @@ func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 
 	for group, clientChannelInfoTable := range pm.GroupChannelTable.GroupChannelTable {
 		delete(clientChannelInfoTable, ctx)
-		logger.Infof("NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s",
-			remoteAddr, group)
+
+		format := "NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s"
+		logger.Infof(format, remoteAddr, group)
 	}
 }
 
@@ -223,7 +224,7 @@ func get(lst *list.List, index int) interface{} {
 		if index == pos {
 			return e.Value
 		}
-		pos ++
+		pos++
 	}
 	return nil
 }

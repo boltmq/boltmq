@@ -24,25 +24,18 @@ import (
 // MQClientInstance: producer和consumer核心
 // Author: yintongqiang
 // Since:  2017/8/8
-
 type MQClientInstance struct {
-	ClientConfig  *stgclient.ClientConfig
-	InstanceIndex int32
-	ClientId      string
-	// group MQProducerInner
-	ProducerTable *sync.Map
-	// group MQConsumerInner
-	ConsumerTable   *sync.Map
-	MQClientAPIImpl *MQClientAPIImpl
-	MQAdminImpl     *MQAdminImpl
-	// topic TopicRouteData
-	TopicRouteTable *sync.Map
-
-	LockNamesrv   lock.RWMutex
-	LockHeartbeat lock.RWMutex
-	// broker name  map[int(brokerId)] string(address)
-	BrokerAddrTable *sync.Map
-
+	ClientConfig            *stgclient.ClientConfig
+	InstanceIndex           int32
+	ClientId                string
+	ProducerTable           *sync.Map // group MQProducerInner
+	ConsumerTable           *sync.Map // group MQConsumerInner
+	MQClientAPIImpl         *MQClientAPIImpl
+	MQAdminImpl             *MQAdminImpl
+	TopicRouteTable         *sync.Map // topic TopicRouteData
+	LockNamesrv             lock.RWMutex
+	LockHeartbeat           lock.RWMutex
+	BrokerAddrTable         *sync.Map // broker name  map[int(brokerId)] string(address)
 	ClientRemotingProcessor *ClientRemotingProcessor
 	PullMessageService      *PullMessageService
 	RebalanceService        *RebalanceService
@@ -166,8 +159,8 @@ func (mqClientInstance *MQClientInstance) unregisterClient(producerGroup, consum
 			for brokerId, addr := range oneTable {
 				if !strings.EqualFold(addr, "") {
 					mqClientInstance.MQClientAPIImpl.unRegisterClient(addr, mqClientInstance.ClientId, producerGroup, consumerGroup, 3000)
-					logger.Infof(
-						"unregister client[producer: %v Consumer: %v] from broker[%v %v %v] success", producerGroup, consumerGroup, brokerName, brokerId, addr)
+					format := "unregister client [ProducerGroupId: %s, ConsumerGroupId: %s] from broker[%v, %v, %v] success"
+					logger.Infof(format, producerGroup, consumerGroup, brokerName, brokerId, addr)
 				}
 			}
 		}
@@ -209,9 +202,9 @@ func (mqClientInstance *MQClientInstance) sendHeartbeatToAllBroker() {
 				}
 				err := mqClientInstance.MQClientAPIImpl.sendHeartbeat(address, heartbeatData, 3000)
 				if err == nil {
-					logger.Infof("send heart beat to broker[%v %v %v] success", brokerName, brokerId, address)
+					logger.Infof("send heart beat to broker[%v, %v, %v] success", brokerName, brokerId, address)
 				} else {
-					logger.Errorf("send heart beat to broker[%v %v %v] fail, error", brokerName, brokerId, address, err.Error())
+					logger.Errorf("send heart beat to broker[%v, %v, %v] fail, err: %s", brokerName, brokerId, address, err.Error())
 				}
 			}
 		}

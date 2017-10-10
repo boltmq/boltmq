@@ -7,3 +7,4 @@ deleteWhen=04
 fileReservedTime=48
 brokerRole="SYNC_MASTER"
 flushDiskType="SYNC_FLUSH"
+autoCreateTopicEnable=true

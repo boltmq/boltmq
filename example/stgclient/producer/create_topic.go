@@ -1,9 +1,9 @@
 package main
-import (
-	"time"
 
+import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"time"
 )
 
 func TaskSync() {
@@ -12,15 +12,19 @@ func TaskSync() {
 		select {
 		case <-t.C:
 		}
-
 	}
 }
 
 func main() {
-	defaultMQProducer := process.NewDefaultMQProducer("producer")
-	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
+	var (
+		topic           = "topic-example-200"
+		producerGroupId = "producerGroupId-200"
+	)
+
+	defaultMQProducer := process.NewDefaultMQProducer(producerGroupId)
+	defaultMQProducer.SetNamesrvAddr(stgcommon.GetNamesrvAddr())
 	defaultMQProducer.Start()
-	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone10", 8)
+	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, 8)
 	go TaskSync()
 	time.Sleep(time.Second * 10)
 	defaultMQProducer.Shutdown()

@@ -26,8 +26,7 @@ func NewClientChannelInfo(ctx netm.Context, clientId string, languageCode, addr 
 	return channelInfo
 }
 
-func (info *ChannelInfo) toString() string {
-	format := "ClientChannelInfo [channel=%v, clientId=%d, language=%s, version=%d, lastUpdateTimestamp=%d]"
-	result := fmt.Sprintf(format, info.Context, info.ClientId, info.LanguageCode, info.Version, info.LastUpdateTimestamp)
-	return result
+func (info *ChannelInfo) ToString() string {
+	format := "client channel info [%s, clientId=%s, language=%s, version=%d, lastUpdateTimestamp=%d]"
+	return fmt.Sprintf(format, info.Context.ToString(), info.ClientId, info.LanguageCode, info.Version, info.LastUpdateTimestamp)
 }
