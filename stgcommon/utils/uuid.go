@@ -1,9 +1,8 @@
 package utils
 
 import (
-	"strings"
-
 	"github.com/satori/go.uuid"
+	"strings"
 )
 
 // UUID return uuid string

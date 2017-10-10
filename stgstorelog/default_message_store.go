@@ -865,14 +865,19 @@ func (self *DefaultMessageStore) UpdateHaMasterAddress(newAddr string) {
 	}
 }
 
-// SlaveFallBehindMuch Slave落后Master多少字节
+// SlaveFallBehindMuch Slave落后Master多少byte
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/9/21
 func (self *DefaultMessageStore) SlaveFallBehindMuch() int64 {
 	if self.HAService != nil {
 		return self.CommitLog.getMaxOffset() - self.HAService.push2SlaveMaxOffset
 	}
+	return 0
+}
 
+// CleanUnusedTopic 清除未使用Topic
+func (self *DefaultMessageStore) CleanUnusedTopic(topics []string) int32 {
+	// TODO
 	return 0
 }
 

@@ -28,7 +28,6 @@ func (slaveSynchronize *SlaveSynchronize) syncAll() {
 	slaveSynchronize.syncTopicConfig()
 	slaveSynchronize.syncDelayOffset()
 	slaveSynchronize.syncSubscriptionGroupConfig()
-
 }
 
 // syncTopicConfig 同步Topic配置文件
