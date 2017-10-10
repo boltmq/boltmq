@@ -19,7 +19,6 @@ import (
 	storeStats "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -143,7 +142,6 @@ func (self *BrokerController) Initialize() bool {
 
 	// Master监听Slave请求的端口，默认为服务端口+1
 	self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port() + 1
-	//self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port()
 
 	self.StoreHost = self.GetStoreHost()
 
@@ -162,26 +160,25 @@ func (self *BrokerController) Initialize() bool {
 	self.brokerStats = storeStats.NewBrokerStats(self.MessageStore)
 
 	// 定时统计
-	initialDelay, err := strconv.Atoi(fmt.Sprint(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()))
-	if err != nil {
-		logger.Error(err.Error())
-		return false
-	}
+	initialDelay := int(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis())
 	brokerStatsRecordTicker := timeutil.NewTicker(one_day, initialDelay)
 	go brokerStatsRecordTicker.Do(func(tm time.Time) {
 		self.brokerStats.Record()
+		logger.Info("start brokerStatsRecordTicker successful")
 	})
 
 	// 定时写入ConsumerOffset文件
 	consumerOffsetPersistTicker := timeutil.NewTicker(self.BrokerConfig.FlushConsumerOffsetInterval, ten_second)
 	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
 		self.ConsumerOffsetManager.configManagerExt.Persist()
+		logger.Info("start consumerOffsetPersistTicker successful")
 	})
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
 	scanUnsubscribedTopicTicker := timeutil.NewTicker(one_hour, ten_minute)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
 		self.ConsumerOffsetManager.ScanUnsubscribedTopic()
+		logger.Info("start ConsumerOffsetManager successful")
 	})
 
 	// 如果namesrv不为空则更新namesrv地址
@@ -193,6 +190,7 @@ func (self *BrokerController) Initialize() bool {
 			FetchNameServerAddrTicker := timeutil.NewTicker(two_minute, ten_second)
 			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
 				self.BrokerOuterAPI.FetchNameServerAddr()
+				logger.Info("start FetchNameServerAddrTicker successful")
 			})
 		}
 	}
@@ -210,11 +208,13 @@ func (self *BrokerController) Initialize() bool {
 		slaveSynchronizeTicker := timeutil.NewTicker(one_minute, ten_second)
 		go slaveSynchronizeTicker.Do(func(tm time.Time) {
 			self.SlaveSynchronize.syncAll()
+			logger.Info("start slaveSynchronizeTicker successful")
 		})
 	} else {
 		printMasterAndSlaveDiffTicker := timeutil.NewTicker(one_minute, ten_second)
 		go printMasterAndSlaveDiffTicker.Do(func(tm time.Time) {
 			self.printMasterAndSlaveDiff()
+			logger.Info("start printMasterAndSlaveDiffTicker successful")
 		})
 	}
 
@@ -231,13 +231,13 @@ func (self *BrokerController) registerShutdownHook(stopChan chan bool) {
 	// 这种退出方式比较优雅，能够在退出之前做些收尾工作，清理任务和垃圾
 	// http://www.codeweblog.com/nsqlookupd入口文件分析
 	// http://www.cnblogs.com/jkkkk/p/6180016.html
-	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(stopSignalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, os.Kill)
 
 	go func() {
 		//阻塞程序运行，直到收到终止的信号
 		s := <-stopSignalChan
 
-		logger.Infof("receive signal code:%d", s)
+		logger.Infof("receive signal code = %d", s)
 		self.Shutdown()
 
 		// 是否有必要close(stopSignalChan)??
@@ -267,10 +267,12 @@ func (self *BrokerController) Shutdown() {
 
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
+		logger.Info("DefalutRemotingClient shutdown successful")
 	}
 
 	if self.MessageStore != nil {
 		self.MessageStore.Shutdown()
+		logger.Info("MessageStore shutdown successful")
 	}
 
 	self.unRegisterBrokerAll()
@@ -286,7 +288,7 @@ func (self *BrokerController) Shutdown() {
 	}
 
 	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
-	logger.Info("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
+	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
 }
 
 // Start BrokerController启动入口
@@ -342,7 +344,7 @@ func (self *BrokerController) Start() {
 func (self *BrokerController) unRegisterBrokerAll() {
 	brokerId := int(self.BrokerConfig.BrokerId)
 	self.BrokerOuterAPI.UnRegisterBrokerAll(self.BrokerConfig.BrokerClusterName, self.GetBrokerAddr(), self.BrokerConfig.BrokerName, brokerId)
-	logger.Info("unRegisterBrokerAll successful")
+	logger.Info("unRegister all broker successful")
 }
 
 // RegisterBrokerAll 注册所有broker

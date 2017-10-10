@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
@@ -223,7 +224,8 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
 		panic(err.Error())
 	}
 	if strings.EqualFold(defaultMQProducerImpl.DefaultMQProducer.ProducerGroup, stgcommon.DEFAULT_PRODUCER_GROUP) {
-		panic("producerGroup can not equal " + stgcommon.DEFAULT_PRODUCER_GROUP + ", please specify another one.")
+		format := "producerGroup can not equal %s, please specify another one."
+		panic(fmt.Sprintf(format, stgcommon.DEFAULT_PRODUCER_GROUP))
 	}
 
 }
@@ -255,7 +257,11 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) UpdateTopicPublishInfo(topic
 		if prev != nil {
 			//atomic.AddInt64(&info.SendWhichQueue, prev.(*TopicPublishInfo).SendWhichQueue)
 			info.SendWhichQueue = prev.(*TopicPublishInfo).SendWhichQueue
-			logger.Infof("updateTopicPublishInfo prev is not null,prev=%v", prev)
+			if topicPublishInfo, ok := prev.(*TopicPublishInfo); ok {
+				logger.Infof("updateTopicPublishInfo prev is %s", topicPublishInfo.ToString())
+			} else {
+				logger.Infof("updateTopicPublishInfo prev is not null, prev = %v", prev)
+			}
 		}
 	}
 }

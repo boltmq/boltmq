@@ -149,14 +149,14 @@ func (serv *PullRequestHoldService) notifyMessageArriving(topic string, queueId 
 // Since 2017/9/5
 func (serv *PullRequestHoldService) run() {
 	defer utils.RecoveredFn()
-	logger.Info(serv.getServiceName() + " service started")
+	logger.Info(fmt.Sprintf("%s service started", serv.getServiceName()))
 
 	for !serv.isStopped {
 		time.Sleep(time.Millisecond * time.Duration(1000))
 		serv.checkHoldRequest()
 	}
 
-	logger.Info(serv.getServiceName() + " service end")
+	logger.Info(fmt.Sprintf("%s service end", serv.getServiceName()))
 }
 
 // Start  启动入口
@@ -165,6 +165,7 @@ func (serv *PullRequestHoldService) run() {
 func (serv *PullRequestHoldService) Start() {
 	go func() {
 		serv.run()
+		logger.Info("PullRequestHoldService start successful")
 	}()
 }
 
@@ -173,6 +174,7 @@ func (serv *PullRequestHoldService) Start() {
 // Since 2017/9/5
 func (serv *PullRequestHoldService) Shutdown() {
 	serv.isStopped = true
+	logger.Info("PullRequestHoldService shutdown successful")
 }
 
 // getServiceName  获得类名

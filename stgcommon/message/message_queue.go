@@ -1,6 +1,7 @@
 package message
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"strconv"
 	"strings"
@@ -88,7 +89,8 @@ func (self MessageQueues) Len() int {
 }
 
 func (mq MessageQueue) ToString() string {
-	return "MessageQueue [topic=" + mq.Topic + ", brokerName=" + mq.BrokerName + ", queueId=" + strconv.Itoa(mq.QueueId) + "]"
+	format := "MessageQueue [topic=%s, brokerName=%s, queueId=%d]"
+	return fmt.Sprintf(format, mq.Topic, mq.BrokerName, mq.QueueId)
 }
 
 func (mq MessageQueue) Key() string {

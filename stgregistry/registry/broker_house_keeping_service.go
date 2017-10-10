@@ -52,14 +52,6 @@ func (self *BrokerHousekeepingService) OnContextError(ctx netm.Context) {
 		logger.Error("OnContextError() net.conn is nil")
 		return
 	}
-	if self.NamesrvController == nil {
-		logger.Error("self.NamesrvController is nil")
-		return
-	}
-	if self.NamesrvController.RouteInfoManager == nil {
-		logger.Error("self.NamesrvController.RouteInfoManager is nil")
-		return
-	}
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 

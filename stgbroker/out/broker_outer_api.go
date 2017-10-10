@@ -52,7 +52,7 @@ func (self *BrokerOuterAPI) Start() {
 func (self *BrokerOuterAPI) Shutdown() {
 	if self.remotingClient != nil {
 		self.remotingClient.Shutdown()
-		logger.Infof("brokerOuterAPI Shutdown successful")
+		logger.Infof("brokerOuterAPI shutdown successful")
 	}
 }
 

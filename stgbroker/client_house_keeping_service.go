@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"time"
@@ -32,6 +33,7 @@ func (self *ClientHouseKeepingService) Start() {
 	// 定时扫描过期的连接
 	go self.ticker.Do(func(tm time.Time) {
 		self.scanExceptionChannel()
+		logger.Info("ClientHouseKeepingService start successful")
 	})
 }
 
@@ -41,6 +43,7 @@ func (self *ClientHouseKeepingService) Start() {
 func (self *ClientHouseKeepingService) Shutdown() {
 	if self.ticker != nil {
 		self.ticker.Stop()
+		logger.Info("ClientHouseKeepingService shutdown successful")
 	}
 }
 

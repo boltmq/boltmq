@@ -2,6 +2,7 @@ package stats
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/stats"
 	"sync/atomic"
 )
@@ -34,21 +35,13 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 
 	bs.clusterName = clusterName
 	bs.statsTable = make(map[string]*stats.StatsItemSet)
-
 	bs.momentStatsItemSet = stats.NewMomentStatsItemSet(GROUP_GET_FALL)
-
 	bs.statsTable[TOPIC_PUT_NUMS] = stats.NewStatsItemSet(TOPIC_PUT_NUMS)
-
 	bs.statsTable[TOPIC_PUT_SIZE] = stats.NewStatsItemSet(TOPIC_PUT_SIZE)
-
 	bs.statsTable[GROUP_GET_NUMS] = stats.NewStatsItemSet(GROUP_GET_NUMS)
-
 	bs.statsTable[GROUP_GET_SIZE] = stats.NewStatsItemSet(GROUP_GET_SIZE)
-
 	bs.statsTable[SNDBCK_PUT_NUMS] = stats.NewStatsItemSet(SNDBCK_PUT_NUMS)
-
 	bs.statsTable[BROKER_PUT_NUMS] = stats.NewStatsItemSet(BROKER_PUT_NUMS)
-
 	bs.statsTable[BROKER_GET_NUMS] = stats.NewStatsItemSet(BROKER_GET_NUMS)
 
 	return bs
@@ -58,22 +51,21 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Start() {
-
+	logger.Info("BrokerStatsManager start successful")
 }
 
 // Start  BrokerStatsManager停止入口
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Shutdown() {
-
+	logger.Info("BrokerStatsManager shutdown successful")
 }
 
 // GetStatsItem  增加数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) GetStatsItem(statsName, statsKey string) *stats.StatsItem {
-	statItemSet, ok := bsm.statsTable[statsName]
-	if ok {
+	if statItemSet, ok := bsm.statsTable[statsName]; ok && statItemSet != nil {
 		return statItemSet.GetStatsItem(statsKey)
 	}
 	return nil

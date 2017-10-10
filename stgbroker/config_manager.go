@@ -5,6 +5,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/toolkits/file"
+	"strings"
 	"sync"
 )
 
@@ -33,19 +34,19 @@ func (cme *ConfigManagerExt) Load() bool {
 		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
 		ok, err := stgcommon.CreateFile(fileName)
 		if err != nil {
-			logger.Infof("create %s failed. err: %s", fileName, err.Error())
+			logger.Errorf("create %s failed. err: %s", fileName, err.Error())
 			return false
 		}
 		if !ok {
-			logger.Infof("create %s failed, unknown reason.", fileName)
+			logger.Errorf("create %s failed, unknown reason.", fileName)
 			return false
 		}
-		logger.Infof("create %s successful.", fileName)
+		logger.Infof("create %s successful", fileName)
 	}
 
 	buf, err := file.ToBytes(fileName)
 	if err != nil {
-		logger.Infof("read file err: %s", err.Error())
+		logger.Errorf("read file err: %s", err.Error())
 		return false
 	}
 
@@ -56,9 +57,12 @@ func (cme *ConfigManagerExt) Load() bool {
 func (cme *ConfigManagerExt) Persist() {
 	defer utils.RecoveredFn()
 
-	buf := cme.ConfigManager.Encode(true)
-	if buf != "" && len(buf) > 0 {
-		fileName := cme.ConfigManager.ConfigFilePath()
-		stgcommon.String2File([]byte(buf), fileName)
+	buf := strings.TrimSpace(cme.ConfigManager.Encode(true))
+	if buf == "" {
+		logger.Warnf("configManagerExt nothing to persist")
+		return
 	}
+
+	fileName := cme.ConfigManager.ConfigFilePath()
+	stgcommon.String2File([]byte(buf), fileName)
 }
