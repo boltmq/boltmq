@@ -17,6 +17,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
+	"fmt"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -280,6 +281,8 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 		requestHeader.ConsumerGroup = stgclient.BuildWithProjectGroup(requestHeader.ConsumerGroup, impl.ProjectGroupPrefix)
 		requestHeader.Topic = stgclient.BuildWithProjectGroup(requestHeader.Topic, impl.ProjectGroupPrefix)
 	}
+	fmt.Println("----------------------")
+	fmt.Sprintf("queueId=%v,offset==%v --------",requestHeader.QueueId,requestHeader.QueueOffset)
 	request := protocol.CreateRequestCommand(code.PULL_MESSAGE, &requestHeader)
 	switch communicationMode {
 	case ONEWAY:

@@ -20,11 +20,11 @@ func TaskSync() {
 
 func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
-	defaultMQProducer.SetNamesrvAddr("10.122.2.28:9876")
+	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
 	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
-	for i := 0; i < 100; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone1", "tagA", []byte("I'm so diao!")))
+	for i := 0; i < 8; i++ {
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone2", "tagA", []byte("I'm so diao!")))
 		if err != nil {
 			fmt.Println(err)
 		}
