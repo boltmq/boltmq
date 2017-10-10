@@ -53,17 +53,9 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 	defer utils.RecoveredFn()
 
 	response := &protocol.RemotingCommand{}
-
-	//heartbeatData := heartbeat.NewHeartbeatData()
-
 	// heartbeatDataPlus heartbeatData 层级较多，json难解析，加入heartbeatDataPlus作为中间转化
 	heartbeatDataPlus := &heartbeat.HeartbeatDataPlus{}
 	heartbeatDataPlus.Decode(request.Body)
-
-	//heartbeatData.ConsumerDataSet.Add(heartbeatDataPlus.ConsumerDataSet)
-	//heartbeatData.ProducerDataSet.Add(heartbeatDataPlus.ProducerDataSet)
-	//heartbeatData.ClientID=heartbeatDataPlus.ClientID
-
 	consumerDataSet := heartbeatDataPlus.ConsumerDataSet
 	channelInfo := client.NewClientChannelInfo(ctx, heartbeatDataPlus.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
 	for _, consumerData := range consumerDataSet {
