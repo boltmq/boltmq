@@ -109,8 +109,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		return response, nil
 	}
 
-	// TODO client端口每次只传SysFlag=4, 为测试HoldPull，将SysFlag = 6
-	requestHeader.SysFlag = 6
 	hasSuspendFlag := sysflag.HasSuspendFlag(requestHeader.SysFlag)
 	hasCommitOffsetFlag := sysflag.HasCommitOffsetFlag(requestHeader.SysFlag)
 	hasSubscriptionFlag := sysflag.HasSubscriptionFlag(requestHeader.SysFlag)

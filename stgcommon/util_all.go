@@ -1,9 +1,12 @@
 package stgcommon
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/statfs"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/pquerna/ffjson/ffjson"
+	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -54,36 +57,30 @@ func ComputNextHourTimeMillis() int64 {
 	return nextMorningTimeMillis
 }
 
-// GetDiskPartitionSpaceUsedPercent 此文件已使用磁盘容量占所申请的磁盘容量的百分比
+// GetDiskPartitionSpaceUsedPercent 获取磁盘分区空间使用率
 // Author rongzhihong
 // Since 2017/9/5
 func GetDiskPartitionSpaceUsedPercent(path string) (percent float64) {
 	defer utils.RecoveredFn()
 
-	percent = 1.0
-	// TODO: unix环境，去掉注释
-	/*if path != "" {
-		isExits, err := isExists(path)
+	percent = -1
+	if path != "" {
+		isExits, err := ExistsDir(path)
 		if err != nil {
 			panic(fmt.Sprintf("GetDiskPartitionSpaceUsedPercent error:%s", err.Error()))
+			return
 		}
 
 		if !isExits {
 			os.MkdirAll(path, os.ModePerm)
 		}
 
-		fs := syscall.Statfs_t{}
-		err = syscall.Statfs(path, &fs)
-		if err != nil {
-			return
+		diskStatus := statfs.DiskStatfs(path)
+		if diskStatus.All > 0 {
+			percent = float64(diskStatus.Used) / float64(diskStatus.All)
 		}
-		totalSpace := fs.Blocks * uint64(fs.Bsize)
-		freeSpace := fs.Bfree * uint64(fs.Bsize)
-		usedSpace := totalSpace - freeSpace
-		if totalSpace > 0 {
-			percent = usedSpace / totalSpace
-		}
-	}*/
+	}
+
 	return
 }
 
