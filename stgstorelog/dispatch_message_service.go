@@ -79,12 +79,14 @@ func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest)
 
 	switch tranType {
 	case sysflag.TransactionNotType:
+		fallthrough
 	case sysflag.TransactionCommitType:
 		self.defaultMessageStore.putMessagePostionInfo(dispatchRequest.topic, dispatchRequest.queueId,
 			dispatchRequest.commitLogOffset, dispatchRequest.msgSize, dispatchRequest.tagsCode,
 			dispatchRequest.storeTimestamp, dispatchRequest.consumeQueueOffset)
 		break
 	case sysflag.TransactionPreparedType:
+		fallthrough
 	case sysflag.TransactionRollbackType:
 		break
 	}
@@ -101,6 +103,7 @@ func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest)
 			*/
 			break
 		case sysflag.TransactionCommitType:
+			fallthrough
 		case sysflag.TransactionRollbackType:
 			/*
 				self.defaultMessageStore.TransactionStateService.updateTransactionState(
