@@ -51,6 +51,8 @@ stgregistry/start/g/cfg.json
 stgregistry/start/start.exe
 stgregistry/start/logs/
 stgregistry/start/logs/*.log
+
+stgregistry/start/registry
 stgregistry/start/start
 stgbroker/start/start.exe
 stgbroker/start/demo

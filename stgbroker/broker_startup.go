@@ -77,12 +77,14 @@ func CreateBrokerController() *BrokerController {
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName)
 	if !checkBrokerConfig(brokerConfig) {
+		logger.Flush()
 		os.Exit(0)
 	}
 
 	// 初始化brokerConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 	if !checkMessageStoreConfig(messageStoreConfig, brokerConfig) {
+		logger.Flush()
 		os.Exit(0)
 	}
 
@@ -96,6 +98,7 @@ func CreateBrokerController() *BrokerController {
 	if !initResult {
 		logger.Info("the broker initialize failed")
 		controller.Shutdown()
+		logger.Flush()
 		os.Exit(0)
 	}
 
@@ -110,7 +113,7 @@ func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 	// 如果没有设置home环境变量，则启动失败
 	if "" == brokerConfig.SmartGoHome {
 		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
-		logger.Info(format, stgcommon.SMARTGO_HOME_ENV)
+		logger.Infof(format, stgcommon.SMARTGO_HOME_ENV)
 		return false
 	}
 
@@ -118,7 +121,7 @@ func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 	nameSrvAddr := brokerConfig.NamesrvAddr
 	if strings.TrimSpace(nameSrvAddr) == "" {
 		format := "please set the '%s' variable in your environment"
-		logger.Info(format, stgcommon.NAMESRV_ADDR_ENV)
+		logger.Infof(format, stgcommon.NAMESRV_ADDR_ENV)
 		return false
 	}
 
@@ -126,13 +129,13 @@ func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 	addrs := strings.Split(strings.TrimSpace(nameSrvAddr), ";")
 	if addrs == nil || len(addrs) == 0 {
 		format := "the %s=%s environment variable is invalid."
-		logger.Info(format, stgcommon.NAMESRV_ADDR_ENV, addrs)
+		logger.Infof(format, stgcommon.NAMESRV_ADDR_ENV, addrs)
 		return false
 	}
 	for _, addr := range addrs {
 		if !stgcommon.CheckIpAndPort(addr) {
 			format := "the name server address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\""
-			logger.Info(format, addr)
+			logger.Infof(format, addr)
 			return false
 		}
 	}
@@ -158,7 +161,7 @@ func checkMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig,
 		brokerConfig.BrokerId = stgcommon.MASTER_ID
 	case config.SLAVE:
 		if brokerConfig.BrokerId <= 0 {
-			logger.Info("Slave's brokerId[%d] must be > 0", brokerConfig.BrokerId)
+			logger.Infof("Slave's brokerId[%d] must be > 0", brokerConfig.BrokerId)
 			return false
 		}
 	default:
