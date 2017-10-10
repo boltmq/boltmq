@@ -4,6 +4,10 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 )
 
+const (
+	SUBSCRIPTION_ALL = "*"
+)
+
 // MessageFilter 消息过滤接口
 // Author zhoufei
 // Since 2017/9/6
@@ -26,7 +30,7 @@ func (df *DefaultMessageFilter) IsMessageMatched(subscriptionData *heartbeat.Sub
 		return true
 	}
 
-	if subscriptionData.SubString == subscriptionData.SUB_ALL {
+	if subscriptionData.SubString == SUBSCRIPTION_ALL {
 		return true
 	}
 
