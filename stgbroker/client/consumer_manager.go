@@ -55,7 +55,7 @@ func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.
 // Author gaoyanlei
 // Since 2017/8/24
 func (cm *ConsumerManager) RegisterConsumer(group string, channelInfo *ChannelInfo, consumeType heartbeat.ConsumeType,
-	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList set.Set) bool {
+	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere, subList []heartbeat.SubscriptionDataPlus) bool {
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if nil == consumerGroupInfo {
 		tmp := NewConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere)
