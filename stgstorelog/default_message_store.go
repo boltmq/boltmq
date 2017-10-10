@@ -212,14 +212,15 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 			topicDir := dirLogicDir + pathSeparator + topic
 			fileQueueIdList, err := ioutil.ReadDir(topicDir)
 			if err != nil {
-				// TODO
+				logger.Error("message store load consume queue load topic directory error:", err.Error())
 			}
 
 			if fileQueueIdList != nil {
 				for _, fileQueueId := range fileQueueIdList {
 					queueId, err := strconv.Atoi(fileQueueId.Name())
 					if err != nil {
-						// TODO
+						logger.Error("message store load consume queue parse queue id error:", err.Error())
+						continue
 					}
 
 					logic := NewConsumeQueue(topic, int32(queueId),
