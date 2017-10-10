@@ -906,8 +906,8 @@ func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minO
 					nextOffset++
 
 					if err != nil {
-						logger.Warn("message store get message ids create message id error:", err.Error())
-						continue
+						logger.Error("message store get message ids create message id error:", err.Error())
+						break
 					}
 
 					messageIds[msgId] = nextOffset
