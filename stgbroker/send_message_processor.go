@@ -291,8 +291,7 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 			return response
 		}
 	}
-	// TODO:当前messageStore有问题，只有SysFlag=8才能分发消息位置信息到ConsumeQueue
-	msgInner.SysFlag = 8
+
 	putMessageResult := smp.BrokerController.MessageStore.PutMessage(msgInner)
 	logger.Info("put message messageId %s", putMessageResult.AppendMessageResult.MsgId)
 	if putMessageResult != nil {
