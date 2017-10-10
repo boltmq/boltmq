@@ -10,18 +10,22 @@ const (
 	PERM_INHERIT  = 0x1 << 0
 )
 
+// IsReadable 是否可读
 func IsReadable(perm int) bool {
 	return (perm & PERM_READ) == PERM_READ
 }
 
+// IsWriteable 是否可写
 func IsWriteable(perm int) bool {
 	return (perm & PERM_WRITE) == PERM_WRITE
 }
 
+// IsInherited 是否可继承
 func IsInherited(perm int) bool {
 	return (perm & PERM_INHERIT) == PERM_INHERIT
 }
 
+// Perm2String 转化为友好的展示效果：可读、可写、可继承
 func Perm2String(perm int) string {
 	str := "---"
 	if IsReadable(perm) {
