@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
-	set "github.com/deckarep/golang-set"
 	"strings"
 )
 
@@ -47,6 +46,7 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
 
 	return nil
 }
+
 /**
  * UpdateChannel 更新通道
  * Author gaoyanlei
@@ -54,14 +54,13 @@ func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.Subsc
  */
 func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType heartbeat.ConsumeType,
 	messageModel heartbeat.MessageModel, consumeFromWhere heartbeat.ConsumeFromWhere) bool {
-
 	updated := false
 	cg.ConsumeType = consumeType
 	cg.MessageModel = messageModel
 	cg.ConsumeFromWhere = consumeFromWhere
-	infoOld, err := cg.ConnTable.Get(infoNew.Context)
+	infoOld, err := cg.ConnTable.Get(infoNew.ClientId)
 	if infoOld == nil || err != nil {
-		prev, err := cg.ConnTable.Put(infoNew.Context, infoNew)
+		prev, err := cg.ConnTable.Put(infoNew.ClientId, infoNew)
 		if prev == nil || err != nil {
 			logger.Infof("new consumer connected, group: %s %v %v channel: %s", cg.GroupName, consumeType,
 				messageModel, infoNew.Context.LocalAddr().String())
@@ -151,13 +150,11 @@ func (cg *ConsumerGroupInfo) UnregisterChannel(clientChannelInfo *ChannelInfo) {
 // UpdateSubscription 更新订阅
 // Author rongzhihong
 // Since 2017/9/17
-func (cg *ConsumerGroupInfo) UpdateSubscription(subList set.Set) bool {
+func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.SubscriptionDataPlus) bool {
 	updated := false
 
 	// 增加新的订阅关系
-	iterator := subList.Iterator()
-	for item := range iterator.C {
-		if sub, ok := item.(*heartbeat.SubscriptionData); ok {
+	for _, sub := range subList {
 			old, _ := cg.SubscriptionTable.Get(sub.Topic)
 			if old == nil {
 				prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
@@ -177,20 +174,16 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList set.Set) bool {
 				}
 			}
 		}
-	}
 
 	// 删除老的订阅关系
 	subIt := cg.SubscriptionTable.Iterator()
 	for subIt.HasNext() {
 		exist := false
 		oldTopic, oldValue, _ := subIt.Next()
-
-		for subItem := range subList.Iterator().C {
-			if sub, ok := subItem.(*heartbeat.SubscriptionData); ok {
-				if oldTopic, ok := oldTopic.(string); ok && strings.EqualFold(sub.Topic, oldTopic) {
-					exist = true
-					break
-				}
+		for _, subItem := range subList {
+			if oldTopic, ok := oldTopic.(string); ok && strings.EqualFold(subItem.Topic, oldTopic) {
+				exist = true
+				break
 			}
 		}
 

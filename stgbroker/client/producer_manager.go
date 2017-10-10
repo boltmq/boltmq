@@ -55,15 +55,15 @@ func (pm *ProducerManager) GetGroupChannelTable() {
 func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelInfo) {
 	pm.GroupChannelLock.Lock()
 
-	connTable := pm.GroupChannelTable.Get(group)
-	if nil == connTable {
-		channelTable := make(map[netm.Context]*ChannelInfo)
+	channelTable := pm.GroupChannelTable.Get(group)
+	if nil == channelTable {
+		channelTable = make(map[netm.Context]*ChannelInfo)
 		pm.GroupChannelTable.Put(group, channelTable)
 	}
 
-	clientChannelInfoFound, ok := connTable[channelInfo.Context]
+	clientChannelInfoFound, ok := channelTable[channelInfo.Context]
 	if !ok || nil == clientChannelInfoFound {
-		connTable[channelInfo.Context] = channelInfo
+		channelTable[channelInfo.Context] = channelInfo
 		logger.Infof("new producer connected, group: %s channel: %s", group, channelInfo.Addr)
 	}
 
