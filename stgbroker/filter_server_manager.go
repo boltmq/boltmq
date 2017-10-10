@@ -51,8 +51,8 @@ func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 func (fsm *FilterServerManager) Start() {
 	go fsm.ticker.Do(func(tm time.Time) {
 		fsm.createFilterServer()
-		logger.Info("FilterServerManager start successful")
 	})
+	logger.Info("FilterServerManager start successful")
 }
 
 // Shutdown 停止检查Filter Server的定时任务

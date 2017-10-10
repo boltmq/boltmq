@@ -75,7 +75,7 @@ func (self *IndexService) Load(lastExitOK bool) bool {
 				// TODO
 			}
 
-			logger.Info("load index file OK, %s", filePath)
+			logger.Infof("load index file OK, %s", filePath)
 			self.indexFileList.PushBack(indexFile)
 		}
 	}

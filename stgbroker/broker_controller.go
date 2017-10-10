@@ -164,22 +164,22 @@ func (self *BrokerController) Initialize() bool {
 	brokerStatsRecordTicker := timeutil.NewTicker(one_day, initialDelay)
 	go brokerStatsRecordTicker.Do(func(tm time.Time) {
 		self.brokerStats.Record()
-		logger.Info("start brokerStatsRecordTicker successful")
 	})
+	logger.Info("start brokerStatsRecordTicker successful")
 
 	// 定时写入ConsumerOffset文件
 	consumerOffsetPersistTicker := timeutil.NewTicker(self.BrokerConfig.FlushConsumerOffsetInterval, ten_second)
 	go consumerOffsetPersistTicker.Do(func(tm time.Time) {
 		self.ConsumerOffsetManager.configManagerExt.Persist()
-		logger.Info("start consumerOffsetPersistTicker successful")
 	})
+	logger.Info("start consumerOffsetPersistTicker successful")
 
 	// 扫描数据被删除了的topic，offset记录也对应删除
 	scanUnsubscribedTopicTicker := timeutil.NewTicker(one_hour, ten_minute)
 	go scanUnsubscribedTopicTicker.Do(func(tm time.Time) {
 		self.ConsumerOffsetManager.ScanUnsubscribedTopic()
-		logger.Info("start ConsumerOffsetManager successful")
 	})
+	logger.Info("start ConsumerOffsetManager successful")
 
 	// 如果namesrv不为空则更新namesrv地址
 	if self.BrokerConfig.NamesrvAddr != "" {
@@ -190,8 +190,8 @@ func (self *BrokerController) Initialize() bool {
 			FetchNameServerAddrTicker := timeutil.NewTicker(two_minute, ten_second)
 			go FetchNameServerAddrTicker.Do(func(tm time.Time) {
 				self.BrokerOuterAPI.FetchNameServerAddr()
-				logger.Info("start FetchNameServerAddrTicker successful")
 			})
+			logger.Info("start FetchNameServerAddrTicker successful")
 		}
 	}
 
@@ -208,14 +208,14 @@ func (self *BrokerController) Initialize() bool {
 		slaveSynchronizeTicker := timeutil.NewTicker(one_minute, ten_second)
 		go slaveSynchronizeTicker.Do(func(tm time.Time) {
 			self.SlaveSynchronize.syncAll()
-			logger.Info("start slaveSynchronizeTicker successful")
 		})
+		logger.Info("start slaveSynchronizeTicker successful")
 	} else {
 		printMasterAndSlaveDiffTicker := timeutil.NewTicker(one_minute, ten_second)
 		go printMasterAndSlaveDiffTicker.Do(func(tm time.Time) {
 			self.printMasterAndSlaveDiff()
-			logger.Info("start printMasterAndSlaveDiffTicker successful")
 		})
+		logger.Info("start printMasterAndSlaveDiffTicker successful")
 	}
 
 	return result
@@ -396,6 +396,7 @@ func (self *BrokerController) addDeleteTopicTask() {
 			self.ConsumerOffsetManager.configManagerExt.Persist()
 		})
 	}()
+	logger.Infof("start addDeleteTopicTaskTicker successful")
 }
 
 // UpdateAllConfig 更新所有文件
