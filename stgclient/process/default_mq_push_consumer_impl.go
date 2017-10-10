@@ -113,7 +113,7 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 	sd, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
 	// todo class filter
 	if sd != nil {
-
+		subExpression=sd.(*heartbeat.SubscriptionData).SubString
 	}
 	sysFlag := sysflag.BuildSysFlag(commitOffsetEnable, true, !strings.EqualFold(subExpression, ""), classFilter)
 	impl.pullAPIWrapper.PullKernelImpl(pullRequest.MessageQueue,
