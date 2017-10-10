@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	"github.com/pquerna/ffjson/ffjson"
-	"os/user"
 )
 
 // SubscriptionGroupManager  用来管理订阅组，包括订阅权限等
@@ -91,8 +90,7 @@ func (sgm *SubscriptionGroupManager) Decode(jsonString []byte) {
 }
 
 func (sgm *SubscriptionGroupManager) ConfigFilePath() string {
-	currentUser, _ := user.Current()
-	return GetSubscriptionGroupPath(currentUser.HomeDir)
+	return GetSubscriptionGroupPath(stgcommon.GetUserHomeDir())
 }
 
 // UpdateSubscriptionGroupConfig 更新订阅组配置

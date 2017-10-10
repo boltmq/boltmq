@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"github.com/pquerna/ffjson/ffjson"
 	"github.com/toolkits/file"
@@ -11,7 +10,7 @@ import (
 // ParseConfig 解析json文件到config结构体
 func ParseConfig(cfg string, config interface{}) error {
 	if cfg == "" {
-		return errors.New("use -c to specify configuration file")
+		return fmt.Errorf("use -c to specify configuration file")
 	}
 
 	if !file.IsExist(cfg) {

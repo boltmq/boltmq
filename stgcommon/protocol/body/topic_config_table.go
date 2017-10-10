@@ -26,6 +26,20 @@ func (table *TopicConfigTable) Size() int {
 	return len(table.TopicConfigs)
 }
 
+func (self *TopicConfigTable) Keys() []string {
+	self.RLock()
+	defer self.RUnlock()
+	if self == nil || self.TopicConfigs == nil || len(self.TopicConfigs) == 0 {
+		return []string{}
+	}
+
+	topics := make([]string, 0, len(self.TopicConfigs))
+	for topic, _ := range self.TopicConfigs {
+		topics = append(topics, topic)
+	}
+	return topics
+}
+
 func (table *TopicConfigTable) Put(k string, v *stgcommon.TopicConfig) *stgcommon.TopicConfig {
 	table.Lock()
 	defer table.Unlock()

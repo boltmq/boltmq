@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -97,7 +98,6 @@ func HashCode(s string) int64 {
 func UnixNano() int64 {
 	return time.Now().UnixNano()
 }
-
 
 // GetCurrentTimeMillis 得到当前时间的毫秒数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
@@ -258,6 +258,14 @@ func GetNamesrvAddr() string {
 // Since: 2017/9/27
 func GetSmartGoHome() string {
 	return os.Getenv(SMARTGO_HOME_ENV)
+}
+
+// GetUserHomeDir 获取当前操作系统登陆用户的Home目录
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetUserHomeDir() string {
+	currentUser, _ := user.Current()
+	return currentUser.HomeDir
 }
 
 // GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符

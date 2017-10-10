@@ -179,7 +179,7 @@ func (abp *AdminBrokerProcessor) deleteTopic(ctx netm.Context, request *protocol
 	}
 
 	abp.BrokerController.TopicConfigManager.DeleteTopicConfig(requestHeader.Topic)
-	abp.BrokerController.addDeleteTopicTask()
+	abp.BrokerController.brokerControllerTask.startDeleteTopicTask()
 
 	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())
 	response.Code = code.SUCCESS

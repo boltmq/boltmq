@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
-	"os/user"
 	"strings"
 	"sync"
 )
@@ -21,14 +20,10 @@ const (
 // Since 2017/8/9
 type ConsumerOffsetManager struct {
 	TOPIC_GROUP_SEPARATOR string
-
-	Offsets *OffsetTable
-
-	BrokerController *BrokerController
-
-	configManagerExt *ConfigManagerExt
-
-	persistLock *sync.RWMutex
+	Offsets               *OffsetTable
+	BrokerController      *BrokerController
+	configManagerExt      *ConfigManagerExt
+	persistLock           *sync.RWMutex
 }
 
 // NewConsumerOffsetManager 初始化ConsumerOffsetManager
@@ -44,41 +39,41 @@ func NewConsumerOffsetManager(brokerController *BrokerController) *ConsumerOffse
 }
 
 func (com *ConsumerOffsetManager) Load() bool {
-
 	return com.configManagerExt.Load()
 }
 
 func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
-	if b, err := ffjson.Marshal(com.Offsets); err == nil {
-		return string(b)
+	if buf, err := ffjson.Marshal(com.Offsets); err == nil {
+		return string(buf)
 	}
 	return ""
 }
 
-func (com *ConsumerOffsetManager) Decode(jsonString []byte) {
-	if len(jsonString) > 0 {
-		ffjson.Unmarshal(jsonString, com.Offsets)
+func (com *ConsumerOffsetManager) Decode(buf []byte) {
+	if len(buf) > 0 {
+		ffjson.Unmarshal(buf, com.Offsets)
 	}
 }
 
 func (com *ConsumerOffsetManager) ConfigFilePath() string {
-	user, _ := user.Current()
-	return GetConsumerOffsetPath(user.HomeDir)
+	return GetConsumerOffsetPath(stgcommon.GetUserHomeDir())
 }
 
-// ScanUnsubscribedTopic 扫描数据被删除了的topic，offset记录也对应删除
+// ScanUnsubscribedTopic 扫描被删除Topic，并删除该Topic对应的Offset
 // Author gaoyanlei
 // Since 2017/8/22
-func (com *ConsumerOffsetManager) ScanUnsubscribedTopic() {
-
-	com.Offsets.Foreach(func(k string, v map[int]int64) {
+func (self *ConsumerOffsetManager) ScanUnsubscribedTopic() {
+	self.Offsets.Foreach(func(k string, v map[int]int64) {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
 		if arrays != nil && len(arrays) == 2 {
 			topic := arrays[0]
 			group := arrays[1]
-			if nil == com.BrokerController.ConsumerManager.FindSubscriptionData(group, topic) &&
-				com.offsetBehindMuchThanData(topic, v) {
-				com.Offsets.Remove(k)
+			findSubscriptionData := self.BrokerController.ConsumerManager.FindSubscriptionData(group, topic)
+			hasBehindMuchThanData := self.offsetBehindMuchThanData(topic, v)
+
+			// 当前订阅关系里面没有group-topic订阅关系（消费端当前是停机的状态）并且offset落后很多,则删除消费进度
+			if findSubscriptionData == nil && hasBehindMuchThanData {
+				self.Offsets.Remove(k)
 				logger.Warnf("remove topic offset, %s", topic)
 			}
 		}

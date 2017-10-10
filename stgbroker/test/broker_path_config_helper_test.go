@@ -4,20 +4,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"os"
 	"os/exec"
-	"os/user"
 	"runtime"
 	"strings"
 	"testing"
-	"git.oschina.net/cloudzone/smartgo/stgbroker"
 )
 
 func TestNewClientConfig(t *testing.T) {
-	user, err := user.Current()
-	if nil == err {
-		fmt.Println(user.HomeDir, nil)
-	}
+	fmt.Println(stgcommon.GetUserHomeDir)
 
 	// cross compile support
 
@@ -31,14 +28,8 @@ func TestNewClientConfig(t *testing.T) {
 
 func TestPathSeparator(t *testing.T) {
 	fmt.Println(string(os.PathSeparator))
-	user, err := user.Current()
-	if nil == err {
-	}
-
-	fmt.Println(stgbroker.GetTopicConfigPath(user.HomeDir))
+	fmt.Println(stgbroker.GetTopicConfigPath(stgcommon.GetUserHomeDir()))
 }
-
-
 
 func homeUnix() (string, error) {
 	// First prefer the HOME environmental variable

@@ -8,7 +8,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	set "github.com/deckarep/golang-set"
-	"os/user"
 	"sync"
 )
 
@@ -361,6 +360,5 @@ func (self *TopicConfigManager) Decode(content []byte) {
 }
 
 func (self *TopicConfigManager) ConfigFilePath() string {
-	user, _ := user.Current()
-	return GetTopicConfigPath(user.HomeDir)
+	return GetTopicConfigPath(stgcommon.GetUserHomeDir())
 }

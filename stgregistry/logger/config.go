@@ -24,15 +24,15 @@ func SetLog(log *logs.BeeLogger) {
 // SetConfig 配置
 func SetConfig(conf Config) {
 	logger = logs.NewLogger(conf.CacheSize)
-	logger.EnableFuncCallDepth(conf.EnableFuncCallDepth)
-	logger.SetLogFuncCallDepth(conf.FuncCallDepth)
 
-	jsonString, err := json.Marshal(conf.Engine.Config)
-	if err != nil {
-		panic(err)
+	buf, err := json.Marshal(conf.Engine.Config)
+	if err == nil && len(buf) > 0 {
+		// 配置参数链接： http://blog.csdn.net/huwh_/article/details/77923570
+		logger.SetLogger(conf.Engine.Adapter, string(buf))
+	} else {
+		logger.EnableFuncCallDepth(conf.EnableFuncCallDepth)
+		logger.SetLogFuncCallDepth(conf.FuncCallDepth)
 	}
-	// 配置参数链接： http://blog.csdn.net/huwh_/article/details/77923570
-	logger.SetLogger(conf.Engine.Adapter, string(jsonString))
 }
 
 // Trace 打印trace级别日志

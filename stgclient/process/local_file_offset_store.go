@@ -9,7 +9,6 @@ import (
 	"github.com/pquerna/ffjson/ffjson"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"strings"
 	"sync"
 )
@@ -32,16 +31,12 @@ type LocalFileOffsetStore struct {
 func NewLocalFileOffsetStore(mQClientFactory *MQClientInstance, groupName string) *LocalFileOffsetStore {
 	path := os.Getenv("smartgo.client.localOffsetStoreDir")
 	if strings.EqualFold(path, "") {
-		curUser, err := user.Current()
-		if err != nil {
-			logger.Errorf("NewLocalFileOffsetStore error=%v", err.Error())
-		}
-		path = curUser.HomeDir + string(os.PathSeparator) + ".smartgo_offsets"
+		path = stgcommon.GetUserHomeDir() + string(os.PathSeparator) + ".smartgo_offsets"
 	}
-	path = path + string(os.PathSeparator)  + mQClientFactory.ClientId + string(os.PathSeparator) +
+	path = path + string(os.PathSeparator) + mQClientFactory.ClientId + string(os.PathSeparator) +
 		groupName + string(os.PathSeparator) + "offsets.json"
 	return &LocalFileOffsetStore{mQClientFactory: mQClientFactory, groupName: groupName,
-		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: strings.Replace(path,"\\","/",-1)}
+		offsetTable: make(map[string]baseStore.MessageQueueExt), storePath: strings.Replace(path, "\\", "/", -1)}
 }
 
 // 读取本地offset
