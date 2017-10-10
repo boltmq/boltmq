@@ -53,43 +53,37 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 	defer utils.RecoveredFn()
 
 	response := &protocol.RemotingCommand{}
-
-	heartbeatData := heartbeat.NewHeartbeatData()
-	heartbeatData.Decode(request.Body)
-	consumerDataSet := heartbeatData.ConsumerDataSet
-
-	channelInfo := client.NewClientChannelInfo(ctx, heartbeatData.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
-	for value := range consumerDataSet.Iterator().C {
-		if consumerData, ok := value.(*heartbeat.ConsumerData); ok {
-			subscriptionGroupConfig :=
-				cmp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(consumerData.GroupName)
-
-			if subscriptionGroupConfig != nil {
-				topicSysFlag := 0
-				if consumerData.UnitMode {
-					topicSysFlag = sysflag.TopicBuildSysFlag(false, true)
-				}
-
-				newTopic := stgcommon.GetRetryTopic(consumerData.GroupName)
-				cmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod( //
-					newTopic, //
-					subscriptionGroupConfig.RetryQueueNums, //
-					constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
+	// heartbeatDataPlus heartbeatData 层级较多，json难解析，加入heartbeatDataPlus作为中间转化
+	heartbeatDataPlus := &heartbeat.HeartbeatDataPlus{}
+	heartbeatDataPlus.Decode(request.Body)
+	consumerDataSet := heartbeatDataPlus.ConsumerDataSet
+	channelInfo := client.NewClientChannelInfo(ctx, heartbeatDataPlus.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
+	for _, consumerData := range consumerDataSet {
+		subscriptionGroupConfig :=
+			cmp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(consumerData.GroupName)
+		if subscriptionGroupConfig != nil {
+			topicSysFlag := 0
+			if consumerData.UnitMode {
+				topicSysFlag = sysflag.TopicBuildSysFlag(false, true)
 			}
 
-			changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, channelInfo,
-				consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
-			if changed {
-				logger.Infof("registerConsumer info changed {} %s", consumerData.ToString(), ctx.RemoteAddr().String())
-			}
+			newTopic := stgcommon.GetRetryTopic(consumerData.GroupName)
+			cmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageBackMethod( //
+				newTopic, //
+				subscriptionGroupConfig.RetryQueueNums, //
+				constant.PERM_WRITE|constant.PERM_READ, topicSysFlag)
+		}
+
+		changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, channelInfo,
+			consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
+		if changed {
+			logger.Infof("registerConsumer info changed {} %s", consumerData, ctx.RemoteAddr().String())
 		}
 	}
 
 	// 注册Producer
-	for value := range heartbeatData.ProducerDataSet.Iterator().C {
-		if producerData, ok := value.(*heartbeat.ProducerData); ok {
-			cmp.BrokerController.ProducerManager.RegisterProducer(producerData.GroupName, channelInfo)
-		}
+	for _, producerData := range heartbeatDataPlus.ProducerDataSet {
+		cmp.BrokerController.ProducerManager.RegisterProducer(producerData.GroupName, channelInfo)
 	}
 
 	response.Code = code.SUCCESS
