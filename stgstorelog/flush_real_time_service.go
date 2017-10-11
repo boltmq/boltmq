@@ -56,6 +56,7 @@ func (self *FlushRealTimeService) start() {
 				self.commitLog.DefaultMessageStore.StoreCheckpoint.physicMsgTimestamp = storeTimestamp
 			}
 		case <-self.stopChan:
+			ticker.Stop()
 			self.destroy()
 			return
 		}
