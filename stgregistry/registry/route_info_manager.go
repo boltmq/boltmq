@@ -298,7 +298,7 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 			result = "OK"
 		}
 	}
-	logger.Info("unRegisterBroker, remove from brokerLiveTable %s, %s", result, brokerAddr)
+	logger.Info("unRegisterBroker remove from brokerLiveTable [result=%s, brokerAddr=%s]", result, brokerAddr)
 
 	result = "Failed"
 	if filterServerInfo, ok := self.FilterServerTable[brokerAddr]; ok {
@@ -307,7 +307,7 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 			result = "OK"
 		}
 	}
-	logger.Info("unRegisterBroker, remove from filterServerTable %s, %s", result, brokerAddr)
+	logger.Info("unRegisterBroker remove from filterServerTable [result=%s, brokerAddr=%s]", result, brokerAddr)
 
 	removeBrokerName := false
 	result = "Failed"
@@ -318,12 +318,14 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 				result = "OK"
 			}
 		}
-		logger.Info("unRegisterBroker, remove addr from brokerAddrTable %s, %d, %s", result, brokerId, brokerAddr)
+		format := "unRegisterBroker remove brokerAddr from brokerAddrTable [result=%s, brokerId=%d, brokerAddr=%s, brokerName=%s]"
+		logger.Info(format, result, brokerId, brokerAddr, brokerName)
 
 		if len(brokerData.BrokerAddrs) == 0 {
 			result = "OK"
 			delete(self.BrokerAddrTable, brokerName)
-			logger.Info("unRegisterBroker, remove brokerName from brokerAddrTable %s, %s", result, brokerName)
+			format := "unRegisterBroker remove brokerName from brokerAddrTable [result=%s, brokerName=%s]"
+			logger.Info(format, result, brokerName)
 			removeBrokerName = true
 		}
 	}
@@ -335,12 +337,14 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 				result = "OK"
 			}
 			brokerNameSet.Remove(brokerName)
-			logger.Info("unRegisterBroker, remove brokerName from clusterAddrTable %s, %s, %s", result, clusterName, brokerName)
+			format := "unRegisterBroker remove brokerName from clusterAddrTable [result=%s, clusterName=%s, brokerName=%s]"
+			logger.Info(format, result, clusterName, brokerName)
 
 			if brokerNameSet.Cardinality() == 0 {
 				result = "OK"
 				delete(self.ClusterAddrTable, clusterName)
-				logger.Info("unRegisterBroker, remove clusterName from clusterAddrTable %s, %s", result, clusterName)
+				format := "unRegisterBroker remove clusterName from clusterAddrTable [result=%s, clusterName=%s]"
+				logger.Info(format, result, clusterName)
 			}
 		}
 
@@ -348,6 +352,9 @@ func (self *RouteInfoManager) unRegisterBroker(clusterName, brokerAddr, brokerNa
 		self.removeTopicByBrokerName(brokerName)
 	}
 	self.ReadWriteLock.Unlock()
+
+	logger.Info("执行unRegisterBroker()后打印数据")
+	self.printAllPeriodically()
 }
 
 // removeTopicByBrokerName 根据brokerName移除它对应的Topic数据
@@ -359,13 +366,13 @@ func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
 			if queueDataList != nil {
 				for index, queueData := range queueDataList {
 					if queueData != nil && queueData.BrokerName == brokerName {
-						logger.Info("removeTopicByBrokerName, remove one broker's topic %s %s", topic, queueData.ToString())
+						logger.Info("removeTopicByBrokerName, remove one broker's topic=%s, %s", topic, queueData.ToString())
 						queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
 					}
 				}
 
 				if len(queueDataList) == 0 {
-					logger.Info("removeTopicByBrokerName, remove the topic all queue %s", topic)
+					logger.Info("removeTopicByBrokerName, remove the topic all queue, topic=%s", topic)
 					delete(self.TopicQueueTable, topic)
 				}
 			}
@@ -463,6 +470,8 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 			// 关闭Channel通道
 			format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
 			logger.Info(format, remoteAddr, currentTime, lastTimestamp, brokerChannelExpiredTime)
+
+			logger.Info("namesrv主动关闭channel. %s", brokerLiveInfo.Context.ToString())
 			self.onChannelDestroy(remoteAddr, brokerLiveInfo.Context)
 		}
 	}
@@ -478,9 +487,8 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 	if ctx != nil {
 		self.ReadWriteLock.RLock()
 		for k, v := range self.BrokerLiveTable {
-			logger.Info("BrokerLiveTable.Context --> %s", v.Context.ToString())
-			logger.Info("ctx.Context --> %s", ctx.ToString())
-
+			//logger.Info("BrokerLiveTable.Context --> %s", v.Context.ToString())
+			//logger.Info("ctx.Context --> %s", ctx.ToString())
 			if v != nil && v.Context.RemoteAddr().String() == ctx.RemoteAddr().String() {
 				brokerAddrFound = k
 				queryBroker = true
