@@ -6,6 +6,7 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"strconv"
 )
 
 func TaskSync() {
@@ -23,8 +24,8 @@ func main() {
 	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
 	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
-	for i := 0; i < 8; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone10", "tagA", []byte("I'm so diao!")))
+	for i := 0; i < 64; i++ {
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone20", "tagA", []byte("I'm so diao!"+strconv.Itoa(i))))
 		if err != nil {
 			fmt.Println(err)
 		}

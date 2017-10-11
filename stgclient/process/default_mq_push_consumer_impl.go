@@ -113,7 +113,7 @@ func (impl *DefaultMQPushConsumerImpl) pullMessage(pullRequest *consumer.PullReq
 	sd, _ := impl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Get(pullRequest.MessageQueue.Topic)
 	// todo class filter
 	if sd != nil {
-		subExpression=sd.(*heartbeat.SubscriptionData).SubString
+		subExpression = sd.(*heartbeat.SubscriptionData).SubString
 	}
 	sysFlag := sysflag.BuildSysFlag(commitOffsetEnable, true, !strings.EqualFold(subExpression, ""), classFilter)
 	impl.pullAPIWrapper.PullKernelImpl(pullRequest.MessageQueue,
@@ -160,8 +160,8 @@ func (backImpl *PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
 		if pullResult.NextBeginOffset < prevRequestOffset || firstMsgOffset < prevRequestOffset {
 			logger.Warnf(
 				"[BUG] pull message result maybe data wrong, nextBeginOffset: %v firstMsgOffset: %v prevRequestOffset: %v", //
-				pullResult.NextBeginOffset, //
-				firstMsgOffset,             //
+				pullResult.NextBeginOffset,                                                                                 //
+				firstMsgOffset,                                                                                             //
 				prevRequestOffset)
 		}
 	case consumer.NO_NEW_MSG:
@@ -247,7 +247,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) Start() {
 			case consumer.MessageListenerConcurrently:
 				pushConsumerImpl.consumeOrderly = false
 				pushConsumerImpl.consumeMessageService = NewConsumeMessageConcurrentlyService(pushConsumerImpl, pushConsumerImpl.messageListenerInner.(consumer.MessageListenerConcurrently))
-			//todo 顺序消费
+				//todo 顺序消费
 			default:
 				break
 			}

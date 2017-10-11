@@ -17,6 +17,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
+	"fmt"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -101,6 +102,8 @@ func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string
 				return topicRouteData
 			}
 		default:
+			logger.Errorf("response code=%v,remark=%v", response.Code, response.Remark)
+			panic(response.Remark)
 
 		}
 	} else {
@@ -126,17 +129,14 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 				topicRouteData.Decode(body)
 				return topicRouteData
 			}
+		default:
+			logger.Errorf("response code=%v,remark=%v", response.Code, response.Remark)
+			//panic(response.Remark)
 		}
 
 	} else {
 		logger.Errorf("GetTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
 	}
-	////todo 测试
-	//routeData := &route.TopicRouteData{}
-	//routeData.QueueDatas = append(routeData.QueueDatas, &route.QueueData{BrokerName: "broker-master2", ReadQueueNums: 8, WriteQueueNums: 8, Perm: 6, TopicSynFlag: 0})
-	//mapBrokerAddrs := make(map[int]string)
-	//mapBrokerAddrs[0] = "127.0.0.1:10911"
-	//routeData.BrokerDatas = append(routeData.BrokerDatas, &route.BrokerData{BrokerName: "broker-master2", BrokerAddrs: mapBrokerAddrs})
 	return nil
 }
 
@@ -284,6 +284,7 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
+		fmt.Println(requestHeader.QueueOffset,"---------------------------------------")
 		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 		return impl.pullMessageSync(addr, request, timeoutMillis)

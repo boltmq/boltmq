@@ -13,11 +13,11 @@ import (
 type PullMessageService struct {
 	MQClientFactory  *MQClientInstance
 	PullRequestQueue chan *consumer.PullRequest
-	isStopped         bool
+	isStopped        bool
 }
 
 func NewPullMessageService(mqClientFactory *MQClientInstance) *PullMessageService {
-	return &PullMessageService{MQClientFactory:mqClientFactory, PullRequestQueue:make(chan *consumer.PullRequest)}
+	return &PullMessageService{MQClientFactory: mqClientFactory, PullRequestQueue: make(chan *consumer.PullRequest)}
 }
 
 func (service *PullMessageService) Start() {
@@ -47,7 +47,6 @@ func (service *PullMessageService) run() {
 	for !service.isStopped {
 		request := <-service.PullRequestQueue
 		service.pullMessage(request)
-
 	}
 }
 

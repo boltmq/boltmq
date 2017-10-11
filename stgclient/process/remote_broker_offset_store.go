@@ -56,9 +56,11 @@ func (store *RemoteBrokerOffsetStore)PersistAll(mqs set.Set) {
 			//if mqs.Contains(mq) {
 			store.updateConsumeOffsetToBroker(mq.(*message.MessageQueue), v.(int64))
 			if times % 12 == 0 {
-				logger.Infof("Group: %v ClientId: %v updateConsumeOffsetToBroker %v", //
+				logger.Infof("Group: %v ClientId: %v Topic: %v QueueId: %v updateConsumeOffsetToBroker %v", //
 					store.groupName, //
 					store.mQClientFactory.ClientId, //
+					mq.(*message.MessageQueue).Topic,
+					mq.(*message.MessageQueue).QueueId,
 					v.(int64))
 			}
 		} else {
