@@ -25,12 +25,15 @@ func main() {
 	defaultMQProducer.Start()
 	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
 	for i := 0; i < 64; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone20", "tagA", []byte("I'm so diao!"+strconv.Itoa(i))))
+		body := "I'm so diao!" + strconv.Itoa(i)
+		msg := message.NewMessage("cloudzone20", "tagA", []byte(body))
+		sendResult, err := defaultMQProducer.Send(msg)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println(fmt.Sprintf("send msg err: %s", err.Error()))
+			continue
 		}
 		if sendResult != nil {
-			fmt.Println(sendResult.ToString())
+			fmt.Println(fmt.Sprintf("msg.body=%s, %s", body, sendResult.ToString()))
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
