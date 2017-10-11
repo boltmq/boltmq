@@ -254,17 +254,20 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 		logger.Infof("updateTopicRouteInfoFromNameServer every [ %v ] sencond", mqClientInstance.ClientConfig.PollNameServerInterval/1000)
 	})
+	updateRouteTicker.Start()
 	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
 	cleanAndHBTicker := timeutil.NewTicker(true,1000*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.HeartbeatBrokerInterval)*time.Millisecond, func() {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
 	} )
+	cleanAndHBTicker.Start()
 	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
 	// 定时持久化consumer的offset
 	persistOffsetTicker := timeutil.NewTicker(true,1000*10*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval)*time.Millisecond, func() {
 		mqClientInstance.persistAllConsumerOffset()
 	})
+	persistOffsetTicker.Start()
 	mqClientInstance.TimerTask.Add(persistOffsetTicker)
 	//todo 定时调整线程池的数量
 }
