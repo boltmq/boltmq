@@ -2,7 +2,8 @@
 
 #Broker的配置信息
 brokerClusterName="DefaultCluster"
-brokerName="broker-a"
+brokerName="broker-s"
+brokerId=0
 deleteWhen=04
 fileReservedTime=48
 brokerRole="SYNC_MASTER"

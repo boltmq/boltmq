@@ -38,12 +38,7 @@ func main() {
 	fmt.Println("remoting client start success")
 
 	// 请求的custom header
-	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{
-		BrokerAddr:  brokerAddr,
-		BrokerName:  brokerName,
-		ClusterName: clusterName,
-		BrokerId:    brokerId,
-	}
+	requestHeader := namesrv.NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName, brokerId)
 	request = protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
 
 	namesrvAddrs := cmd.GetNameServerAddressList()

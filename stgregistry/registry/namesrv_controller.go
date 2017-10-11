@@ -3,14 +3,12 @@ package registry
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 const (
@@ -27,8 +25,7 @@ type DefaultNamesrvController struct {
 	RouteInfoManager          *RouteInfoManager               // topic路由管理器
 	KvConfigManager           *KVConfigManager                // kv管理器
 	BrokerHousekeepingService netm.ContextListener            // 扫描不活跃broker
-	scanBrokerTicker          *timeutil.Ticker                // 扫描2分钟不活跃broker的定时器
-	printNamesrvTicker        *timeutil.Ticker                // 周期性打印namesrv数据的定时器
+	ScheduledExecutorService  *NamesrvControllerTask          // Namesrv定时器服务
 	RequestProcessor          remoting.RequestProcessor       // 默认请求处理器
 }
 
@@ -37,12 +34,11 @@ type DefaultNamesrvController struct {
 // Since: 2017/9/12
 func NewNamesrvController(namesrvConfig *namesrv.NamesrvConfig, remotingServer *remoting.DefalutRemotingServer) *DefaultNamesrvController {
 	controller := &DefaultNamesrvController{
-		scanBrokerTicker:   timeutil.NewTicker(5*second, 10*second),
-		printNamesrvTicker: timeutil.NewTicker(1*minute, 10*minute),
-		NamesrvConfig:      namesrvConfig,
-		RemotingServer:     remotingServer,
-		RouteInfoManager:   NewRouteInfoManager(),
+		NamesrvConfig:    namesrvConfig,
+		RemotingServer:   remotingServer,
+		RouteInfoManager: NewRouteInfoManager(),
 	}
+	controller.ScheduledExecutorService = NewNamesrvControllerTask(controller)
 	controller.KvConfigManager = NewKVConfigManager(controller)
 	controller.BrokerHousekeepingService = NewBrokerHousekeepingService(controller)
 	return controller
@@ -65,11 +61,8 @@ func (self *DefaultNamesrvController) initialize() bool {
 	// (3)注册broker连接的监听器
 	self.registerContextListener()
 
-	// (4)启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
-	self.startScanNotActiveBroker()
-
-	// (5)启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer的配置参数,即KVConfigManager.configTable变量的内容
-	self.startPrintAllPeriodically()
+	// (4)启动ScheduledExecutorService任务
+	self.startScheduledExecutorService()
 
 	return true
 }
@@ -79,13 +72,13 @@ func (self *DefaultNamesrvController) initialize() bool {
 // Since: 2017/9/14
 func (self *DefaultNamesrvController) shutdown() {
 	begineTime := stgcommon.GetCurrentTimeMillis()
-	if self.scanBrokerTicker != nil {
-		self.scanBrokerTicker.Stop()
-		logger.Info("stop scanNotActiveBroker task successful")
+	if self.ScheduledExecutorService.scanBrokerTask != nil {
+		self.ScheduledExecutorService.scanBrokerTask.Stop()
+		logger.Info("stop scanBrokerTask ok")
 	}
-	if self.printNamesrvTicker != nil {
-		self.printNamesrvTicker.Stop()
-		logger.Info("stop printAllPeriodically task successful")
+	if self.ScheduledExecutorService.printNamesrvTask != nil {
+		self.ScheduledExecutorService.printNamesrvTask.Stop()
+		logger.Info("stop printNamesrvTask ok")
 	}
 	if self.RemotingServer != nil {
 		self.RemotingServer.Shutdown()
@@ -96,10 +89,10 @@ func (self *DefaultNamesrvController) shutdown() {
 	logger.Info("namesrv controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
 }
 
-// start 启动Namesrv控制服务
+// startNamesrvController 启动Namesrv控制服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
-func (self *DefaultNamesrvController) start() error {
+func (self *DefaultNamesrvController) startNamesrvController() error {
 	self.RemotingServer.Start()
 	return nil
 }
@@ -113,27 +106,18 @@ func (self *DefaultNamesrvController) registerProcessor() error {
 	return nil
 }
 
-// startScanNotActiveBroker 启动任务：扫描2分钟内不活跃的Broker
+// startScheduledExecutorService 启动ScheduledExecutorService任务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
-func (self *DefaultNamesrvController) startScanNotActiveBroker() {
+func (self *DefaultNamesrvController) startScheduledExecutorService() {
 	go func() {
-		self.scanBrokerTicker.Do(func(tm time.Time) {
-			self.RouteInfoManager.scanNotActiveBroker()
-		})
-		logger.Info("start scanNotActiveBroker task successful")
-	}()
-}
+		// 启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
+		self.ScheduledExecutorService.scanBrokerTask.Start()
+		logger.Info("start scanBrokerTask ok")
 
-// startPrintAllPeriodically 启动任务：每个10秒打印namesrv全局配置
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/14
-func (self *DefaultNamesrvController) startPrintAllPeriodically() {
-	go func() {
-		self.printNamesrvTicker.Do(func(tm time.Time) {
-			self.KvConfigManager.printAllPeriodically()
-		})
-		logger.Info("start printAllPeriodically task successful")
+		// 启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer全局配置,即KVConfigManager.configTable变量的内容
+		self.ScheduledExecutorService.printNamesrvTask.Start()
+		logger.Info("start printNamesrvTask ok")
 	}()
 }
 
