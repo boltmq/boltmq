@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/stats"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"sync/atomic"
 )
 
@@ -51,13 +52,31 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Start() {
-
+	logger.Info("BrokerStatsManager start successful")
 }
 
 // Start  BrokerStatsManager停止入口
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Shutdown() {
+	defer utils.RecoveredFn()
+
+	// 先关闭momentStatsItemSet的定时任务
+	for _, ticker := range bsm.momentStatsItemSet.MomentStatsTaskList {
+		if ticker != nil {
+			ticker.Stop()
+		}
+	}
+
+	// 再关闭statsTable中的定时任务
+	for _, statsItemSet := range bsm.statsTable {
+		for _, ticker := range statsItemSet.StatsItemTaskList {
+			if ticker != nil {
+				ticker.Stop()
+			}
+		}
+	}
+
 	logger.Info("BrokerStatsManager shutdown successful")
 }
 
@@ -122,7 +141,7 @@ func (bsm *BrokerStatsManager) IncSendBackNums(group, topic string) {
 	bsm.statsTable[SNDBCK_PUT_NUMS].AddValue(topic+"@"+group, 1, 1)
 }
 
-// TpsGroupGetNums  增加数量
+// TpsGroupGetNums  根据topic + group获得TPS
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
