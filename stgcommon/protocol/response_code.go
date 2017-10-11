@@ -1,5 +1,9 @@
 package protocol
 
+import (
+	"fmt"
+)
+
 // ResponseCode: 响应码
 // Author: yintongqiang
 // Since:  2017/8/16
@@ -35,3 +39,44 @@ const (
 	CONSUMER_NOT_ONLINE           = 206 // Consumer不在线
 	CONSUME_MSG_TIMEOUT           = 207 // Consumer消费消息超时
 )
+
+func ParseResponse(responseCode int32) string {
+	value, ok := responsePattern[responseCode]
+	if !ok {
+		return fmt.Sprintf("unknown responseCode[%d]", responseCode)
+	}
+	return value
+}
+
+var responsePattern = map[int32]string{
+	0:   "SUCCESS",
+	1:   "SYSTEM_ERROR",
+	2:   "SYSTEM_BUSY",
+	3:   "REQUEST_CODE_NOT_SUPPORTED",
+	4:   "TRANSACTION_FAILED",
+	10:  "FLUSH_DISK_TIMEOUT",
+	11:  "SLAVE_NOT_AVAILABLE",
+	12:  "FLUSH_SLAVE_TIMEOUT",
+	13:  "MESSAGE_ILLEGAL",
+	14:  "SERVICE_NOT_AVAILABLE",
+	15:  "VERSION_NOT_SUPPORTED",
+	16:  "NO_PERMISSION",
+	17:  "TOPIC_NOT_EXIST",
+	18:  "TOPIC_EXIST_ALREADY",
+	19:  "PULL_NOT_FOUND",
+	20:  "PULL_RETRY_IMMEDIATELY",
+	21:  "PULL_OFFSET_MOVED",
+	22:  "QUERY_NOT_FOUND",
+	23:  "SUBSCRIPTION_PARSE_FAILED",
+	24:  "SUBSCRIPTION_NOT_EXIST",
+	25:  "SUBSCRIPTION_NOT_LATEST",
+	26:  "SUBSCRIPTION_GROUP_NOT_EXIST",
+	200: "TRANSACTION_SHOULD_COMMIT",
+	201: "TRANSACTION_SHOULD_ROLLBACK",
+	202: "TRANSACTION_STATE_UNKNOW",
+	203: "TRANSACTION_STATE_GROUP_WRONG",
+	204: "NO_BUYER_ID",
+	205: "NOT_IN_CURRENT_UNIT",
+	206: "CONSUMER_NOT_ONLINE",
+	207: "CONSUME_MSG_TIMEOUT",
+}
