@@ -230,11 +230,11 @@ func (mqClientInstance *MQClientInstance) prepareHeartbeatData() *heartbeat.Hear
 		if v != nil && l {
 			impl := v.(consumer.MQConsumerInner)
 			consumerData := heartbeat.ConsumerData{GroupName: impl.GroupName(),
-				ConsumeType:         impl.ConsumeType(),
-				ConsumeFromWhere:    impl.ConsumeFromWhere(),
-				MessageModel:        impl.MessageModel(),
+				ConsumeType: impl.ConsumeType(),
+				ConsumeFromWhere: impl.ConsumeFromWhere(),
+				MessageModel: impl.MessageModel(),
 				SubscriptionDataSet: set.NewSet(),
-				UnitMode:            impl.IsUnitMode()}
+				UnitMode: impl.IsUnitMode()}
 			for data := range impl.Subscriptions().Iterator().C {
 				consumerData.SubscriptionDataSet.Add(data)
 			}
@@ -250,22 +250,19 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 		//todo namesrv地址为空通过http获取
 	}
 	// 定时从nameserver更新topic route信息
-	updateRouteTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PollNameServerInterval, 10)
-	go updateRouteTicker.Do(func(tm time.Time) {
+	updateRouteTicker := timeutil.NewTicker(true, 10*time.Millisecond, time.Duration(mqClientInstance.ClientConfig.PollNameServerInterval)*time.Millisecond, func() {
 		mqClientInstance.UpdateTopicRouteInfoFromNameServer()
 		logger.Infof("updateTopicRouteInfoFromNameServer every [ %v ] sencond", mqClientInstance.ClientConfig.PollNameServerInterval/1000)
 	})
 	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
-	cleanAndHBTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.HeartbeatBrokerInterval, 1000)
-	go cleanAndHBTicker.Do(func(tm time.Time) {
+	cleanAndHBTicker := timeutil.NewTicker(true,1000*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.HeartbeatBrokerInterval)*time.Millisecond, func() {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
-	})
+	} )
 	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
-	persistOffsetTicker := timeutil.NewTicker(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval, 1000*10)
 	// 定时持久化consumer的offset
-	go persistOffsetTicker.Do(func(tm time.Time) {
+	persistOffsetTicker := timeutil.NewTicker(true,1000*10*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval)*time.Millisecond, func() {
 		mqClientInstance.persistAllConsumerOffset()
 	})
 	mqClientInstance.TimerTask.Add(persistOffsetTicker)
