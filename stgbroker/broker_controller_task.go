@@ -159,7 +159,7 @@ func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startRegisterAllBrokerTask() {
-	self.RegisterAllBrokerTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Second, func() {
+	self.RegisterAllBrokerTask = timeutil.NewTicker(false, 10*time.Second, 30*time.Second, func() {
 		self.BrokerController.RegisterBrokerAll(true, false)
 	})
 	self.RegisterAllBrokerTask.Start()
