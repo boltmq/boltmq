@@ -156,7 +156,7 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 	createNew := false
 
 	// 如果获取到topic并且没有出错则反会topicConig
-	if tc == nil && tc != nil {
+	if tc == nil {
 		return tc, nil
 	}
 
