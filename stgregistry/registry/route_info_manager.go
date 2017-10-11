@@ -578,6 +578,8 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 		self.ReadWriteLock.Unlock()
 	}
 
+	logger.Warn("执行onChannelDestroy()后打印数据")
+	self.printAllPeriodically()
 }
 
 // printAllPeriodically 定期打印当前类的数据结构(常用于业务调试)

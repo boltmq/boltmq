@@ -391,6 +391,7 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	logger.Info("DefaultRequestProcessor.unRegisterBroker start ...")
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -407,6 +408,8 @@ func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request 
 
 	response.Code = code.SUCCESS
 	response.Remark = ""
+
+	logger.Info("DefaultRequestProcessor.unRegisterBroker end ...")
 	return response, nil
 }
 
