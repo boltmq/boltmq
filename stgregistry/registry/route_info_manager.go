@@ -440,28 +440,30 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) scanNotActiveBroker() {
-	if self.BrokerLiveTable != nil {
-		for brokerAddr, brokerLiveInfo := range self.BrokerLiveTable {
-			lastTimestamp := brokerLiveInfo.LastUpdateTimestamp + brokerChannelExpiredTime
-			currentTime := stgcommon.GetCurrentTimeMillis()
-			//format := "scanNotActiveBroker[lastTimestamp=%s, currentTimeMillis=%s]"
-			//logger.Debug(format, stgcommon.FormatTimestamp(lastTimestamp), stgcommon.FormatTimestamp(currentTime))
+	if self.BrokerLiveTable == nil || len(self.BrokerLiveTable) == 0 {
+		return
+	}
+	for remoteAddr, brokerLiveInfo := range self.BrokerLiveTable {
+		lastTimestamp := brokerLiveInfo.LastUpdateTimestamp + brokerChannelExpiredTime
+		currentTime := stgcommon.GetCurrentTimeMillis()
+		//format := "scanNotActiveBroker[lastTimestamp=%s, currentTimeMillis=%s]"
+		//logger.Debug(format, stgcommon.FormatTimestamp(lastTimestamp), stgcommon.FormatTimestamp(currentTime))
 
-			if lastTimestamp < currentTime {
-				// 主动关闭Channel通道，关闭后打印日志
-				remotingUtil.CloseChannel(brokerLiveInfo.Context)
+		if lastTimestamp < currentTime {
+			// 主动关闭Channel通道，关闭后打印日志
+			remotingUtil.CloseChannel(brokerLiveInfo.Context)
 
-				// 删除无效Broker列表
-				self.ReadWriteLock.RLock()
-				delete(self.BrokerLiveTable, brokerAddr)
-				logger.Info("delete brokerAddr[%s] from brokerLiveTable", brokerAddr)
-				self.ReadWriteLock.RUnlock()
+			// 删除无效Broker列表
+			self.ReadWriteLock.RLock()
+			delete(self.BrokerLiveTable, remoteAddr)
+			logger.Info("delete brokerAddr[%s] from brokerLiveTable", remoteAddr)
+			self.printBrokerLiveTable()
+			self.ReadWriteLock.RUnlock()
 
-				// 关闭Channel通道
-				format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
-				logger.Info(format, brokerAddr, currentTime, lastTimestamp, brokerChannelExpiredTime)
-				self.onChannelDestroy(brokerAddr, brokerLiveInfo.Context)
-			}
+			// 关闭Channel通道
+			format := "The broker channel expired, remoteAddr[%s], currentTimeMillis[%dms], lastTimestamp[%dms], brokerChannelExpiredTime[%dms]"
+			logger.Info(format, remoteAddr, currentTime, lastTimestamp, brokerChannelExpiredTime)
+			self.onChannelDestroy(remoteAddr, brokerLiveInfo.Context)
 		}
 	}
 }
@@ -469,40 +471,43 @@ func (self *RouteInfoManager) scanNotActiveBroker() {
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Context) {
+func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Context) {
 	// 加读锁，寻找断开连接的Broker
 	queryBroker := false
 	brokerAddrFound := ""
 	if ctx != nil {
-		this.ReadWriteLock.RLock()
-		for k, v := range this.BrokerLiveTable {
-			if v != nil && v.Context.RemoteAddr().String() == ctx.RemoteAddr().String() && v.Context.RemoteAddr().Network() == ctx.RemoteAddr().Network() {
+		self.ReadWriteLock.RLock()
+		for k, v := range self.BrokerLiveTable {
+			logger.Info("BrokerLiveTable.Context --> %s", v.Context.ToString())
+			logger.Info("ctx.Context --> %s", ctx.ToString())
+
+			if v != nil && v.Context.RemoteAddr().String() == ctx.RemoteAddr().String() {
 				brokerAddrFound = k
 				queryBroker = true
 			}
 		}
-		this.ReadWriteLock.RUnlock()
+		self.ReadWriteLock.RUnlock()
 	}
 
 	if !queryBroker {
-		brokerAddrFound = brokerAddr
+		brokerAddrFound = remoteAddr
 	} else {
 		logger.Info("the broker's channel destroyed, %s, clean it's data structure at once", brokerAddrFound)
 	}
 
 	// 加写锁，删除相关数据结构
-	if queryBroker && len(brokerAddrFound) > 0 {
-		this.ReadWriteLock.Lock()
+	if len(brokerAddrFound) > 0 {
+		self.ReadWriteLock.Lock()
 		// 1 清理brokerLiveTable
-		delete(this.BrokerLiveTable, brokerAddrFound)
+		delete(self.BrokerLiveTable, brokerAddrFound)
 
 		// 2 清理FilterServer
-		delete(this.FilterServerTable, brokerAddrFound)
+		delete(self.FilterServerTable, brokerAddrFound)
 
 		// 3 清理brokerAddrTable
 		brokerNameFound := ""
 		removeBrokerName := false
-		for bn, brokerData := range this.BrokerAddrTable {
+		for bn, brokerData := range self.BrokerAddrTable {
 			if brokerNameFound == "" {
 				if brokerData != nil {
 
@@ -523,7 +528,7 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 					// 3.2 BrokerName无关联BrokerAddr
 					if len(brokerData.BrokerAddrs) == 0 {
 						removeBrokerName = true
-						delete(this.BrokerAddrTable, bn)
+						delete(self.BrokerAddrTable, bn)
 						removeMsg := "remove brokerAddr[%s] from brokerAddrTable, because channel destroyed"
 						logger.Info(removeMsg, brokerData.BrokerName)
 					}
@@ -533,7 +538,7 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 
 		// 4 清理clusterAddrTable
 		if brokerNameFound != "" && removeBrokerName {
-			for clusterName, brokerNames := range this.ClusterAddrTable {
+			for clusterName, brokerNames := range self.ClusterAddrTable {
 				if brokerNames.Cardinality() > 0 && brokerNames.Contains(brokerNameFound) {
 					brokerNames.Remove(brokerNameFound)
 					removeMsg := "remove brokerName[%s], clusterName[%s] from clusterAddrTable, because channel destroyed"
@@ -541,9 +546,9 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 
 					// 如果集群对应的所有broker都下线了， 则集群也删除掉
 					if brokerNames.Cardinality() == 0 {
-						msgEmpty := "remove the clusterName[%s] from clusterAddrTable, because channel destroyed and no broker in this cluster"
+						msgEmpty := "remove the clusterName[%s] from clusterAddrTable, because channel destroyed and no broker in self cluster"
 						logger.Info(msgEmpty, clusterName)
-						delete(this.ClusterAddrTable, clusterName)
+						delete(self.ClusterAddrTable, clusterName)
 					}
 					break
 				}
@@ -552,7 +557,7 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 
 		// 5 清理topicQueueTable
 		if removeBrokerName {
-			for topic, queueDataList := range this.TopicQueueTable {
+			for topic, queueDataList := range self.TopicQueueTable {
 				if queueDataList != nil {
 					for index, queueData := range queueDataList {
 						if queueData.BrokerName == brokerAddrFound {
@@ -563,14 +568,14 @@ func (this *RouteInfoManager) onChannelDestroy(brokerAddr string, ctx netm.Conte
 						}
 					}
 					if len(queueDataList) == 0 {
-						delete(this.TopicQueueTable, topic)
+						delete(self.TopicQueueTable, topic)
 						removeMsg := "remove topic[%s] all queue, from topicQueueTable, because channel destroyed"
 						logger.Info(removeMsg, topic)
 					}
 				}
 			}
 		}
-		this.ReadWriteLock.Unlock()
+		self.ReadWriteLock.Unlock()
 	}
 
 }

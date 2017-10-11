@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
+	protocolCode "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
 	"os"
@@ -308,6 +309,12 @@ func (self *RemotingCommand) ToString() string {
 		body = string(self.Body)
 	}
 
-	format := "RemotingCommand [code=%d, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s, body=%s ]"
-	return fmt.Sprintf(format, self.Code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields, body)
+	description := protocolCode.ParseRequest(self.Code)
+	if self.IsResponseType() {
+		description = protocolCode.ParseResponse(self.Code)
+	}
+	code := fmt.Sprintf("%d(%s)", self.Code, description)
+
+	format := "RemotingCommand [code=%s, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s, body=%s ]"
+	return fmt.Sprintf(format, code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields, body)
 }

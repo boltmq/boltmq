@@ -15,7 +15,8 @@ import (
 type StatsItemSet struct {
 	StatsItemTable map[string]*StatsItem // key: statsKey, val:StatsItem
 	sync.RWMutex
-	StatsName string
+	StatsName         string
+	StatsItemTaskList []*timeutil.Ticker // broker统计的定时任务
 }
 
 // NewStatsItemSet 统计单元集合初始化
@@ -113,16 +114,19 @@ func (stats *StatsItemSet) GetStatsItem(statsKey string) *StatsItem {
 // Since 2017/9/19
 func (stats *StatsItemSet) Init() {
 	samplingInSecondsTicker := timeutil.NewTicker(10*1000, 0)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInSecondsTicker)
 	go samplingInSecondsTicker.Do(func(tm time.Time) {
 		stats.samplingInSeconds()
 	})
 
 	samplingInMinutesTicker := timeutil.NewTicker(10*60*1000, 0)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInMinutesTicker)
 	go samplingInMinutesTicker.Do(func(tm time.Time) {
 		stats.samplingInMinutes()
 	})
 
 	samplingInHourTicker := timeutil.NewTicker(1*60*60*1000, 0)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInHourTicker)
 	go samplingInHourTicker.Do(func(tm time.Time) {
 		stats.samplingInHour()
 	})
@@ -130,6 +134,7 @@ func (stats *StatsItemSet) Init() {
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 	printAtMinutesTicker := timeutil.NewTicker(60000, delayMin)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtMinutesTicker)
 	go printAtMinutesTicker.Do(func(tm time.Time) {
 		stats.printAtMinutes()
 	})
@@ -137,6 +142,7 @@ func (stats *StatsItemSet) Init() {
 	diffHour := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
 	printAtHourTicker := timeutil.NewTicker(3600000, delayHour)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtHourTicker)
 	go printAtHourTicker.Do(func(tm time.Time) {
 		stats.printAtHour()
 	})
@@ -144,6 +150,7 @@ func (stats *StatsItemSet) Init() {
 	diffDay := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayDay int = int(math.Abs(diffDay))
 	printAtDayTicker := timeutil.NewTicker(86400000, delayDay)
+	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtDayTicker)
 	go printAtDayTicker.Do(func(tm time.Time) {
 		stats.printAtDay()
 	})

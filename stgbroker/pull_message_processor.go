@@ -187,7 +187,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
-	logger.Infof("getMessageResult:%#v", getMessageResult)
+	logger.Infof("------------------------ConsumerGroup:%s .Topic:%s . QueueId:%v . QueueOffset :%v . MaxMsgNums: %v. NextBeginOffset: %v",requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId,requestHeader.QueueOffset,int32(requestHeader.MaxMsgNums),getMessageResult.NextBeginOffset)
 
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
