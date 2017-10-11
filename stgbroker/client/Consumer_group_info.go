@@ -15,7 +15,7 @@ import (
 type ConsumerGroupInfo struct {
 	GroupName           string
 	SubscriptionTable   *sync.Map // key:Topic, val:SubscriptionData
-	ConnTable           *sync.Map // key: Channel val: ChannelInfo
+	ConnTable           *sync.Map // key: Channel.Addr() val: ChannelInfo
 	ConsumeType         heartbeat.ConsumeType
 	MessageModel        heartbeat.MessageModel
 	ConsumeFromWhere    heartbeat.ConsumeFromWhere
@@ -58,9 +58,9 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType hea
 	cg.ConsumeType = consumeType
 	cg.MessageModel = messageModel
 	cg.ConsumeFromWhere = consumeFromWhere
-	infoOld, err := cg.ConnTable.Get(infoNew.ClientId)
+	infoOld, err := cg.ConnTable.Get(infoNew.Context.Addr())
 	if infoOld == nil || err != nil {
-		prev, err := cg.ConnTable.Put(infoNew.ClientId, infoNew)
+		prev, err := cg.ConnTable.Put(infoNew.Context.Addr(), infoNew)
 		if prev == nil || err != nil {
 			logger.Infof("new consumer connected, group: %s %v %v channel: %s", cg.GroupName, consumeType,
 				messageModel, infoNew.Context.LocalAddr().String())
@@ -68,14 +68,14 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType hea
 		}
 		infoOld = infoNew
 	} else {
-		if infoold, ok := infoOld.(*ChannelInfo); ok {
-			if !strings.EqualFold(infoNew.ClientId, infoold.ClientId) {
+		if info, ok := infoOld.(*ChannelInfo); ok {
+			if !strings.EqualFold(infoNew.ClientId, info.ClientId) {
 				logger.Errorf(
 					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
-					cg.GroupName,                         //
-					infoold.Context.LocalAddr().String(), //
+					cg.GroupName,                      //
+					info.Context.LocalAddr().String(), //
 					infoNew.Context.LocalAddr().String())
-				cg.ConnTable.Put(infoNew.Context, infoNew)
+				cg.ConnTable.Put(infoNew.Context.Addr(), infoNew)
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Con
 		return false
 	}
 
-	info, err := cg.ConnTable.Remove(ctx)
+	info, err := cg.ConnTable.Remove(ctx.Addr())
 	if err != nil {
 		logger.Error(err)
 		return false
@@ -116,9 +116,9 @@ func (cg *ConsumerGroupInfo) GetAllChannel() []netm.Context {
 	result := []netm.Context{}
 	iterator := cg.ConnTable.Iterator()
 	for iterator.HasNext() {
-		key, _, _ := iterator.Next()
-		if channel, ok := key.(netm.Context); ok {
-			result = append(result, channel)
+		_, value, _ := iterator.Next()
+		if channel, ok := value.(*ChannelInfo); ok {
+			result = append(result, channel.Context)
 		}
 	}
 	return result
@@ -149,7 +149,7 @@ func (cg *ConsumerGroupInfo) UnregisterChannel(clientChannelInfo *ChannelInfo) {
 		return
 	}
 
-	old, _ := cg.ConnTable.Remove(clientChannelInfo.Context)
+	old, _ := cg.ConnTable.Remove(clientChannelInfo.Context.Addr())
 	if old != nil {
 		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v", cg.GroupName, old)
 	}
