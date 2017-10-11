@@ -8,49 +8,53 @@ import (
 func TestTickersClose(t *testing.T) {
 	var i int
 
-	ts := NewTickers()
-	ts.Register("flush", true, 0, 100*time.Millisecond, func() {
+	tk := NewTicker(true, 0, 100*time.Millisecond, func() {
 		i++
 	})
+	ts := NewTickers()
+	ts.Register("flush", tk)
 
-	time.Sleep(850 * time.Millisecond)
-	if i != 8 {
-		t.Error("tickers error")
-	}
-
+	time.Sleep(800 * time.Millisecond)
 	e := ts.Close()
 	if e != nil {
 		t.Error("tickers close: %v", e)
 	}
+
+	if i != 8 {
+		t.Error("tickers error")
+	}
+
 }
 
 func TestTickersRemove(t *testing.T) {
 	var i int
 
-	ts := NewTickers()
-	ts.Register("flush", true, 0, 100*time.Millisecond, func() {
+	tk := NewTicker(true, 0, 100*time.Millisecond, func() {
 		i++
 	})
+	ts := NewTickers()
+	ts.Register("flush", tk)
 
-	time.Sleep(850 * time.Millisecond)
-	if i != 8 {
-		t.Error("tickers error")
-	}
-
+	time.Sleep(800 * time.Millisecond)
 	e := ts.Remove("flush")
 	if e != nil {
 		t.Error("tickers remove: %v", e)
+	}
+
+	if i != 8 {
+		t.Error("tickers error")
 	}
 }
 
 func TestTickersDelay(t *testing.T) {
 	var i int
 
-	ts := NewTickers()
-	ts.Register("flush", true, time.Second, 300*time.Millisecond, func() {
+	tk := NewTicker(true, time.Second, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
+	ts := NewTickers()
+	ts.Register("flush", tk)
 
 	time.Sleep(400 * time.Millisecond)
 	e := ts.Close()
@@ -66,11 +70,12 @@ func TestTickersDelay(t *testing.T) {
 func TestTickersWait(t *testing.T) {
 	var i int
 
-	ts := NewTickers()
-	ts.Register("flush", true, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(true, 0, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
+	ts := NewTickers()
+	ts.Register("flush", tk)
 
 	time.Sleep(400 * time.Millisecond)
 	e := ts.Close()
@@ -86,11 +91,12 @@ func TestTickersWait(t *testing.T) {
 func TestTickersNotWait(t *testing.T) {
 	var i int
 
-	ts := NewTickers()
-	ts.Register("flush", false, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(false, 0, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
+	ts := NewTickers()
+	ts.Register("flush", tk)
 
 	time.Sleep(400 * time.Millisecond)
 	e := ts.Close()
@@ -108,21 +114,25 @@ func TestTickersMutil(t *testing.T) {
 	var j int
 	var k int
 
-	ts := NewTickers()
-	ts.Register("flush", true, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(true, 0, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
 
-	ts.Register("flush2", true, 0, 400*time.Millisecond, func() {
+	tk2 := NewTicker(true, 0, 400*time.Millisecond, func() {
 		time.Sleep(300 * time.Millisecond)
 		j++
 	})
 
-	ts.Register("flush3", true, 0, 1500*time.Millisecond, func() {
+	tk3 := NewTicker(true, 0, 1500*time.Millisecond, func() {
 		time.Sleep(1300 * time.Millisecond)
 		k++
 	})
+
+	ts := NewTickers()
+	ts.Register("flush", tk)
+	ts.Register("flush2", tk2)
+	ts.Register("flush3", tk3)
 
 	time.Sleep(1800 * time.Millisecond)
 	e := ts.Close()
@@ -148,21 +158,25 @@ func TestTickersMutilNotWait(t *testing.T) {
 	var j int
 	var k int
 
-	ts := NewTickers()
-	ts.Register("flush", false, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(false, 0, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
 
-	ts.Register("flush2", false, 0, 400*time.Millisecond, func() {
+	tk2 := NewTicker(false, 0, 400*time.Millisecond, func() {
 		time.Sleep(300 * time.Millisecond)
 		j++
 	})
 
-	ts.Register("flush3", false, 0, 1500*time.Millisecond, func() {
+	tk3 := NewTicker(false, 0, 1500*time.Millisecond, func() {
 		time.Sleep(1300 * time.Millisecond)
 		k++
 	})
+
+	ts := NewTickers()
+	ts.Register("flush", tk)
+	ts.Register("flush2", tk2)
+	ts.Register("flush3", tk3)
 
 	time.Sleep(1800 * time.Millisecond)
 	e := ts.Close()

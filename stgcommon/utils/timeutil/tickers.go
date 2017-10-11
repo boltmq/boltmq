@@ -2,7 +2,6 @@ package timeutil
 
 import (
 	"sync"
-	"time"
 
 	"github.com/facebookgo/errgroup"
 	"github.com/go-errors/errors"
@@ -11,87 +10,20 @@ import (
 // Tickers 定时器管理
 type Tickers struct {
 	lock    sync.RWMutex
-	tickers map[string]*ticker
+	tickers map[string]*Ticker
 }
 
 // NewTickers 创建定时器管理
 func NewTickers() *Tickers {
 	return &Tickers{
-		tickers: make(map[string]*ticker),
+		tickers: make(map[string]*Ticker),
 	}
-}
-
-type ticker struct {
-	tm    *time.Timer
-	d     time.Duration
-	delay time.Duration
-	fn    func()
-	isRun bool
-	wait  bool
-	over  chan interface{}
-}
-
-func newTicker(wait bool, delay, d time.Duration, fn func()) *ticker {
-	return &ticker{
-		d:     d,
-		delay: delay,
-		fn:    fn,
-		wait:  wait,
-	}
-}
-
-func (t *ticker) run() {
-	if t.wait {
-		t.over = make(chan interface{})
-	}
-
-	t.tm = time.NewTimer(t.d)
-	t.isRun = true
-
-	if t.delay > 0 {
-		time.Sleep(t.delay)
-		t.fn()
-	}
-
-	for {
-		select {
-		case <-t.tm.C:
-			t.fn()
-			if !t.isRun {
-				if t.over != nil {
-					close(t.over)
-				}
-				return
-			}
-
-			t.tm.Reset(t.d)
-		}
-	}
-}
-
-func (t *ticker) flush() {
-	if t.isRun {
-		t.tm.Reset(t.d)
-	}
-}
-
-func (t *ticker) stop() bool {
-	if t.isRun == false {
-		return true
-	}
-
-	// 等待正在执行的任务完成
-	t.isRun = false
-	if t.over != nil {
-		<-t.over
-	}
-	return true
 }
 
 // Register 注册一个定时器
-func (ts *Tickers) Register(key string, wait bool, delay, d time.Duration, f func()) error {
-	if f == nil {
-		return errors.Errorf("func not nil.")
+func (ts *Tickers) Register(key string, t *Ticker) error {
+	if t == nil {
+		return errors.Errorf("ticker not nil.")
 	}
 
 	ts.lock.RLock()
@@ -101,19 +33,14 @@ func (ts *Tickers) Register(key string, wait bool, delay, d time.Duration, f fun
 		return errors.Errorf("ticker[%s] register already.", key)
 	}
 
-	t := newTicker(wait, delay, d, f)
 	ts.lock.Lock()
 	ts.tickers[key] = t
 	ts.lock.Unlock()
 
 	//启动定时器
-	ts.startTicker(t)
+	t.Start()
 
 	return nil
-}
-
-func (ts *Tickers) startTicker(t *ticker) {
-	go t.run()
 }
 
 // Remove 移除定时器
@@ -130,7 +57,7 @@ func (ts *Tickers) Remove(key string) error {
 	ts.lock.Unlock()
 
 	// 停止定时器
-	ok = t.stop()
+	ok = t.Stop()
 	if !ok {
 		return errors.Errorf("ticker[%s] stop faild.", key)
 	}
@@ -144,11 +71,11 @@ func (ts *Tickers) Close() error {
 		length  int
 		g       errgroup.Group
 		wg      sync.WaitGroup
-		tickers map[string]*ticker
+		tickers map[string]*Ticker
 	)
 
 	length = len(ts.tickers)
-	tickers = make(map[string]*ticker, length)
+	tickers = make(map[string]*Ticker, length)
 	wg.Add(length)
 
 	ts.lock.Lock()
@@ -160,8 +87,8 @@ func (ts *Tickers) Close() error {
 
 	// 同时停止所有任务
 	for k, t := range tickers {
-		go func(t *ticker) {
-			ok := t.stop()
+		go func(t *Ticker) {
+			ok := t.Stop()
 			if !ok {
 				g.Error(errors.Errorf("ticker[%s] stop faild.", k))
 			}
