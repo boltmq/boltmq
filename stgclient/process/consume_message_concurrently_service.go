@@ -166,12 +166,12 @@ func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []*m
 		for total := 0; total < len(msgs); {
 			msgThis := []*message.MessageExt{}
 			for i := 0; i < consumeBatchSize; i++ {
-				total++
 				if total < len(msgs) {
-					msgThis = append(msgs, msgs[total])
+					msgThis = append(msgThis, msgs[total])
 				} else {
 					break
 				}
+				total++
 			}
 			consumeRequest := &consumeRequest{msgs: msgThis, processQueue: processQueue, messageQueue: messageQueue, ConsumeMessageConcurrentlyService: service}
 			service.consumeExecutor <- 1

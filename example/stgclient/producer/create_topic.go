@@ -17,12 +17,12 @@ func TaskSync() {
 
 func main() {
 	var (
-		topic           = "topic-example-200"
+		topic           = "cloudzone20"
 		producerGroupId = "producerGroupId-200"
 	)
 
 	defaultMQProducer := process.NewDefaultMQProducer(producerGroupId)
-	defaultMQProducer.SetNamesrvAddr(stgcommon.GetNamesrvAddr())
+	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
 	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, 8)
 	go TaskSync()
