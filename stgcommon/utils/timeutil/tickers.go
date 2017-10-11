@@ -94,6 +94,10 @@ func (ts *Tickers) Close() error {
 	)
 
 	length = len(ts.tickers)
+	if length == 0 {
+		return nil
+	}
+
 	tickers = make(map[string]*Ticker, length)
 	wg.Add(length)
 
