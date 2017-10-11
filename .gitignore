@@ -27,6 +27,8 @@ _testmain.go
 .idea/vcs.xml
 .idea/preferred-vcs.xml
 
+
+
 *.tmp
 unit_test_*/*
 
@@ -51,6 +53,7 @@ stgregistry/start/g/cfg.json
 stgregistry/start/start.exe
 stgregistry/start/logs/
 stgregistry/start/logs/*.log
+stgregistry/start/nohup.out
 
 stgregistry/start/registry
 stgregistry/start/start

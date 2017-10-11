@@ -23,7 +23,7 @@ type ConsumerOffsetManager struct {
 	Offsets               *OffsetTable
 	BrokerController      *BrokerController
 	configManagerExt      *ConfigManagerExt
-	persistLock           *sync.RWMutex
+	persistLock           sync.RWMutex
 }
 
 // NewConsumerOffsetManager 初始化ConsumerOffsetManager
@@ -113,6 +113,8 @@ func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int,
 }
 
 func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset int64) {
+	com.persistLock.Lock()
+	defer com.persistLock.Unlock()
 	value := com.Offsets.Get(key)
 	if value == nil {
 		table := make(map[int]int64)

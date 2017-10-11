@@ -14,9 +14,10 @@ import (
 // Author rongzhihong
 // Since 2017/9/17
 type MomentStatsItemSet struct {
-	StatsItemTable map[string]*MomentStatsItem `json:"statsItemTable"`
-	StatsItemLock  sync.RWMutex                `json:"-"`
-	StatsName      string                      `json:"statsName"`
+	StatsItemTable      map[string]*MomentStatsItem `json:"statsItemTable"`
+	StatsItemLock       sync.RWMutex                `json:"-"`
+	StatsName           string                      `json:"statsName"`
+	MomentStatsTaskList []*timeutil.Ticker          // broker统计的定时任务
 }
 
 // NewMomentStatsItemSet 初始化统计
@@ -63,6 +64,7 @@ func (mom *MomentStatsItemSet) init() {
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 	printAtMinutesTicker := timeutil.NewTicker(300000, delayMin)
+	mom.MomentStatsTaskList = append(mom.MomentStatsTaskList, printAtMinutesTicker)
 	go printAtMinutesTicker.Do(func(tm time.Time) {
 		mom.printAtMinutes()
 	})

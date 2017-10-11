@@ -79,7 +79,11 @@ func (self *BrokerControllerTask) Shutdown() bool {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startDeleteTopicTask() {
-	self.DeleteTopicTask = timeutil.NewTicker(5*one_minute, 0)
+	if self.DeleteTopicTask != nil {
+		return
+	}
+
+	self.DeleteTopicTask = timeutil.NewTicker(ten_second, 5*one_minute)
 	go func() {
 		self.DeleteTopicTask.Do(func(tm time.Time) {
 			topics := self.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Keys()
@@ -180,4 +184,5 @@ func (self *BrokerControllerTask) startRegisterAllBrokerTask() {
 			self.BrokerController.RegisterBrokerAll(true, false)
 		})
 	}()
+	logger.Info("RegisterAllBrokerTask start successful")
 }
