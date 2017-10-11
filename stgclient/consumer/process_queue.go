@@ -39,10 +39,11 @@ func NewTreeMap() *TreeMap {
 }
 
 func (treeMap *TreeMap) put(offset int, msg *message.MessageExt) *message.MessageExt {
+	old:=treeMap.innerMap[offset]
 	treeMap.innerMap[offset] = msg
 	treeMap.keys = append(treeMap.keys, offset)
 	sort.Ints(treeMap.keys)
-	return msg
+	return old
 }
 
 func (treeMap *TreeMap) get(offset int) *message.MessageExt {
@@ -91,7 +92,7 @@ func (pq *ProcessQueue) PutMessage(msgs []*message.MessageExt) bool {
 	dispatchToConsume := false
 	var validMsgCnt int64 = 0
 	for _, msg := range msgs {
-		old := pq.MsgTreeMap.put(int(msg.QueueId), msg)
+		old := pq.MsgTreeMap.put(int(msg.QueueOffset), msg)
 		if old == nil {
 			validMsgCnt++
 			pq.QueueOffsetMax = msg.QueueOffset

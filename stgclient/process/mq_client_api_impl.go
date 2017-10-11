@@ -17,7 +17,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
-	"fmt"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -284,7 +283,6 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-		fmt.Println(requestHeader.QueueOffset,"---------------------------------------")
 		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 		return impl.pullMessageSync(addr, request, timeoutMillis)
