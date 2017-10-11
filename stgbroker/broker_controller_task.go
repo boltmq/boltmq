@@ -7,17 +7,9 @@ import (
 	"time"
 )
 
-const (
-	second      = 1000
-	ten_second  = 10 * second
-	one_minute  = 60 * second
-	half_minute = 30 * second
-	two_minute  = 2 * one_minute
-	ten_minute  = 10 * one_minute
-	one_hour    = 60 * one_minute
-	one_day     = 24 * one_hour
-)
-
+// BrokerControllerTask broker控制器的各种任务
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/11
 type BrokerControllerTask struct {
 	BrokerController            *BrokerController
 	DeleteTopicTask             *timeutil.Ticker
@@ -43,38 +35,36 @@ func (self *BrokerControllerTask) Shutdown() bool {
 	}
 	if self.PrintMasterAndSlaveDiffTask != nil {
 		self.PrintMasterAndSlaveDiffTask.Stop()
-		logger.Infof("PrintMasterAndSlaveDiffTask stop successful")
-	} else {
-		logger.Infof("PrintMasterAndSlaveDiffTask other")
+		logger.Info("PrintMasterAndSlaveDiffTask stop ok")
 	}
 
 	if self.DeleteTopicTask != nil {
 		self.DeleteTopicTask.Stop()
-		logger.Infof("DeleteTopicTask stop successful")
+		logger.Info("DeleteTopicTask stop ok")
 	}
 	if self.BrokerStatsRecordTask != nil {
 		self.BrokerStatsRecordTask.Stop()
-		logger.Infof("BrokerStatsRecordTask stop successful")
+		logger.Info("BrokerStatsRecordTask stop ok")
 	}
 	if self.PersistConsumerOffsetTask != nil {
 		self.PersistConsumerOffsetTask.Stop()
-		logger.Infof("PersistConsumerOffsetTask stop successful")
+		logger.Info("PersistConsumerOffsetTask stop ok")
 	}
 	if self.ScanUnSubscribedTopicTask != nil {
 		self.ScanUnSubscribedTopicTask.Stop()
-		logger.Infof("ScanUnSubscribedTopicTask stop successful")
+		logger.Info("ScanUnSubscribedTopicTask stop ok")
 	}
 	if self.FetchNameServerAddrTask != nil {
 		self.FetchNameServerAddrTask.Stop()
-		logger.Infof("FetchNameServerAddrTask stop successful")
+		logger.Info("FetchNameServerAddrTask stop ok")
 	}
 	if self.SlaveSynchronizeTask != nil {
 		self.SlaveSynchronizeTask.Stop()
-		logger.Infof("SlaveSynchronizeTask stop successful")
+		logger.Info("SlaveSynchronizeTask stop ok")
 	}
 	if self.RegisterAllBrokerTask != nil {
 		self.RegisterAllBrokerTask.Stop()
-		logger.Infof("RegisterAllBrokerTask stop successful")
+		logger.Info("RegisterAllBrokerTask stop ok")
 	}
 	return true
 }
@@ -87,15 +77,13 @@ func (self *BrokerControllerTask) startDeleteTopicTask() {
 		return
 	}
 
-	self.DeleteTopicTask = timeutil.NewTicker(false, 5*time.Minute, 10*time.Second,
-		func() {
-			topics := self.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Keys()
-			removedTopicCount := self.BrokerController.MessageStore.CleanUnusedTopic(topics)
-			logger.Infof("DeleteTopicTask removed topic count: %d", removedTopicCount)
-		})
+	self.DeleteTopicTask = timeutil.NewTicker(false, 5*time.Minute, 10*time.Second, func() {
+		topics := self.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Keys()
+		removedTopicCount := self.BrokerController.MessageStore.CleanUnusedTopic(topics)
+		logger.Infof("DeleteTopicTask removed topic count: %d", removedTopicCount)
+	})
 	self.DeleteTopicTask.Start()
-
-	logger.Infof("DeleteTopicTask start successful")
+	logger.Infof("DeleteTopicTask start ok")
 }
 
 // startBrokerStatsRecordTask 定时统计broker各类信息
@@ -103,80 +91,68 @@ func (self *BrokerControllerTask) startDeleteTopicTask() {
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startBrokerStatsRecordTask() {
 	initialDelay := stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()
-	self.BrokerStatsRecordTask = timeutil.NewTicker(false, time.Duration(initialDelay)*time.Millisecond, 24*time.Hour,
-		func() {
-			self.BrokerController.brokerStats.Record()
-		})
+	self.BrokerStatsRecordTask = timeutil.NewTicker(false, time.Duration(initialDelay)*time.Millisecond, 24*time.Hour, func() {
+		self.BrokerController.brokerStats.Record()
+	})
 	self.BrokerStatsRecordTask.Start()
-
-	logger.Infof("BrokerStatsRecordTask start successful")
+	logger.Infof("BrokerStatsRecordTask start ok")
 }
 
 // startPersistConsumerOffsetTask 定时写入ConsumerOffset文件
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startPersistConsumerOffsetTask() {
-	self.PersistConsumerOffsetTask = timeutil.NewTicker(false, 10*time.Second,
-		time.Duration(self.BrokerController.BrokerConfig.FlushConsumerOffsetInterval)*time.Millisecond,
-		func() {
-			self.BrokerController.ConsumerOffsetManager.configManagerExt.Persist()
-		})
+	period := time.Duration(self.BrokerController.BrokerConfig.FlushConsumerOffsetInterval) * time.Millisecond
+	self.PersistConsumerOffsetTask = timeutil.NewTicker(false, 10*time.Second, period, func() {
+		self.BrokerController.ConsumerOffsetManager.configManagerExt.Persist()
+	})
 	self.PersistConsumerOffsetTask.Start()
-
-	logger.Infof("PersistConsumerOffsetTask start successful")
+	logger.Infof("PersistConsumerOffsetTask start ok")
 }
 
 // startScanUnSubscribedTopicTask 扫描被删除Topic，并删除该Topic对应的Offset
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startScanUnSubscribedTopicTask() {
-	self.ScanUnSubscribedTopicTask = timeutil.NewTicker(false, 10*time.Minute, 1*time.Hour,
-		func() {
-			self.BrokerController.ConsumerOffsetManager.ScanUnsubscribedTopic()
-		})
+	self.ScanUnSubscribedTopicTask = timeutil.NewTicker(false, 10*time.Minute, 1*time.Hour, func() {
+		self.BrokerController.ConsumerOffsetManager.ScanUnsubscribedTopic()
+	})
 	self.ScanUnSubscribedTopicTask.Start()
-
-	logger.Infof("ScanUnSubscribedTopicTask start successful")
+	logger.Infof("ScanUnSubscribedTopicTask start ok")
 }
 
 // startFetchNameServerAddrTask 更新Namesrv地址列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startFetchNameServerAddrTask() {
-	self.FetchNameServerAddrTask = timeutil.NewTicker(false, 10*time.Second, 2*time.Minute,
-		func() {
-			self.BrokerController.BrokerOuterAPI.FetchNameServerAddr()
-		})
+	self.FetchNameServerAddrTask = timeutil.NewTicker(false, 10*time.Second, 2*time.Minute, func() {
+		self.BrokerController.BrokerOuterAPI.FetchNameServerAddr()
+	})
 	self.FetchNameServerAddrTask.Start()
-
-	logger.Infof("FetchNameServerAddrTask start successful")
+	logger.Infof("FetchNameServerAddrTask start ok")
 }
 
 // startSlaveSynchronizeTask ScheduledTask syncAll slave
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startSlaveSynchronizeTask() {
-	self.SlaveSynchronizeTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute,
-		func() {
-			self.BrokerController.SlaveSynchronize.syncAll()
-		})
+	self.SlaveSynchronizeTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
+		self.BrokerController.SlaveSynchronize.syncAll()
+	})
 	self.SlaveSynchronizeTask.Start()
-
-	logger.Infof("SlaveSynchronizeTask start successful")
+	logger.Infof("SlaveSynchronizeTask start ok")
 }
 
 // startPrintMasterAndSlaveDiffTask 启动“输出主从偏移量差值”任务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
-	self.PrintMasterAndSlaveDiffTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute,
-		func() {
-			diff := self.BrokerController.MessageStore.SlaveFallBehindMuch()
-			logger.Infof("slave fall behind master, how much, %d bytes", diff) // warn and notify me
-		})
+	self.PrintMasterAndSlaveDiffTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
+		diff := self.BrokerController.MessageStore.SlaveFallBehindMuch()
+		logger.Infof("slave fall behind master, how much, %d bytes", diff) // warn and notify me
+	})
 	self.PrintMasterAndSlaveDiffTask.Start()
-
-	logger.Infof("PrintMasterAndSlaveDiffTask start successful")
+	logger.Infof("PrintMasterAndSlaveDiffTask start ok")
 }
 
 // startRegisterAllBrokerTask 注册所有Broker
@@ -187,5 +163,5 @@ func (self *BrokerControllerTask) startRegisterAllBrokerTask() {
 		self.BrokerController.RegisterBrokerAll(true, false)
 	})
 	self.RegisterAllBrokerTask.Start()
-	logger.Info("RegisterAllBrokerTask start successful")
+	logger.Infof("RegisterAllBrokerTask start ok")
 }
