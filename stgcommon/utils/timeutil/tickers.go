@@ -37,9 +37,6 @@ func (ts *Tickers) Register(key string, t *Ticker) error {
 	ts.tickers[key] = t
 	ts.lock.Unlock()
 
-	//启动定时器
-	t.Start()
-
 	return nil
 }
 
@@ -63,6 +60,28 @@ func (ts *Tickers) Remove(key string) error {
 	}
 
 	return nil
+}
+
+// Get 取得定时器
+func (ts *Tickers) Get(key string) *Ticker {
+	ts.lock.RLock()
+	t, ok := ts.tickers[key]
+	ts.lock.RUnlock()
+	if !ok {
+		return nil
+	}
+
+	return t
+}
+
+//Start 开启所有定时器
+func (ts *Tickers) Start() {
+	ts.lock.RLock()
+	for _, t := range ts.tickers {
+		//启动定时器
+		t.Start()
+	}
+	ts.lock.RUnlock()
 }
 
 //Close 关闭定时器

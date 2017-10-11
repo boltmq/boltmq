@@ -22,6 +22,10 @@ func NewTicker(wait bool, delay, d time.Duration, fn func()) *Ticker {
 }
 
 func (t *Ticker) Start() {
+	if t.isRun {
+		return
+	}
+
 	go t.start()
 }
 
