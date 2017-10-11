@@ -118,14 +118,14 @@ func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
 	offset := master.GetMaxOffsetInQueue("test", 0)
 	if offset != 100 {
 		t.Fail()
-		t.Error("GetOffsetInQueueByTime method error, expection:100, actuality:", offset)
+		t.Error("get max offset in queue error, expection:100, actuality:", offset)
 	}
 
 	putMessage(master, 100)
 	offset = master.GetMaxOffsetInQueue("test", 0)
 	if offset != 200 {
 		t.Fail()
-		t.Error("GetOffsetInQueueByTime method error, expection:200, actuality:", offset)
+		t.Error("get max offset in queue error, expection:200, actuality:", offset)
 	}
 
 	master.Shutdown()
@@ -140,7 +140,7 @@ func TestDefaultMessageStore_GetMinOffsetInQueue(t *testing.T) {
 	offset := master.GetMinOffsetInQueue("test", 0)
 	if offset != 0 {
 		t.Fail()
-		t.Error("max offset error")
+		t.Error("min offset error")
 	}
 
 	master.Shutdown()
@@ -154,14 +154,14 @@ func TestDefaultMessageStore_GetOffsetInQueueByTime(t *testing.T) {
 	offset := master.GetOffsetInQueueByTime("test", 0, timestampStart)
 	if offset != 0 {
 		t.Fail()
-		t.Error("GetOffsetInQueueByTime method error, expection:0, actuality:", offset)
+		t.Error("get offset in queue by time error, expection:0, actuality:", offset)
 	}
 
 	timestampEnd := time.Now().UnixNano() / 1000000
 	offset = master.GetOffsetInQueueByTime("test", 0, timestampEnd)
 	if offset != 99 {
 		t.Fail()
-		t.Error("GetOffsetInQueueByTime method error, expection:99, actuality:", offset)
+		t.Error("get offset in queue by time error, expection:99, actuality:", offset)
 	}
 
 	master.Shutdown()
