@@ -5,7 +5,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -72,11 +71,7 @@ func (self *NamesrvConfig) ToString() string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func getSmartGoHome() string {
-	smartGoHome := strings.TrimSpace(stgcommon.GetSmartGoHome())
-	if smartGoHome == "" {
-		return stgcommon.GetUserHomeDir()
-	}
-	return smartGoHome
+	return stgcommon.GetSmartGoHome()
 }
 
 // getKvConfigPath 获得KV配置文件路径

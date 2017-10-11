@@ -28,7 +28,7 @@ var (
 )
 
 func configPath() string {
-	cfgPath := os.Getenv("SMARTGO_CONFIG")
+	cfgPath := os.Getenv("SMARTGO_REGISTRY_CONFIG")
 	if strings.TrimSpace(cfgPath) == "" {
 		dirPath := stgcommon.GetSmartgoConfigDir(cfg)
 		return dirPath + cfgName

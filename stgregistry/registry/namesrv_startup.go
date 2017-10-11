@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
@@ -10,7 +11,7 @@ import (
 
 const (
 	default_port = 9876
-	default_ip   = "0.0.0.0"  // not local ip
+	default_ip   = "0.0.0.0" // 不能设置为127.0.0.1,否则别的集群无法访问当前机器的namesrv服务
 )
 
 // Startup 启动Namesrv控制器
@@ -23,7 +24,7 @@ func Startup(stopChannel chan bool) *DefaultNamesrvController {
 	// NamesrvController初始化
 	initResult := controller.initialize()
 	if !initResult {
-		logger.Info("the name server controller initialize failed")
+		fmt.Println("the name server controller initialize failed")
 		controller.shutdown()
 		os.Exit(0)
 	}
@@ -36,7 +37,7 @@ func Startup(stopChannel chan bool) *DefaultNamesrvController {
 		// 额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发namesrv主线程阻塞”情况
 		controller.start()
 	}()
-	logger.Info("the name server boot success")
+	fmt.Println("the name server boot success") // 此处不要使用logger.Info(),给nohup.out提示
 
 	return controller
 }
