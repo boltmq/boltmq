@@ -41,6 +41,7 @@ func (self *BrokerHousekeepingService) OnContextClose(ctx netm.Context) {
 		logger.Error("OnContextClose() net.conn is nil")
 		return
 	}
+	logger.Warn("BrokerHousekeepingService.OnContextClose() --> %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
@@ -52,6 +53,7 @@ func (self *BrokerHousekeepingService) OnContextError(ctx netm.Context) {
 		logger.Error("OnContextError() net.conn is nil")
 		return
 	}
+	logger.Warn("BrokerHousekeepingService.OnContextError() --> %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
@@ -63,5 +65,6 @@ func (self *BrokerHousekeepingService) OnContextIdle(ctx netm.Context) {
 		logger.Error("OnContextIdle() net.conn is nil")
 		return
 	}
+	logger.Warn("BrokerHousekeepingService.OnContextIdle() --> %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
