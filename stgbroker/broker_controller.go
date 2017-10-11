@@ -198,6 +198,8 @@ func (self *BrokerController) registerShutdownHook(stopChan chan bool) {
 func (self *BrokerController) Shutdown() {
 	begineTime := stgcommon.GetCurrentTimeMillis()
 
+	self.brokerControllerTask.Shutdown()
+
 	if self.brokerStatsManager != nil {
 		self.brokerStatsManager.Shutdown()
 	}
@@ -231,8 +233,6 @@ func (self *BrokerController) Shutdown() {
 	if self.FilterServerManager != nil {
 		self.FilterServerManager.Shutdown()
 	}
-
-	self.brokerControllerTask.Shutdown()
 
 	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
 	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)

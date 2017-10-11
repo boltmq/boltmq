@@ -170,26 +170,20 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
 	defer utils.RecoveredFn()
 
-	requestHeader := &headerNamesrv.UnRegisterBrokerRequestHeader{
-		ClusterName: clusterName,
-		BrokerName:  brokerAddr,
-		BrokerAddr:  brokerName,
-		BrokerId:    brokerId,
-	}
-
+	requestHeader := headerNamesrv.NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName, brokerId)
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
-	if response != nil {
-		switch response.Code {
-		case code.SUCCESS:
-			{
-				return
-			}
-		default:
-			break
-		}
+	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+	if err != nil {
+		logger.Errorf("unRegisterBroker err: %s, the request is %s", err.Error(), request.ToString())
+		return
 	}
-	return
+	if response == nil {
+		logger.Errorf("unRegisterBroker err: the response is nil")
+		return
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("unRegisterBroker failed. %s", response.ToString())
+	}
 }
 
 // UnRegisterBrokerAll 注销全部Broker
@@ -203,7 +197,7 @@ func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerN
 
 	for _, namesrvAddr := range nameServerAddressList {
 		self.UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-		logger.Infof("register broker to name server %s OK", namesrvAddr)
+		logger.Infof("unregister all broker to name server %s OK", namesrvAddr)
 	}
 }
 
