@@ -28,6 +28,7 @@ type SmartgoBrokerConfig struct {
 	BrokerRole            string
 	FlushDiskType         string
 	AutoCreateTopicEnable bool
+	BrokerId              int64
 }
 
 // Start 启动BrokerController
@@ -77,6 +78,7 @@ func CreateBrokerController() *BrokerController {
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName, cfg.AutoCreateTopicEnable)
+	brokerConfig.BrokerId = cfg.BrokerId
 	if !checkBrokerConfig(brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
@@ -176,9 +178,9 @@ func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcom
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
 func (self *SmartgoBrokerConfig) ToString() string {
-	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, DeleteWhen=%d, FileReservedTime=%d, " +
-		"BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t]"
-	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.DeleteWhen, self.FileReservedTime,
+	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, DeleteWhen=%d, FileReservedTime=%d, "
+	format += "BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t]"
+	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.DeleteWhen, self.FileReservedTime,
 		self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable)
 	return info
 }

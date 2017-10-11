@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	ten_second  = 10 * 1000
-	one_minute  = 60 * 1000
-	half_minute = 30 * 1000
+	second      = 1000
+	ten_second  = 10 * second
+	one_minute  = 60 * second
+	half_minute = 30 * second
 	two_minute  = 2 * one_minute
 	ten_minute  = 10 * one_minute
 	one_hour    = 60 * one_minute
@@ -40,6 +41,13 @@ func (self *BrokerControllerTask) Shutdown() bool {
 	if self == nil {
 		return false
 	}
+	if self.PrintMasterAndSlaveDiffTask != nil {
+		self.PrintMasterAndSlaveDiffTask.Stop()
+		logger.Infof("PrintMasterAndSlaveDiffTask stop successful")
+	} else {
+		logger.Infof("PrintMasterAndSlaveDiffTask other")
+	}
+
 	if self.DeleteTopicTask != nil {
 		self.DeleteTopicTask.Stop()
 		logger.Infof("DeleteTopicTask stop successful")
@@ -63,10 +71,6 @@ func (self *BrokerControllerTask) Shutdown() bool {
 	if self.SlaveSynchronizeTask != nil {
 		self.SlaveSynchronizeTask.Stop()
 		logger.Infof("SlaveSynchronizeTask stop successful")
-	}
-	if self.PrintMasterAndSlaveDiffTask != nil {
-		self.PrintMasterAndSlaveDiffTask.Stop()
-		logger.Infof("PrintMasterAndSlaveDiffTask stop successful")
 	}
 	if self.RegisterAllBrokerTask != nil {
 		self.RegisterAllBrokerTask.Stop()
@@ -179,11 +183,9 @@ func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startRegisterAllBrokerTask() {
-	self.RegisterAllBrokerTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Second,
-		func() {
-			self.BrokerController.RegisterBrokerAll(true, false)
-		})
+	self.RegisterAllBrokerTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Second, func() {
+		self.BrokerController.RegisterBrokerAll(true, false)
+	})
 	self.RegisterAllBrokerTask.Start()
-
 	logger.Info("RegisterAllBrokerTask start successful")
 }
