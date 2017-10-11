@@ -154,7 +154,7 @@ func TestSearchOffsetByTimestamp(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.SearchOffsetRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 	requestHeader.QueueId = 0
 	requestHeader.Timestamp = 1506682913490
 
@@ -164,7 +164,6 @@ func TestSearchOffsetByTimestamp(t *testing.T) {
 		t.Fail()
 		t.Error(err)
 	}
-	// TODO:查询报错
 	t.Logf("ExtFields:%v", response.ExtFields)
 
 }
@@ -175,7 +174,7 @@ func TestGetMaxOffset(t *testing.T) {
 
 	requestHeader := header.NewGetMaxOffsetRequestHeader()
 	requestHeader.QueueId = 0
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.GET_MAX_OFFSET, requestHeader)
 	request.EncodeHeader()
@@ -207,7 +206,7 @@ func TestGetMinOffset(t *testing.T) {
 
 	requestHeader := &header.GetMinOffsetRequestHeader{}
 	requestHeader.QueueId = 0
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.GET_MIN_OFFSET, requestHeader)
 	request.EncodeHeader()
@@ -238,7 +237,7 @@ func TestGetEarliestMsgStoretime(t *testing.T) {
 
 	requestHeader := &header.GetEarliestMsgStoretimeRequestHeader{}
 	requestHeader.QueueId = 0
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.GET_EARLIEST_MSG_STORETIME, requestHeader)
 	request.EncodeHeader()
@@ -259,7 +258,7 @@ func TestGetEarliestMsgStoretime(t *testing.T) {
 	mills, err := strconv.Atoi(timestamp)
 	if err != nil || mills == -1 { // 查不到则mills值为-1
 		t.Fail()
-		t.Error("最小偏移量应该为0")
+		t.Error("查询到的最早消息存储时间为-1")
 	}
 }
 
@@ -395,7 +394,7 @@ func TestGetTopicStatsInfo(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.GetTopicStatsInfoRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.GET_TOPIC_STATS_INFO, requestHeader)
 	request.EncodeHeader()
@@ -405,7 +404,6 @@ func TestGetTopicStatsInfo(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	// TODO MessageStore.GetMessageStoreTimeStamp报错
 	t.Logf("response.Body:%s", string(response.Body))
 }
 
@@ -427,10 +425,6 @@ func TestGetConsumerConnectionList(t *testing.T) {
 		return
 	}
 
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("获得消费者连接列表为空")
-	}
 	t.Logf("Body:%s, response:%#v", response.Body, response)
 }
 
@@ -452,10 +446,6 @@ func TestGetProducerConnectionList(t *testing.T) {
 		return
 	}
 
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("获得生产者连接列表为空")
-	}
 	t.Logf("Body:%s, response:%#v", response.Body, response)
 }
 
@@ -465,7 +455,7 @@ func TestGetConsumeStats(t *testing.T) {
 
 	requestHeader := &header.GetConsumeStatsRequestHeader{}
 	requestHeader.ConsumerGroup = "myConsumerGroup"
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.GET_CONSUME_STATS, requestHeader)
 	request.EncodeHeader()
@@ -520,7 +510,6 @@ func TestGetAllDelayOffset(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	// TODO MessageStore.ScheduleMessageService.Encode()报错
 
 	if response.Body == nil || len(string(response.Body)) <= 0 {
 		t.Fail()
@@ -533,7 +522,7 @@ func TestResetOffset(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 	requestHeader := &header.ResetOffsetRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 	requestHeader.Group = "myConsumerGroup"
 	requestHeader.Timestamp = timeutil.CurrentTimeMillis()
 	requestHeader.IsForce = false
@@ -562,7 +551,7 @@ func TestGetConsumerStatus(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.GetConsumerStatusRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 	requestHeader.Group = "myConsumerGroup"
 	requestHeader.ClientAddr = "127.0.0.1:56501"
 
@@ -577,11 +566,6 @@ func TestGetConsumerStatus(t *testing.T) {
 		return
 	}
 
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("获取Consumer端的消息情况为空")
-	}
-
 	t.Logf("Body:%s, response:%v", string(response.Body), response)
 }
 
@@ -590,7 +574,7 @@ func TestQueryTopicConsumeByWho(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.QueryTopicConsumeByWhoRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.QUERY_TOPIC_CONSUME_BY_WHO, requestHeader)
 	request.EncodeHeader()
@@ -601,11 +585,6 @@ func TestQueryTopicConsumeByWho(t *testing.T) {
 		t.Fail()
 		t.Errorf("error:%v, remarks:%s", err, response.Remark)
 		return
-	}
-
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("查询Topic被哪些消费者消费的列表为空")
 	}
 
 	t.Logf("Body:%s, response:%v", string(response.Body), response)
@@ -637,7 +616,7 @@ func TestQueryConsumeTimeSpan(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.QueryConsumeTimeSpanRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 	requestHeader.Group = "myConsumerGroup"
 
 	request := protocol.CreateRequestCommand(code.QUERY_CONSUME_TIME_SPAN, requestHeader)
@@ -651,7 +630,6 @@ func TestQueryConsumeTimeSpan(t *testing.T) {
 		return
 	}
 
-	// TODO MessageStore.GetMessageStoreTimeStamp报错
 	t.Logf("Body:%s, response:%v", string(response.Body), response)
 }
 
@@ -667,11 +645,6 @@ func TestGetSystemTopicListFromBroker(t *testing.T) {
 		t.Fail()
 		t.Errorf("error:%v, remarks:%s", err, response.Remark)
 		return
-	}
-
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("从Broker获取系统Topic列表为空")
 	}
 	t.Logf("Body:%s, response:%v", string(response.Body), response)
 }
@@ -723,7 +696,7 @@ func TestQueryCorrectionOffset(t *testing.T) {
 	requestHeader := &header.QueryCorrectionOffsetRequestHeader{}
 	requestHeader.FilterGroups = "myFilterGroup"
 	requestHeader.CompareGroup = "myConsumerGroup"
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 
 	request := protocol.CreateRequestCommand(code.QUERY_CORRECTION_OFFSET, requestHeader)
 	request.EncodeHeader()
@@ -773,7 +746,7 @@ func TestCloneGroupOffset(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.CloneGroupOffsetRequestHeader{}
-	requestHeader.Topic = "TestTopic"
+	requestHeader.Topic = "BenchmarkTest"
 	requestHeader.Offline = false
 	requestHeader.SrcGroup = "myConsumerGroup"
 	requestHeader.DestGroup = "otherConsumerGroup"
@@ -797,7 +770,7 @@ func TestViewBrokerStatsData(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	requestHeader := &header.ViewBrokerStatsDataRequestHeader{}
-	requestHeader.StatsKey = "TestTopic"
+	requestHeader.StatsKey = "BenchmarkTest"
 	requestHeader.StatsName = "TOPIC_PUT_NUMS"
 
 	request := protocol.CreateRequestCommand(code.VIEW_BROKER_STATS_DATA, requestHeader)
@@ -810,11 +783,5 @@ func TestViewBrokerStatsData(t *testing.T) {
 		t.Errorf("error:%v, remarks:%s", err, response.Remark)
 		return
 	}
-
-	if response.Body == nil || len(string(response.Body)) <= 0 {
-		t.Fail()
-		t.Error("查找到的Broker统计信息为空")
-	}
-
 	t.Logf("Body:%s, response:%v", string(response.Body), response)
 }
