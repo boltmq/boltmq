@@ -112,7 +112,9 @@ func (ctx *DefaultContext) Idle() time.Duration {
 func (ctx *DefaultContext) onError(e error) {
 	if e == io.EOF {
 		ctx.bootstrap.onContextClose(ctx)
+		fmt.Printf("bootstrap.onContextClose() ----> \n")
 	} else {
+		fmt.Printf("bootstrap.onContextError() ----> %s\n", e.Error())
 		ctx.bootstrap.onContextError(ctx)
 	}
 	ctx.isClosed = true

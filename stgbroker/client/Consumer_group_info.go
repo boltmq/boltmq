@@ -92,6 +92,10 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType hea
 // Author rongzhihong
 // Since 2017/9/11
 func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Context) bool {
+	if cg.ConnTable.Size() <= 0 {
+		return false
+	}
+
 	info, err := cg.ConnTable.Remove(ctx)
 	if err != nil {
 		logger.Error(err)
@@ -141,6 +145,10 @@ func (cg *ConsumerGroupInfo) GetAllClientId() []string {
 // Author rongzhihong
 // Since 2017/9/14
 func (cg *ConsumerGroupInfo) UnregisterChannel(clientChannelInfo *ChannelInfo) {
+	if cg.ConnTable.Size() <= 0 {
+		return
+	}
+
 	old, _ := cg.ConnTable.Remove(clientChannelInfo.Context)
 	if old != nil {
 		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v", cg.GroupName, old)
@@ -155,25 +163,25 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 
 	// 增加新的订阅关系
 	for _, sub := range subList {
-			old, _ := cg.SubscriptionTable.Get(sub.Topic)
-			if old == nil {
-				prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
-				if prev == nil {
-					updated = true
-					logger.Infof("subscription changed, add new topic, group: %s %#v", cg.GroupName, sub)
-				}
-				continue
+		old, _ := cg.SubscriptionTable.Get(sub.Topic)
+		if old == nil {
+			prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
+			if prev == nil {
+				updated = true
+				logger.Infof("subscription changed, add new topic, group: %s %#v", cg.GroupName, sub)
 			}
+			continue
+		}
 
-			if oldSub, ok := old.(*heartbeat.SubscriptionData); ok {
-				if sub.SubVersion > oldSub.SubVersion {
-					if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
-						logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, old, sub)
-					}
-					cg.SubscriptionTable.Put(sub.Topic, sub)
+		if oldSub, ok := old.(*heartbeat.SubscriptionData); ok {
+			if sub.SubVersion > oldSub.SubVersion {
+				if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
+					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, old, sub)
 				}
+				cg.SubscriptionTable.Put(sub.Topic, sub)
 			}
 		}
+	}
 
 	// 删除老的订阅关系
 	subIt := cg.SubscriptionTable.Iterator()
