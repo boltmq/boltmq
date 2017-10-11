@@ -63,11 +63,12 @@ func (mom *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentSta
 func (mom *MomentStatsItemSet) init() {
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(300000, delayMin)
-	mom.MomentStatsTaskList = append(mom.MomentStatsTaskList, printAtMinutesTicker)
-	go printAtMinutesTicker.Do(func(tm time.Time) {
-		mom.printAtMinutes()
-	})
+	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 300000*time.Millisecond,
+		func() {
+			mom.printAtMinutes()
+		})
+	printAtMinutesTicker.Start()
+
 }
 
 // printAtMinutes  输出每分钟数据

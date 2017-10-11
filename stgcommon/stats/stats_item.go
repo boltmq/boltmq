@@ -105,41 +105,47 @@ func (statsItem *StatsItem) GetStatsDataInDay() *StatsSnapshot {
 func (statsItem *StatsItem) Init() {
 	defer utils.RecoveredFn()
 
-	samplingInSecondsTicker := timeutil.NewTicker(10*1000, 0)
-	go samplingInSecondsTicker.Do(func(tm time.Time) {
-		statsItem.SamplingInSeconds()
-	})
+	samplingInSecondsTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*1000*time.Millisecond,
+		func() {
+			statsItem.SamplingInSeconds()
+		})
+	samplingInSecondsTicker.Start()
 
-	samplingInMinutesTicker := timeutil.NewTicker(10*60*1000, 0)
-	go samplingInMinutesTicker.Do(func(tm time.Time) {
-		statsItem.SamplingInMinutes()
-	})
+	samplingInMinutesTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*60*1000*time.Millisecond,
+		func() {
+			statsItem.SamplingInMinutes()
+		})
+	samplingInMinutesTicker.Start()
 
-	samplingInHourTicker := timeutil.NewTicker(1*60*60*1000, 0)
-	go samplingInHourTicker.Do(func(tm time.Time) {
-		statsItem.SamplingInHour()
-	})
+	samplingInHourTicker := timeutil.NewTicker(false, 0*time.Millisecond, 1*60*60*1000*time.Millisecond,
+		func() {
+			statsItem.SamplingInHour()
+		})
+	samplingInHourTicker.Start()
 
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(60000, delayMin)
-	go printAtMinutesTicker.Do(func(tm time.Time) {
-		statsItem.PrintAtMinutes()
-	})
+	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 60000*time.Millisecond,
+		func() {
+			statsItem.PrintAtMinutes()
+		})
+	printAtMinutesTicker.Start()
 
 	diffHour := float64(stgcommon.ComputNextHourTimeMillis()-timeutil.CurrentTimeMillis()) - 2000
 	var delayHour int = int(math.Abs(diffHour))
-	printAtHourTicker := timeutil.NewTicker(3600000, delayHour)
-	go printAtHourTicker.Do(func(tm time.Time) {
-		statsItem.PrintAtHour()
-	})
+	printAtHourTicker := timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond, 3600000*time.Millisecond,
+		func() {
+			statsItem.PrintAtHour()
+		})
+	printAtHourTicker.Start()
 
 	diffDay := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayDay int = int(math.Abs(diffDay))
-	printAtDayTicker := timeutil.NewTicker(86400000, delayDay)
-	go printAtDayTicker.Do(func(tm time.Time) {
-		statsItem.PrintAtDay()
-	})
+	printAtDayTicker := timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 86400000*time.Millisecond,
+		func() {
+			statsItem.PrintAtDay()
+		})
+	printAtDayTicker.Start()
 }
 
 // StatsItemSet 输出分钟统计
