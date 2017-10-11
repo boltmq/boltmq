@@ -31,15 +31,13 @@ func ParseChannelRemoteAddr(conn netm.Context) string {
 // Since: 2017/9/18
 func CloseChannel(ctx netm.Context) {
 	if ctx == nil {
-		logger.Info("ctx is nil, not need to close")
+		logger.Info("ctx is nil, not need to be closed")
 		return
 	}
 
-	success := true
 	if err := ctx.Close(); err != nil {
-		logger.Error("closeChannel: close ctx error. %s, %s", ctx.ToString(), err.Error())
-		success = false
+		logger.Error("close closeChannel failed, err: %s, the channel is %s", err.Error(), ctx.ToString())
 		return
 	}
-	logger.Info("closeChannel: close ctx %s, result: %t", ctx.ToString(), success)
+	logger.Info("close closeChannel successful. %s", ctx.ToString())
 }

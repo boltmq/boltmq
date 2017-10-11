@@ -49,7 +49,7 @@ func Start(stopChan chan bool) *BrokerController {
 		format = "the broker[%s, %s] boot success, and the name server is %s"
 		tips = fmt.Sprintf(format, controller.BrokerConfig.BrokerName, controller.GetBrokerAddr(), controller.BrokerConfig.NamesrvAddr)
 	}
-	logger.Info(tips)
+	fmt.Println(tips) // 此处不要使用logger.Info(),给nohup.out提示
 
 	return controller
 }
@@ -97,7 +97,7 @@ func CreateBrokerController() *BrokerController {
 	// 初始化controller
 	initResult := controller.Initialize()
 	if !initResult {
-		logger.Info("the broker initialize failed")
+		fmt.Println("the broker controller initialize failed")
 		controller.Shutdown()
 		logger.Flush()
 		os.Exit(0)

@@ -243,21 +243,21 @@ func ExistsFile(fileFullPath string) (bool, error) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
 func GetGoPath() string {
-	return os.Getenv("GOPATH")
+	return strings.TrimSpace(os.Getenv("GOPATH"))
 }
 
 // GetNamesrvAddr 获取环境变量“NAMESRV_ADDR”的值
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
 func GetNamesrvAddr() string {
-	return os.Getenv(NAMESRV_ADDR_ENV)
+	return strings.TrimSpace(os.Getenv(NAMESRV_ADDR_ENV))
 }
 
 // GetSmartGoHome 获取环境变量“SMARTGO_HOME”的值
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
 func GetSmartGoHome() string {
-	return os.Getenv(SMARTGO_HOME_ENV)
+	return strings.TrimSpace(os.Getenv(SMARTGO_HOME_ENV))
 }
 
 // GetUserHomeDir 获取当前操作系统登陆用户的Home目录

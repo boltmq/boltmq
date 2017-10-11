@@ -37,18 +37,21 @@ func NewKVConfigManager(controller *DefaultNamesrvController) *KVConfigManager {
 // Since: 2017/9/6
 func (self *KVConfigManager) printAllPeriodically() {
 	self.ReadWriteLock.RLock()
-	logger.Info("--------------------------------------------------------")
-	logger.Info("configTable size: %d", len(self.ConfigTable))
-	if self.ConfigTable != nil {
-		for namespace, kvTable := range self.ConfigTable {
-			if kvTable != nil {
-				for key, value := range kvTable {
-					logger.Info("configTable namespace=%s, key=%s, value=%s", namespace, key, value)
+	defer self.ReadWriteLock.RUnlock()
+
+	if len(self.ConfigTable) > 0 {
+		logger.Info("--------------------------------------------------------")
+		logger.Info("configTable size: %d", len(self.ConfigTable))
+		if self.ConfigTable != nil {
+			for namespace, kvTable := range self.ConfigTable {
+				if kvTable != nil {
+					for key, value := range kvTable {
+						logger.Info("configTable namespace=%s, key=%s, value=%s", namespace, key, value)
+					}
 				}
 			}
 		}
 	}
-	self.ReadWriteLock.RUnlock()
 }
 
 // persist 将内存中的namesrv配置项持久化到kvConfig.json文件
