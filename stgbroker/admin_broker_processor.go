@@ -502,8 +502,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		timestamp := int64(0)
 		if max > 0 {
-			// TODO 方法查询有时会卡死 报错:unexpected fault address 0x301012c fatal error: fault
-			timestamp = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), (max - 1))
+			timestamp = abp.BrokerController.MessageStore.GetMessageStoreTimeStamp(topic, int32(i), max-1)
 		}
 
 		topicOffset.MinOffset = min
@@ -512,7 +511,6 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 
 		topicStatsTable.OffsetTable[mq] = topicOffset
 	}
-	fmt.Printf("%#v\n", topicStatsTable.OffsetTable)
 	content := stgcommon.Encode(&(topicStatsTable.OffsetTable))
 	fmt.Println(content)
 	response.Code = code.SUCCESS

@@ -83,14 +83,14 @@ func (self *BrokerControllerTask) startDeleteTopicTask() {
 		return
 	}
 
-	self.DeleteTopicTask = timeutil.NewTicker(ten_second, 5*one_minute)
-	go func() {
-		self.DeleteTopicTask.Do(func(tm time.Time) {
+	self.DeleteTopicTask = timeutil.NewTicker(false, 5*time.Minute, 10*time.Second,
+		func() {
 			topics := self.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Keys()
 			removedTopicCount := self.BrokerController.MessageStore.CleanUnusedTopic(topics)
 			logger.Infof("DeleteTopicTask removed topic count: %d", removedTopicCount)
 		})
-	}()
+	self.DeleteTopicTask.Start()
+
 	logger.Infof("DeleteTopicTask start successful")
 }
 
@@ -98,13 +98,13 @@ func (self *BrokerControllerTask) startDeleteTopicTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startBrokerStatsRecordTask() {
-	initialDelay := int(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis())
-	self.BrokerStatsRecordTask = timeutil.NewTicker(one_day, initialDelay)
-	go func() {
-		self.BrokerStatsRecordTask.Do(func(tm time.Time) {
+	initialDelay := stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis()
+	self.BrokerStatsRecordTask = timeutil.NewTicker(false, time.Duration(initialDelay)*time.Millisecond, 24*time.Hour,
+		func() {
 			self.BrokerController.brokerStats.Record()
 		})
-	}()
+	self.BrokerStatsRecordTask.Start()
+
 	logger.Infof("BrokerStatsRecordTask start successful")
 }
 
@@ -112,12 +112,13 @@ func (self *BrokerControllerTask) startBrokerStatsRecordTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startPersistConsumerOffsetTask() {
-	self.PersistConsumerOffsetTask = timeutil.NewTicker(self.BrokerController.BrokerConfig.FlushConsumerOffsetInterval, ten_second)
-	go func() {
-		self.PersistConsumerOffsetTask.Do(func(tm time.Time) {
+	self.PersistConsumerOffsetTask = timeutil.NewTicker(false, 10*time.Second,
+		time.Duration(self.BrokerController.BrokerConfig.FlushConsumerOffsetInterval)*time.Millisecond,
+		func() {
 			self.BrokerController.ConsumerOffsetManager.configManagerExt.Persist()
 		})
-	}()
+	self.PersistConsumerOffsetTask.Start()
+
 	logger.Infof("PersistConsumerOffsetTask start successful")
 }
 
@@ -125,12 +126,12 @@ func (self *BrokerControllerTask) startPersistConsumerOffsetTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startScanUnSubscribedTopicTask() {
-	self.ScanUnSubscribedTopicTask = timeutil.NewTicker(one_hour, ten_minute)
-	go func() {
-		self.ScanUnSubscribedTopicTask.Do(func(tm time.Time) {
+	self.ScanUnSubscribedTopicTask = timeutil.NewTicker(false, 10*time.Minute, 1*time.Hour,
+		func() {
 			self.BrokerController.ConsumerOffsetManager.ScanUnsubscribedTopic()
 		})
-	}()
+	self.ScanUnSubscribedTopicTask.Start()
+
 	logger.Infof("ScanUnSubscribedTopicTask start successful")
 }
 
@@ -138,12 +139,12 @@ func (self *BrokerControllerTask) startScanUnSubscribedTopicTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startFetchNameServerAddrTask() {
-	self.FetchNameServerAddrTask = timeutil.NewTicker(two_minute, ten_second)
-	go func() {
-		self.FetchNameServerAddrTask.Do(func(tm time.Time) {
+	self.FetchNameServerAddrTask = timeutil.NewTicker(false, 10*time.Second, 2*time.Minute,
+		func() {
 			self.BrokerController.BrokerOuterAPI.FetchNameServerAddr()
 		})
-	}()
+	self.FetchNameServerAddrTask.Start()
+
 	logger.Infof("FetchNameServerAddrTask start successful")
 }
 
@@ -151,12 +152,12 @@ func (self *BrokerControllerTask) startFetchNameServerAddrTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startSlaveSynchronizeTask() {
-	self.SlaveSynchronizeTask = timeutil.NewTicker(one_minute, ten_second)
-	go func() {
-		self.SlaveSynchronizeTask.Do(func(tm time.Time) {
+	self.SlaveSynchronizeTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute,
+		func() {
 			self.BrokerController.SlaveSynchronize.syncAll()
 		})
-	}()
+	self.SlaveSynchronizeTask.Start()
+
 	logger.Infof("SlaveSynchronizeTask start successful")
 }
 
@@ -164,13 +165,13 @@ func (self *BrokerControllerTask) startSlaveSynchronizeTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
-	self.PrintMasterAndSlaveDiffTask = timeutil.NewTicker(one_minute, ten_second)
-	go func() {
-		self.PrintMasterAndSlaveDiffTask.Do(func(tm time.Time) {
+	self.PrintMasterAndSlaveDiffTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute,
+		func() {
 			diff := self.BrokerController.MessageStore.SlaveFallBehindMuch()
 			logger.Infof("slave fall behind master, how much, %d bytes", diff) // warn and notify me
 		})
-	}()
+	self.PrintMasterAndSlaveDiffTask.Start()
+
 	logger.Infof("PrintMasterAndSlaveDiffTask start successful")
 }
 
@@ -178,11 +179,11 @@ func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startRegisterAllBrokerTask() {
-	self.RegisterAllBrokerTask = timeutil.NewTicker(half_minute, ten_second)
-	go func() {
-		self.RegisterAllBrokerTask.Do(func(tm time.Time) {
+	self.RegisterAllBrokerTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Second,
+		func() {
 			self.BrokerController.RegisterBrokerAll(true, false)
 		})
-	}()
+	self.RegisterAllBrokerTask.Start()
+
 	logger.Info("RegisterAllBrokerTask start successful")
 }

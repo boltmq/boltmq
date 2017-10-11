@@ -11,10 +11,6 @@ import (
 	"time"
 )
 
-const (
-	WINDOWS = "windows" // windows operating system
-)
-
 // FilterServerManager FilterServer管理
 // Author rongzhihong
 // Since 2017/9/8
@@ -22,7 +18,7 @@ type FilterServerManager struct {
 	ticker                       *timeutil.Ticker
 	brokerController             *BrokerController
 	FilterServerMaxIdleTimeMills int64
-	filterServerTable            *sync.Map
+	filterServerTable            *sync.Map // key:Channel, value:FilterServerInfo
 }
 
 // FilterServerInfo FilterServer基本信息
@@ -39,7 +35,9 @@ type FilterServerInfo struct {
 func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 	fsm := new(FilterServerManager)
 	fsm.brokerController = bc
-	fsm.ticker = timeutil.NewTicker(1000*30, 1000*5)
+	fsm.ticker = timeutil.NewTicker(false, 5*time.Second, 30*time.Second, func() {
+		fsm.createFilterServer()
+	})
 	fsm.FilterServerMaxIdleTimeMills = 30000
 	fsm.filterServerTable = sync.NewMap()
 	return fsm
@@ -49,9 +47,7 @@ func NewFilterServerManager(bc *BrokerController) *FilterServerManager {
 // Author rongzhihong
 // Since 2017/9/8
 func (fsm *FilterServerManager) Start() {
-	go fsm.ticker.Do(func(tm time.Time) {
-		fsm.createFilterServer()
-	})
+	fsm.ticker.Start()
 	logger.Info("FilterServerManager start successful")
 }
 
@@ -61,11 +57,11 @@ func (fsm *FilterServerManager) Start() {
 func (fsm *FilterServerManager) Shutdown() {
 	if fsm.ticker != nil {
 		fsm.ticker.Stop()
-		logger.Info("FilterServerManager shutdown successful")
 	}
+	logger.Info("FilterServerManager shutdown successful")
 }
 
-// Shutdown 停止检查Filter Server的定时任务
+// createFilterServer 创建FilterServer
 // Author rongzhihong
 // Since 2017/9/8
 func (fsm *FilterServerManager) createFilterServer() {
@@ -149,10 +145,14 @@ func (fsm *FilterServerManager) ScanNotActiveChannel() {
 	}
 }
 
-// doChannelCloseEvent 组装CMD命令
+// doChannelCloseEvent 通道关闭事件
 // Author rongzhihong
 // Since 2017/9/8
 func (fsm *FilterServerManager) doChannelCloseEvent(remoteAddr string, ctx netm.Context) {
+	if fsm.filterServerTable.Size() <= 0 {
+		return
+	}
+
 	old, err := fsm.filterServerTable.Remove(ctx)
 	if err != nil {
 		logger.Errorf("The Filter Server Remove conn, throw:%s", err.Error())

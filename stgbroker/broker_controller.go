@@ -246,13 +246,6 @@ func (self *BrokerController) Start() {
 		self.MessageStore.Start()
 	}
 
-	go func() {
-		//FIXME: 额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发broker主线程阻塞”情况
-		if self.RemotingServer != nil {
-			self.RemotingServer.Start()
-		}
-	}()
-
 	if self.BrokerOuterAPI != nil {
 		self.BrokerOuterAPI.Start()
 	}
@@ -261,9 +254,18 @@ func (self *BrokerController) Start() {
 		self.PullRequestHoldService.Start()
 	}
 
+	// ClientHousekeepingService:1.向RemotingServer注册通道监听器 2.启动定时任务
+	// 提示：必须在RemotingServer之前启动
 	if self.ClientHousekeepingService != nil {
 		self.ClientHousekeepingService.Start()
 	}
+
+	go func() {
+		//FIXME: 额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发broker主线程阻塞”情况
+		if self.RemotingServer != nil {
+			self.RemotingServer.Start()
+		}
+	}()
 
 	if self.FilterServerManager != nil {
 		self.FilterServerManager.Start()

@@ -113,47 +113,53 @@ func (stats *StatsItemSet) GetStatsItem(statsKey string) *StatsItem {
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) Init() {
-	samplingInSecondsTicker := timeutil.NewTicker(10*1000, 0)
+	samplingInSecondsTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*1000*time.Millisecond,
+		func() {
+			stats.samplingInSeconds()
+		})
+	samplingInSecondsTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInSecondsTicker)
-	go samplingInSecondsTicker.Do(func(tm time.Time) {
-		stats.samplingInSeconds()
-	})
 
-	samplingInMinutesTicker := timeutil.NewTicker(10*60*1000, 0)
+	samplingInMinutesTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*60*1000*time.Millisecond,
+		func() {
+			stats.samplingInMinutes()
+		})
+	samplingInMinutesTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInMinutesTicker)
-	go samplingInMinutesTicker.Do(func(tm time.Time) {
-		stats.samplingInMinutes()
-	})
 
-	samplingInHourTicker := timeutil.NewTicker(1*60*60*1000, 0)
+	samplingInHourTicker := timeutil.NewTicker(false, 0*time.Millisecond, 1*60*60*1000*time.Millisecond,
+		func() {
+			stats.samplingInHour()
+		})
+	samplingInHourTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInHourTicker)
-	go samplingInHourTicker.Do(func(tm time.Time) {
-		stats.samplingInHour()
-	})
 
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(60000, delayMin)
+	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 60000*time.Millisecond,
+		func() {
+			stats.printAtMinutes()
+		})
+	printAtMinutesTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtMinutesTicker)
-	go printAtMinutesTicker.Do(func(tm time.Time) {
-		stats.printAtMinutes()
-	})
 
 	diffHour := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
-	printAtHourTicker := timeutil.NewTicker(3600000, delayHour)
+	printAtHourTicker := timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond, 3600000*time.Millisecond,
+		func() {
+			stats.printAtHour()
+		})
+	printAtHourTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtHourTicker)
-	go printAtHourTicker.Do(func(tm time.Time) {
-		stats.printAtHour()
-	})
 
 	diffDay := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayDay int = int(math.Abs(diffDay))
-	printAtDayTicker := timeutil.NewTicker(86400000, delayDay)
+	printAtDayTicker := timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 86400000*time.Millisecond,
+		func() {
+			stats.printAtDay()
+		})
+	printAtDayTicker.Start()
 	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtDayTicker)
-	go printAtDayTicker.Do(func(tm time.Time) {
-		stats.printAtDay()
-	})
 }
 
 // samplingInSeconds 取样每秒统计
