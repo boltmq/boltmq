@@ -12,9 +12,9 @@ type Ticker struct {
 	over  chan interface{}
 }
 
-func NewTicker(wait bool, delay, d time.Duration, fn func()) *Ticker {
+func NewTicker(wait bool, delay, period time.Duration, fn func()) *Ticker {
 	return &Ticker{
-		d:     d,
+		d:     period,
 		delay: delay,
 		fn:    fn,
 		wait:  wait,

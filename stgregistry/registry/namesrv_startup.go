@@ -35,7 +35,7 @@ func Startup(stopChannel chan bool) *DefaultNamesrvController {
 	// 启动
 	go func() {
 		// 额外处理“RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发namesrv主线程阻塞”情况
-		controller.start()
+		controller.startNamesrvController()
 	}()
 	fmt.Println("the name server boot success") // 此处不要使用logger.Info(),给nohup.out提示
 

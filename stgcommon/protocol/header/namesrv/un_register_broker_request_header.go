@@ -15,6 +15,16 @@ type UnRegisterBrokerRequestHeader struct {
 	BrokerId    int    // brokerId
 }
 
+func NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName string, brokerId int) *UnRegisterBrokerRequestHeader {
+	unRegisterBrokerRequestHeader := &UnRegisterBrokerRequestHeader{
+		BrokerName:  brokerName,
+		BrokerAddr:  brokerAddr,
+		ClusterName: clusterName,
+		BrokerId:    brokerId,
+	}
+	return unRegisterBrokerRequestHeader
+}
+
 func (self *UnRegisterBrokerRequestHeader) CheckFields() error {
 	if strings.TrimSpace(self.BrokerName) == "" {
 		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerName is empty")
