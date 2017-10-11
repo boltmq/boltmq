@@ -18,7 +18,7 @@ type FilterServerManager struct {
 	ticker                       *timeutil.Ticker
 	brokerController             *BrokerController
 	FilterServerMaxIdleTimeMills int64
-	filterServerTable            *sync.Map // key:Channel, value:FilterServerInfo
+	filterServerTable            *sync.Map // key:Channel.Addr(), value:FilterServerInfo
 }
 
 // FilterServerInfo FilterServer基本信息
@@ -99,7 +99,7 @@ func (fsm *FilterServerManager) buildStartCommand() string {
 // Author rongzhihong
 // Since 2017/9/8
 func (fsm *FilterServerManager) RegisterFilterServer(ctx netm.Context, filterServerAddr string) {
-	bean, err := fsm.filterServerTable.Get(ctx)
+	bean, err := fsm.filterServerTable.Get(ctx.Addr())
 	if err != nil {
 		logger.Error(err)
 		return
@@ -109,14 +109,14 @@ func (fsm *FilterServerManager) RegisterFilterServer(ctx netm.Context, filterSer
 		filterServerInfo := new(FilterServerInfo)
 		filterServerInfo.filterServerAddr = filterServerAddr
 		filterServerInfo.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
-		fsm.filterServerTable.Put(ctx, filterServerInfo)
+		fsm.filterServerTable.Put(ctx.Addr(), filterServerInfo)
 		logger.Infof("Receive a New Filter Server %v", filterServerAddr)
 		return
 	}
 
 	if filterServerInfo, ok := bean.(*FilterServerInfo); ok {
 		filterServerInfo.lastUpdateTimestamp = timeutil.CurrentTimeMillis()
-		fsm.filterServerTable.Put(ctx, filterServerInfo)
+		fsm.filterServerTable.Put(ctx.Addr(), filterServerInfo)
 	}
 }
 
@@ -153,7 +153,7 @@ func (fsm *FilterServerManager) doChannelCloseEvent(remoteAddr string, ctx netm.
 		return
 	}
 
-	old, err := fsm.filterServerTable.Remove(ctx)
+	old, err := fsm.filterServerTable.Remove(ctx.Addr())
 	if err != nil {
 		logger.Errorf("The Filter Server Remove conn, throw:%s", err.Error())
 	}
