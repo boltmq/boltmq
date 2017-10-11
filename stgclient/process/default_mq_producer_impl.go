@@ -148,6 +148,9 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message
 			if tmpMQ != nil {
 				mq = tmpMQ
 				sendResult, err := defaultMQProducerImpl.sendKernelImpl(msg, mq, communicationMode, sendCallback, timeout)
+				if err != nil {
+					return nil, err
+				}
 				endTimestamp = time.Now().Unix() * 1000
 				switch communicationMode {
 				case ASYNC:
@@ -212,9 +215,9 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.
 		msg.Body = prevBody
 		return sendResult, err
 	} else {
-		panic(errors.New("The broker[" + mq.BrokerName + "] not exist"))
+		panic(fmt.Errorf("The broker[%s] not exist", mq.BrokerName))
 	}
-	return nil, errors.New("The broker[" + mq.BrokerName + "] not exist")
+	return nil, fmt.Errorf("The broker[%s] not exist", mq.BrokerName)
 }
 
 // 检查配置文件
