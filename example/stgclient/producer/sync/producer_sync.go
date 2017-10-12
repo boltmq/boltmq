@@ -25,7 +25,7 @@ func main() {
 	defaultMQProducer.Start()
 	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
 	for i := 0; i < 64; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone3", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone4", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
 		if err != nil {
 			fmt.Println("send msg err: ----> ", err.Error())
 			continue
@@ -33,7 +33,6 @@ func main() {
 		if sendResult != nil {
 			fmt.Println(sendResult.ToString())
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 	go TaskSync()
 	time.Sleep(time.Second * 600)

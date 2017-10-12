@@ -155,6 +155,7 @@ func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *me
 	case ONEWAY:
 		request.MarkOnewayRPC()
 		impl.DefalutRemotingClient.InvokeOneway(addr, request, timeoutMillis)
+		return nil, nil
 	case ASYNC:
 		impl.sendMessageASync(addr, brokerName, msg, timeoutMillis, request, sendCallback)
 		return nil, nil
@@ -285,7 +286,7 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-		fmt.Println(requestHeader.Topic,requestHeader.QueueId,requestHeader.QueueOffset,"-------------------------------------")
+		fmt.Println(requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, "-------------------------------------")
 		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 		return impl.pullMessageSync(addr, request, timeoutMillis)
@@ -303,7 +304,7 @@ func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader head
 	request := protocol.CreateRequestCommand(code.QUERY_CONSUMER_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
-		logger.Errorf("topic=%v queryConsumerOffset error=%v", requestHeader.Topic,err.Error())
+		logger.Errorf("topic=%v queryConsumerOffset error=%v", requestHeader.Topic, err.Error())
 	}
 	if response != nil && err == nil {
 		switch response.Code {
