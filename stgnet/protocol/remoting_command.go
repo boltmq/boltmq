@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
+	"strconv"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	protocolCode "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
-	"os"
-	"strconv"
 )
 
 // RemotingCommand 服务器与客户端通过传递RemotingCommand来交互
@@ -213,7 +214,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 
 	// step 1 读取报文长度
 	if buf.Len() < 4 {
-		return nil, errors.Errorf("frame length[%d] incorrect，minimal is 4", buf.Len())
+		return nil, errors.Errorf("DecodeRemotingCommand: buffer length[%d] incorrect，minimal is 4", buf.Len())
 	}
 
 	err := binary.Read(buf, binary.BigEndian, &length)
@@ -223,7 +224,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 
 	// step 2 读取报文头长度
 	if buf.Len() < 4 {
-		return nil, errors.Errorf("frame header length[%d] incorrect，minimal is 4", buf.Len())
+		return nil, errors.Errorf("DecodeRemotingCommand: attribute header-length[%d] form buffer incorrect，minimal is 4", buf.Len())
 	}
 
 	err = binary.Read(buf, binary.BigEndian, &headerLength)
@@ -233,7 +234,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 
 	// step 3 读取报文头数据
 	if buf.Len() == 0 || buf.Len() < int(headerLength) {
-		return nil, errors.Errorf("frame header data[%d] incorrect，expect[%d]", buf.Len(), headerLength)
+		return nil, errors.Errorf("DecodeRemotingCommand: buffer length[%d] < attribute header-data[%d] from buffer.", buf.Len(), headerLength)
 	}
 
 	header := make([]byte, headerLength)
@@ -245,7 +246,7 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 	// step 4 读取报文Body
 	bodyLength = length - 4 - headerLength
 	if buf.Len() < int(bodyLength) {
-		return nil, errors.Errorf("frame body[%d] incorrect, expect[%d]", buf.Len(), bodyLength)
+		return nil, errors.Errorf("DecodeRemotingCommand: buffer length[%d] < attribute body[%d] from buffer.", buf.Len(), bodyLength)
 	}
 
 	if bodyLength > 0 {
