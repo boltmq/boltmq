@@ -57,8 +57,8 @@ func (store *RemoteBrokerOffsetStore) PersistAll(mqs set.Set) {
 			store.updateConsumeOffsetToBroker(mq.(*message.MessageQueue), v.(int64))
 			//if times % 12 == 0 {
 			logger.Infof("Group: %v ClientId: %v Topic: %v QueueId: %v updateConsumeOffsetToBroker %v", //
-				store.groupName,                //
-				store.mQClientFactory.ClientId, //
+				store.groupName,                                                                        //
+				store.mQClientFactory.ClientId,                                                         //
 				mq.(*message.MessageQueue).Topic,
 				mq.(*message.MessageQueue).QueueId,
 				v.(int64))
@@ -125,7 +125,6 @@ func (rStore *RemoteBrokerOffsetStore) ReadOffset(mq *message.MessageQueue, rTyp
 
 func (store *RemoteBrokerOffsetStore) UpdateOffset(mq *message.MessageQueue, offset int64, increaseOnly bool) {
 	offsetOld, _ := store.offsetTable.Get(mq)
-	logger.Infof("updateOffset offset=%v", offset)
 	if offsetOld == nil {
 		offsetOld, _ = store.offsetTable.PutIfAbsent(mq, offset)
 	} else {

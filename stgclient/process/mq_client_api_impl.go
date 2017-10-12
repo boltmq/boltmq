@@ -300,7 +300,7 @@ func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader head
 	request := protocol.CreateRequestCommand(code.QUERY_CONSUMER_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
-		logger.Errorf("queryConsumerOffset error=%v", err.Error())
+		logger.Errorf("topic=%v queryConsumerOffset error=%v", requestHeader.Topic,err.Error())
 	}
 	if response != nil && err == nil {
 		switch response.Code {
