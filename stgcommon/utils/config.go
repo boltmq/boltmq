@@ -13,15 +13,6 @@ func ParseConfig(cfg string, config interface{}) error {
 		return fmt.Errorf("use -c to specify configuration file")
 	}
 
-	if !file.IsExist(cfg) {
-		var firstCfg = cfg
-		// 此处为了兼容能够直接在idea上面利用start/etc默认配置文件目录
-		cfg = "start/" + cfg
-		if !file.IsExist(cfg) {
-			return fmt.Errorf("config file: %s is not existent", firstCfg)
-		}
-	}
-
 	content, err := ToTrimString(cfg)
 	if err != nil {
 		return fmt.Errorf("read config file: %s fail: %+v", cfg, err)

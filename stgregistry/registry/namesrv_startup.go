@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
@@ -50,11 +49,12 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	cfg := namesrv.NewNamesrvConfig()
 	logger.Info("%s", cfg.ToString())
 
-	if cfg.GetSmartGoHome() == "" {
-		msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
-		logger.Error(msg, stgcommon.SMARTGO_HOME_ENV)
-		os.Exit(0)
-	}
+	// 检查“SMARTGO_HOME”环境变量的值是为了，设置日志组件，main()已经初始化了logger,因此没必要额外判断
+	//if cfg.GetSmartGoHome() == "" {
+	//	msg := "Please set the %s variable in your environment to match the location of the smartgo installation\n"
+	//	logger.Error(msg, stgcommon.SMARTGO_HOME_ENV)
+	//	os.Exit(0)
+	//}
 
 	// 初始化NamesrvController
 	remotingServer := remoting.NewDefalutRemotingServer(default_ip, default_port)

@@ -26,6 +26,7 @@ const (
 	CLOUDMQ_HOME_PROPERTY           = "cloudmq.home.dir"
 	NAMESRV_ADDR_ENV                = "NAMESRV_ADDR"
 	NAMESRV_ADDR_PROPERTY           = "cloudmq.namesrv.addr"
+	SMARTGO_REGISTRY_CONFIG_ENV     = "SMARTGO_REGISTRY_CONFIG"
 	MESSAGE_COMPRESS_LEVEL          = "cloudmq.message.compressLevel"
 	WS_DOMAIN_NAME                  = "jmenv.tbsite.net"
 	WS_DOMAIN_SUBGROUP              = "nsaddr"
@@ -266,6 +267,13 @@ func GetSmartGoHome() string {
 func GetUserHomeDir() string {
 	currentUser, _ := user.Current()
 	return currentUser.HomeDir
+}
+
+// GetSmartRegistryConfig 获取环境变量“SMARTGO_REGISTRY_CONFIG”的值
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetSmartRegistryConfig() string {
+	return strings.TrimSpace(os.Getenv(SMARTGO_REGISTRY_CONFIG_ENV))
 }
 
 // GetSmartgoConfigDir 为了IDEA开发调试，得到当前项目conf配置项路径,路径末尾带上"/"字符

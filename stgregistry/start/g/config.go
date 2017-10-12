@@ -1,12 +1,12 @@
 package g
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"github.com/toolkits/file"
 	"log"
-	"os"
-	"strings"
 )
 
 type Config struct {
@@ -27,12 +27,28 @@ var (
 	cfg Config
 )
 
-func configPath() string {
-	cfgPath := os.Getenv("SMARTGO_REGISTRY_CONFIG")
-	if strings.TrimSpace(cfgPath) == "" {
-		dirPath := stgcommon.GetSmartgoConfigDir(cfg)
-		return dirPath + cfgName
+func configPath() (cfgPath string) {
+	cfgDir := stgcommon.GetSmartRegistryConfig()
+	if cfgDir == "" {
+		cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName
+		return cfgPath
 	}
+
+	cfgPath = cfgDir + "/" + cfgName
+	lastChar := cfgDir[len(cfgDir)-1 : len(cfgDir)]
+	if lastChar == "/" {
+		cfgPath = cfgDir + cfgName
+	}
+
+	if !file.IsExist(cfgPath) {
+		fmt.Printf("config file is not existent. %s \n", cfgPath)
+
+		if !file.IsExist(cfgPath) {
+			// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
+		}
+		return ""
+	}
+
 	return cfgPath
 }
 
@@ -41,7 +57,7 @@ func InitLogger() {
 	cfgPath := configPath()
 	err := utils.ParseConfig(cfgPath, &cfg)
 	if err == nil {
-		log.Printf("read config file %s success.\n", cfgPath)
+		log.Printf("read config file %s success \n", cfgPath)
 		logger.SetConfig(cfg.Log)
 	} else {
 		log.Printf("set default config to logger")
