@@ -3,10 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
-
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
-	//"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	//"strconv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"strconv"
 	"sync"
@@ -18,6 +15,8 @@ var (
 	topic           = "cloudzone2"
 	tag             = "tagA"
 	producerGroupId = "producerGroupId-200"
+	goThreadNum     = 100
+	everyThreadNum  = 1000
 )
 
 func main() {
@@ -27,15 +26,13 @@ func main() {
 	defaultMQProducer.Start()
 	var sucCount int64
 	var failCount int64
-	var goThreadNum int = 100
-	var num int = 1000
 	start := time.Now().Unix()
 	for i := 0; i < goThreadNum; i++ {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			for j := 0; j < num; j++ {
-				sendResult, err := defaultMQProducer.Send(message.NewMessage(topic, tag, []byte("I'm so diao!呵呵"+strconv.Itoa(n))))
+			for j := 0; j < everyThreadNum; j++ {
+				sendResult, err := defaultMQProducer.Send(message.NewMessage(topic, tag, []byte("I'm so diao!呵呵"+strconv.Itoa(n)+"-"+strconv.Itoa(j))))
 				if err != nil {
 					atomic.AddInt64(&failCount, 1)
 					fmt.Println("send msg err: ----> ", err.Error())
@@ -51,6 +48,5 @@ func main() {
 	wg.Wait()
 	end := time.Now().Unix()
 	tps := sucCount / (end - start)
-	fmt.Println(tps)
-
+	fmt.Println("msgCount=", goThreadNum*everyThreadNum, "goThreadNum=", goThreadNum, "everyThreadNum=", everyThreadNum, "successCount=", sucCount, "failCount=", failCount, "tps=", tps)
 }
