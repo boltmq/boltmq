@@ -386,10 +386,16 @@ func (self *StoreStatsService) GetRuntimeInfo() map[string]string {
 }
 
 func (self *StoreStatsService) setSinglePutMessageTopicSizeTotal(topic string, value int64) {
+	self.lockPut.Lock()
+	defer self.lockPut.Unlock()
+
 	self.putMessageTopicSizeTotal[topic] = value
 }
 
 func (self *StoreStatsService) getSinglePutMessageTopicSizeTotal(topic string) int64 {
+	self.lockPut.Lock()
+	defer self.lockPut.Unlock()
+
 	result, ok := self.putMessageTopicSizeTotal[topic]
 	if !ok {
 		result = int64(0)
@@ -424,10 +430,16 @@ func (self *StoreStatsService) setPutMessageEntireTimeMax(value int64) {
 }
 
 func (self *StoreStatsService) setSinglePutMessageTopicTimesTotal(topic string, value int64) {
+	self.lockPut.Lock()
+	defer self.lockPut.Unlock()
+
 	self.putMessageTopicTimesTotal[topic] = value
 }
 
 func (self *StoreStatsService) getSinglePutMessageTopicTimesTotal(topic string) int64 {
+	self.lockPut.Lock()
+	defer self.lockPut.Unlock()
+
 	result, ok := self.putMessageTopicTimesTotal[topic]
 	if !ok {
 		result = 0
