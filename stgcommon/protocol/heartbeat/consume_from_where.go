@@ -1,5 +1,8 @@
 package heartbeat
 
+// ConsumeFromWhere 从哪里开始消费
+// Author: yintongqiang
+// Since:  2017/8/8
 type ConsumeFromWhere int
 
 const (
@@ -16,12 +19,12 @@ const (
 	// 时间点设置参见DefaultMQPushConsumer.consumeTimestamp参数
 	CONSUME_FROM_TIMESTAMP
 )
-// ConsumeFromWhere 从哪里开始消费
+
+// ToString 从哪里开始消费，转化为相应的字符串
 // Author: yintongqiang
 // Since:  2017/8/8
-
-func (cType ConsumeFromWhere) String() string {
-	switch cType {
+func (consumeFromWhere ConsumeFromWhere) ToString() string {
+	switch consumeFromWhere {
 	case CONSUME_FROM_LAST_OFFSET:
 		return "CONSUME_FROM_LAST_OFFSET"
 	case CONSUME_FROM_FIRST_OFFSET:
@@ -29,6 +32,6 @@ func (cType ConsumeFromWhere) String() string {
 	case CONSUME_FROM_TIMESTAMP:
 		return "CONSUME_FROM_TIMESTAMP"
 	default:
-		return "Unknow"
+		return "Unknown"
 	}
 }

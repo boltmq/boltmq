@@ -38,8 +38,8 @@ func (self *ClusterInfo) RetrieveAllAddrByCluster(clusterName string) []string {
 
 	brokerAddrs := make([]string, 0)
 	if v, ok := self.ClusterAddrTable[clusterName]; ok {
-		for value := range v.Iterator().C {
-			if brokerName, ok := value.(string); ok {
+		for itor := range v.Iterator().C {
+			if brokerName, ok := itor.(string); ok {
 				if brokerData, ok := self.BokerAddrTable[brokerName]; ok {
 					if brokerData != nil && brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
 						for _, val := range brokerData.BrokerAddrs {

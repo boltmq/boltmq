@@ -6,15 +6,10 @@ import (
 )
 
 type OffsetMovedEvent struct {
-	ConsumerGroup string               `json:"consumerGroup"`
-	MessageQueue  message.MessageQueue `json:"messageQueue"`
-
-	// 客户端请求的Offset
-	OffsetRequest int64 `json:"offsetRequest"`
-
-	//  Broker要求从这个新的Offset开始消费
-	OffsetNew int64 `json:"offsetNew"`
-
+	ConsumerGroup string               `json:"consumerGroup"` // 消费组名称
+	MessageQueue  message.MessageQueue `json:"messageQueue"`  // 消息Queue
+	OffsetRequest int64                `json:"offsetRequest"` // 客户端请求的Offset
+	OffsetNew     int64                `json:"offsetNew"`     // Broker要求从这个新的Offset开始消费
 	*protocol.RemotingSerializable
 }
 
