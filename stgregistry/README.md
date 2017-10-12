@@ -9,11 +9,13 @@ export SMARTGO_REGISTRY_CONFIG="/home/smartgo/registry" # 可以是任意目录�
 ```
 
 ### logger日志
-- 采用的日志组件为`github.com/astaxie/beego/logs`，已修改该组件的`logger.go`文件，支持日志信息第一列时间字段的毫秒显示效果
-- `registry`工程启动后， 自动读取日志配置文件`$SMARTGO_REGISTRY_CONFIG/cfg.json`
-- 如果`SMARTGO_REGISTRY_CONFIG`环境变量为空，尝试读取`$GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/g/cfg.json`
-- 如果日志配置文件`cfg.json`不存在或读取异常，则默认将日志打印到控制台，默认地址级别为`Info`
-
+- 日志组件为`github.com/astaxie/beego/logs`，已修改它的`logger.go`文件，支持第一列时间字段的毫秒显示效果
+- `registry`工程启动后默认读取日志配置文件`cfg.json`，如果读取异常，会将日志打印到控制台，日志级别默认为`Info`
+- 配置文件路径的读取优先级为`$SMARTGO_REGISTRY_CONFIG/cfg.json `
+```bash
+$SMARTGO_REGISTRY_CONFIG/cfg.json                                            # 优先读取
+$GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/g/cfg.json
+```
 
 ### 日志文件`cfg.json`示例
 ```json
