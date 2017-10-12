@@ -74,7 +74,7 @@ func getDefaultLoggerConfig() logger.Config {
 	param := make(map[string]interface{})
 	//param["filename"] = filename                      // 保存日志文件地址
 	param["level"] = level                             // 日志级别 6:info, 7:debug
-	param["maxdays"] = maxdays                         // 每天一个日志文件，最多保留文件个数,
+	param["maxdays"] = maxdays                         // 每天一个日志文件，最多保留文件个数
 	param["enableFuncCallDepth"] = enableFuncCallDepth // 打印日志，是否显示文件名
 	param["loggerFuncCallDepth"] = loggerFuncCallDepth // 堆栈日志打印层数
 	config.Engine.Config = param                       // 转化过去

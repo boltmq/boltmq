@@ -1,4 +1,4 @@
-package stgregistry
+package other
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
@@ -25,7 +25,7 @@ type namesrvCfg struct {
 }
 
 func etcdAddrsFromConfig() []string {
-	namesrvConfPath := "../conf/smartgo.toml"
+	namesrvConfPath := "../../conf/smartgo.toml"
 	var smartgoConfig SmartgoConfig
 	parseutil.ParseConf(namesrvConfPath, &smartgoConfig)
 

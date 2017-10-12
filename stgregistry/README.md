@@ -1,10 +1,72 @@
-## smartgonamesrv
+## smartgo registry
 
-`smartgonamesrv` is ...
 
 Read the [docs](http://git.oschina.net/cloudzone/smartgo)
 
+### 环境变量
+```bash
+export SMARTGO_REGISTRY_CONFIG="/home/smartgo/registry" # 可以是任意目录，只要能在该目录创建文件即可
+```
 
+### logger日志
+- 采用的日志组件为`github.com/astaxie/beego/logs`，已修改该组件的`logger.go`文件，支持日志信息第一列时间字段的毫秒显示效果
+- `registry`工程启动后， 自动读取日志配置文件`$SMARTGO_REGISTRY_CONFIG/cfg.json`
+- 如果`SMARTGO_REGISTRY_CONFIG`环境变量为空，尝试读取`$GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/g/cfg.json`
+- 如果日志配置文件`cfg.json`不存在或读取异常，则默认将日志打印到控制台，默认地址级别为`Info`
+
+
+### 日志文件`cfg.json`示例
+```json
+{
+  "log": {
+    "engine": {
+      "adapter": "file",
+      "config": {
+        "filename": "./logs/registry.log",
+        "level":6,
+        "maxdays":30,
+        "enableFuncCallDepth":false,
+        "loggerFuncCallDepth":3
+      }
+    }
+  }
+}
+```
+
+### 日志文件`cfg.json`说明
+
+| 字段	       | 默认值        | 参数说明   | 
+|:-----------  |:-------------| :-----|
+| adapter      | file  | 日志终端类型， 文件file、控制台console  |
+| filename     | `./logs/registry.log` | 日志路径， 如果adapter为控制台，此字段无效|
+| level        | 6   | 日志级别 7:debug, 6:info, 4:warn, 3:error    |
+| maxdays      | 30 | 每天一个日志文件，最多保留文件个数  |
+| enableFuncCallDepth| false  |打印日志的同时，是否打印该日志对应的 源码文件名与行号   |
+| loggerFuncCallDepth| 3|  默认打印堆栈异常新的层数 |
+
+
+
+### 编译`registry`
+```bash
+cd $GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start
+go get ./...
+go build 
+mv start registry
+```
+
+
+### 启动`registry`
+```bash
+mkdir ./logs
+touch logs/registry.log
+nohup ./registry &
+```
+
+### 查看`registry`日志
+```bash
+tailf nohup.out
+tailf registry.log
+```
 
 ## 信号类型
 
@@ -12,8 +74,6 @@ Read the [docs](http://git.oschina.net/cloudzone/smartgo)
 Linux使用34-64信号用作实时系统中。
 命令 man 7 signal 提供了官方的信号介绍。
 在POSIX.1-1990标准中定义的信号列表, 更多资料，参考 [信号类型](http://www.cnblogs.com/jkkkk/p/6180016.html)
-
-----
 
 | 信号	       | 值            | 值   | 说明   |
 | :----------- |:-------------| :-----|:-----|
@@ -29,4 +89,3 @@ Linux使用34-64信号用作实时系统中。
 | SIGALRM        | 14          | Term   | 时钟定时信号  |
 | SIGTERM        | 15          | Term   | 结束程序(可以被捕获、阻塞或忽略) |
 
----

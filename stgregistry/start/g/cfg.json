@@ -9,10 +9,6 @@
         "enableFuncCallDepth":false,
         "loggerFuncCallDepth":3
       }
-    },
-    "path": "",
-    "cache_size": 10000,
-    "enable_func_call_depth": false,
-    "func_call_depth": 3
+    }
   }
 }
