@@ -18,12 +18,14 @@ func TaskOneWay() {
 }
 func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
-	defaultMQProducer.SetNamesrvAddr("127.0.0.1:10911")
+	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
-	for i := 0; i < 10; i++ {
-		err := defaultMQProducer.SendOneWay(message.NewMessage("TestTopic", "tagA", []byte("send oneway msg")))
+	for i := 0; i < 640; i++ {
+		err := defaultMQProducer.SendOneWay(message.NewMessage("cloudzoneoneway", "tagA", []byte("send oneway msg 呵呵")))
 		if err != nil {
 			fmt.Println(err)
+		} else {
+			fmt.Println("sendOneWay>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		}
 	}
 	go TaskOneWay()

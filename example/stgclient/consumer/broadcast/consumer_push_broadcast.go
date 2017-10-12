@@ -31,11 +31,11 @@ func taskC() {
 }
 
 func main() {
-	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("consumer")
+	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("conasuemer1")
 	defaultMQPushConsumer.SetConsumeFromWhere(heartbeat.CONSUME_FROM_LAST_OFFSET)
 	defaultMQPushConsumer.SetMessageModel(heartbeat.BROADCASTING)
 	defaultMQPushConsumer.SetNamesrvAddr("10.112.68.189:9876")
-	defaultMQPushConsumer.Subscribe("cloudzone", "tagA")
+	defaultMQPushConsumer.Subscribe("cloudzone4", "tagA")
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{})
 	defaultMQPushConsumer.Start()
 	time.Sleep(time.Second * 6000)

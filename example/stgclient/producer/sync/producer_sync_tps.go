@@ -12,7 +12,7 @@ import (
 
 var (
 	namesrvAddr     = "10.112.68.189:9876"
-	topic           = "cloudzone2"
+	topic           = "cloudzone4"
 	tag             = "tagA"
 	producerGroupId = "producerGroupId-200"
 	goThreadNum     = 100
