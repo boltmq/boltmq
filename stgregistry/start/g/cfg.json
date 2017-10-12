@@ -1,7 +1,7 @@
 {
   "log": {
     "engine": {
-      "adapter": "file",
+      "adapter": "console",
       "config": {
         "filename": "./logs/registry.log",
         "level":6,

@@ -33,7 +33,7 @@ _testmain.go
 unit_test_*/*
 
 
-
+# beego/logs/logger.go文件有额外修改
 !vendor/github.com/astaxie/beego/logs/*/
 
 vendor/*/
@@ -53,13 +53,14 @@ example/stgnet/remoting/serve/serve
 producer_main
 push_consumer_main
 
-stgregistry/start/g/cfg.json
 stgregistry/start/start.exe
 stgregistry/start/logs/
 stgregistry/start/logs/*.log
 stgregistry/start/nohup.out
-
 stgregistry/start/registry
 stgregistry/start/start
 stgbroker/start/start.exe
+stgbroker/start/start
+stgbroker/start/broker
+stgbroker/start/broker.exe
 stgbroker/start/demo
