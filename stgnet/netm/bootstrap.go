@@ -228,7 +228,9 @@ func (bootstrap *Bootstrap) Disconnect(addr string) {
 func (bootstrap *Bootstrap) remove(ctx Context) {
 	addr := ctx.Addr()
 	bootstrap.contextTableLock.Lock()
-	delete(bootstrap.contextTable, addr)
+	if _, ok := bootstrap.contextTable[addr]; ok {
+		delete(bootstrap.contextTable, addr)
+	}
 	bootstrap.contextTableLock.Unlock()
 }
 
@@ -245,11 +247,16 @@ func (bootstrap *Bootstrap) Shutdown() {
 
 	// 关闭所有连接
 	bootstrap.contextTableLock.Lock()
+	contexts := make(map[string]Context, len(bootstrap.contextTable))
 	for addr, ctx := range bootstrap.contextTable {
-		ctx.Close()
+		contexts[addr] = ctx
 		delete(bootstrap.contextTable, addr)
 	}
 	bootstrap.contextTableLock.Unlock()
+
+	for _, ctx := range contexts {
+		ctx.Close()
+	}
 
 	// 关闭定时器
 	if bootstrap.checkCtxIdleTimer != nil {
