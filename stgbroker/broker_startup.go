@@ -64,17 +64,12 @@ func Start(stopChan chan bool) *BrokerController {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
 func CreateBrokerController() *BrokerController {
-	cfgPath := "../../conf/" + cfgName // 启动各种test用例读取路径
-	if !file.IsExist(cfgPath) {
-		// 为了兼容能够直接在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
-		cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
-		logger.Infof("idea special brokerConfigPath = %s", cfgPath)
-	}
-
 	// 读取并转化*.toml配置项的值
-	var cfg SmartgoBrokerConfig
-	parseutil.ParseConf(cfgPath, &cfg)
-	logger.Info(cfg.ToString())
+	cfg, cfgPath, ok := parseSmartgoBrokerConfig()
+	if !ok {
+		logger.Flush()
+		os.Exit(0)
+	}
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName, cfg.AutoCreateTopicEnable)
@@ -107,6 +102,42 @@ func CreateBrokerController() *BrokerController {
 
 	logger.Info("create broker controller successful")
 	return controller
+}
+
+// parseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, string, bool) {
+	smartGoHome := stgcommon.GetSmartGoHome()
+	cfgPath := smartGoHome + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
+	if smartGoHome != "" {
+		logger.Infof("brokerConfigPath = %s", cfgPath)
+	}
+
+	if !file.IsExist(cfgPath) {
+		firstPath := cfgPath
+		firstPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
+		if !file.IsExist(firstPath) {
+			cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName // 在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
+			logger.Infof("idea special brokerConfigPath = %s", cfgPath)
+		}
+	}
+
+	// 读取并转化*.toml配置项的值
+	var cfg SmartgoBrokerConfig
+	parseutil.ParseConf(cfgPath, &cfg)
+	if &cfg == nil {
+		logger.Errorf("read %s failed", cfgPath)
+		return nil, "", false
+	}
+
+	logger.Info(cfg.ToString())
+	if cfg.IsBlank() {
+		logger.Errorf("please set `brokerClusterName` and `brokerName` value with %s", cfgName)
+		return nil, "", false
+	}
+
+	return &cfg, cfgPath, true
 }
 
 // checBrokerConfig 校验broker启动的所必需的SmartGoHome、namesrv配置
@@ -178,6 +209,10 @@ func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcom
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
 func (self *SmartgoBrokerConfig) ToString() string {
+	if self == nil {
+		return "SmartgoBrokerConfig is nil"
+	}
+
 	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, DeleteWhen=%d, FileReservedTime=%d, "
 	format += "BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t]"
 	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.DeleteWhen, self.FileReservedTime,
