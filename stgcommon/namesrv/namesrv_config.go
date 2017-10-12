@@ -64,7 +64,7 @@ func (self *NamesrvConfig) GetKvConfigName() string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/8
 func (self *NamesrvConfig) ToString() string {
-	return fmt.Sprintf("namesrv cfg [smartgoHome=%s, kvConfigPath=%s]", self.smartgoHome, self.kvConfigPath)
+	return fmt.Sprintf("namesrv cfg [kvConfigPath=%s, smartgoHome=%s]", self.kvConfigPath, self.smartgoHome)
 }
 
 // getSmartGoHome 获得默认配置

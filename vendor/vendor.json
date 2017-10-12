@@ -9,7 +9,7 @@
 			"revisionTime": "2017-03-28T06:15:53Z"
 		},
 		{
-			"checksumSHA1": "bsSuj8Nf6TdZk8TxnogpSmk7eX0=",
+			"checksumSHA1": "3P3K84oKdHGJ9E5EoEZB423oa2s=",
 			"path": "github.com/astaxie/beego/logs",
 			"revision": "b55e20ac60c5c2f4ec9612ec68a48cb94cfaab42",
 			"revisionTime": "2017-01-23T13:12:58Z"
@@ -85,6 +85,12 @@
 			"path": "github.com/deckarep/golang-set",
 			"revision": "3a36ffa8b5bf7cd329c8834c6b743d6930dad12f",
 			"revisionTime": "2017-07-08T02:11:48Z"
+		},
+		{
+			"checksumSHA1": "L2aDTmrAIBjhbzTszCwg4uLc6IU=",
+			"path": "github.com/facebookgo/errgroup",
+			"revision": "779c8d7ef069c522bc72ee5f31a98d89a37f3fb6",
+			"revisionTime": "2016-02-09T02:11:48Z"
 		},
 		{
 			"checksumSHA1": "JA+jBZGeXyRLODnTR0muyuyRx5k=",
