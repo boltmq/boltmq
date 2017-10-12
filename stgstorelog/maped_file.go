@@ -232,6 +232,7 @@ func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 
 		newMmpBuffer := NewMappedByteBuffer(self.mappedByteBuffer.Bytes())
 		newMmpBuffer.WritePos = self.mappedByteBuffer.WritePos
+		newMmpBuffer.ReadPos = int(pos)
 		return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
 	}
 
