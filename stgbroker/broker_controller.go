@@ -377,39 +377,45 @@ func (self *BrokerController) EncodeAllConfig() string {
 // Author gaoyanlei
 // Since 2017/8/25
 func (self *BrokerController) registerProcessor() {
+	// http://blog.csdn.net/meilong_whpu/article/details/76922647
+	// http://blog.csdn.net/a417930422/article/details/50700276
 
+	// 客户端管理事件处理器 ClientManageProcessor
 	clientProcessor := NewClientManageProcessor(self)
-	self.RemotingServer.RegisterProcessor(code.HEART_BEAT, clientProcessor)                 // 心跳
+	self.RemotingServer.RegisterProcessor(code.HEART_BEAT, clientProcessor)                 // 心跳连接
 	self.RemotingServer.RegisterProcessor(code.UNREGISTER_CLIENT, clientProcessor)          // 注销client
-	self.RemotingServer.RegisterProcessor(code.GET_CONSUMER_LIST_BY_GROUP, clientProcessor) // 获取Consumer
+	self.RemotingServer.RegisterProcessor(code.GET_CONSUMER_LIST_BY_GROUP, clientProcessor) // 获取Consumer列表
 	self.RemotingServer.RegisterProcessor(code.QUERY_CONSUMER_OFFSET, clientProcessor)      // 查询ConsumerOffset
 	self.RemotingServer.RegisterProcessor(code.UPDATE_CONSUMER_OFFSET, clientProcessor)     // 更新ConsumerOffset
 
+	// 管理Broker事件处理器 AdminBrokerProcessor
 	adminBrokerProcessor := NewAdminBrokerProcessor(self)
 	self.RemotingServer.RegisterProcessor(code.UPDATE_AND_CREATE_TOPIC, adminBrokerProcessor) // 更新创建topic
 	self.RemotingServer.RegisterProcessor(code.DELETE_TOPIC_IN_BROKER, adminBrokerProcessor)  // 删除topic
 	self.RemotingServer.RegisterProcessor(code.GET_MAX_OFFSET, adminBrokerProcessor)          // 获取最大offset
 
+	// 发送消息事件处理器 SendMessageProcessor
 	sendMessageProcessor := NewSendMessageProcessor(self)
 	sendMessageProcessor.RegisterSendMessageHook(self.sendMessageHookList)                   // 发送消息回调
 	self.RemotingServer.RegisterProcessor(code.SEND_MESSAGE, sendMessageProcessor)           // 未优化过发送消息
 	self.RemotingServer.RegisterProcessor(code.SEND_MESSAGE_V2, sendMessageProcessor)        // 优化过发送消息
 	self.RemotingServer.RegisterProcessor(code.CONSUMER_SEND_MSG_BACK, sendMessageProcessor) // 消费失败消息
 
+	// 拉取消息事件处理器 PullMessageProcessor
 	pullMessageProcessor := NewPullMessageProcessor(self)
 	self.RemotingServer.RegisterProcessor(code.PULL_MESSAGE, pullMessageProcessor) // Broker拉取消息
 	pullMessageProcessor.RegisterConsumeMessageHook(self.consumeMessageHookList)   // 消费消息回调
 
-	// queryMessageProcessor
+	// 查询消息事件处理器 QueryMessageProcessor
 	queryProcessor := NewQueryMessageProcessor(self)
 	self.RemotingServer.RegisterProcessor(code.QUERY_MESSAGE, queryProcessor)      // Broker 查询消息
 	self.RemotingServer.RegisterProcessor(code.VIEW_MESSAGE_BY_ID, queryProcessor) // Broker 根据消息ID来查询消息
 
-	// endTransactionProcessor
+	// 结束事务处理器 EndTransactionProcessor
 	endTransactionProcessor := NewEndTransactionProcessor(self)
 	self.RemotingServer.RegisterProcessor(code.END_TRANSACTION, endTransactionProcessor) // Broker Commit或者Rollback事务
 
-	// Default
+	// 默认事件处理器 DefaultProcessor
 	adminProcessor := NewAdminBrokerProcessor(self)
 	self.RemotingServer.RegisterDefaultProcessor(adminProcessor) // 默认Admin请求
 }
