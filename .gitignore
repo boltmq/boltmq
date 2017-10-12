@@ -32,6 +32,10 @@ _testmain.go
 *.tmp
 unit_test_*/*
 
+
+
+!vendor/github.com/astaxie/beego/logs/*/
+
 vendor/*/
 
 .DS_Store
