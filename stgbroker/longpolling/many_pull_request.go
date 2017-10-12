@@ -32,10 +32,7 @@ func (req *ManyPullRequest) AddManyPullRequest(mpr []*PullRequest) {
 	defer req.Unlock()
 	defer utils.RecoveredFn()
 
-	for _, item := range mpr {
-		req.pullRequestList = append(req.pullRequestList, item)
-	}
-
+	req.pullRequestList = append(mpr, req.pullRequestList...)
 }
 
 // CloneListAndClear 克隆并清空请求列表
