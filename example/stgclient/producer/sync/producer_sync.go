@@ -27,7 +27,8 @@ func main() {
 	for i := 65; i < 64000000000000000; i++ {
 		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("send msg err: ----> ", err.Error())
+			continue
 		}
 		if sendResult != nil {
 			fmt.Println(sendResult.ToString())
