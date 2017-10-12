@@ -25,13 +25,9 @@ func SetLog(log *logs.BeeLogger) {
 func SetConfig(conf Config) {
 	logger = logs.NewLogger(conf.CacheSize)
 
-	buf, err := json.Marshal(conf.Engine.Config)
-	if err == nil && len(buf) > 0 {
-		// 配置参数链接： http://blog.csdn.net/huwh_/article/details/77923570
+	if buf, err := json.Marshal(conf.Engine.Config); err == nil && len(buf) > 0 {
+		// beego/logs参数配置 http://blog.csdn.net/huwh_/article/details/77923570
 		logger.SetLogger(conf.Engine.Adapter, string(buf))
-	} else {
-		logger.EnableFuncCallDepth(conf.EnableFuncCallDepth)
-		logger.SetLogFuncCallDepth(conf.FuncCallDepth)
 	}
 }
 

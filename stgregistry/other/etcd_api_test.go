@@ -1,4 +1,4 @@
-package stgregistry
+package other
 
 import (
 	"context"
