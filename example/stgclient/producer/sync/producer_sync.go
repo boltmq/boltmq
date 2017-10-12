@@ -23,9 +23,8 @@ func main() {
 	defaultMQProducer := process.NewDefaultMQProducer("producer")
 	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
-	//defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, "cloudzone1", 8)
-	for i := 0; i < 64; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone4", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
+	for i := 0; i < 640; i++ {
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone999", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
 		if err != nil {
 			fmt.Println("send msg err: ----> ", err.Error())
 			continue
