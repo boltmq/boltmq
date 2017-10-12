@@ -17,7 +17,7 @@ func TaskSync() {
 
 func main() {
 	var (
-		topic           = "cloudzoneoneway"
+		topic           = "cloudzone999"
 		producerGroupId = "producerGroupId-200"
 	)
 

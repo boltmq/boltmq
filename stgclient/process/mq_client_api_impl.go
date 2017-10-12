@@ -18,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
 	"fmt"
+	cprotocol"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -30,11 +31,12 @@ type MQClientAPIImpl struct {
 }
 
 func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQClientAPIImpl {
-
-	return &MQClientAPIImpl{
+	mClientAPIImpl := &MQClientAPIImpl{
 		DefalutRemotingClient:   remoting.NewDefalutRemotingClient(),
 		ClientRemotingProcessor: clientRemotingProcessor,
 	}
+	mClientAPIImpl.DefalutRemotingClient.RegisterProcessor(cprotocol.NOTIFY_CONSUMER_IDS_CHANGED, clientRemotingProcessor)
+	return mClientAPIImpl
 }
 
 // 调用romoting的start
