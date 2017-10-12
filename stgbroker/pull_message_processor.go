@@ -50,7 +50,7 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Since 2017/9/5
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
-		logger.Info("唤醒HoldPullRequest: %v", request)
+		logger.Info("唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
 
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
@@ -70,6 +70,7 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 			logger.Errorf("processRequestWrapper response to %s failed %s. \n request:%s, response:%s",
 				ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
+		logger.Infof("............唤醒HoldPullRequest response:%#v", response)
 	}()
 }
 
@@ -187,8 +188,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 	getMessageResult := pull.BrokerController.MessageStore.GetMessage(requestHeader.ConsumerGroup, requestHeader.Topic,
 		requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums), subscriptionData)
-	logger.Infof("------------------------ConsumerGroup:%s .Topic:%s . QueueId:%v . QueueOffset :%v . MaxMsgNums: %v. NextBeginOffset: %v",requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId,requestHeader.QueueOffset,int32(requestHeader.MaxMsgNums),getMessageResult.NextBeginOffset)
-
 	if nil != getMessageResult {
 		response.Remark = getMessageResult.Status.String()
 		responseHeader.NextBeginOffset = getMessageResult.NextBeginOffset
@@ -227,6 +226,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 			response.Code = code.PULL_RETRY_IMMEDIATELY
 			// 这两个返回值都表示服务器暂时没有这个队列，应该立刻将客户端Offset重置为0
 		case stgstorelog.NO_MATCHED_LOGIC_QUEUE:
+			fallthrough
 		case stgstorelog.NO_MESSAGE_IN_QUEUE:
 			if 0 != requestHeader.QueueOffset {
 				response.Code = code.PULL_OFFSET_MOVED
@@ -270,12 +270,15 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
 					ctx.RemoteAddr().String(), err.Error())
 			}
+			logger.Infof("----ConsumerGroup:%s .Topic:%s . QueueId:%v . QueueOffset :%v . MaxMsgNums: %v. \n NextBeginOffset: %v, response:%#v, getMessageResult:%#v, ",
+				requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums),
+				getMessageResult.NextBeginOffset, response, getMessageResult)
 			// TODO getMessageResult.Release()
 			response = nil
 		case code.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
-				logger.Infof("进入hold pull: %#v", request)
+				logger.Infof("进入hold pull: ExtFields=%#v, Opaque=%d", request.ExtFields, request.Opaque)
 				pollingTimeMills := suspendTimeoutMillisLong
 				if !pull.BrokerController.BrokerConfig.LongPollingEnable {
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills
@@ -324,6 +327,9 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	storeOffsetEnable = storeOffsetEnable && hasCommitOffsetFlag // 说明Consumer设置了标志位
 	// 只有Master支持存储offset
 	storeOffsetEnable = storeOffsetEnable && pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE
+
+	logger.Infof("brokerAllowSuspend:%v, requestHeader.SysFlag:%v,  hasCommitOffsetFlag:%v, storeOffsetEnable:%v, requestHeader:%#v",
+		brokerAllowSuspend, requestHeader.SysFlag, hasCommitOffsetFlag, storeOffsetEnable, requestHeader)
 
 	if storeOffsetEnable {
 		pull.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,
