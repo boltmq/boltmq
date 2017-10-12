@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"github.com/go-errors/errors"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"strconv"
 )
 
 // MessageExt 消息体
@@ -45,6 +46,13 @@ type MessageExt struct {
 	// 当前消息被某个订阅组重新消费了几次（订阅组之间独立计数）
 	ReconsumeTimes            int32
 	PreparedTransactionOffset int64
+}
+
+func (msgExt *MessageExt) ToString() string {
+	return "MessageExt [topic=" + msgExt.Topic + ", storeHost=" + msgExt.StoreHost + ", bornHost=" + msgExt.BornHost +
+		", storeTimestamp=" + strconv.FormatInt(msgExt.StoreTimestamp, 10) + ", bornTimestamp=" + strconv.FormatInt(msgExt.BornTimestamp, 10) +
+		", queueId=" + strconv.Itoa(int(msgExt.QueueId)) +
+		", queueOffset=" + strconv.Itoa(int(msgExt.QueueOffset)) + ", msgId=" + msgExt.MsgId + ", msgBody=" + string(msgExt.Body) + "]"
 }
 
 // Encode 编码MessageExt

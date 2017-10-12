@@ -30,7 +30,7 @@ type DefaultMQProducerImpl struct {
 func NewDefaultMQProducerImpl(defaultMQProducer *DefaultMQProducer) *DefaultMQProducerImpl {
 	return &DefaultMQProducerImpl{DefaultMQProducer: defaultMQProducer,
 		TopicPublishInfoTable: sync.NewMap(),
-		ServiceState:          stgcommon.CREATE_JUST}
+		ServiceState: stgcommon.CREATE_JUST}
 }
 
 func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
@@ -155,7 +155,7 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message
 				case ONEWAY:
 					return nil, err
 				case SYNC:
-					if sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
+					if sendResult != nil && sendResult.SendStatus != SEND_OK && defaultMQProducerImpl.DefaultMQProducer.RetryAnotherBrokerWhenNotStoreOK {
 						continue
 					}
 					return sendResult, err
