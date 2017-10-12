@@ -226,6 +226,10 @@ func (self *MapedFile) destroy() bool {
 func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	if pos < self.wrotePostion && pos >= 0 {
 		size := self.mappedByteBuffer.WritePos - int(pos)
+		if self.mappedByteBuffer.WritePos > len(self.mappedByteBuffer.MMapBuf) {
+			return nil
+		}
+
 		newMmpBuffer := NewMappedByteBuffer(self.mappedByteBuffer.Bytes())
 		newMmpBuffer.WritePos = self.mappedByteBuffer.WritePos
 		return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
