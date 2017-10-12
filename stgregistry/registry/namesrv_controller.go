@@ -11,11 +11,6 @@ import (
 	"syscall"
 )
 
-const (
-	second = 1000
-	minute = 10 * second
-)
-
 // DefaultNamesrvController 注意循环引用
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
