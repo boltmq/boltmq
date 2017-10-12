@@ -18,7 +18,7 @@ import (
 // Since 2017/9/5
 type PullRequestHoldService struct {
 	TOPIC_QUEUEID_SEPARATOR string
-	pullRequestTable        *sync.Map // key:context
+	pullRequestTable        *sync.Map // key:topic@queueid value:ManyPullRequest
 	brokerController        *BrokerController
 	isStopped               bool
 }

@@ -192,8 +192,6 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 func (self *KVConfigManager) load() error {
 	// 如果kvConfig.json文件不存在，则创建
 	cfgPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
-	logger.Info("get kvConfigPath = %s", cfgPath)
-
 	cfgName := self.NamesrvController.NamesrvConfig.GetKvConfigName()
 	if !file.IsExist(cfgPath) {
 		ok, err := stgcommon.CreateFile(cfgPath)

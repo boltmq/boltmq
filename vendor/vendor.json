@@ -9,7 +9,7 @@
 			"revisionTime": "2017-03-28T06:15:53Z"
 		},
 		{
-			"checksumSHA1": "bsSuj8Nf6TdZk8TxnogpSmk7eX0=",
+			"checksumSHA1": "3P3K84oKdHGJ9E5EoEZB423oa2s=",
 			"path": "github.com/astaxie/beego/logs",
 			"revision": "b55e20ac60c5c2f4ec9612ec68a48cb94cfaab42",
 			"revisionTime": "2017-01-23T13:12:58Z"
@@ -87,6 +87,12 @@
 			"revisionTime": "2017-07-08T02:11:48Z"
 		},
 		{
+			"checksumSHA1": "L2aDTmrAIBjhbzTszCwg4uLc6IU=",
+			"path": "github.com/facebookgo/errgroup",
+			"revision": "779c8d7ef069c522bc72ee5f31a98d89a37f3fb6",
+			"revisionTime": "2016-02-09T02:11:48Z"
+		},
+		{
 			"checksumSHA1": "JA+jBZGeXyRLODnTR0muyuyRx5k=",
 			"path": "github.com/fanliao/go-concurrentMap",
 			"revision": "7d2d7a5ea67b268e16582c195af75c2eedf94d75",
@@ -139,6 +145,12 @@
 			"path": "github.com/toolkits/file",
 			"revision": "a5b3c5147e07f934d9f9d00b901a20b2529f1a57",
 			"revisionTime": "2016-03-25T03:37:39Z"
+		},
+		{
+			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
+			"path": "golang.org/x/net/context",
+			"revision": "6b27048ae5e6ad1ef927e72e437531493de612fe",
+			"revisionTime": "2017-02-17T08:49:01Z"
 		},
 		{
 			"checksumSHA1": "0FCBLTqGOxgifAKfS0360iLTZR4=",
