@@ -17,14 +17,14 @@ func TaskSync() {
 
 func main() {
 	var (
-		topic           = "cloudzone2"
+		topic           = "cloudzone3"
 		producerGroupId = "producerGroupId-200"
 	)
 
 	defaultMQProducer := process.NewDefaultMQProducer(producerGroupId)
 	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
-	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, 8)
+	defaultMQProducer.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, 1)
 	go TaskSync()
 	time.Sleep(time.Second * 10)
 	defaultMQProducer.Shutdown()
