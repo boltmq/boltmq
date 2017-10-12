@@ -363,7 +363,7 @@ func (self *TopicRouteData) ToString() string {
 	}
 	filterServerTable := strings.Join(vals, ",")
 
-	format := "TopicRouteData [orderTopicConf=%s, queueDatas=%s, brokerDatas=%s, filterServerTable=%s]"
+	format := "TopicRouteData {orderTopicConf=%s, queueDatas=%s, brokerDatas=%s, filterServerTable=%s}"
 	info := fmt.Sprintf(format, self.OrderTopicConf, data1, data2, filterServerTable)
 	return info
 }
@@ -373,7 +373,7 @@ func (self *QueueData) ToString() string {
 		return ""
 	}
 
-	format := "QueueData [brokerName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicSynFlag=%d]"
+	format := "QueueData {brokerName=%s, readQueueNums=%d, writeQueueNums=%d, perm=%d, topicSynFlag=%d}"
 	info := fmt.Sprintf(format, self.BrokerName, self.ReadQueueNums, self.WriteQueueNums, self.Perm, self.TopicSynFlag)
 	return info
 }
@@ -386,11 +386,11 @@ func (self *BrokerData) ToString() string {
 	brokerAddrs := make([]string, 0, len(self.BrokerAddrs))
 	if self.BrokerAddrs != nil && len(self.BrokerAddrs) > 0 {
 		for k, v := range self.BrokerAddrs {
-			brokerAddr := fmt.Sprintf("[brokerId=%d, brokerAddr=%s]", k, v)
+			brokerAddr := fmt.Sprintf("{brokerId=%d, brokerAddr=%s}", k, v)
 			brokerAddrs = append(brokerAddrs, brokerAddr)
 		}
 	}
-	format := "QueueData [brokerName:%s, brokerAddrs:%s]"
+	format := "QueueData {brokerName:%s, brokerAddrs:%s}"
 	info := fmt.Sprintf(format, self.BrokerName, strings.Join(brokerAddrs, ","))
 	return info
 }

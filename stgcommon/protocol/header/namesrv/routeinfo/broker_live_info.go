@@ -33,7 +33,7 @@ func NewBrokerLiveInfo(dataVersion *stgcommon.DataVersion, haServerAddr string, 
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/29
 func (self *BrokerLiveInfo) ToString() string {
-	format := "BrokerLiveInfo [lastUpdateTimestamp=%d, %s, %s, haServerAddr=%s]"
+	format := "BrokerLiveInfo {lastUpdateTimestamp=%d, %s, %s, haServerAddr=%s}"
 	info := fmt.Sprintf(format, self.LastUpdateTimestamp, self.DataVersion.ToString(), self.Context.ToString(), self.HaServerAddr)
 	return info
 }

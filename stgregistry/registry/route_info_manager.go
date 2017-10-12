@@ -258,29 +258,40 @@ func (self *RouteInfoManager) createAndUpdateQueueData(brokerName string, topicC
 	queueData := route.NewQueueData(brokerName, topicConfig)
 
 	queueDataList, ok := self.TopicQueueTable[topic]
+	logger.Info("createAndUpdateQueueData(), brokerName=%s, topic=%s, ok=%t, queueDataList: %#v", brokerName, topic, ok, queueDataList)
+
 	if !ok || queueDataList == nil {
 		queueDataList = make([]*route.QueueData, 0)
 		queueDataList = append(queueDataList, queueData)
 		self.TopicQueueTable[topic] = queueDataList
-		logger.Info("new topic registerd, topic[%s], %s", topic, queueData.ToString())
+		logger.Info("new topic registerd, topic=%s, %s", topic, queueData.ToString())
 		self.printTopicQueueTable()
 	} else {
 		addNewOne := true
 		for index, qd := range queueDataList {
+			//logger.Info("createAndUpdateQueueData.for.queueData  -->  brokerName=%s,  %s", brokerName, qd.ToString())
+
 			if qd != nil && qd.BrokerName == brokerName {
 				if queueData.Equals(qd) {
 					addNewOne = false
 				} else {
-					logger.Info("topic changed, %s OLD: %s NEW: %s", topic, qd.ToString(), queueData.ToString())
+					format := "topic changed, old.queueData(被删除): %s, new.queueData(新加入): %s"
+					logger.Info(format, topic, qd.ToString(), queueData.ToString())
 					queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
+					self.TopicQueueTable[topic] = queueDataList // 使用append()操作后，queueDataList切片地址已改变，因此需要再次设置self.TopicQueueTable的数据
+
+					//logger.Info("删除Topic后，打印参数")
+					//self.printTopicQueueTable()
 				}
 			}
 		}
 
 		if addNewOne {
 			queueDataList = append(queueDataList, queueData)
-			//再次打印日志，看看有多少数据
-			//self.printTopicQueueTable()
+			self.TopicQueueTable[topic] = queueDataList
+
+			logger.Info("新增queueData信息: %s", queueData.ToString())
+			self.printTopicQueueTable()
 		}
 	}
 }
@@ -366,13 +377,18 @@ func (self *RouteInfoManager) removeTopicByBrokerName(brokerName string) {
 			if queueDataList != nil {
 				for index, queueData := range queueDataList {
 					if queueData != nil && queueData.BrokerName == brokerName {
-						logger.Info("removeTopicByBrokerName, remove one broker's topic=%s, %s", topic, queueData.ToString())
+						format := "removeTopicByBrokerName(), remove topic from broker. brokerName=%s, topic=%s, %s"
+						logger.Info(format, brokerName, topic, queueData.ToString())
 						queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
+						self.TopicQueueTable[topic] = queueDataList // 使用append()操作后，queueDataList切片地址已改变，因此需要再次设置self.TopicQueueTable的数据
+
+						//logger.Info("删除Topic后打印参数")
+						//self.printTopicQueueTable()
 					}
 				}
 
 				if len(queueDataList) == 0 {
-					logger.Info("removeTopicByBrokerName, remove the topic all queue, topic=%s", topic)
+					logger.Info("removeTopicByBrokerName(), remove the topic all queue, topic=%s", topic)
 					delete(self.TopicQueueTable, topic)
 				}
 			}
@@ -411,7 +427,9 @@ func (self *RouteInfoManager) pickupTopicRouteData(topic string) *route.TopicRou
 				if ok && brokerData != nil {
 					brokerDataClone := brokerData.CloneBrokerData()
 					brokerDataList = append(brokerDataList, brokerDataClone)
-					topicRouteData.BrokerDatas = brokerDataList // FIXME:修复“topicRouteData.BrokerDatas”节点为空的问题
+
+					// 使用append()操作后，brokerDataList切片地址已改变，因此需要再次设置self.TopicQueueTable的数据
+					topicRouteData.BrokerDatas = brokerDataList
 					foundBrokerData = true
 
 					if brokerDataClone.BrokerAddrs != nil && len(brokerDataClone.BrokerAddrs) > 0 {
@@ -486,11 +504,9 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 	brokerAddrFound := ""
 	if ctx != nil {
 		self.ReadWriteLock.RLock()
-		for k, v := range self.BrokerLiveTable {
-			//logger.Info("BrokerLiveTable.Context --> %s", v.Context.ToString())
-			//logger.Info("ctx.Context --> %s", ctx.ToString())
-			if v != nil && v.Context.RemoteAddr().String() == ctx.RemoteAddr().String() {
-				brokerAddrFound = k
+		for key, brokerLive := range self.BrokerLiveTable {
+			if brokerLive != nil && brokerLive.Context.RemoteAddr().String() == ctx.RemoteAddr().String() {
+				brokerAddrFound = key
 				queryBroker = true
 			}
 		}
@@ -500,7 +516,7 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 	if !queryBroker {
 		brokerAddrFound = remoteAddr
 	} else {
-		logger.Info("the broker's channel destroyed, %s, clean it's data structure at once", brokerAddrFound)
+		logger.Info("the broker's channel destroyed, clean it's data structure at once.  brokerAddr=%s", brokerAddrFound)
 	}
 
 	// 加写锁，删除相关数据结构
@@ -526,7 +542,7 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 							if brokerAddr == brokerAddrFound {
 								brokerNameFound = brokerData.BrokerName
 								delete(brokerAddrs, brokerId)
-								removeMsg := "remove brokerAddr[%d, %s, %s] from brokerAddrTable, because channel destroyed"
+								removeMsg := "remove brokerAddr from brokerAddrTable, because channel destroyed. brokerId=%d, brokerAddr=%s, brokerName=%s"
 								logger.Info(removeMsg, brokerId, brokerAddr, brokerData.BrokerName)
 								break
 							}
@@ -537,7 +553,7 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 					if len(brokerData.BrokerAddrs) == 0 {
 						removeBrokerName = true
 						delete(self.BrokerAddrTable, bn)
-						removeMsg := "remove brokerAddr[%s] from brokerAddrTable, because channel destroyed"
+						removeMsg := "remove brokerAddr from brokerAddrTable, because channel destroyed. brokerName=%s"
 						logger.Info(removeMsg, brokerData.BrokerName)
 					}
 				}
@@ -571,13 +587,15 @@ func (self *RouteInfoManager) onChannelDestroy(remoteAddr string, ctx netm.Conte
 						if queueData.BrokerName == brokerAddrFound {
 							// 从queueDataList切片中删除索引为index的数据
 							queueDataList = append(queueDataList[:index], queueDataList[index+1:]...)
-							removeMsg := "remove topic[%s %s], from topicQueueTable, because channel destroyed"
+							self.TopicQueueTable[topic] = queueDataList // 使用append()操作后，queueDataList切片地址已改变，因此需要再次设置self.TopicQueueTable的数据
+
+							removeMsg := "remove one topic from topicQueueTable, because channel destroyed. topic=%s, %s"
 							logger.Info(removeMsg, topic, queueData.ToString())
 						}
 					}
 					if len(queueDataList) == 0 {
 						delete(self.TopicQueueTable, topic)
-						removeMsg := "remove topic[%s] all queue, from topicQueueTable, because channel destroyed"
+						removeMsg := "remove topic all queue from topicQueueTable, because channel destroyed. topic=%s"
 						logger.Info(removeMsg, topic)
 					}
 				}
@@ -608,16 +626,17 @@ func (self *RouteInfoManager) printAllPeriodically() {
 // Since: 2017/9/6
 func (self *RouteInfoManager) printTopicQueueTable() {
 	logger.Info("topicQueueTable size: %d", len(self.TopicQueueTable))
-	if self.TopicQueueTable != nil {
-		for topic, queueDatas := range self.TopicQueueTable {
-			if queueDatas != nil && len(queueDatas) > 0 {
-				for _, queueData := range queueDatas {
-					info := "queueData is nil"
-					if queueData != nil {
-						info = queueData.ToString()
-					}
-					logger.Info("topicQueueTable topic: %s %s", topic, info)
+	if self.TopicQueueTable == nil {
+		return
+	}
+	for topic, queueDatas := range self.TopicQueueTable {
+		if queueDatas != nil && len(queueDatas) > 0 {
+			for _, queueData := range queueDatas {
+				info := "queueData is nil"
+				if queueData != nil {
+					info = queueData.ToString()
 				}
+				logger.Info("topicQueueTable topic=%s, %s", topic, info)
 			}
 		}
 	}
@@ -644,7 +663,7 @@ func (self *RouteInfoManager) printClusterAddrTable() {
 			}
 			info = strings.Join(brokerNames, ",")
 		}
-		logger.Info("clusterAddrTable clusterName [%s],  brokerNames[%s]", clusterName, info)
+		logger.Info("clusterAddrTable clusterName=%s, brokerNames=[%s]", clusterName, info)
 	}
 	logger.Info("") // 额外打印换行符
 }
@@ -662,7 +681,7 @@ func (self *RouteInfoManager) printBrokerLiveTable() {
 		if brokerLiveInfo != nil {
 			info = brokerLiveInfo.ToString()
 		}
-		logger.Info("brokerLiveTable brokerAddr: %s %s", brokerAddr, info)
+		logger.Info("brokerLiveTable brokerAddr=%s, %s", brokerAddr, info)
 	}
 	logger.Info("") // 额外打印换行符
 }
@@ -680,7 +699,7 @@ func (self *RouteInfoManager) printBrokerAddrTable() {
 		if brokerData != nil {
 			info = brokerData.ToString()
 		}
-		logger.Info("brokerAddrTable brokerName: %s, %s", brokerName, info)
+		logger.Info("brokerAddrTable brokerName=%s, %s", brokerName, info)
 	}
 	logger.Info("") // 额外打印换行符
 }
