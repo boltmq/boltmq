@@ -43,7 +43,7 @@ type DefaultMessageStore struct {
 	MessageStoreConfig       *MessageStoreConfig   // 存储配置
 	CommitLog                *CommitLog
 	consumeTopicTable        map[string]*ConsumeQueueTable
-	consumeQueueTableMu      sync.RWMutex
+	consumeQueueTableMu      *sync.RWMutex
 	FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
 	CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
 	CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
@@ -71,6 +71,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.RunningFlags = new(RunningFlags)
 	ms.SystemClock = new(stgcommon.SystemClock)
 	ms.ShutdownFlag = true
+	ms.consumeQueueTableMu = new(sync.RWMutex)
 
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
@@ -245,19 +246,17 @@ func (self *DefaultMessageStore) loadConsumeQueue() bool {
 }
 
 func (self *DefaultMessageStore) putConsumeQueue(topic string, queueId int32, consumeQueue *ConsumeQueue) {
-	self.consumeQueueTableMu.RLock()
-	_, ok := self.consumeTopicTable[topic]
-	self.consumeQueueTableMu.RUnlock()
+	self.consumeQueueTableMu.Lock()
+	defer self.consumeQueueTableMu.Unlock()
+	consumeQueueMap, ok := self.consumeTopicTable[topic]
 
 	if !ok {
-		self.consumeQueueTableMu.Lock()
-		consumeQueueMap := NewConsumeQueueTable()
-		consumeQueueMap.consumeQueuesMu.Lock()
+		consumeQueueMap = NewConsumeQueueTable()
 		consumeQueueMap.consumeQueues[queueId] = consumeQueue
-		consumeQueueMap.consumeQueuesMu.Unlock()
 		self.consumeTopicTable[topic] = consumeQueueMap
-		self.consumeQueueTableMu.Unlock()
 	}
+
+	consumeQueueMap.consumeQueues[queueId] = consumeQueue
 }
 
 func (self *DefaultMessageStore) isTempFileExist() bool {
