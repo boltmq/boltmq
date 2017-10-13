@@ -13,9 +13,11 @@ type SubscriptionGroupTable struct {
 }
 
 func NewSubscriptionGroupTable() *SubscriptionGroupTable {
-	return &SubscriptionGroupTable{
-		SubscriptionGroupTable: make(map[string]*SubscriptionGroupConfig),
+	subscriptionGroupTable := &SubscriptionGroupTable{
+		SubscriptionGroupTable: make(map[string]*SubscriptionGroupConfig, 1024),
+		DataVersion:            *stgcommon.NewDataVersion(),
 	}
+	return subscriptionGroupTable
 }
 
 func (table *SubscriptionGroupTable) Size() int {
@@ -74,7 +76,7 @@ func (table *SubscriptionGroupTable) Clear() {
 	table.RLock()
 	defer table.RUnlock()
 
-	table.SubscriptionGroupTable = make(map[string]*SubscriptionGroupConfig)
+	table.SubscriptionGroupTable = make(map[string]*SubscriptionGroupConfig, 1024)
 }
 
 // syncTopicConfig 同步Topic配置文件
@@ -84,20 +86,17 @@ func (table *SubscriptionGroupTable) PutAll(offsetMap *syncmap.Map) {
 	table.Lock()
 	defer table.Unlock()
 
-	iterator := offsetMap.Iterator()
-	for iterator.HasNext() {
-		kItem, vItem, _ := iterator.Next()
-		var (
-			k  = ""
-			ok = false
-		)
+	if offsetMap == nil {
+		return
+	}
 
-		if k, ok = kItem.(string); !ok {
-			continue
-		}
-
-		if v, vok := vItem.(*SubscriptionGroupConfig); vok {
-			table.SubscriptionGroupTable[k] = v
+	itor := offsetMap.Iterator()
+	for itor.HasNext() {
+		key, value, _ := itor.Next()
+		if groupName, ok := key.(string); ok && key != "" {
+			if subscriptionGroupConfig, ok := value.(*SubscriptionGroupConfig); ok {
+				table.SubscriptionGroupTable[groupName] = subscriptionGroupConfig
+			}
 		}
 	}
 }

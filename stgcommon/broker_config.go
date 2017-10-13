@@ -18,34 +18,35 @@ const (
 // Author gaoyanlei
 // Since 2017/8/8
 type BrokerConfig struct {
-	SmartGoHome                        string `json:"SmartGoHome"`                        // mqHome
-	NamesrvAddr                        string `json:"NamesrvAddr"`                        // namsrv地址
-	BrokerIP1                          string `json:"BrokerIP1"`                          // 本机ip1地址
-	BrokerIP2                          string `json:"BrokerIP2"`                          // 本机ip2地址
-	BrokerName                         string `json:"BrokerName"`                         // 当前机器hostName
-	BrokerClusterName                  string `json:"BrokerClusterName"`                  // 集群名称
-	BrokerId                           int64  `json:"BrokerId"`                           // 默认值MasterId
-	BrokerPermission                   int    `json:"BrokerPermission"`                   // Broker权限
-	DefaultTopicQueueNums              int32  `json:"DefaultTopicQueueNums"`              // 默认topic队列数
-	AutoCreateTopicEnable              bool   `json:"AutoCreateTopicEnable"`              // 自动创建Topic功能是否开启（生产环境建议关闭）
-	ClusterTopicEnable                 bool   `json:"ClusterTopicEnable"`                 // 自动创建以集群名字命名的Topic功能是否开启
-	BrokerTopicEnable                  bool   `json:"BrokerTopicEnable"`                  // 自动创建以服务器名字命名的Topic功能是否开启
-	AutoCreateSubscriptionGroup        bool   `json:"AutoCreateSubscriptionGroup"`        // 自动创建订阅组功能是否开启（线上建议关闭）
-	SendMessageThreadPoolNums          int    `json:"SendMessageThreadPoolNums"`          // SendMessageProcessor处理线程数
-	PullMessageThreadPoolNums          int    `json:"PullMessageThreadPoolNums"`          // PullMessageProcessor处理线程数
-	AdminBrokerThreadPoolNums          int    `json:"AdminBrokerThreadPoolNums"`          // AdminBrokerProcessor处理线程数
-	ClientManageThreadPoolNums         int    `json:"ClientManageThreadPoolNums"`         // ClientManageProcessor处理线程数
-	FlushConsumerOffsetInterval        int    `json:"FlushConsumerOffsetInterval"`        // 刷新Consumer offest定时间隔
-	FlushConsumerOffsetHistoryInterval int    `json:"FlushConsumerOffsetHistoryInterval"` // 此字段目前cloudmq没有使用
-	RejectTransactionMessage           bool   `json:"RejectTransactionMessage"`           // 是否拒绝接收事务消息
-	FetchNamesrvAddrByAddressServer    bool   `json:"FetchNamesrvAddrByAddressServer"`    // 是否从地址服务器寻找NameServer地址，正式发布后，默认值为false
-	SendThreadPoolQueueCapacity        int    `json:"SendThreadPoolQueueCapacity"`        // 发送消息对应的线程池阻塞队列size
-	PullThreadPoolQueueCapacity        int    `json:"PullThreadPoolQueueCapacity"`        // 订阅消息对应的线程池阻塞队列size
-	FilterServerNums                   int32  `json:"FilterServerNums"`                   // 过滤服务器数量
-	LongPollingEnable                  bool   `json:"LongPollingEnable"`                  // Consumer订阅消息时，Broker是否开启长轮询
-	ShortPollingTimeMills              int    `json:"ShortPollingTimeMills"`              // 如果是短轮询，服务器挂起时间
-	NotifyConsumerIdsChangedEnable     bool   `json:"NotifyConsumerIdsChangedEnable"`     // notify consumerId changed 开关
-	OffsetCheckInSlave                 bool   `json:"OffsetCheckInSlave"`                 // slave 是否需要纠正位点
+	SmartGoHome                        string `json:"smartgoHome"`                        // 环境变量"SMARTGO_HOME"(smartgo工程目录)
+	SmartgoDataPath                    string `json:"smartgoDataPath"`                    // broker、store等模块的数据存储目录
+	NamesrvAddr                        string `json:"namesrvAddr"`                        // namsrv地址
+	BrokerIP1                          string `json:"brokerIP1"`                          // 本机ip1地址
+	BrokerIP2                          string `json:"brokerIP2"`                          // 本机ip2地址
+	BrokerName                         string `json:"brokerName"`                         // 当前机器hostName
+	BrokerClusterName                  string `json:"brokerClusterName"`                  // 集群名称
+	BrokerId                           int64  `json:"brokerId"`                           // 默认值MasterId
+	BrokerPermission                   int    `json:"brokerPermission"`                   // Broker权限
+	DefaultTopicQueueNums              int32  `json:"defaultTopicQueueNums"`              // 默认topic队列数
+	AutoCreateTopicEnable              bool   `json:"autoCreateTopicEnable"`              // 自动创建Topic功能是否开启（生产环境建议关闭）
+	ClusterTopicEnable                 bool   `json:"clusterTopicEnable"`                 // 自动创建以集群名字命名的Topic功能是否开启
+	BrokerTopicEnable                  bool   `json:"brokerTopicEnable"`                  // 自动创建以服务器名字命名的Topic功能是否开启
+	AutoCreateSubscriptionGroup        bool   `json:"autoCreateSubscriptionGroup"`        // 自动创建订阅组功能是否开启（线上建议关闭）
+	SendMessageThreadPoolNums          int    `json:"sendMessageThreadPoolNums"`          // SendMessageProcessor处理线程数
+	PullMessageThreadPoolNums          int    `json:"pullMessageThreadPoolNums"`          // PullMessageProcessor处理线程数
+	AdminBrokerThreadPoolNums          int    `json:"adminBrokerThreadPoolNums"`          // AdminBrokerProcessor处理线程数
+	ClientManageThreadPoolNums         int    `json:"clientManageThreadPoolNums"`         // ClientManageProcessor处理线程数
+	FlushConsumerOffsetInterval        int    `json:"flushConsumerOffsetInterval"`        // 刷新ConsumerOffest定时间隔
+	FlushConsumerOffsetHistoryInterval int    `json:"flushConsumerOffsetHistoryInterval"` // 此字段目前没有使用
+	RejectTransactionMessage           bool   `json:"rejectTransactionMessage"`           // 是否拒绝接收事务消息
+	FetchNamesrvAddrByAddressServer    bool   `json:"fetchNamesrvAddrByAddressServer"`    // 是否从地址服务器寻找NameServer地址，正式发布后，默认值为false
+	SendThreadPoolQueueCapacity        int    `json:"sendThreadPoolQueueCapacity"`        // 发送消息对应的线程池阻塞队列size
+	PullThreadPoolQueueCapacity        int    `json:"pullThreadPoolQueueCapacity"`        // 订阅消息对应的线程池阻塞队列size
+	FilterServerNums                   int32  `json:"filterServerNums"`                   // 过滤服务器数量
+	LongPollingEnable                  bool   `json:"longPollingEnable"`                  // Consumer订阅消息时，Broker是否开启长轮询
+	ShortPollingTimeMills              int    `json:"shortPollingTimeMills"`              // 如果是短轮询，服务器挂起时间
+	NotifyConsumerIdsChangedEnable     bool   `json:"notifyConsumerIdsChangedEnable"`     // notify consumerId changed 开关
+	OffsetCheckInSlave                 bool   `json:"offsetCheckInSlave"`                 // slave 是否需要纠正位点
 }
 
 // NewDefaultBrokerConfig 初始化默认BrokerConfig（默认AutoCreateTopicEnable=true）
