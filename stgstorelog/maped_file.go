@@ -208,7 +208,6 @@ func (self *MapedFile) isAbleToFlush(flushLeastPages int32) bool {
 }
 
 func (self *MapedFile) isFull() bool {
-	logger.Infof("maped file: %s wrote postion: %d", self.fileName, self.wrotePostion)
 	return self.fileSize == int64(self.wrotePostion)
 }
 
