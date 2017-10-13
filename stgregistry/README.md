@@ -5,16 +5,15 @@ Read the [docs](http://git.oschina.net/cloudzone/smartgo)
 
 ### 环境变量
 ```bash
-export SMARTGO_REGISTRY_CONFIG="/home/smartgo/registry" # 可以是任意目录，只要能在该目录创建文件即可
+export SMARTGO_REGISTRY_CONFIG="/home/smartgo/registry/cfg.json" # registry日志配置文件
 ```
 
 ### logger日志
 - 日志组件为`github.com/astaxie/beego/logs`，已修改它的`logger.go`文件，支持第一列时间字段的毫秒显示效果
-- `registry`工程启动后默认读取日志配置文件`cfg.json`，如果读取异常，会将日志打印到控制台，日志级别默认为`Info`
-- 配置文件路径的读取优先级为`$SMARTGO_REGISTRY_CONFIG/cfg.json `
+- `registry`启动后，优先读取`$SMARTGO_REGISTRY_CONFIG`日志配置文件，如果读取异常则尝试读取`cfg.json`默认路径
+- 如果`cfg.json`默认文件还是读取异常，则会将日志输出到控制台，日志级别默认为`Info`
 ```bash
-$SMARTGO_REGISTRY_CONFIG/cfg.json                                            # 优先读取
-$GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/g/cfg.json
+$GOPATH/src/git.oschina.net/cloudzone/smartgo/stgregistry/start/g/cfg.json   # 日志默认路径
 ```
 
 ### 日志文件`cfg.json`示例
@@ -60,7 +59,7 @@ mv start registry
 ### 启动`registry`
 ```bash
 mkdir ./logs
-touch logs/registry.log
+touch logs/registry.log  # 第一次启动，确保./logs/registry.log文件存在
 nohup ./registry &
 ```
 

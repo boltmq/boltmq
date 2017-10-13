@@ -27,32 +27,9 @@ var (
 	cfg Config
 )
 
-func configPath() (cfgPath string) {
-	cfgDir := stgcommon.GetSmartRegistryConfig()
-	if cfgDir == "" {
-		cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName
-		return cfgPath
-	}
-
-	cfgPath = cfgDir + "/" + cfgName
-	lastChar := cfgDir[len(cfgDir)-1 : len(cfgDir)]
-	if lastChar == "/" {
-		cfgPath = cfgDir + cfgName
-	}
-
-	if !file.IsExist(cfgPath) {
-		fmt.Printf("config file is not existent. %s \n", cfgPath)
-
-		if !file.IsExist(cfgPath) {
-			// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
-		}
-		return ""
-	}
-
-	return cfgPath
-}
-
 // Init 模块初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/21
 func InitLogger() {
 	cfgPath := configPath()
 	err := utils.ParseConfig(cfgPath, &cfg)
@@ -65,6 +42,28 @@ func InitLogger() {
 	}
 }
 
+// configPath 获取日志配置文件路径
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/21
+func configPath() (cfgPath string) {
+	// export SMARTGO_REGISTRY_CONFIG = "/home/registry/cfg.json"
+	cfgPath = stgcommon.GetSmartRegistryConfig()
+	if !file.IsExist(cfgPath) {
+		fmt.Printf("registry config file is not existent. SMARTGO_REGISTRY_CONFIG=%s \n", cfgPath)
+
+		if !file.IsExist(cfgPath) {
+			// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
+			cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName
+			fmt.Printf("idea special registryConfigPath = %s \n", cfgPath)
+			return cfgPath
+		}
+	}
+	return cfgPath
+}
+
+// getDefaultLoggerConfig 获得默认logger配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/21
 func getDefaultLoggerConfig() logger.Config {
 	config := logger.Config{}
 	config.CacheSize = cacheSize
@@ -83,6 +82,9 @@ func getDefaultLoggerConfig() logger.Config {
 	return config
 }
 
+// loggerType 日志保存类型：文件、控制台
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/21
 var loggerType = struct {
 	File    string // 保存文件
 	Console string // 打印到控制台
