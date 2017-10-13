@@ -23,30 +23,36 @@ func NewSlaveSynchronize(brokerController *BrokerController) *SlaveSynchronize {
 	return slaveSynchronize
 }
 
-func (slaveSynchronize *SlaveSynchronize) syncAll() {
-	slaveSynchronize.syncConsumerOffset()
-	slaveSynchronize.syncTopicConfig()
-	slaveSynchronize.syncDelayOffset()
-	slaveSynchronize.syncSubscriptionGroupConfig()
+func (self *SlaveSynchronize) syncAll() {
+	self.syncConsumerOffset()
+	self.syncTopicConfig()
+	self.syncDelayOffset()
+	self.syncSubscriptionGroupConfig()
 }
 
 // syncTopicConfig 同步Topic配置文件
 // Author rongzhihong
 // Since 2017/9/18
 func (slave *SlaveSynchronize) syncTopicConfig() {
-	masterAddrBak := slave.masterAddr
-	if "" != (masterAddrBak) {
-		topicWrapper := slave.BrokerController.BrokerOuterAPI.GetAllTopicConfig(masterAddrBak)
-		if slave.BrokerController.TopicConfigManager.DataVersion != topicWrapper.DataVersion {
-			slave.BrokerController.TopicConfigManager.DataVersion.AssignNewOne(
-				stgcommon.DataVersion{Timestamp: topicWrapper.DataVersion.Timestamp, Counter: topicWrapper.DataVersion.Counter})
+	if slave.masterAddr == "" {
+		return
+	}
 
-			slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Clear()
-			slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.PutAll(
-				topicWrapper.TopicConfigTable.TopicConfigs,
-			)
-			slave.BrokerController.TopicConfigManager.ConfigManagerExt.Persist()
-		}
+	topicWrapper := slave.BrokerController.BrokerOuterAPI.GetAllTopicConfig(slave.masterAddr)
+	if topicWrapper == nil || topicWrapper.DataVersion == nil {
+		return
+	}
+
+	if topicWrapper.DataVersion != slave.BrokerController.TopicConfigManager.DataVersion {
+		dataVersion := stgcommon.NewDataVersion(topicWrapper.DataVersion.Timestamp)
+		dataVersion.Counter = topicWrapper.DataVersion.Counter
+
+		slave.BrokerController.TopicConfigManager.DataVersion.AssignNewOne(*dataVersion)
+		slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Clear()
+
+		topicConfigs := topicWrapper.TopicConfigTable.TopicConfigs
+		slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.PutAll(topicConfigs)
+		slave.BrokerController.TopicConfigManager.ConfigManagerExt.Persist()
 	}
 }
 
@@ -54,47 +60,64 @@ func (slave *SlaveSynchronize) syncTopicConfig() {
 // Author rongzhihong
 // Since 2017/9/18
 func (slave *SlaveSynchronize) syncConsumerOffset() {
-	masterAddrBak := slave.masterAddr
-	if "" != (masterAddrBak) {
-		offsetWrapper := slave.BrokerController.BrokerOuterAPI.GetAllConsumerOffset(masterAddrBak)
-		slave.BrokerController.ConsumerOffsetManager.Offsets.PutAll(offsetWrapper.OffsetTable)
-		slave.BrokerController.ConsumerOffsetManager.configManagerExt.Persist()
-		logger.Infof("update slave consumer offset from master, %s", masterAddrBak)
+	if slave.masterAddr == "" {
+		return
 	}
+
+	offsetWrapper := slave.BrokerController.BrokerOuterAPI.GetAllConsumerOffset(slave.masterAddr)
+	if offsetWrapper == nil || offsetWrapper.OffsetTable == nil {
+		return
+	}
+
+	slave.BrokerController.ConsumerOffsetManager.Offsets.PutAll(offsetWrapper.OffsetTable)
+	slave.BrokerController.ConsumerOffsetManager.configManagerExt.Persist()
+	buf := offsetWrapper.CustomEncode(offsetWrapper)
+	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s", slave.masterAddr, string(buf))
 }
 
 // syncTopicConfig 同步定时偏移量配置文件
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *SlaveSynchronize) syncDelayOffset() {
-	masterAddrBak := slave.masterAddr
-	if "" != (masterAddrBak) {
-		delayOffset := slave.BrokerController.BrokerOuterAPI.GetAllDelayOffset(masterAddrBak)
-		if delayOffset != "" {
-			fileName := config.GetDelayOffsetStorePath(slave.BrokerController.MessageStoreConfig.StorePathRootDir)
-			stgcommon.String2File([]byte(delayOffset), fileName)
-		}
-		logger.Infof("update slave delay offset from master, %s", masterAddrBak)
+func (self *SlaveSynchronize) syncDelayOffset() {
+	if self.masterAddr == "" {
+		return
 	}
+
+	delayOffset := self.BrokerController.BrokerOuterAPI.GetAllDelayOffset(self.masterAddr)
+	if delayOffset == "" {
+		logger.Infof("update slave delay offset from master, but delayOffset is empty. masterAddr=%s", self.masterAddr)
+		return
+	}
+
+	fileName := config.GetDelayOffsetStorePath(self.BrokerController.MessageStoreConfig.StorePathRootDir)
+	stgcommon.String2File([]byte(delayOffset), fileName)
+	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s", self.masterAddr, delayOffset)
 }
 
 // syncTopicConfig 同步订阅配置文件
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *SlaveSynchronize) syncSubscriptionGroupConfig() {
-	masterAddrBak := slave.masterAddr
-	if "" != (masterAddrBak) {
-		subscriptionWrapper := slave.BrokerController.BrokerOuterAPI.GetAllSubscriptionGroupConfig(masterAddrBak)
+func (self *SlaveSynchronize) syncSubscriptionGroupConfig() {
+	if self.masterAddr == "" {
+		return
+	}
+	subscriptionWrapper := self.BrokerController.BrokerOuterAPI.GetAllSubscriptionGroupConfig(self.masterAddr)
+	if subscriptionWrapper == nil {
+		return
+	}
 
-		if slave.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion != subscriptionWrapper.DataVersion {
-			subscriptionGroupManager := slave.BrokerController.SubscriptionGroupManager
-			subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(
-				stgcommon.DataVersion{Timestamp: subscriptionWrapper.DataVersion.Timestamp, Counter: subscriptionWrapper.DataVersion.Counter})
-			subscriptionGroupManager.SubscriptionGroupTable.Clear()
-			subscriptionGroupManager.SubscriptionGroupTable.PutAll(subscriptionWrapper.SubscriptionGroupTable)
-			subscriptionGroupManager.ConfigManagerExt.Persist()
+	if !subscriptionWrapper.DataVersion.Equals(&self.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion) {
+		dataVersion := stgcommon.NewDataVersion(subscriptionWrapper.DataVersion.Timestamp)
+		dataVersion.Counter = subscriptionWrapper.DataVersion.Counter
 
-			logger.Infof("update slave Subscription Group from master, %s", masterAddrBak)
-		}
+		subscriptionGroupManager := self.BrokerController.SubscriptionGroupManager
+		subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(*dataVersion)
+		subscriptionGroupManager.SubscriptionGroupTable.Clear()
+		subscriptionGroupManager.SubscriptionGroupTable.PutAll(subscriptionWrapper.SubscriptionGroupTable)
+		subscriptionGroupManager.ConfigManagerExt.Persist()
+
+		buf := subscriptionGroupManager.Encode(false)
+		logger.Infof("syncSubscriptionGroupConfig --> %s", buf)
+		logger.Infof("update slave subscription group from master, %s", self.masterAddr)
 	}
 }
