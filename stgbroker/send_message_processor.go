@@ -348,7 +348,6 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 				mqtraceContext.QueueId = responseHeader.QueueId
 				mqtraceContext.QueueOffset = responseHeader.QueueOffset
 			}
-			logger.Infof("response:%#v", response)
 			return nil
 		}
 

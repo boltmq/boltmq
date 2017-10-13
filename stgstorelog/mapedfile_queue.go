@@ -172,9 +172,10 @@ func (self *MapedFileQueue) load() bool {
 				// 恢复队列
 				mapedFile, error := NewMapedFile(path, int64(self.mapedFileSize))
 				if error != nil {
-					logger.Error(error.Error())
+					logger.Error("maped file queue load file error:", error.Error())
 					return false
 				}
+
 				mapedFile.wrotePostion = self.mapedFileSize
 				mapedFile.committedPosition = self.mapedFileSize
 				mapedFile.mappedByteBuffer.WritePos = int(mapedFile.wrotePostion)

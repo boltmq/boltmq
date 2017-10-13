@@ -36,7 +36,6 @@ func (self *DispatchMessageService) Start() {
 	for {
 		select {
 		case request := <-self.requestsChan:
-			logger.Infof("dispatch message: %#v \r\n", request)
 			self.doDispatch(request)
 		case <-self.closeChan:
 			self.destroy()
@@ -59,8 +58,6 @@ func (self *DispatchMessageService) putRequest(dispatchRequest *DispatchRequest)
 	if !self.stop {
 		self.requestsChan <- dispatchRequest
 		atomic.AddInt32(&self.requestSize, 1)
-
-		logger.Info("dispatch message service put request,request size: ", self.requestSize)
 
 		self.defaultMessageStore.StoreStatsService.setDispatchMaxBuffer(int64(atomic.LoadInt32(&self.requestSize)))
 
