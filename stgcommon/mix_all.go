@@ -22,11 +22,12 @@ import (
 // Author: yintongqiang
 // Since:  2017/8/10
 const (
-	SMARTGO_HOME_ENV                = "SMARTGO_HOME"
-	CLOUDMQ_HOME_PROPERTY           = "cloudmq.home.dir"
-	NAMESRV_ADDR_ENV                = "NAMESRV_ADDR"
-	NAMESRV_ADDR_PROPERTY           = "cloudmq.namesrv.addr"
-	SMARTGO_REGISTRY_CONFIG_ENV     = "SMARTGO_REGISTRY_CONFIG"
+	SMARTGO_HOME_ENV                = "SMARTGO_HOME"            // smartgo home目录
+	CLOUDMQ_HOME_PROPERTY           = "smartgo.home.dir"        // 默认smartgo home地址
+	NAMESRV_ADDR_ENV                = "NAMESRV_ADDR"            // namesrv环境变量
+	NAMESRV_ADDR_PROPERTY           = "cloudmq.namesrv.addr"    // 默认namesrv_addr地址
+	SMARTGO_DATA_PATH_ENV           = "SMARTGO_DATA_PATH"       // broker、store等模块，存取数据的目录
+	SMARTGO_REGISTRY_CONFIG_ENV     = "SMARTGO_REGISTRY_CONFIG" // registry模块的日志配置文件路径
 	MESSAGE_COMPRESS_LEVEL          = "cloudmq.message.compressLevel"
 	WS_DOMAIN_NAME                  = "jmenv.tbsite.net"
 	WS_DOMAIN_SUBGROUP              = "nsaddr"
@@ -262,9 +263,19 @@ func GetSmartGoHome() string {
 }
 
 // GetUserHomeDir 获取当前操作系统登陆用户的Home目录
+//
+// 注意：
+// 	(1)一台服务器，启动多个broker，因此就需要环境变量“SMARTGO_DATA_PATH”来区别每个broker的数据目录
+//  (2)如果配置了环境变量“SMARTGO_DATA_PATH”，那么user.Current().HomeDir的路径会被覆盖
+//
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
 func GetUserHomeDir() string {
+	smartgoDataPath := strings.TrimSpace(os.Getenv(SMARTGO_DATA_PATH_ENV))
+	if smartgoDataPath != "" {
+		return smartgoDataPath
+	}
+
 	currentUser, _ := user.Current()
 	return currentUser.HomeDir
 }

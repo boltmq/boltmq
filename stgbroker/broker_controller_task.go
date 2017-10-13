@@ -132,7 +132,7 @@ func (self *BrokerControllerTask) startFetchNameServerAddrTask() {
 	logger.Infof("FetchNameServerAddrTask start ok")
 }
 
-// startSlaveSynchronizeTask ScheduledTask syncAll slave
+// startSlaveSynchronizeTask 启动“Slave同步所有数据”任务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/10
 func (self *BrokerControllerTask) startSlaveSynchronizeTask() {
