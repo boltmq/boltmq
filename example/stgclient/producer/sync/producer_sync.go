@@ -24,7 +24,7 @@ func main() {
 	defaultMQProducer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQProducer.Start()
 	for i := 0; i < 640; i++ {
-		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone999", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
+		sendResult, err := defaultMQProducer.Send(message.NewMessage("cloudzone9992", "tagA", []byte("I'm so diao!呵呵"+strconv.Itoa(i))))
 		if err != nil {
 			fmt.Println("send msg err: ----> ", err.Error())
 			continue
