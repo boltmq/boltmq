@@ -110,7 +110,10 @@ func (self *IndexFile) putKey(key string, phyOffset int64, storeTimestamp int64)
 		self.mappedByteBuffer.WriteInt32(slotValue)
 
 		// 更新哈希槽
+		currentWritePos := self.mappedByteBuffer.WritePos
+		self.mappedByteBuffer.WritePos = int(absIndexPos)
 		self.mappedByteBuffer.WriteInt32(self.indexHeader.indexCount)
+		self.mappedByteBuffer.WritePos = currentWritePos
 
 		// 第一次写入
 		if self.indexHeader.indexCount <= 1 {
