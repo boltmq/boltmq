@@ -2,11 +2,11 @@ package stgstorelog
 
 import (
 	"fmt"
-	"math"
 	"sync/atomic"
 	"testing"
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"math"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 )
 
 func Test_write_read(t *testing.T) {
-	totalMessages := 500
+	totalMessages := 100
 	QUEUE_TOTAL = 1
 
 	storeMessage := "Once, there was a chance for me!"
@@ -53,7 +53,7 @@ func Test_write_read(t *testing.T) {
 	}
 
 	master.Shutdown()
-	master.Destroy()
+	//master.Destroy()
 
 }
 
@@ -352,4 +352,59 @@ func TestDefaultMessageStore_CheckInDiskByConsumeOffset(t *testing.T) {
 
 	master.Shutdown()
 	master.Destroy()
+}
+
+func TestDefaultMessageStore_load(t *testing.T) {
+	totalMessages := 10
+	queueNum := 9
+	master := buildMessageStore()
+	storeMessage := "Once, there was a chance for me!"
+	messageBody := []byte(storeMessage)
+
+	for i := 0; i < totalMessages; i++ {
+		for j := 0; j < queueNum; j++ {
+			queueId := int32(j)
+			result := master.PutMessage(buildMessage(messageBody, &queueId))
+			fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+		}
+	}
+	master.Shutdown()
+	time.Sleep(time.Duration(10000 * time.Millisecond))
+	//master.Destroy()
+}
+
+func TestDefaultMessageStore_load2(t *testing.T) {
+	totalMessages := 10
+	queueNum := 9
+	master := buildMessageStore()
+	time.Sleep(time.Duration(10000 * time.Millisecond))
+	storeMessage := "Once, there was a chance for me!"
+	messageBody := []byte(storeMessage)
+
+	for i := 0; i < totalMessages; i++ {
+		for j := 0; j < queueNum; j++ {
+			queueId := int32(j)
+			msg := buildMessage(messageBody, &queueId)
+			msg.QueueId = int32(j)
+			result := master.PutMessage(msg)
+			fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+		}
+	}
+
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	for i := 0; i < 20; i++ {
+		for j := 1; j < 10; j++ {
+			queueId := int32(j)
+			logger.Infof("get message queueId:%d queueOffset:%d", queueId, i)
+			result := master.GetMessage("producer", "test", queueId, int64(i), 1, nil)
+			if result == nil {
+				fmt.Printf("result == nil queue-%d %d \r\n", j, i)
+			}
+
+			fmt.Printf("read queue-%d %d ok %d \r\n", j, i, result.Status)
+		}
+	}
+
+	master.Shutdown()
 }
