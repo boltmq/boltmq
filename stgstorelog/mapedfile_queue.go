@@ -447,7 +447,24 @@ func (self *MapedFileQueue) getMapedMemorySize() int64 {
 }
 
 func (self *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
-	return true
+	mapFile := self.getFirstMapedFile()
+	if mapFile != nil {
+		logger.Warn("the mapedfile was destroyed once, but still alive, ", mapFile.fileName)
+
+		result := mapFile.destroy()
+		if result {
+			logger.Info("the mapedfile redelete OK, ", mapFile.fileName)
+			tmps := list.New()
+			tmps.PushBack(mapFile)
+			self.deleteExpiredFile(tmps)
+		} else {
+			logger.Warn("the mapedfile redelete Failed, ", mapFile.fileName)
+		}
+
+		return result
+	}
+
+	return false
 }
 
 func (self *MapedFileQueue) getFirstMapedFileOnLock() *MapedFile {

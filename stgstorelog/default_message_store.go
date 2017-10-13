@@ -16,6 +16,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 const (
@@ -60,6 +61,7 @@ type DefaultMessageStore struct {
 	ShutdownFlag             bool                      // 存储服务是否启动
 	StoreCheckpoint          *StoreCheckpoint
 	BrokerStatsManager       *stats.BrokerStatsManager
+	storeTicker              *timeutil.Ticker
 }
 
 func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsManager *stats.BrokerStatsManager) *DefaultMessageStore {
@@ -332,9 +334,11 @@ func (self *DefaultMessageStore) Shutdown() {
 	if !self.ShutdownFlag {
 		self.ShutdownFlag = true
 
-		// TODO self.scheduledExecutorService.shutdown()
+		if self.storeTicker != nil {
+			// self.storeTicker.Stop()
+		}
 
-		time.After(time.Millisecond * 3) // 等待其他调用停止
+		time.After(time.Millisecond * 1000 * 3) // 等待其他调用停止
 
 		if self.ScheduleMessageService != nil {
 			self.ScheduleMessageService.Shutdown()
@@ -954,7 +958,24 @@ func (self *DefaultMessageStore) destroyLogics() {
 }
 
 func (self *DefaultMessageStore) addScheduleTask() {
-	// TODO
+	/*
+	self.storeTicker = timeutil.NewTicker(true, 1000*60*time.Millisecond,
+		time.Duration(self.MessageStoreConfig.CleanResourceInterval)*time.Millisecond, func() {
+			self.cleanFilesPeriodically()
+		})
+
+	self.storeTicker.Start()
+	*/
+}
+
+func (self *DefaultMessageStore) cleanFilesPeriodically() {
+	if self.CleanConsumeQueueService != nil {
+		self.CleanCommitLogService.run()
+	}
+
+	if self.CleanConsumeQueueService != nil {
+		self.CleanConsumeQueueService.run()
+	}
 }
 
 func (self *DefaultMessageStore) recoverTopicQueueTable() {

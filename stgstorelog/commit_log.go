@@ -461,6 +461,14 @@ func (self *CommitLog) isMapedFileMatchedRecover(mapedFile *MapedFile) bool {
 	return false
 }
 
+func (self *CommitLog) deleteExpiredFile(expiredTime int64, deleteFilesInterval int32, intervalForcibly int64, cleanImmediately bool) int {
+	return self.MapedFileQueue.deleteExpiredFileByTime(expiredTime, int(deleteFilesInterval), intervalForcibly, cleanImmediately)
+}
+
+func (self *CommitLog) retryDeleteFirstFile(intervalForcibly int64) bool {
+	return self.MapedFileQueue.retryDeleteFirstFile(intervalForcibly)
+}
+
 func (self *CommitLog) destroy() {
 	if self.MapedFileQueue != nil {
 		self.MapedFileQueue.destroy()
@@ -468,9 +476,9 @@ func (self *CommitLog) destroy() {
 }
 
 func (self *CommitLog) Start() {
-	// TODO
+	// TODO self.FlushCommitLogService.start()
 }
 
 func (self *CommitLog) Shutdown() {
-	// TODO
+	// TODO self.FlushCommitLogService.shutdown()
 }

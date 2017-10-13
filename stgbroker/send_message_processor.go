@@ -293,7 +293,6 @@ func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol
 	}
 
 	putMessageResult := smp.BrokerController.MessageStore.PutMessage(msgInner)
-	logger.Info("put message messageId %s", putMessageResult.AppendMessageResult.MsgId)
 	if putMessageResult != nil {
 		sendOK := false
 		switch putMessageResult.PutMessageStatus {
