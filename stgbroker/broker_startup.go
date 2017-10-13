@@ -2,6 +2,9 @@ package stgbroker
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
@@ -9,8 +12,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/toolkits/file"
-	"os"
-	"strings"
 )
 
 const (

@@ -75,5 +75,6 @@ func (t *Ticker) Stop() bool {
 	if t.over != nil {
 		<-t.over
 	}
+	t.tm.Stop()
 	return true
 }
