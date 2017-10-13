@@ -7,30 +7,32 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"fmt"
 )
 
 // StatsItemSet 统计单元集合
 // Author rongzhihong
 // Since 2017/9/19
 type StatsItemSet struct {
-	StatsItemTable map[string]*StatsItem // key: statsKey, val:StatsItem
 	sync.RWMutex
-	StatsName         string
-	StatsItemTaskList []*timeutil.Ticker // broker统计的定时任务
+	StatsName        string
+	StatsItemTable   map[string]*StatsItem // key: statsKey, val:StatsItem
+	StatsItemTickers *timeutil.Tickers     // broker统计的定时任务
 }
 
-// NewStatsItemSet 统计单元集合初始化
+// NewStatsItemSet 初始化某个统计维度的统计单元集合
 // Author rongzhihong
 // Since 2017/9/19
 func NewStatsItemSet(statsName string) *StatsItemSet {
 	statsItemSet := new(StatsItemSet)
-	statsItemSet.StatsItemTable = make(map[string]*StatsItem)
 	statsItemSet.StatsName = statsName
+	statsItemSet.StatsItemTable = make(map[string]*StatsItem, 128)
+	statsItemSet.StatsItemTickers = timeutil.NewTickers()
 	statsItemSet.Init()
 	return statsItemSet
 }
 
-// GetAndCreateStatsItem 获得或创建统计单元
+// GetAndCreateStatsItem 创建、获得statsKey的统计单元
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetAndCreateStatsItem(statsKey string) *StatsItem {
@@ -47,16 +49,18 @@ func (stats *StatsItemSet) GetAndCreateStatsItem(statsKey string) *StatsItem {
 	return statsItem
 }
 
-// AddValue 添加值
+// AddValue statsKey的统计单元数量增加
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) AddValue(statsKey string, incValue, incTimes int64) {
 	statsItem := stats.GetAndCreateStatsItem(statsKey)
 	atomic.AddInt64(&(statsItem.ValueCounter), incValue)
 	atomic.AddInt64(&(statsItem.TimesCounter), incTimes)
+	fmt.Printf("statsKey:%s, statsItem.ValueCounter:%d\n, statsItem.TimesCounter:%d\n",
+		statsKey, statsItem.ValueCounter, statsItem.TimesCounter)
 }
 
-// GetStatsDataInMinute 获得分钟统计快照
+// GetStatsDataInMinute 获得statsKey每分钟统计数据
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetStatsDataInMinute(statsKey string) *StatsSnapshot {
@@ -70,7 +74,7 @@ func (stats *StatsItemSet) GetStatsDataInMinute(statsKey string) *StatsSnapshot 
 	return NewStatsSnapshot()
 }
 
-// GetStatsDataInHour 获得小时统计快照
+// GetStatsDataInHour 获得statsKey每小时统计数据
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetStatsDataInHour(statsKey string) *StatsSnapshot {
@@ -84,7 +88,7 @@ func (stats *StatsItemSet) GetStatsDataInHour(statsKey string) *StatsSnapshot {
 	return NewStatsSnapshot()
 }
 
-// GetStatsDataInDay 获得天统计快照
+// GetStatsDataInDay 获得statsKey每天统计数据
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetStatsDataInDay(statsKey string) *StatsSnapshot {
@@ -98,7 +102,7 @@ func (stats *StatsItemSet) GetStatsDataInDay(statsKey string) *StatsSnapshot {
 	return NewStatsSnapshot()
 }
 
-// NewStatsItemSet 获得统计单元
+// NewStatsItemSet 获得statsKey的统计单元
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) GetStatsItem(statsKey string) *StatsItem {
@@ -113,56 +117,32 @@ func (stats *StatsItemSet) GetStatsItem(statsKey string) *StatsItem {
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) Init() {
-	samplingInSecondsTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*1000*time.Millisecond,
-		func() {
-			stats.samplingInSeconds()
-		})
-	samplingInSecondsTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInSecondsTicker)
+	stats.StatsItemTickers.Register("statsItemSet_samplingInSecondsTicker", timeutil.NewTicker(false, 0, 10*time.Second,
+		func() { stats.samplingInSeconds() }))
 
-	samplingInMinutesTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*60*1000*time.Millisecond,
-		func() {
-			stats.samplingInMinutes()
-		})
-	samplingInMinutesTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInMinutesTicker)
+	stats.StatsItemTickers.Register("statsItemSet_samplingInMinutesTicker", timeutil.NewTicker(false, 0, 10*time.Minute,
+		func() { stats.samplingInMinutes() }))
 
-	samplingInHourTicker := timeutil.NewTicker(false, 0*time.Millisecond, 1*60*60*1000*time.Millisecond,
-		func() {
-			stats.samplingInHour()
-		})
-	samplingInHourTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, samplingInHourTicker)
+	stats.StatsItemTickers.Register("statsItemSet_samplingInHourTicker", timeutil.NewTicker(false, 0, time.Hour,
+		func() { stats.samplingInHour() }))
 
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 60000*time.Millisecond,
-		func() {
-			stats.printAtMinutes()
-		})
-	printAtMinutesTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtMinutesTicker)
+	stats.StatsItemTickers.Register("statsItemSet_printAtMinutesTicker", timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond,
+		time.Minute, func() { stats.printAtMinutes() }))
 
 	diffHour := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
-	printAtHourTicker := timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond, 3600000*time.Millisecond,
-		func() {
-			stats.printAtHour()
-		})
-	printAtHourTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtHourTicker)
+	stats.StatsItemTickers.Register("statsItemSet_printAtHourTicker", timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond,
+		time.Hour, func() { stats.printAtHour() }))
 
-	diffDay := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
+	diffDay := float64(stgcommon.ComputNextMorningTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayDay int = int(math.Abs(diffDay))
-	printAtDayTicker := timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 86400000*time.Millisecond,
-		func() {
-			stats.printAtDay()
-		})
-	printAtDayTicker.Start()
-	stats.StatsItemTaskList = append(stats.StatsItemTaskList, printAtDayTicker)
+	stats.StatsItemTickers.Register("statsItemSet_printAtDayTicker", timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond,
+		24*time.Hour, func() { stats.printAtDay() }))
 }
 
-// samplingInSeconds 取样每秒统计
+// samplingInSeconds 每秒统计取样
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) samplingInSeconds() {
@@ -174,7 +154,7 @@ func (stats *StatsItemSet) samplingInSeconds() {
 	}
 }
 
-// samplingInMinutes 取样每分统计
+// samplingInMinutes 每分钟统计取样
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) samplingInMinutes() {
@@ -186,7 +166,7 @@ func (stats *StatsItemSet) samplingInMinutes() {
 	}
 }
 
-// samplingInHour 取样每小时统计
+// samplingInHour 每小时统计取样
 // Author rongzhihong
 // Since 2017/9/19
 func (stats *StatsItemSet) samplingInHour() {

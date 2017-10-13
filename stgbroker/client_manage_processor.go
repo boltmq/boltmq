@@ -12,7 +12,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
@@ -131,8 +130,6 @@ func (cmp *ClientManageProcessor) unregisterClient(ctx netm.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/14
 func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	logger.Infof(">>> queryConsumerOffset client add:%s", ctx.RemoteAddr().String())
-	statTime := timeutil.CurrentTimeMillis()
 	responseHeader := &header.QueryConsumerOffsetResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
@@ -152,14 +149,7 @@ func (cmp *ClientManageProcessor) queryConsumerOffset(ctx netm.Context, request 
 	} else { // 订阅组不存在
 
 		minOffset := cmp.BrokerController.MessageStore.GetMinOffsetInQueue(requestHeader.Topic, requestHeader.QueueId)
-
-		minOffsetTime := timeutil.CurrentTimeMillis()
-
 		isInDisk := cmp.BrokerController.MessageStore.CheckInDiskByConsumeOffset(requestHeader.Topic, requestHeader.QueueId, 0)
-
-		isInDiskTime := timeutil.CurrentTimeMillis()
-		logger.Infof("queryConsumerOffset isInDiskDiff:%d, minOffsetDiff:%d, isInDiskTime:%d, minOffsetTime:%d, startTime:%d",
-			isInDiskTime-minOffsetTime, minOffsetTime-statTime, isInDiskTime, minOffsetTime, statTime)
 
 		// 订阅组不存在情况下，如果这个队列的消息最小Offset是0，则表示这个Topic上线时间不长，服务器堆积的数据也不多，那么这个订阅组就从0开始消费。
 		// 尤其对于Topic队列数动态扩容时，必须要从0开始消费。
