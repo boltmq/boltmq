@@ -109,9 +109,11 @@ func (ext *RebalanceImplExt) rebalanceByTopic(topic string) {
 			changed := ext.updateProcessQueueTableInRebalance(topic, allocateResultSet)
 			if changed {
 				logger.Infof(
-					"rebalanced allocate source. allocateMessageQueueStrategyName, group, topic, mqAllSize, cidAllSize, mqAll, cidAll")
+					"rebalanced allocate source. allocateMessageQueueStrategyName=%v, group=%v, topic=%v, mqAllSize=%v, cidAllSize=%v, mqAll, cidAll",
+					strategy.GetName(), ext.ConsumerGroup, topic, len(mqAll), len(cidAll))
 				logger.Infof(
-					"rebalanced result changed. allocateMessageQueueStrategyName, group, topic, ConsumerId, rebalanceSize, rebalanceMqSet")
+					"rebalanced result changed. allocateMessageQueueStrategyName=%v, group=%v, topic=%v, ConsumerId=%v, rebalanceSize=%v, rebalanceMqSet",
+					strategy.GetName(), ext.ConsumerGroup, topic, ext.MQClientFactory.ClientId, len(allocateResultSet.ToSlice()))
 				mqSet := set.NewSet()
 				for _, mq := range mqAll {
 					mqSet.Add(mq)

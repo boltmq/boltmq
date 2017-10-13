@@ -18,6 +18,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
 	cprotocol"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"fmt"
+	"time"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -287,7 +289,7 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-		//fmt.Println(time.Now().Unix(),requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, "-------------------------------------")
+		fmt.Println(time.Now().Unix(),requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, "-------------------------------------")
 		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 		return impl.pullMessageSync(addr, request, timeoutMillis)
@@ -305,7 +307,7 @@ func (impl *MQClientAPIImpl) queryConsumerOffset(addr string, requestHeader head
 	request := protocol.CreateRequestCommand(code.QUERY_CONSUMER_OFFSET, &requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(addr, request, timeoutMillis)
 	if err != nil {
-		logger.Errorf("topic=%v queryConsumerOffset error=%v", requestHeader.Topic, err.Error())
+		logger.Errorf("topic=%v queueId=%v queryConsumerOffset error=%v", requestHeader.Topic, requestHeader.QueueId, err.Error())
 	}
 	if response != nil && err == nil {
 		switch response.Code {
