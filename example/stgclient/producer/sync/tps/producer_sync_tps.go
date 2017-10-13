@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
-	"time"
-	"git.oschina.net/cloudzone/smartgo/stgclient/process"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	"git.oschina.net/cloudzone/smartgo/stgclient/process"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 
 var (
-	namesrvAddr     = "10.112.68.189:9876"
-	topic           = "cloudzone4"
+	namesrvAddr     = "10.122.1.200:9876"
+	topic           = "luoji"
 	tag             = "tagA"
 	producerGroupId = "producerGroupId-200"
 	goThreadNum     = 100

@@ -212,7 +212,6 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 		body         []byte
 	)
 
-	fmt.Println("[temp]DecodeRemotingCommand: -->", buf.Len(), buf.Bytes())
 	// step 1 读取报文长度
 	if buf.Len() < 4 {
 		return nil, errors.Errorf("DecodeRemotingCommand: buffer-length[%d] incorrect，minimal is 4", buf.Len())
@@ -233,7 +232,6 @@ func DecodeRemotingCommand(buf *bytes.Buffer) (*RemotingCommand, error) {
 		return nil, errors.Wrap(err, 0)
 	}
 
-	fmt.Println("[temp]DecodeRemotingCommand: ==>", headerLength)
 	// step 3 读取报文头数据
 	if buf.Len() == 0 || buf.Len() < int(headerLength) {
 		return nil, errors.Errorf("DecodeRemotingCommand: buffer-length[%d] < attribute header-data[%d] from buffer.", buf.Len(), headerLength)
