@@ -270,9 +270,9 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
 					ctx.RemoteAddr().String(), err.Error())
 			}
-			logger.Infof("----ConsumerGroup:%s .Topic:%s . QueueId:%v . QueueOffset :%v . MaxMsgNums: %v. \n NextBeginOffset: %v, response:%#v, getMessageResult:%#v, ",
-				requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums),
-				getMessageResult.NextBeginOffset, response, getMessageResult)
+			//logger.Infof("----ConsumerGroup:%s .Topic:%s . QueueId:%v . QueueOffset :%v . MaxMsgNums: %v. \n NextBeginOffset: %v, response:%#v, getMessageResult:%#v, ",
+			//	requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, int32(requestHeader.MaxMsgNums),
+			//	getMessageResult.NextBeginOffset, response, getMessageResult)
 			// TODO getMessageResult.Release()
 			response = nil
 		case code.PULL_NOT_FOUND:
