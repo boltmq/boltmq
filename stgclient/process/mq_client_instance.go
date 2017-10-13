@@ -257,14 +257,14 @@ func (mqClientInstance *MQClientInstance) StartScheduledTask() {
 	updateRouteTicker.Start()
 	mqClientInstance.TimerTask.Add(updateRouteTicker)
 	// 定时清理离线的broker并发送心跳数据
-	cleanAndHBTicker := timeutil.NewTicker(true,1000*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.HeartbeatBrokerInterval)*time.Millisecond, func() {
+	cleanAndHBTicker := timeutil.NewTicker(true, 1000*time.Millisecond, time.Duration(mqClientInstance.ClientConfig.HeartbeatBrokerInterval)*time.Millisecond, func() {
 		mqClientInstance.cleanOfflineBroker()
 		mqClientInstance.SendHeartbeatToAllBrokerWithLock()
-	} )
+	})
 	cleanAndHBTicker.Start()
 	mqClientInstance.TimerTask.Add(cleanAndHBTicker)
 	// 定时持久化consumer的offset
-	persistOffsetTicker := timeutil.NewTicker(true,1000*10*time.Millisecond,time.Duration(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval)*time.Millisecond, func() {
+	persistOffsetTicker := timeutil.NewTicker(true, 1000*10*time.Millisecond, time.Duration(mqClientInstance.ClientConfig.PersistConsumerOffsetInterval)*time.Millisecond, func() {
 		mqClientInstance.persistAllConsumerOffset()
 	})
 	persistOffsetTicker.Start()
@@ -531,7 +531,7 @@ func (mqClientInstance *MQClientInstance) persistAllConsumerOffset() {
 
 // 立即执行负载
 func (mqClientInstance *MQClientInstance) rebalanceImmediately() {
-	mqClientInstance.RebalanceService.Start()
+	mqClientInstance.RebalanceService.Wakeup <- true
 }
 
 // 查找broker的master地址
