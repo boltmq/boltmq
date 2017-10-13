@@ -19,6 +19,7 @@ func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageE
 	}
 	return listener.CONSUME_SUCCESS
 }
+
 func taskC() {
 	t := time.NewTicker(time.Second * 1000)
 	for {
