@@ -45,7 +45,7 @@ func (lffp *LengthFieldFramePacket) UnPack(addr string, buffer []byte) (bufs []*
 	buf, ok := lffp.bufTable[addr]
 	lffp.bufTableLock.RUnlock()
 	if !ok {
-		buf = bytes.NewBuffer([]byte{})
+		buf = &bytes.Buffer{}
 		lffp.bufTableLock.Lock()
 		lffp.bufTable[addr] = buf
 		lffp.bufTableLock.Unlock()
@@ -130,7 +130,13 @@ func (lffp *LengthFieldFramePacket) adjustBuffer(addr string, buf *bytes.Buffer,
 	// 读取报文
 	buffer := buf.Next(frameLength)
 
-	return bytes.NewBuffer(buffer), nil
+	nbuf := &bytes.Buffer{}
+	_, err := nbuf.Write(buffer)
+	if err != nil {
+		return nil, errors.Wrap(err, 0)
+	}
+
+	return nbuf, nil
 }
 
 func (lffp *LengthFieldFramePacket) readLengthFieldLength(lengthFieldBytes []byte) (int, error) {
