@@ -1,12 +1,8 @@
 package subscription
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-)
-
-const (
-	RETRY_MAX_TIMES  = 16 // 重试消费最大次数
-	RETRY_QUEUE_NUMS = 1  // 每个订阅组配置重试队列的个数
 )
 
 // SubscriptionGroupConfig 订阅关系配置
@@ -31,9 +27,23 @@ func NewSubscriptionGroupConfig() *SubscriptionGroupConfig {
 		ConsumeEnable:          true,
 		ConsumeFromMinEnable:   true,
 		ConsumeBroadcastEnable: true,
-		RetryQueueNums:         RETRY_QUEUE_NUMS,
-		RetryMaxTimes:          RETRY_MAX_TIMES,
+		RetryQueueNums:         1,  // 每个订阅组配置重试队列的个数
+		RetryMaxTimes:          16, // 重试消费最大次数
 		BrokerId:               stgcommon.MASTER_ID,
 	}
+}
 
+// ToString 打印SubscriptionGroupConfig结构体数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/13
+func (self *SubscriptionGroupConfig) ToString() string {
+	if self == nil {
+		return "SubscriptionGroupConfig is nil"
+	}
+
+	format := "SubscriptionGroupConfig {groupName=%s, consumeEnable=%t, consumeFromMinEnable=%t, consumeBroadcastEnable=%t"
+	format += "retryQueueNums=%d, retryMaxTimes=%d, brokerId=%d, whichBrokerWhenConsumeSlowly=%d}"
+	info := fmt.Sprintf(format, self.GroupName, self.ConsumeEnable, self.ConsumeFromMinEnable, self.ConsumeBroadcastEnable,
+		self.RetryQueueNums, self.RetryMaxTimes, self.BrokerId, self.WhichBrokerWhenConsumeSlowly)
+	return info
 }

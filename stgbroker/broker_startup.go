@@ -21,14 +21,15 @@ const (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/26
 type SmartgoBrokerConfig struct {
-	BrokerClusterName     string
-	BrokerName            string
-	DeleteWhen            int
-	FileReservedTime      int
-	BrokerRole            string
-	FlushDiskType         string
-	AutoCreateTopicEnable bool
-	BrokerId              int64
+	BrokerClusterName     string // 集群名称
+	BrokerName            string // broker名称
+	BrokerId              int64  // broker id
+	DeleteWhen            int    // 何时触发“删除无效Message”
+	FileReservedTime      int    // 消息保存时间
+	BrokerRole            string // broker角色 主/备
+	FlushDiskType         string // 刷盘方式
+	AutoCreateTopicEnable bool   // 是否允许客户端自动创建Topic
+	SmartgoDataPath       string // broker、store等模块的数据存储目录
 }
 
 // Start 启动BrokerController
@@ -65,7 +66,7 @@ func Start(stopChan chan bool) *BrokerController {
 // Since: 2017/9/20
 func CreateBrokerController() *BrokerController {
 	// 读取并转化*.toml配置项的值
-	cfg, cfgPath, ok := parseSmartgoBrokerConfig()
+	cfg, ok := parseSmartgoBrokerConfig()
 	if !ok {
 		logger.Flush()
 		os.Exit(0)
@@ -74,22 +75,26 @@ func CreateBrokerController() *BrokerController {
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName, cfg.AutoCreateTopicEnable)
 	brokerConfig.BrokerId = cfg.BrokerId
+	brokerConfig.SmartgoDataPath = cfg.SmartgoDataPath
+	logger.Infof("broker.UserHomeDir && store.StorePathRootDir = %s", brokerConfig.SmartgoDataPath)
+
 	if !checkBrokerConfig(brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
 	}
 
-	// 初始化brokerConfig
+	// 初始化brokerConfig、messageStoreConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
 	if !checkMessageStoreConfig(messageStoreConfig, brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
 	}
+	setMessageStoreConfig(messageStoreConfig, brokerConfig)
 
 	// 构建BrokerController结构体
 	remotingClient := remoting.NewDefalutRemotingClient()
 	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
-	controller.ConfigFile = cfgPath
+	controller.ConfigFile = brokerConfig.SmartgoDataPath
 
 	// 初始化controller
 	initResult := controller.Initialize()
@@ -107,13 +112,8 @@ func CreateBrokerController() *BrokerController {
 // parseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, string, bool) {
-	smartGoHome := stgcommon.GetSmartGoHome()
-	cfgPath := smartGoHome + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
-	if smartGoHome != "" {
-		logger.Infof("brokerConfigPath = %s", cfgPath)
-	}
-
+func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, bool) {
+	cfgPath := stgcommon.GetSmartGoHome() + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
 	if !file.IsExist(cfgPath) {
 		firstPath := cfgPath
 		firstPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
@@ -128,16 +128,21 @@ func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, string, bool) {
 	parseutil.ParseConf(cfgPath, &cfg)
 	if &cfg == nil {
 		logger.Errorf("read %s failed", cfgPath)
-		return nil, "", false
+		return nil, false
 	}
 
 	logger.Info(cfg.ToString())
 	if cfg.IsBlank() {
 		logger.Errorf("please set `brokerClusterName` and `brokerName` value with %s", cfgName)
-		return nil, "", false
+		return nil, false
 	}
 
-	return &cfg, cfgPath, true
+	// TODO:处理broker、store等模块的存取数据目录, 优先级从高到低:
+	// smartgoBroker.toml文件SmartgoDataPath >> 环境变量“SMARTGO_DATA_PATH” >> 操作系统的user.Current().HomeDir属性
+	if strings.TrimSpace(cfg.SmartgoDataPath) == "" {
+		cfg.SmartgoDataPath = stgcommon.GetUserHomeDir() + separator + "store"
+	}
+	return &cfg, true
 }
 
 // checBrokerConfig 校验broker启动的所必需的SmartGoHome、namesrv配置
@@ -181,28 +186,37 @@ func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
 func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcommon.BrokerConfig) bool {
+	if mscfg.BrokerRole == config.SLAVE && bcfg.BrokerId <= 0 {
+		logger.Infof("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
+		return false
+	}
+	return true
+}
+
+// setMessageStoreConfig 设置messageStoreConfig配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
+	// 覆盖store模块的StorePathRootDir配置目录
+	messageStoreConfig.StorePathRootDir = brokerConfig.SmartgoDataPath
+
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
-	if mscfg.BrokerRole == config.SLAVE {
-		ratio := mscfg.AccessMessageInMemoryMaxRatio - 10
-		mscfg.AccessMessageInMemoryMaxRatio = ratio
+	if messageStoreConfig.BrokerRole == config.SLAVE {
+		ratio := messageStoreConfig.AccessMessageInMemoryMaxRatio - 10
+		messageStoreConfig.AccessMessageInMemoryMaxRatio = ratio
 	}
 
 	// BrokerId的处理 switch-case语法：
 	// 只要匹配到一个case，则顺序往下执行，直到遇到break，因此若没有break则不管后续case匹配与否都会执行
-	switch mscfg.BrokerRole {
+	switch messageStoreConfig.BrokerRole {
 	//如果是同步master也会执行下述case中brokerConfig.setBrokerId(MixAll.MASTER_ID);语句，直到遇到break
 	case config.ASYNC_MASTER:
 	case config.SYNC_MASTER:
-		bcfg.BrokerId = stgcommon.MASTER_ID
+		brokerConfig.BrokerId = stgcommon.MASTER_ID
 	case config.SLAVE:
-		if bcfg.BrokerId <= 0 {
-			logger.Infof("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
-			return false
-		}
 	default:
 
 	}
-	return true
 }
 
 // ToString 打印smartgoBroker配置项
@@ -214,9 +228,9 @@ func (self *SmartgoBrokerConfig) ToString() string {
 	}
 
 	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, DeleteWhen=%d, FileReservedTime=%d, "
-	format += "BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t]"
+	format += "BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, SmartgoDataPath=%s]"
 	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.DeleteWhen, self.FileReservedTime,
-		self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable)
+		self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.SmartgoDataPath)
 	return info
 }
 

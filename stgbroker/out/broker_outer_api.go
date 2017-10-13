@@ -30,9 +30,9 @@ type BrokerOuterAPI struct {
 // Author gaoyanlei
 // Since 2017/8/22
 func NewBrokerOuterAPI(defaultRemotingClient *remoting.DefalutRemotingClient) *BrokerOuterAPI {
-	api := &BrokerOuterAPI{
-		remotingClient: defaultRemotingClient, // 参数defaultRemotingClient必须从外部传入，而不是直接调用remoting.NewDefalutRemotingClient()
-	}
+	api := new(BrokerOuterAPI)
+	// 参数defaultRemotingClient必须从外部传入，而不是直接调用remoting.NewDefalutRemotingClient()
+	api.remotingClient = defaultRemotingClient
 	return api
 }
 
@@ -59,10 +59,10 @@ func (self *BrokerOuterAPI) Shutdown() {
 // UpdateNameServerAddressList 更新nameService地址
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) UpdateNameServerAddressList(addrs string) {
-	addrArray := strings.Split(addrs, ";")
-	if addrArray != nil && len(addrArray) > 0 {
-		self.remotingClient.UpdateNameServerAddressList(addrArray)
+func (self *BrokerOuterAPI) UpdateNameServerAddressList(namesrvAddrs string) {
+	addrs := strings.Split(namesrvAddrs, ";")
+	if addrs != nil && len(addrs) > 0 {
+		self.remotingClient.UpdateNameServerAddressList(addrs)
 	}
 }
 
@@ -103,7 +103,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 
 	response, err := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("register broker failed. err:[%s], %s", err.Error(), request.ToString())
+		logger.Errorf("register broker failed. err: %s, %s", err.Error(), request.ToString())
 		return nil, err
 	}
 	if response == nil {
@@ -137,7 +137,7 @@ func (self *BrokerOuterAPI) RegisterBroker(namesrvAddr, clusterName, brokerAddr,
 	return result, nil
 }
 
-// RegisterBrokerAll 向每个nameservice注册
+// RegisterBrokerAll 向nameservice注册所有broker
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
@@ -159,12 +159,12 @@ func (self *BrokerOuterAPI) RegisterBrokerAll(clusterName, brokerAddr, brokerNam
 		if result != nil {
 			registerBrokerResult = result
 		}
-		logger.Infof("register broker to name server %s OK, the result: %s", namesrvAddr, result.ToString())
+		//logger.Infof("register broker to name server %s OK, the result: %s", namesrvAddr, result.ToString())
 	}
 	return registerBrokerResult
 }
 
-// UnRegisterBroker 注销broker
+// UnRegisterBroker 注销单个broker
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
@@ -178,7 +178,7 @@ func (self *BrokerOuterAPI) UnRegisterBroker(namesrvAddr, clusterName, brokerAdd
 		return
 	}
 	if response == nil {
-		logger.Errorf("unRegisterBroker err: the response is nil")
+		logger.Errorf("unRegisterBroker failed: the response is nil")
 		return
 	}
 	if response.Code != code.SUCCESS {
@@ -201,85 +201,91 @@ func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerN
 	}
 }
 
-// getAllTopicConfig 获取全部topic信息
+// GetAllTopicConfig 获取全部topic信息
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) GetAllTopicConfig(namesrvAddr string) *body.TopicConfigSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllTopicConfig(brokerAddr string) *body.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			tcsw := body.NewTopicConfigSerializeWrapper()
-			err := tcsw.CustomDecode(response.Body, tcsw)
-			if err != nil {
-				logger.Error(err)
-			}
-			return tcsw
-		}
-	default:
-		break
+	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
+	if err != nil {
+		logger.Errorf("GetAllTopicConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
+		return nil
 	}
-	return nil
+	if response == nil || response.Code != code.SUCCESS {
+		logger.Errorf("GetAllTopicConfig() failed. brokerAddr=%s, response is %s", brokerAddr, response.ToString())
+		return nil
+	}
+
+	topicConfigWrapper := body.NewTopicConfigSerializeWrapper()
+	err = topicConfigWrapper.CustomDecode(response.Body, topicConfigWrapper)
+	if err != nil {
+		logger.Errorf("topicConfigWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		return nil
+	}
+	return topicConfigWrapper
 }
 
-// getAllConsumerOffset 获取所有Consumer Offset
+// GetAllConsumerOffset 获取所有Consumer Offset
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) GetAllConsumerOffset(namesrvAddr string) *body.ConsumerOffsetSerializeWrapper {
+func (self *BrokerOuterAPI) GetAllConsumerOffset(brokerAddr string) *body.ConsumerOffsetSerializeWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			cosw := body.NewConsumerOffsetSerializeWrapper()
-			err := cosw.CustomDecode(response.Body, cosw)
-			if err != nil {
-				logger.Error(err)
-			}
-			return cosw
-		}
-	default:
-		break
+	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
+	if err != nil {
+		logger.Errorf("GetAllConsumerOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
+		return nil
 	}
-	return nil
+	if response == nil || response.Code != code.SUCCESS {
+		logger.Errorf("GetAllConsumerOffset() failed. brokerAddr=%s, response is %s", brokerAddr, response.ToString())
+		return nil
+	}
+
+	consumerOffsetWrapper := body.NewConsumerOffsetSerializeWrapper()
+	err = consumerOffsetWrapper.CustomDecode(response.Body, consumerOffsetWrapper)
+	if err != nil {
+		logger.Errorf("consumerOffsetWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		return nil
+	}
+	return consumerOffsetWrapper
 }
 
-// getAllDelayOffset 获取所有定时进度
+// GetAllDelayOffset 获取所有DelayOffset
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) GetAllDelayOffset(namesrvAddr string) string {
+func (self *BrokerOuterAPI) GetAllDelayOffset(brokerAddr string) string {
 	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			return string(response.Body)
-		}
-	default:
-		break
+	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
+	if err != nil {
+		logger.Errorf("GetAllDelayOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
+		return ""
 	}
-	return ""
+	if response == nil || response.Code != code.SUCCESS {
+		logger.Errorf("GetAllDelayOffset() failed. brokerAddr=%s, response is %s", brokerAddr, response.ToString())
+		return ""
+	}
+	return string(response.Body)
 }
 
-// getAllSubscriptionGroupConfig 获取订阅组配置
+// GetAllSubscriptionGroupConfig 获取订阅组配置
 // Author gaoyanlei
 // Since 2017/8/22
-func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(namesrvAddr string) *body.SubscriptionGroupWrapper {
+func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(brokerAddr string) *body.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
-	response, _ := self.remotingClient.InvokeSync(namesrvAddr, request, timeout)
-	switch response.Code {
-	case code.SUCCESS:
-		{
-			sgw := body.NewSubscriptionGroupWrapper()
-			err := sgw.CustomDecode(response.Body, sgw)
-			if err != nil {
-				logger.Error(err)
-			}
-			return sgw
-		}
-	default:
-		break
+	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
+	if err != nil {
+		logger.Errorf("GetAllSubscriptionGroupConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
+		return nil
 	}
-	return nil
+	if response == nil || response.Code != code.SUCCESS {
+		logger.Errorf("GetAllSubscriptionGroupConfig() failed. brokerAddr=%s, response is %s", brokerAddr, response.ToString())
+		return nil
+	}
+
+	subscriptionGroupWrapper := body.NewSubscriptionGroupWrapper()
+	err = subscriptionGroupWrapper.CustomDecode(response.Body, subscriptionGroupWrapper)
+	if err != nil {
+		logger.Errorf("subscriptionGroupWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		return nil
+	}
+	return subscriptionGroupWrapper
 }

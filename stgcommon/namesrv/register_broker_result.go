@@ -38,6 +38,6 @@ func (self *RegisterBrokerResult) ToString() string {
 			datas = append(datas, kv)
 		}
 	}
-	format := "registerBrokerResult [haServerAddr=%s, masterAddr=%s, kvTable=%s]"
+	format := "registerBrokerResult {haServerAddr=%s, masterAddr=%s, kvTable=%s}"
 	return fmt.Sprintf(format, self.HaServerAddr, self.MasterAddr, strings.Join(datas, ","))
 }
