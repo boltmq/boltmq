@@ -34,7 +34,7 @@ type MessageStoreConfig struct {
 	RedeleteHangedFileInterval             int32                `json:"RedeleteHangedFileInterval"`             // 定期检查Hanged文件间隔时间（单位毫秒）
 	DeleteWhen                             string               `json:"DeleteWhen"`                             // 何时触发删除文件, 默认凌晨4点删除文件
 	DiskMaxUsedSpaceRatio                  int32                `json:"DiskMaxUsedSpaceRatio"`                  // 磁盘空间最大使用率
-	FileReservedTime                       int32                `json:"FileReservedTime"`
+	FileReservedTime                       int64                `json:"FileReservedTime"`
 	PutMsgIndexHightWater                  int32                `json:"PutMsgIndexHightWater"`             // 写消息索引到ConsumeQueue，缓冲区高水位，超过则开始流控
 	MaxMessageSize                         int32                `json:"MaxMessageSize"`                    // 最大消息大小，默认512K
 	CheckCRCOnRecover                      bool                 `json:"CheckCRCOnRecover"`                 // 重启时，是否校验CRC

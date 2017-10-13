@@ -79,8 +79,7 @@ func TestConsumerSendMsgBack(t *testing.T) {
 
 	request := CreateConsumerSendMsgBackRequest()
 
-	respone := sendMessage.consumerSendMsgBack(ctx, request)
-	fmt.Println(respone)
+	sendMessage.consumerSendMsgBack(ctx, request)
 }
 
 func InitBrokerController() *BrokerController {

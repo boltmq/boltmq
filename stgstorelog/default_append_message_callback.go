@@ -143,7 +143,7 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		self.msgStoreItemMemory.Write(propertiesData)
 	}
 
-	logger.Info("doAppend: ", string(self.msgStoreItemMemory.Bytes()))
+	//logger.Info("doAppend: ", string(self.msgStoreItemMemory.Bytes()))
 	mappedByteBuffer.Write(self.msgStoreItemMemory.Bytes())
 
 	result := &AppendMessageResult{

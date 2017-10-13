@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"strconv"
 )
 
 const (
@@ -138,4 +139,28 @@ func Encode(v interface{}) []byte {
 // Since: 2017/9/19
 func Decode(data []byte, v interface{}) error {
 	return ffjson.Unmarshal(data, v)
+}
+
+// IsItTimeToDo
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/13
+func IsItTimeToDo(when string) bool {
+	whiles := strings.Split(when, ";")
+	if whiles != nil && len(whiles) > 0 {
+		currentTime := time.Now()
+
+		for i := 0; i < len(whiles); i++ {
+			hour, err := strconv.Atoi(whiles[i])
+			if err != nil {
+				logger.Warn("is it time to do parse time hour, error:", err.Error())
+				continue
+			}
+
+			if hour == currentTime.Hour() {
+				return true
+			}
+		}
+	}
+
+	return false
 }
