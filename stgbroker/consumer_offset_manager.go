@@ -84,12 +84,12 @@ func (self *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 // Author gaoyanlei
 // Since 2017/9/10
 func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) int64 {
-	logger.Info("ConsumerOffsetManager----QueryOffset , group:%s,topic:%s，queueId：%v", group,topic,queueId)
+	logger.Info("ConsumerOffsetManager----QueryOffset , group:%s,topic:%s，queueId：%v", group, topic, queueId)
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	value := com.Offsets.Get(key)
 	if nil != value {
-		offset := value[queueId]
-		if offset != 0 {
+		offset, ok := value[queueId]
+		if ok {
 			return offset
 		}
 	}
