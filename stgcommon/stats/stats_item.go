@@ -49,8 +49,8 @@ func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *Sta
 		avgpt float64 = 0.0
 		sum   int64   = 0
 	)
-
 	statsSnapshot := NewStatsSnapshot()
+
 	if csList.Size() > 0 {
 		firstBuffer, isHasFirst := csList.Get(0)
 		lastBuffer, isHasLast := csList.Get(csList.Size() - 1)
@@ -63,9 +63,11 @@ func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *Sta
 			stgcommon.Decode(lastBuffer.Bytes(), last)
 
 			sum = last.Value - first.Value
-			tps = float64(sum) * 1000.0 / float64(last.Timestamp-first.Timestamp)
-			timesDiff := last.Times - first.Times
+			if last.Timestamp-first.Timestamp > 0 {
+				tps = float64(sum) * 1000.0 / float64(last.Timestamp-first.Timestamp)
+			}
 
+			timesDiff := last.Times - first.Times
 			if timesDiff > 0 {
 				avgpt = float64(sum) / float64(timesDiff)
 			}
@@ -105,50 +107,38 @@ func (statsItem *StatsItem) GetStatsDataInDay() *StatsSnapshot {
 func (statsItem *StatsItem) Init() {
 	defer utils.RecoveredFn()
 
-	samplingInSecondsTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*1000*time.Millisecond,
-		func() {
-			statsItem.SamplingInSeconds()
-		})
+	// 每隔10s执行一次
+	samplingInSecondsTicker := timeutil.NewTicker(false, 0, 10*time.Second, func() { statsItem.SamplingInSeconds() })
 	samplingInSecondsTicker.Start()
 
-	samplingInMinutesTicker := timeutil.NewTicker(false, 0*time.Millisecond, 10*60*1000*time.Millisecond,
-		func() {
-			statsItem.SamplingInMinutes()
-		})
+	// 每隔10分钟执行一次
+	samplingInMinutesTicker := timeutil.NewTicker(false, 0, 10*time.Minute, func() { statsItem.SamplingInMinutes() })
 	samplingInMinutesTicker.Start()
 
-	samplingInHourTicker := timeutil.NewTicker(false, 0*time.Millisecond, 1*60*60*1000*time.Millisecond,
-		func() {
-			statsItem.SamplingInHour()
-		})
+	// 每隔1小时执行一次
+	samplingInHourTicker := timeutil.NewTicker(false, 0, 1*time.Hour, func() { statsItem.SamplingInHour() })
 	samplingInHourTicker.Start()
 
+	// 分钟整点执行
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 60000*time.Millisecond,
-		func() {
-			statsItem.PrintAtMinutes()
-		})
+	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, time.Minute, func() { statsItem.PrintAtMinutes() })
 	printAtMinutesTicker.Start()
 
-	diffHour := float64(stgcommon.ComputNextHourTimeMillis()-timeutil.CurrentTimeMillis()) - 2000
+	// 小时整点执行
+	diffHour := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
-	printAtHourTicker := timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond, 3600000*time.Millisecond,
-		func() {
-			statsItem.PrintAtHour()
-		})
+	printAtHourTicker := timeutil.NewTicker(false, time.Duration(delayHour)*time.Millisecond, time.Hour, func() { statsItem.PrintAtHour() })
 	printAtHourTicker.Start()
 
-	diffDay := float64(stgcommon.ComputNextHourTimeMillis() - timeutil.CurrentTimeMillis())
+	// 每天0点执行
+	diffDay := float64(stgcommon.ComputNextHourTimeMillis()-timeutil.CurrentTimeMillis()) - 2000
 	var delayDay int = int(math.Abs(diffDay))
-	printAtDayTicker := timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 86400000*time.Millisecond,
-		func() {
-			statsItem.PrintAtDay()
-		})
+	printAtDayTicker := timeutil.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 24*time.Hour, func() { statsItem.PrintAtDay() })
 	printAtDayTicker.Start()
 }
 
-// StatsItemSet 输出分钟统计
+// PrintAtMinutes 输出分钟统计
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) PrintAtMinutes() {
@@ -157,7 +147,7 @@ func (statsItem *StatsItem) PrintAtMinutes() {
 		statsItem.StatsName, statsItem.StatsKey, ss.Sum, ss.Tps, ss.Avgpt)
 }
 
-// StatsItemSet 输出小时统计
+// PrintAtHour 输出小时统计
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) PrintAtHour() {
@@ -166,7 +156,7 @@ func (statsItem *StatsItem) PrintAtHour() {
 		statsItem.StatsName, statsItem.StatsKey, ss.Sum, ss.Tps, ss.Avgpt)
 }
 
-// StatsItemSet 输出天统计
+// PrintAtDay 输出天统计
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) PrintAtDay() {
@@ -175,13 +165,18 @@ func (statsItem *StatsItem) PrintAtDay() {
 		statsItem.StatsName, statsItem.StatsKey, ss.Sum, ss.Tps, ss.Avgpt)
 }
 
-// StatsItemSet 秒统计单元
+// SamplingInSeconds 秒统计单元
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInSeconds() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
+	callSnapshot := &CallSnapshot{
+		Timestamp: timeutil.CurrentTimeMillis(),
+		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
+		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
+	}
+
 	content := stgcommon.Encode(callSnapshot)
 	statsItem.CsListMinute.Add(bytes.NewBuffer(content))
 
@@ -190,13 +185,18 @@ func (statsItem *StatsItem) SamplingInSeconds() {
 	}
 }
 
-// StatsItemSet 分钟统计单元
+// SamplingInMinutes 分钟统计单元
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInMinutes() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
+	callSnapshot := &CallSnapshot{
+		Timestamp: timeutil.CurrentTimeMillis(),
+		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
+		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
+	}
+
 	content := stgcommon.Encode(callSnapshot)
 	bytesBuffer := bytes.NewBuffer(content)
 	statsItem.CsListHour.Add(bytesBuffer)
@@ -206,13 +206,18 @@ func (statsItem *StatsItem) SamplingInMinutes() {
 	}
 }
 
-// StatsItemSet 小时统计单元
+// SamplingInHour 小时统计单元
 // Author rongzhihong
 // Since 2017/9/19
 func (statsItem *StatsItem) SamplingInHour() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{Timestamp: timeutil.CurrentTimeMillis(), Times: atomic.LoadInt64(&(statsItem.TimesCounter)), Value: atomic.LoadInt64(&(statsItem.ValueCounter))}
+	callSnapshot := &CallSnapshot{
+		Timestamp: timeutil.CurrentTimeMillis(),
+		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
+		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
+	}
+
 	content := stgcommon.Encode(callSnapshot)
 	bytesBuffer := bytes.NewBuffer(content)
 	statsItem.CsListDay.Add(bytesBuffer)
