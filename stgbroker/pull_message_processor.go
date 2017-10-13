@@ -85,7 +85,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	}
 
 	response.Opaque = request.Opaque
-	logger.Debug("receive PullMessage request command, ", request)
+	//logger.Debug("receive PullMessage request command, ", request)
 
 	// 检查Broker权限
 	if !pull.BrokerController.BrokerConfig.HasReadable() {
