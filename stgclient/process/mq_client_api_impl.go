@@ -222,6 +222,9 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 	} else {
 		return nil, errors.New("processSendResponse error response is nil")
 	}
+	if response != nil {
+		return nil, errors.New("processSendResponse error=" + response.Remark)
+	}
 	return nil, errors.New("processSendResponse error")
 }
 
@@ -289,7 +292,7 @@ func (impl *MQClientAPIImpl) PullMessage(addr string, requestHeader header.PullM
 	switch communicationMode {
 	case ONEWAY:
 	case ASYNC:
-		fmt.Println(time.Now().Unix(),requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, "-------------------------------------")
+		fmt.Println(time.Now().Unix(), requestHeader.Topic, requestHeader.QueueId, requestHeader.QueueOffset, "-------------------------------------")
 		impl.pullMessageAsync(addr, request, timeoutMillis, pullCallback)
 	case SYNC:
 		return impl.pullMessageSync(addr, request, timeoutMillis)
