@@ -312,8 +312,13 @@ func (self *DefaultMessageStore) createTempFile() error {
 	}
 
 	if !exist {
-		if _, err = os.Create(abortPath); err != nil {
+		abortFile, err := os.Create(abortPath)
+		if err != nil {
 			logger.Info("%s crate failed", abortPath)
+		}
+
+		if abortFile != nil {
+			abortFile.Close()
 		}
 	}
 

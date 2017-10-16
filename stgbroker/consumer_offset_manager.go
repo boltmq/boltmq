@@ -1,7 +1,6 @@
 package stgbroker
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	set "github.com/deckarep/golang-set"
@@ -63,20 +62,22 @@ func (com *ConsumerOffsetManager) ConfigFilePath() string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *ConsumerOffsetManager) ScanUnsubscribedTopic() {
-	self.Offsets.Foreach(func(k string, v map[int]int64) {
+	self.Offsets.RemoveByFlag(func(k string, v map[int]int64) bool {
 		arrays := strings.Split(k, TOPIC_GROUP_SEPARATOR)
-		if arrays != nil && len(arrays) == 2 {
-			topic := arrays[0]
-			group := arrays[1]
-			findSubscriptionData := self.BrokerController.ConsumerManager.FindSubscriptionData(group, topic)
-			hasBehindMuchThanData := self.offsetBehindMuchThanData(topic, v)
-
-			// 当前订阅关系里面没有group-topic订阅关系（消费端当前是停机的状态）并且offset落后很多,则删除消费进度
-			if findSubscriptionData == nil && hasBehindMuchThanData {
-				self.Offsets.Remove(k)
-				logger.Warnf("remove topic offset, %s", topic)
-			}
+		if arrays == nil || len(arrays) != 2 {
+			return false
 		}
+		topic := arrays[0]
+		group := arrays[1]
+		findSubscriptionData := self.BrokerController.ConsumerManager.FindSubscriptionData(group, topic)
+		hasBehindMuchThanData := self.offsetBehindMuchThanData(topic, v)
+
+		// 当前订阅关系里面没有group-topic订阅关系（消费端当前是停机的状态）并且offset落后很多,则删除消费进度
+		if findSubscriptionData == nil && hasBehindMuchThanData {
+			logger.Warnf("remove topic offset, %s", topic)
+			return true
+		}
+		return false
 	})
 }
 
@@ -84,7 +85,6 @@ func (self *ConsumerOffsetManager) ScanUnsubscribedTopic() {
 // Author gaoyanlei
 // Since 2017/9/10
 func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) int64 {
-	logger.Info("ConsumerOffsetManager----QueryOffset , group:%s,topic:%s，queueId：%v", group, topic, queueId)
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	value := com.Offsets.Get(key)
 	if nil != value {
@@ -134,7 +134,6 @@ func (com *ConsumerOffsetManager) offsetBehindMuchThanData(topic string, offsetT
 
 	for key, offsetInPersist := range offsetTable {
 		minOffsetInStore := com.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(key))
-		fmt.Println(key)
 		if offsetInPersist > minOffsetInStore {
 			result = false
 			break
@@ -149,14 +148,15 @@ func (com *ConsumerOffsetManager) offsetBehindMuchThanData(topic string, offsetT
 // Since 2017/9/18
 func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) set.Set {
 	topics := set.NewSet()
-	for topicAtGroup := range com.Offsets.Offsets {
-		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
-		if arrays != nil && len(arrays) == 2 {
-			if strings.EqualFold(group, arrays[1]) {
-				topics.Add(arrays[0])
+
+	com.Offsets.Foreach(func(topicAtGroup string, v map[int]int64) {
+		topicGroupArray := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+		if topicGroupArray != nil && len(topicGroupArray) == 2 {
+			if strings.EqualFold(group, topicGroupArray[1]) {
+				topics.Add(topicGroupArray[0])
 			}
 		}
-	}
+	})
 
 	return topics
 }
@@ -166,14 +166,15 @@ func (com *ConsumerOffsetManager) WhichTopicByConsumer(group string) set.Set {
 // Since 2017/9/18
 func (com *ConsumerOffsetManager) WhichGroupByTopic(topic string) set.Set {
 	groups := set.NewSet()
-	for topicAtGroup := range com.Offsets.Offsets {
-		arrays := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
-		if arrays != nil && len(arrays) == 2 {
-			if strings.EqualFold(topic, arrays[0]) {
-				groups.Add(arrays[1])
+
+	com.Offsets.Foreach(func(topicAtGroup string, v map[int]int64) {
+		topicGroupArray := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+		if topicGroupArray != nil && len(topicGroupArray) == 2 {
+			if strings.EqualFold(topic, topicGroupArray[0]) {
+				groups.Add(topicGroupArray[1])
 			}
 		}
-	}
+	})
 
 	return groups
 }
@@ -196,34 +197,39 @@ func (com *ConsumerOffsetManager) QueryMinOffsetInAllGroup(topic, filterGroups s
 
 	if !stgcommon.IsBlank(filterGroups) {
 		for _, group := range strings.Split(filterGroups, ",") {
-			for groupName := range com.Offsets.Offsets {
-				if strings.EqualFold(group, strings.Split(groupName, TOPIC_GROUP_SEPARATOR)[1]) {
-					com.Offsets.Remove(groupName)
+			com.Offsets.RemoveByFlag(func(topicAtGroup string, v map[int]int64) bool {
+				topicGroupArr := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+				if topicGroupArr != nil && len(topicGroupArr) == 2 {
+					if strings.EqualFold(group, topicGroupArr[1]) {
+						return true
+					}
 				}
-			}
+				return false
+			})
 		}
 	}
 
-	for topicGroup := range com.Offsets.Offsets {
-		topicGroupArr := strings.Split(topicGroup, TOPIC_GROUP_SEPARATOR)
-		if strings.EqualFold(topic, topicGroupArr[0]) {
-			offsetTable := com.Offsets.Get(topicGroup)
-			if offsetTable == nil {
-				continue
-			}
-			for k, v := range offsetTable {
-				minOffset := com.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(k))
-				if v >= minOffset {
-					offset, ok := queueMinOffset[k]
-					if !ok {
-						queueMinOffset[k] = min(MAX_VALUE, v)
-					} else {
-						queueMinOffset[k] = min(v, offset)
-					}
+	com.Offsets.Foreach(func(topicAtGroup string, offsetTable map[int]int64) {
+		topicGroupArr := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
+		if topicGroupArr == nil || len(topicGroupArr) != 2 {
+			return
+		}
+		if !strings.EqualFold(topic, topicGroupArr[0]) {
+			return
+		}
+		for k, v := range offsetTable {
+			minOffset := com.BrokerController.MessageStore.GetMinOffsetInQueue(topic, int32(k))
+			if v >= minOffset {
+				offset, ok := queueMinOffset[k]
+				if !ok {
+					queueMinOffset[k] = min(MAX_VALUE, v)
+				} else {
+					queueMinOffset[k] = min(v, offset)
 				}
 			}
 		}
-	}
+	})
+
 	return queueMinOffset
 }
 

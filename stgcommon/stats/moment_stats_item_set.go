@@ -10,41 +10,35 @@ import (
 	"time"
 )
 
-// MomentStatsItemSet  MomentStatsItemSet
+// MomentStatsItemSet  QueueId@Topic@Group的offset落后数量的记录集合
 // Author rongzhihong
 // Since 2017/9/17
 type MomentStatsItemSet struct {
-	StatsItemTable      map[string]*MomentStatsItem `json:"statsItemTable"`
-	StatsItemLock       sync.RWMutex                `json:"-"`
-	StatsName           string                      `json:"statsName"`
-	MomentStatsTaskList []*timeutil.Ticker          // broker统计的定时任务
+	sync.RWMutex
+	StatsName              string                      `json:"statsName"`
+	StatsItemTable         map[string]*MomentStatsItem `json:"statsItemTable"`
+	MomentStatsTaskTickers *timeutil.Tickers           // broker统计的定时任务
 }
 
-// NewMomentStatsItemSet 初始化统计
-// Author gaoyanlei
-// Since 2017/8/18
+// NewMomentStatsItemSet 初始化
+// Author rongzhihong
+// Since 2017/9/17
 func NewMomentStatsItemSet(statsName string) *MomentStatsItemSet {
 	item := new(MomentStatsItemSet)
-	item.StatsItemTable = make(map[string]*MomentStatsItem, 128)
 	item.StatsName = statsName
+	item.StatsItemTable = make(map[string]*MomentStatsItem, 128)
+	item.MomentStatsTaskTickers = timeutil.NewTickers()
+
 	item.init()
 	return item
-}
-
-// SetValue  SetValue
-// Author rongzhihong
-// Since 2017/9/19
-func (mom *MomentStatsItemSet) SetValue(statsKey string, value int64) {
-	statsItem := mom.GetAndCreateStatsItem(statsKey)
-	statsItem.ValueCounter = atomic.AddInt64(&value, 0)
 }
 
 // GetAndCreateStatsItem  GetAndCreateStatsItem
 // Author rongzhihong
 // Since 2017/9/19
 func (mom *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentStatsItem {
-	mom.StatsItemLock.Lock()
-	defer mom.StatsItemLock.Unlock()
+	mom.Lock()
+	defer mom.Unlock()
 	defer utils.RecoveredFn()
 
 	statsItem := mom.StatsItemTable[statsKey]
@@ -57,26 +51,32 @@ func (mom *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentSta
 	return statsItem
 }
 
+// SetValue  statsKey的数值加value
+// Author rongzhihong
+// Since 2017/9/19
+func (mom *MomentStatsItemSet) SetValue(statsKey string, value int64) {
+	statsItem := mom.GetAndCreateStatsItem(statsKey)
+	atomic.AddInt64(&(statsItem.ValueCounter), value)
+}
+
 // init  init
 // Author rongzhihong
 // Since 2017/9/19
 func (mom *MomentStatsItemSet) init() {
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
-	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 300000*time.Millisecond,
-		func() {
-			mom.printAtMinutes()
-		})
-	printAtMinutesTicker.Start()
 
+	mom.MomentStatsTaskTickers.Register("momentStatsItemSet_printAtMinutesTicker",
+		timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond,
+			5*time.Minute, func() { mom.printAtMinutes() }))
 }
 
 // printAtMinutes  输出每分钟数据
 // Author rongzhihong
 // Since 2017/9/19
 func (mom *MomentStatsItemSet) printAtMinutes() {
-	mom.StatsItemLock.Lock()
-	defer mom.StatsItemLock.Unlock()
+	mom.Lock()
+	defer mom.Unlock()
 	defer utils.RecoveredFn()
 
 	for _, momentStatsItem := range mom.StatsItemTable {

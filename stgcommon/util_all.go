@@ -20,7 +20,7 @@ const (
 	TIMEFORMAT = "2006-01-02 15:04:05"
 )
 
-// ComputNextMorningTimeMillis 下一天（时、分、秒、毫秒置为0）
+// ComputNextMorningTimeMillis 下一整点天（时、分、秒、毫秒置为0）
 // Author rongzhihong
 // Since 2017/9/5
 func ComputNextMorningTimeMillis() int64 {
@@ -30,7 +30,7 @@ func ComputNextMorningTimeMillis() int64 {
 	return nextMorningTimeMillis
 }
 
-// ComputNextMinutesTimeMillis 下一个分钟（秒、毫秒置为0）
+// ComputNextMinutesTimeMillis 下一整点分钟（秒、毫秒置为0）
 // Author rongzhihong
 // Since 2017/9/5
 func ComputNextMinutesTimeMillis() int64 {
@@ -44,7 +44,7 @@ func ComputNextMinutesTimeMillis() int64 {
 	return nextMorningTimeMillis
 }
 
-// ComputNextMinutesTimeMillis 下一小时（分、秒、毫秒置为0）
+// ComputNextMinutesTimeMillis 下一整点小时（分、秒、毫秒置为0）
 // Author rongzhihong
 // Since 2017/9/5
 func ComputNextHourTimeMillis() int64 {

@@ -5,8 +5,6 @@ import (
 	"sync"
 )
 
-// import
-
 type OffsetTable struct {
 	Offsets      map[string]map[int]int64 `json:"offsets"`
 	sync.RWMutex `json:"-"`
@@ -65,24 +63,30 @@ func (table *OffsetTable) Foreach(fn func(k string, v map[int]int64)) {
 	}
 }
 
-// syncTopicConfig 同步Topic配置文件
+func (table *OffsetTable) RemoveByFlag(fn func(k string, v map[int]int64) bool) {
+	table.Lock()
+	for k, v := range table.Offsets {
+		if fn(k, v) {
+			delete(table.Offsets, k)
+		}
+	}
+	table.Unlock()
+}
+
+// PutAll 同步Offset配置文件
 // Author rongzhihong
 // Since 2017/9/18
 func (table *OffsetTable) PutAll(offsetMap *syncmap.Map) {
 	table.Lock()
 	defer table.Unlock()
-	iterator := offsetMap.Iterator()
-	for iterator.HasNext() {
-		kItem, vItem, _ := iterator.Next()
-		var (
-			k  = ""
-			ok = false
-		)
 
+	for iter := offsetMap.Iterator(); iter.HasNext(); {
+		kItem, vItem, _ := iter.Next()
+		var k string = ""
+		var ok bool = false
 		if k, ok = kItem.(string); !ok {
 			continue
 		}
-
 		if v, vok := vItem.(map[int]int64); vok {
 			table.Offsets[k] = v
 		}
