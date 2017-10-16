@@ -2,22 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package list
+package utils
 
-import (
-	"bytes"
-	"sort"
-)
+import "sort"
 
 // Sort sorts values (in-place) with respect to the given comparator.
 //
 // Uses Go's sort (hybrid of quicksort for large and then insertion sort for smaller slices).
-func Sort(values []*bytes.Buffer, comparator Comparator) {
+func Sort(values []interface{}, comparator Comparator) {
 	sort.Sort(sortable{values, comparator})
 }
 
 type sortable struct {
-	values     []*bytes.Buffer
+	values     []interface{}
 	comparator Comparator
 }
 
