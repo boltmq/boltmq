@@ -155,20 +155,21 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 		bootstrap.Warnf("no handler register, data not process.")
 	}
 
-	bootstrap.contextTableLock.RLock()
+	// 保证创建时，多线程安全
+	bootstrap.contextTableLock.Lock()
 	ctx, ok := bootstrap.contextTable[addr]
-	bootstrap.contextTableLock.RUnlock()
 	if ok {
+		bootstrap.contextTableLock.Unlock()
 		return ctx, nil
 	}
 
 	nctx, e := bootstrap.connect(addr)
 	if e != nil {
+		bootstrap.contextTableLock.Unlock()
 		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
 		return nil, errors.Wrap(e, 0)
 	}
 
-	bootstrap.contextTableLock.Lock()
 	bootstrap.contextTable[addr] = nctx
 	bootstrap.contextTableLock.Unlock()
 	bootstrap.Noticef("Connect listening on port: %s", addr)
