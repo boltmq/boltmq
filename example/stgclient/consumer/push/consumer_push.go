@@ -19,7 +19,8 @@ type MessageListenerImpl struct {
 func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	for _, msg := range msgs {
 		count := atomic.AddInt64(&listenerImpl.MsgCount, 1)
-		if count % int64(10000) {
+		var num int64 = 10000
+		if count % num {
 			fmt.Println(count, msg.ToString())
 		}
 	}
