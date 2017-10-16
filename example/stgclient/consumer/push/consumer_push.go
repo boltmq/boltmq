@@ -12,14 +12,14 @@ import (
 )
 
 type MessageListenerImpl struct {
-	MsgCount int64
+	MsgCount  int64
 	StartTime int64
 }
 
 func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	for _, msg := range msgs {
-		count:=atomic.AddInt64(&listenerImpl.MsgCount, 1)
-		if count%10000 {
+		count := atomic.AddInt64(&listenerImpl.MsgCount, 1)
+		if count % int64(10000) {
 			fmt.Println(count, msg.ToString())
 		}
 	}
@@ -42,7 +42,7 @@ func main() {
 	defaultMQPushConsumer.SetMessageModel(heartbeat.CLUSTERING)
 	defaultMQPushConsumer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQPushConsumer.Subscribe("cloudzone1", "tagA")
-	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{StartTime:time.Now().Unix()})
+	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{StartTime: time.Now().Unix()})
 	defaultMQPushConsumer.Start()
 	go taskC()
 	select {}
