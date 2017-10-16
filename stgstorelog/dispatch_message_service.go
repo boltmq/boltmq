@@ -72,6 +72,7 @@ func (self *DispatchMessageService) putRequest(dispatchRequest *DispatchRequest)
 }
 
 func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest) {
+	atomic.AddInt32(&self.requestSize, -1)
 	tranType := sysflag.GetTransactionValue(int(dispatchRequest.sysFlag))
 
 	switch tranType {
