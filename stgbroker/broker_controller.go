@@ -11,6 +11,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/static"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
@@ -20,11 +21,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-)
-
-const (
-	broker_ip   = "0.0.0.0"
-	broker_port = 10911
 )
 
 // BrokerController broker服务控制器
@@ -111,8 +107,12 @@ func (self *BrokerController) Initialize() bool {
 	result = result && self.SubscriptionGroupManager.Load()
 	result = result && self.ConsumerOffsetManager.Load()
 
-	self.RemotingServer = remoting.NewDefalutRemotingServer(broker_ip, broker_port)
-	self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port() + 1 // Master监听Slave请求端口，默认为服务端口+1
+	brokerPort := static.BROKER_PORT
+	if self.BrokerConfig.BrokerPort > 0 {
+		brokerPort = self.BrokerConfig.BrokerPort
+	}
+	self.RemotingServer = remoting.NewDefalutRemotingServer(static.BROKER_IP, brokerPort)
+	self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port() + 1 // broker监听Slave请求端口，默认为Master服务端口+1
 	self.StoreHost = self.GetStoreHost()
 
 	if result {
@@ -295,7 +295,7 @@ func (self *BrokerController) unRegisterBrokerAll() {
 // Author rongzhihong
 // Since 2017/9/12
 func (self *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
-	logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
+	//logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
 	topicConfigWrapper := self.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !self.BrokerConfig.HasWriteable() || !self.BrokerConfig.HasReadable() {
 		topicConfigTable := topicConfigWrapper.TopicConfigTable
@@ -326,7 +326,7 @@ func (self *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bo
 			self.TopicConfigManager.updateOrderTopicConfig(result.KvTable)
 		}
 	}
-	logger.Info("register all broker end")
+	//logger.Info("register all broker end")
 }
 
 // UpdateAllConfig 更新所有文件

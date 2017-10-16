@@ -24,7 +24,8 @@ import (
 const (
 	SMARTGO_HOME_ENV                = "SMARTGO_HOME"            // smartgo home目录
 	CLOUDMQ_HOME_PROPERTY           = "smartgo.home.dir"        // 默认smartgo home地址
-	NAMESRV_ADDR_ENV                = "NAMESRV_ADDR"            // namesrv环境变量
+	NAMESRV_ADDR_ENV                = "NAMESRV_ADDR"            // namesrv地址环境变量
+	NAMESRV_PORT_ENV                = "NAMESRV_PORT"            // namesrv端口环境变量
 	NAMESRV_ADDR_PROPERTY           = "cloudmq.namesrv.addr"    // 默认namesrv_addr地址
 	SMARTGO_DATA_PATH_ENV           = "SMARTGO_DATA_PATH"       // broker、store等模块，存取数据的目录
 	SMARTGO_REGISTRY_CONFIG_ENV     = "SMARTGO_REGISTRY_CONFIG" // registry模块的日志配置文件路径
@@ -253,6 +254,13 @@ func GetGoPath() string {
 // Since: 2017/9/27
 func GetNamesrvAddr() string {
 	return strings.TrimSpace(os.Getenv(NAMESRV_ADDR_ENV))
+}
+
+// GetNamesrvPort 获取环境变量“NAMESRV_PORT”的值
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func GetNamesrvPort() string {
+	return strings.TrimSpace(os.Getenv(NAMESRV_PORT_ENV))
 }
 
 // GetSmartGoHome 获取环境变量“SMARTGO_HOME”的值

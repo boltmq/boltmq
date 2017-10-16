@@ -316,6 +316,6 @@ func (self *RemotingCommand) ToString() string {
 	}
 	code := fmt.Sprintf("%d(%s)", self.Code, description)
 
-	format := "RemotingCommand [code=%s, language=%s, version=%d, opaque=%d, flag(B)=%s, remark=%s, extFields=%s, body=%s ]"
-	return fmt.Sprintf(format, code, self.Language, self.Version, self.Opaque, flagBinary, self.Remark, extFields, body)
+	format := "RemotingCommand [code=%s, language=%s, version=%d, opaque=%d, flag(B)=%s, extFields=%s, body=%s, remark=%s ]"
+	return fmt.Sprintf(format, code, self.Language, self.Version, self.Opaque, flagBinary, extFields, body, self.Remark)
 }
