@@ -7,7 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
 )
 
 // StatsItemSet 统计单元集合
@@ -56,8 +55,8 @@ func (stats *StatsItemSet) AddValue(statsKey string, incValue, incTimes int64) {
 	statsItem := stats.GetAndCreateStatsItem(statsKey)
 	atomic.AddInt64(&(statsItem.ValueCounter), incValue)
 	atomic.AddInt64(&(statsItem.TimesCounter), incTimes)
-	fmt.Printf("statsKey:%s, statsItem.ValueCounter:%d\n, statsItem.TimesCounter:%d\n",
-		statsKey, statsItem.ValueCounter, statsItem.TimesCounter)
+	//fmt.Printf("statsKey:%s, statsItem.ValueCounter:%d\n, statsItem.TimesCounter:%d\n",
+	//	statsKey, statsItem.ValueCounter, statsItem.TimesCounter)
 }
 
 // GetStatsDataInMinute 获得statsKey每分钟统计数据
