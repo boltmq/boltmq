@@ -1,6 +1,6 @@
 # This is a TOML document.
 
-#Broker的配置信息
+#the Broker config for start
 brokerClusterName="DefaultCluster"
 brokerName="broker-a"
 brokerId=0
@@ -9,3 +9,6 @@ fileReservedTime=48
 brokerRole="SYNC_MASTER"
 flushDiskType="SYNC_FLUSH"
 autoCreateTopicEnable=true
+
+#smartgoDataPath="/root/namesrv"
+#brokerPort=10911

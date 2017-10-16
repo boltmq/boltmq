@@ -3,8 +3,10 @@ package stgcommon
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"os"
 	"runtime"
+	"strings"
 )
 
 const (
@@ -26,6 +28,7 @@ type BrokerConfig struct {
 	BrokerName                         string `json:"brokerName"`                         // 当前机器hostName
 	BrokerClusterName                  string `json:"brokerClusterName"`                  // 集群名称
 	BrokerId                           int64  `json:"brokerId"`                           // 默认值MasterId
+	BrokerPort                         int    `json:"brokerPort"`                         // broker对外提供服务端口
 	BrokerPermission                   int    `json:"brokerPermission"`                   // Broker权限
 	DefaultTopicQueueNums              int32  `json:"defaultTopicQueueNums"`              // 默认topic队列数
 	AutoCreateTopicEnable              bool   `json:"autoCreateTopicEnable"`              // 自动创建Topic功能是否开启（生产环境建议关闭）
@@ -90,11 +93,14 @@ func NewDefaultBrokerConfig() *BrokerConfig {
 // NewCustomBrokerConfig 初始化BrokerConfig（根据传入参数autoCreateTopicEnable来标记：是否自动创建Topic）
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/28
-func NewCustomBrokerConfig(brokerName, brokerClusterName string, autoCreateTopicEnable bool) *BrokerConfig {
+func NewCustomBrokerConfig(cfg *SmartgoBrokerConfig) *BrokerConfig {
 	brokerConfig := NewDefaultBrokerConfig()
-	brokerConfig.BrokerName = brokerName
-	brokerConfig.BrokerClusterName = brokerClusterName
-	brokerConfig.AutoCreateTopicEnable = autoCreateTopicEnable
+	brokerConfig.BrokerName = cfg.BrokerName
+	brokerConfig.BrokerClusterName = cfg.BrokerClusterName
+	brokerConfig.AutoCreateTopicEnable = cfg.AutoCreateTopicEnable
+	brokerConfig.BrokerId = cfg.BrokerId
+	brokerConfig.SmartgoDataPath = cfg.SmartgoDataPath
+	brokerConfig.BrokerPort = cfg.BrokerPort
 	return brokerConfig
 }
 
@@ -117,6 +123,43 @@ func localHostName() string {
 		return defaultHostName
 	}
 	return host
+}
+
+// CheckBrokerConfigAttr 校验broker启动的所必需的SmartGoHome、namesrv配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/22
+func (self *BrokerConfig) CheckBrokerConfigAttr() bool {
+	// 如果没有设置home环境变量，则启动失败
+	if "" == self.SmartGoHome {
+		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
+		logger.Infof(format, SMARTGO_HOME_ENV)
+		return false
+	}
+
+	// 检测环境变量NAMESRV_ADDR
+	nameSrvAddr := self.NamesrvAddr
+	if strings.TrimSpace(nameSrvAddr) == "" {
+		format := "please set the '%s' variable in your environment"
+		logger.Infof(format, NAMESRV_ADDR_ENV)
+		return false
+	}
+
+	// 检测NameServer环境变量设置是否正确 IP:PORT
+	addrs := strings.Split(strings.TrimSpace(nameSrvAddr), ";")
+	if addrs == nil || len(addrs) == 0 {
+		format := "the %s=%s environment variable is invalid."
+		logger.Infof(format, NAMESRV_ADDR_ENV, addrs)
+		return false
+	}
+	for _, addr := range addrs {
+		if !CheckIpAndPort(addr) {
+			format := "the name server address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\""
+			logger.Infof(format, addr)
+			return false
+		}
+	}
+
+	return true
 }
 
 // HasReadable 校验Broker是否有读权限

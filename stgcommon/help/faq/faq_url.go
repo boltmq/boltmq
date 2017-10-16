@@ -19,8 +19,8 @@ const (
 	UNEXPECTED_EXCEPTION_URL       = "https://gitee.com/cloudzone/smartgo/issues/48" // FAQ: 未收录异常处理办法
 	SEND_MSG_FAILED                = "https://gitee.com/cloudzone/smartgo/issues/50" // FAQ: 发送消息尝试多次失败
 	UNKNOWN_HOST_EXCEPTION         = "https://gitee.com/cloudzone/smartgo/issues/64" // FAQ: 主机名不存在
-	TipStringBegin                 = "\nSee "                                        // FAQ: 开始提示的内容
-	TipStringEnd                   = " for further details."                         // FAQ: 结尾提示的内容
+	TipStringBegin                 = "See "                                          // FAQ: 开始提示的内容
+	TipStringEnd                   = " for further details "                         // FAQ: 结尾提示的内容
 )
 
 // SuggestTodo 建议从xxx获得帮助
@@ -38,7 +38,7 @@ func AttachDefaultURL(errorMessage string) string {
 
 	index := strings.Index(errorMessage, TipStringBegin)
 	if index < 0 {
-		value = fmt.Sprintf("%s\nFor more information, please visit the url, %s", errorMessage, UNEXPECTED_EXCEPTION_URL)
+		value = fmt.Sprintf("%s. For more information, please visit the url, %s", errorMessage, UNEXPECTED_EXCEPTION_URL)
 	}
 
 	return value

@@ -15,30 +15,15 @@ import (
 )
 
 const (
-	cfgName = "smartgoBroker.toml"
+	brokerConfigName = "smartgoBroker.toml"
 )
-
-// SmartgoBrokerConfig 启动smartgoBroker所必需的配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-type SmartgoBrokerConfig struct {
-	BrokerClusterName     string // 集群名称
-	BrokerName            string // broker名称
-	BrokerId              int64  // broker id
-	DeleteWhen            int    // 何时触发“删除无效Message”
-	FileReservedTime      int    // 消息保存时间
-	BrokerRole            string // broker角色 主/备
-	FlushDiskType         string // 刷盘方式
-	AutoCreateTopicEnable bool   // 是否允许客户端自动创建Topic
-	SmartgoDataPath       string // broker、store等模块的数据存储目录
-}
 
 // Start 启动BrokerController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
-func Start(stopChan chan bool) *BrokerController {
+func Start(stopChan chan bool, smartgoBrokerFileName string) *BrokerController {
 	// 构建BrokerController控制器、初始化BrokerController
-	controller := CreateBrokerController()
+	controller := CreateBrokerController(smartgoBrokerFileName)
 
 	// 注册ShutdownHook钩子
 	controller.registerShutdownHook(stopChan)
@@ -65,28 +50,25 @@ func Start(stopChan chan bool) *BrokerController {
 //
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
-func CreateBrokerController() *BrokerController {
+func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
 	// 读取并转化*.toml配置项的值
-	cfg, ok := parseSmartgoBrokerConfig()
-	if !ok {
+	cfg, ok := ParseSmartgoBrokerConfig(smartgoBrokerFileName...)
+	if !ok || cfg == nil {
 		logger.Flush()
 		os.Exit(0)
 	}
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
-	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg.BrokerName, cfg.BrokerClusterName, cfg.AutoCreateTopicEnable)
-	brokerConfig.BrokerId = cfg.BrokerId
-	brokerConfig.SmartgoDataPath = cfg.SmartgoDataPath
+	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg)
 	logger.Infof("broker.UserHomeDir && store.StorePathRootDir = %s", brokerConfig.SmartgoDataPath)
-
-	if !checkBrokerConfig(brokerConfig) {
+	if !brokerConfig.CheckBrokerConfigAttr() {
 		logger.Flush()
 		os.Exit(0)
 	}
 
 	// 初始化brokerConfig、messageStoreConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
-	if !checkMessageStoreConfig(messageStoreConfig, brokerConfig) {
+	if !checkMessageStoreConfigAttr(messageStoreConfig, brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
 	}
@@ -110,10 +92,11 @@ func CreateBrokerController() *BrokerController {
 	return controller
 }
 
-// parseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
+// ParseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, bool) {
+func ParseSmartgoBrokerConfig(smartgoBrokerFileName ...string) (*stgcommon.SmartgoBrokerConfig, bool) {
+	cfgName := getSmartgoBrokerConfigName(smartgoBrokerFileName...)
 	cfgPath := stgcommon.GetSmartGoHome() + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
 	if !file.IsExist(cfgPath) {
 		firstPath := cfgPath
@@ -125,7 +108,7 @@ func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, bool) {
 	}
 
 	// 读取并转化*.toml配置项的值
-	var cfg SmartgoBrokerConfig
+	var cfg stgcommon.SmartgoBrokerConfig
 	parseutil.ParseConf(cfgPath, &cfg)
 	if &cfg == nil {
 		logger.Errorf("read %s failed", cfgPath)
@@ -139,54 +122,27 @@ func parseSmartgoBrokerConfig() (*SmartgoBrokerConfig, bool) {
 	}
 
 	// TODO:处理broker、store等模块的存取数据目录, 优先级从高到低:
-	// smartgoBroker.toml文件SmartgoDataPath >> 环境变量“SMARTGO_DATA_PATH” >> 操作系统的user.Current().HomeDir属性
+	// smartgoBroker.toml文件SmartgoDataPath属性值 >> 环境变量“SMARTGO_DATA_PATH” >> 操作系统的user.Current().HomeDir属性
 	if strings.TrimSpace(cfg.SmartgoDataPath) == "" {
 		cfg.SmartgoDataPath = stgcommon.GetUserHomeDir() + separator + "store"
 	}
 	return &cfg, true
 }
 
-// checBrokerConfig 校验broker启动的所必需的SmartGoHome、namesrv配置
+// getSmartgoBrokerConfigName 获得启动broker的toml文件名称
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/22
-func checkBrokerConfig(brokerConfig *stgcommon.BrokerConfig) bool {
-	// 如果没有设置home环境变量，则启动失败
-	if "" == brokerConfig.SmartGoHome {
-		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
-		logger.Infof(format, stgcommon.SMARTGO_HOME_ENV)
-		return false
+// Since: 2017/10/16
+func getSmartgoBrokerConfigName(smartgoBrokerFileName ...string) string {
+	if smartgoBrokerFileName != nil && len(smartgoBrokerFileName) > 0 && smartgoBrokerFileName[0] != "" {
+		return strings.TrimSpace(smartgoBrokerFileName[0])
 	}
-
-	// 检测环境变量NAMESRV_ADDR
-	nameSrvAddr := brokerConfig.NamesrvAddr
-	if strings.TrimSpace(nameSrvAddr) == "" {
-		format := "please set the '%s' variable in your environment"
-		logger.Infof(format, stgcommon.NAMESRV_ADDR_ENV)
-		return false
-	}
-
-	// 检测NameServer环境变量设置是否正确 IP:PORT
-	addrs := strings.Split(strings.TrimSpace(nameSrvAddr), ";")
-	if addrs == nil || len(addrs) == 0 {
-		format := "the %s=%s environment variable is invalid."
-		logger.Infof(format, stgcommon.NAMESRV_ADDR_ENV, addrs)
-		return false
-	}
-	for _, addr := range addrs {
-		if !stgcommon.CheckIpAndPort(addr) {
-			format := "the name server address[%s] illegal, please set it as follows, \"127.0.0.1:9876;192.168.0.1:9876\""
-			logger.Infof(format, addr)
-			return false
-		}
-	}
-
-	return true
+	return brokerConfigName
 }
 
-// checkMessageStoreConfig 校验messageStoreConfig配置
+// checkMessageStoreConfigAttr 校验messageStoreConfig配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcommon.BrokerConfig) bool {
+func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcommon.BrokerConfig) bool {
 	if mscfg.BrokerRole == config.SLAVE && bcfg.BrokerId <= 0 {
 		logger.Infof("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
 		return false
@@ -198,7 +154,7 @@ func checkMessageStoreConfig(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcom
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
 func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
-	// 覆盖store模块的StorePathRootDir配置目录
+	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
 	messageStoreConfig.StorePathRootDir = brokerConfig.SmartgoDataPath
 
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
@@ -218,26 +174,4 @@ func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, b
 	default:
 
 	}
-}
-
-// ToString 打印smartgoBroker配置项
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-func (self *SmartgoBrokerConfig) ToString() string {
-	if self == nil {
-		return "SmartgoBrokerConfig is nil"
-	}
-
-	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, DeleteWhen=%d, FileReservedTime=%d, "
-	format += "BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, SmartgoDataPath=%s]"
-	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.DeleteWhen, self.FileReservedTime,
-		self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.SmartgoDataPath)
-	return info
-}
-
-// IsBlank 判断配置项是否读取成功
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/9/26
-func (self *SmartgoBrokerConfig) IsBlank() bool {
-	return self == nil || strings.TrimSpace(self.BrokerClusterName) == "" || strings.TrimSpace(self.BrokerName) == ""
 }
