@@ -1,3 +1,4 @@
+// Copyright (c) 2015, Emir Pasic. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,23 +10,18 @@
 package list
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/list/utils"
-	"github.com/emirpasic/gods/containers"
+	"bytes"
 )
 
 // List interface that all lists implement
 type List interface {
-	Get(index int) (interface{}, bool)
+	Get(index int) (*bytes.Buffer, bool)
 	Remove(index int)
-	Add(values ...interface{})
-	Contains(values ...interface{}) bool
-	Sort(comparator utils.Comparator)
+	Add(values ...*bytes.Buffer)
+	Contains(values ...*bytes.Buffer) bool
+	Sort(comparator Comparator)
 	Swap(index1, index2 int)
-	Insert(index int, values ...interface{})
+	Insert(index int, values ...*bytes.Buffer)
 
-	containers.Container
-	// Empty() bool
-	// Size() int
-	// Clear()
-	// Values() []interface{}
+	Container
 }
