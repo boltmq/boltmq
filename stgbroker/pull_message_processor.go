@@ -328,8 +328,8 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	// 只有Master支持存储offset
 	storeOffsetEnable = storeOffsetEnable && pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE
 
-	logger.Infof("brokerAllowSuspend:%v, requestHeader.SysFlag:%v,  hasCommitOffsetFlag:%v, storeOffsetEnable:%v, requestHeader:%#v",
-		brokerAllowSuspend, requestHeader.SysFlag, hasCommitOffsetFlag, storeOffsetEnable, requestHeader)
+	//logger.Infof("brokerAllowSuspend:%v, requestHeader.SysFlag:%v,  hasCommitOffsetFlag:%v, storeOffsetEnable:%v, requestHeader:%#v",
+	//	brokerAllowSuspend, requestHeader.SysFlag, hasCommitOffsetFlag, storeOffsetEnable, requestHeader)
 
 	if storeOffsetEnable {
 		pull.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,
