@@ -17,7 +17,7 @@ import (
 // Author gaoyanlei
 // Since 2017/8/15
 const (
-	RemotingVersionKey = "rocketmq.remoting.version"
+	RemotingVersionKey = "smartgo.remoting.version"
 	rpcType            = 0
 	rpcOneway          = 1
 )
