@@ -24,7 +24,7 @@ const (
 // Since 2017/8/18
 type BrokerStatsManager struct {
 	clusterName        string
-	statsTable         map[string]*stats.StatsItemSet
+	statsTable         map[string]*stats.StatsItemSet // key: 统计维度，如TOPIC_PUT_SIZE等
 	momentStatsItemSet *stats.MomentStatsItemSet
 }
 
@@ -52,6 +52,12 @@ func NewBrokerStatsManager(clusterName string) *BrokerStatsManager {
 // Author rongzhihong
 // Since 2017/9/12
 func (bsm *BrokerStatsManager) Start() {
+	bsm.momentStatsItemSet.MomentStatsTaskTickers.Start()
+
+	for _, statsItemSet := range bsm.statsTable {
+		statsItemSet.StatsItemTickers.Start()
+	}
+
 	logger.Info("BrokerStatsManager start successful")
 }
 
@@ -62,25 +68,17 @@ func (bsm *BrokerStatsManager) Shutdown() {
 	defer utils.RecoveredFn()
 
 	// 先关闭momentStatsItemSet的定时任务
-	for _, ticker := range bsm.momentStatsItemSet.MomentStatsTaskList {
-		if ticker != nil {
-			ticker.Stop()
-		}
-	}
+	bsm.momentStatsItemSet.MomentStatsTaskTickers.Close()
 
 	// 再关闭statsTable中的定时任务
 	for _, statsItemSet := range bsm.statsTable {
-		for _, ticker := range statsItemSet.StatsItemTaskList {
-			if ticker != nil {
-				ticker.Stop()
-			}
-		}
+		statsItemSet.StatsItemTickers.Close()
 	}
 
 	logger.Info("BrokerStatsManager shutdown successful")
 }
 
-// GetStatsItem  增加数量
+// GetStatsItem  根据statsName、statsKey获得统计数据
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) GetStatsItem(statsName, statsKey string) *stats.StatsItem {
@@ -90,35 +88,35 @@ func (bsm *BrokerStatsManager) GetStatsItem(statsName, statsKey string) *stats.S
 	return nil
 }
 
-// IncTopicPutNums  增加数量
+// IncTopicPutNums  Topic Put次数加1
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncTopicPutNums(topic string) {
 	bsm.statsTable[TOPIC_PUT_NUMS].AddValue(topic, 1, 1)
 }
 
-// IncTopicPutSize  增加数量
+// IncTopicPutSize  Topic Put流量增加size
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncTopicPutSize(topic string, size int64) {
 	bsm.statsTable[TOPIC_PUT_SIZE].AddValue(topic, size, 1)
 }
 
-// IncGroupGetNums  增加数量
+// IncGroupGetNums  Topic@Group Get消息个数加incValue
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncGroupGetNums(group, topic string, incValue int) {
 	bsm.statsTable[GROUP_GET_NUMS].AddValue(topic+"@"+group, int64(incValue), 1)
 }
 
-// IncGroupGetSize  增加数量
+// IncGroupGetSize  Topic@Group Get消息流量增加incValue
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncGroupGetSize(group, topic string, incValue int) {
 	bsm.statsTable[GROUP_GET_SIZE].AddValue(topic+"@"+group, int64(incValue), 1)
 }
 
-// incBrokerPutNums  增加数量
+// incBrokerPutNums  broker Put消息次数加1
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerPutNums() {
@@ -126,29 +124,29 @@ func (bsm *BrokerStatsManager) IncBrokerPutNums() {
 	atomic.AddInt64(&(statsItem.ValueCounter), 1)
 }
 
-// IncBrokerGetNums  增加数量
+// IncBrokerGetNums  broker Get消息个数加incValue
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncBrokerGetNums(incValue int) {
-	statsItem := bsm.statsTable[BROKER_PUT_NUMS].GetAndCreateStatsItem(bsm.clusterName)
+	statsItem := bsm.statsTable[BROKER_GET_NUMS].GetAndCreateStatsItem(bsm.clusterName)
 	atomic.AddInt64(&(statsItem.ValueCounter), int64(incValue))
 }
 
-// IncSendBackNums  增加数量
+// IncSendBackNums  Topic@Group 重试Put次数加1
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) IncSendBackNums(group, topic string) {
 	bsm.statsTable[SNDBCK_PUT_NUMS].AddValue(topic+"@"+group, 1, 1)
 }
 
-// TpsGroupGetNums  根据topic + group获得TPS
+// TpsGroupGetNums  根据 Topic@Group 获得TPS
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) TpsGroupGetNums(group, topic string) float64 {
 	return bsm.statsTable[GROUP_GET_NUMS].GetStatsDataInMinute(topic + "@" + group).Tps
 }
 
-// RecordDiskFallBehind  记录
+// RecordDiskFallBehind  记录 QueueId@Topic@Group 的offset落后数量
 // Author rongzhihong
 // Since 2017/9/17
 func (bsm *BrokerStatsManager) RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64) {

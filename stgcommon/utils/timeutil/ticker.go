@@ -48,6 +48,7 @@ func (t *Ticker) start() {
 			t.fn()
 			if !t.isRun {
 				if t.over != nil {
+					t.tm.Stop()
 					close(t.over)
 				}
 				return

@@ -9,7 +9,7 @@ import (
 // Author gaoyanlei
 // Since 2017/8/22
 type ConsumerOffsetSerializeWrapper struct {
-	OffsetTable *sync.Map `json:"offsetTable"`
+	OffsetTable *sync.Map `json:"offsetTable"` // key topic@group value:map[int]int64
 	*protocol.RemotingSerializable
 }
 
