@@ -9,20 +9,27 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"time"
 	"sync/atomic"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 )
 
 type MessageListenerImpl struct {
-	MsgCount  int64
-	StartTime int64
+	MsgCount   int64
+	StartTime  int64
+	MapContent *sync.Map
 }
 
 func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	for _, msg := range msgs {
 		count := atomic.AddInt64(&listenerImpl.MsgCount, 1)
+		listenerImpl.MapContent.Put(msg.ToString(), 0)
 		var num int64 = 10000
 		if count%num == 0 {
-			fmt.Println(count, msg.ToString())
+			fmt.Println(count, msg.ToString(), listenerImpl.MapContent.Size())
 		}
+		if count >= 5050000 {
+			fmt.Println(count, msg.ToString(), listenerImpl.MapContent.Size())
+		}
+
 	}
 	return listener.CONSUME_SUCCESS
 }
@@ -38,12 +45,12 @@ func taskC() {
 }
 
 func main() {
-	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("consumer2")
+	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("consumer5")
 	defaultMQPushConsumer.SetConsumeFromWhere(heartbeat.CONSUME_FROM_LAST_OFFSET)
 	defaultMQPushConsumer.SetMessageModel(heartbeat.CLUSTERING)
 	defaultMQPushConsumer.SetNamesrvAddr("10.112.68.189:9876")
 	defaultMQPushConsumer.Subscribe("cloudzone1", "tagA")
-	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{StartTime: time.Now().Unix()})
+	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{StartTime: time.Now().Unix(), MapContent: sync.NewMap()})
 	defaultMQPushConsumer.Start()
 	go taskC()
 	select {}
