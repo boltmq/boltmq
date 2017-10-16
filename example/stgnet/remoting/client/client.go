@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
-	"log"
-	"time"
 )
 
 var (
