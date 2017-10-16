@@ -31,7 +31,7 @@ const (
 	MESSAGE_COMPRESS_LEVEL          = "cloudmq.message.compressLevel"
 	WS_DOMAIN_NAME                  = "jmenv.tbsite.net"
 	WS_DOMAIN_SUBGROUP              = "nsaddr"
-	WS_ADDR                         = "http://" + WS_DOMAIN_NAME + ":8080/cloudmq/" + WS_DOMAIN_SUBGROUP // http://jmenv.tbsite.net:8080/rocketmq/nsaddr
+	WS_ADDR                         = "http://" + WS_DOMAIN_NAME + ":8080/smartgo/" + WS_DOMAIN_SUBGROUP // http://jmenv.tbsite.net:8080/smartgo/nsaddr
 	DEFAULT_TOPIC                   = "MY_DEFAULT_TOPIC"
 	BENCHMARK_TOPIC                 = "BenchmarkTest"
 	DEFAULT_PRODUCER_GROUP          = "DEFAULT_PRODUCER"
