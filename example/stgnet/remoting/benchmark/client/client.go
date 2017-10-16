@@ -25,14 +25,24 @@ func main() {
 	port := flag.Int("p", 10911, "port")
 	gonum := flag.Int("n", 100, "thread num")
 	sendnum := flag.Int("c", 10000, "thread/per send count")
+	sendsize := flag.Int("s", 100, "send data size")
 	flag.Parse()
 
 	initClient()
 	addr := net.JoinHostPort(*host, strconv.Itoa(*port))
-	synctest(addr, *gonum, *sendnum)
+	synctest(addr, *gonum, *sendnum, *sendsize)
 }
 
-func synctest(addr string, gonum, sendnum int) {
+func newbytes(size int) []byte {
+	bs := make([]byte, size)
+	for i := 0; i < size; i++ {
+		bs[i] = 92
+	}
+
+	return bs
+}
+
+func synctest(addr string, gonum, sendnum, sendsize int) {
 	var (
 		wg      sync.WaitGroup
 		success int
@@ -43,6 +53,7 @@ func synctest(addr string, gonum, sendnum int) {
 	// 请求的custom header
 	topicStatsInfoRequestHeader := &namesrv.GetTopicStatsInfoRequestHeader{}
 	topicStatsInfoRequestHeader.Topic = "testTopic"
+	body := newbytes(sendsize)
 
 	// 同步消息
 	total = gonum * sendnum
@@ -52,6 +63,7 @@ func synctest(addr string, gonum, sendnum int) {
 		go func() {
 			for i := 0; i < sendnum; i++ {
 				request := protocol.CreateRequestCommand(code.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
+				request.Body = body
 				response, err := remotingClient.InvokeSync(addr, request, 3000)
 				if err != nil {
 					failed++
