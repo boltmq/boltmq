@@ -20,7 +20,7 @@ func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageE
 	for _, msg := range msgs {
 		count := atomic.AddInt64(&listenerImpl.MsgCount, 1)
 		var num int64 = 10000
-		if count % num {
+		if count%num == 0 {
 			fmt.Println(count, msg.ToString())
 		}
 	}
