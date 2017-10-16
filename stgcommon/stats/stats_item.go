@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync/list"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"math"
 	"sync/atomic"
 	"time"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/list"
 )
 
 // StatsItem 统计单元
