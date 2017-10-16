@@ -56,10 +56,10 @@ func (self *TopicPublishInfo) ToString() string {
 
 	messageQueueData := ""
 	if self.MessageQueueList != nil && len(self.MessageQueueList) > 0 {
-		values := make([]string, 0, len(self.MessageQueueList))
-		for index, mq := range self.MessageQueueList {
+		values := []string{}
+		for _, mq := range self.MessageQueueList {
 			format := "{topic=%s, brokerName=%s, queueId=%d}"
-			values[index] = fmt.Sprintf(format, mq.Topic, mq.BrokerName, mq.QueueId)
+			values = append(values, fmt.Sprintf(format, mq.Topic, mq.BrokerName, mq.QueueId))
 		}
 		messageQueueData = strings.Join(values, ",")
 	}
