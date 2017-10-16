@@ -13,23 +13,23 @@
 // Serialization provides serializers (marshalers) and deserializers (unmarshalers).
 package list
 
-import "bytes"
+import "git.oschina.net/cloudzone/smartgo/stgcommon/list/utils"
 
 // Container is base interface that all data structures implement.
 type Container interface {
 	Empty() bool
 	Size() int
 	Clear()
-	Values() []*bytes.Buffer
+	Values() []interface{}
 }
 
 // GetSortedValues returns sorted container's elements with respect to the passed comparator.
 // Does not effect the ordering of elements within the container.
-func GetSortedValues(container Container, comparator Comparator) []*bytes.Buffer {
+func GetSortedValues(container Container, comparator utils.Comparator) []interface{} {
 	values := container.Values()
 	if len(values) < 2 {
 		return values
 	}
-	Sort(values, comparator)
+	utils.Sort(values, comparator)
 	return values
 }

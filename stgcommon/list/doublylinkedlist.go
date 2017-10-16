@@ -6,39 +6,40 @@
 //
 // Structure is not thread safe.
 //
-// Reference: https://en.wikipedia.org/wiki/List_%28abstract_data_type%29
+// Reference: https://en.wikipedia.org/wiki/Linkedlist_%28abstract_data_type%29
 package list
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon/list/utils"
 )
 
-func assertListImplementation() {
-	var _ List = (*BufferLinkedList)(nil)
+func assertLinkedlistImplementation() {
+	var _ List = (*Linkedlist)(nil)
 }
 
-// BufferLinkedList holds the elements, where each element points to the next and previous element
-type BufferLinkedList struct {
+// Linkedlist holds the elements, where each element points to the next and previous element
+type Linkedlist struct {
 	first *element
 	last  *element
 	size  int
 }
 
 type element struct {
-	value *bytes.Buffer
+	value interface{}
 	prev  *element
 	next  *element
 }
 
 // New instantiates a new empty list
-func NewBufferLinkedList() *BufferLinkedList {
-	return &BufferLinkedList{}
+func New() *Linkedlist {
+	return &Linkedlist{}
 }
 
 // Add appends a value (one or more) at the end of the list (same as Append())
-func (list *BufferLinkedList) Add(values ...*bytes.Buffer) {
+func (list *Linkedlist) Add(values ...interface{}) {
 	for _, value := range values {
 		newElement := &element{value: value, prev: list.last}
 		if list.size == 0 {
@@ -53,12 +54,12 @@ func (list *BufferLinkedList) Add(values ...*bytes.Buffer) {
 }
 
 // Append appends a value (one or more) at the end of the list (same as Add())
-func (list *BufferLinkedList) Append(values ...*bytes.Buffer) {
+func (list *Linkedlist) Append(values ...interface{}) {
 	list.Add(values...)
 }
 
 // Prepend prepends a values (or more)
-func (list *BufferLinkedList) Prepend(values ...*bytes.Buffer) {
+func (list *Linkedlist) Prepend(values ...interface{}) {
 	// in reverse to keep passed order i.e. ["c","d"] -> Prepend(["a","b"]) -> ["a","b","c",d"]
 	for v := len(values) - 1; v >= 0; v-- {
 		newElement := &element{value: values[v], next: list.first}
@@ -75,7 +76,7 @@ func (list *BufferLinkedList) Prepend(values ...*bytes.Buffer) {
 
 // Get returns the element at index.
 // Second return parameter is true if index is within bounds of the array and array is not empty, otherwise false.
-func (list *BufferLinkedList) Get(index int) (*bytes.Buffer, bool) {
+func (list *Linkedlist) Get(index int) (interface{}, bool) {
 
 	if !list.withinRange(index) {
 		return nil, false
@@ -95,7 +96,7 @@ func (list *BufferLinkedList) Get(index int) (*bytes.Buffer, bool) {
 }
 
 // Remove removes one or more elements from the list with the supplied indices.
-func (list *BufferLinkedList) Remove(index int) {
+func (list *Linkedlist) Remove(index int) {
 
 	if !list.withinRange(index) {
 		return
@@ -140,7 +141,7 @@ func (list *BufferLinkedList) Remove(index int) {
 // All values have to be present in the set for the method to return true.
 // Performance time complexity of n^2.
 // Returns true if no arguments are passed at all, i.e. set is always super-set of empty set.
-func (list *BufferLinkedList) Contains(values ...*bytes.Buffer) bool {
+func (list *Linkedlist) Contains(values ...interface{}) bool {
 
 	if len(values) == 0 {
 		return true
@@ -164,8 +165,8 @@ func (list *BufferLinkedList) Contains(values ...*bytes.Buffer) bool {
 }
 
 // Values returns all elements in the list.
-func (list *BufferLinkedList) Values() []*bytes.Buffer {
-	values := make([]*bytes.Buffer, list.size, list.size)
+func (list *Linkedlist) Values() []interface{} {
+	values := make([]interface{}, list.size, list.size)
 	for e, element := 0, list.first; element != nil; e, element = e+1, element.next {
 		values[e] = element.value
 	}
@@ -173,31 +174,31 @@ func (list *BufferLinkedList) Values() []*bytes.Buffer {
 }
 
 // Empty returns true if list does not contain any elements.
-func (list *BufferLinkedList) Empty() bool {
+func (list *Linkedlist) Empty() bool {
 	return list.size == 0
 }
 
 // Size returns number of elements within the list.
-func (list *BufferLinkedList) Size() int {
+func (list *Linkedlist) Size() int {
 	return list.size
 }
 
 // Clear removes all elements from the list.
-func (list *BufferLinkedList) Clear() {
+func (list *Linkedlist) Clear() {
 	list.size = 0
 	list.first = nil
 	list.last = nil
 }
 
 // Sort sorts values (in-place) using.
-func (list *BufferLinkedList) Sort(comparator Comparator) {
+func (list *Linkedlist) Sort(comparator utils.Comparator) {
 
 	if list.size < 2 {
 		return
 	}
 
 	values := list.Values()
-	Sort(values, comparator)
+	utils.Sort(values, comparator)
 
 	list.Clear()
 
@@ -206,7 +207,7 @@ func (list *BufferLinkedList) Sort(comparator Comparator) {
 }
 
 // Swap swaps values of two elements at the given indices.
-func (list *BufferLinkedList) Swap(i, j int) {
+func (list *Linkedlist) Swap(i, j int) {
 	if list.withinRange(i) && list.withinRange(j) && i != j {
 		var element1, element2 *element
 		for e, currentElement := 0, list.first; element1 == nil || element2 == nil; e, currentElement = e+1, currentElement.next {
@@ -224,7 +225,7 @@ func (list *BufferLinkedList) Swap(i, j int) {
 // Insert inserts values at specified index position shifting the value at that position (if any) and any subsequent elements to the right.
 // Does not do anything if position is negative or bigger than list's size
 // Note: position equal to list's size is valid, i.e. append.
-func (list *BufferLinkedList) Insert(index int, values ...*bytes.Buffer) {
+func (list *Linkedlist) Insert(index int, values ...interface{}) {
 
 	if !list.withinRange(index) {
 		// Append
@@ -279,8 +280,8 @@ func (list *BufferLinkedList) Insert(index int, values ...*bytes.Buffer) {
 }
 
 // String returns a string representation of container
-func (list *BufferLinkedList) String() string {
-	str := "BufferLinkedList\n"
+func (list *Linkedlist) String() string {
+	str := "DoublyLinkedLinkedlist\n"
 	values := []string{}
 	for element := list.first; element != nil; element = element.next {
 		values = append(values, fmt.Sprintf("%v", element.value))
@@ -290,6 +291,6 @@ func (list *BufferLinkedList) String() string {
 }
 
 // Check that the index is within bounds of the list
-func (list *BufferLinkedList) withinRange(index int) bool {
+func (list *Linkedlist) withinRange(index int) bool {
 	return index >= 0 && index < list.size
 }
