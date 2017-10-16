@@ -8,7 +8,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"time"
-	"sync/atomic"
 )
 
 type MessageListenerImpl struct {
@@ -18,13 +17,7 @@ type MessageListenerImpl struct {
 
 func (listenerImpl *MessageListenerImpl) ConsumeMessage(msgs []*message.MessageExt, context *consumer.ConsumeConcurrentlyContext) listener.ConsumeConcurrentlyStatus {
 	for _, msg := range msgs {
-		atomic.AddInt64(&listenerImpl.MsgCount, 1)
-		if listenerImpl.MsgCount==500000{
-			fmt.Println(500000/(time.Now().Unix()-listenerImpl.StartTime),"______________________________________")
-
-		}
-		fmt.Println(listenerImpl.MsgCount)
-		fmt.Println(msg.ToString())
+		fmt.Println(listenerImpl.MsgCount,msg.ToString())
 	}
 	return listener.CONSUME_SUCCESS
 }
