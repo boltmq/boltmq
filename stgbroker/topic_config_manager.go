@@ -156,7 +156,7 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 	createNew := false
 
 	// 如果获取到topic并且没有出错则反会topicConig
-	if tc == nil {
+	if tc != nil {
 		return tc, nil
 	}
 
@@ -194,7 +194,7 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 			return nil, errors.New("No permissions to create topic")
 		}
 	} else {
-		return nil, errors.New("reate new topic failed, because the default topic not exit")
+		return nil, errors.New("create new topic failed, because the default topic not exit")
 	}
 
 	if topicConfig != nil {
@@ -249,8 +249,9 @@ func (tcm *TopicConfigManager) UpdateTopicConfig(topicConfig *stgcommon.TopicCon
 	old := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if old != nil {
 		logger.Infof("update topic config, old:%s, new:%s", old.ToString(), topicConfig.ToString())
+	} else {
+		logger.Infof("create new topic: %s", topicConfig.ToString())
 	}
-	logger.Infof("create new topic: %s", topicConfig.ToString())
 	tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 	tcm.ConfigManagerExt.Persist()
 }

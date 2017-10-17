@@ -43,8 +43,9 @@ func (self *TopicConfigTable) Keys() []string {
 func (table *TopicConfigTable) Put(k string, v *stgcommon.TopicConfig) *stgcommon.TopicConfig {
 	table.Lock()
 	defer table.Unlock()
+	oldV, _ := table.TopicConfigs[k]
 	table.TopicConfigs[k] = v
-	return v
+	return oldV
 }
 
 func (table *TopicConfigTable) Get(k string) *stgcommon.TopicConfig {

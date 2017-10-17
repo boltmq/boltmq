@@ -104,7 +104,7 @@ func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *pro
 		if err != nil {
 			logger.Errorf("transfer one message by pagecache failed, %s", err.Error())
 		}
-		// TODO selectMapedBufferResult.Release()
+		selectMapedBufferResult.Release()
 		return nil, nil
 	}
 

@@ -147,7 +147,7 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 
 	defer utils.RecoveredFn()
 
-	for group, chlMap := range pm.GroupChannelTable.GroupChannelTable {
+	pm.GroupChannelTable.ForeachByWPerm(func(group string, chlMap map[netm.Context]*ChannelInfo) {
 		for key, info := range chlMap {
 			diff := timeutil.CurrentTimeMillis() - info.LastUpdateTimestamp
 			if diff > pm.ChannelExpiredTimeout {
@@ -157,7 +157,7 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 				info.Context.Close()
 			}
 		}
-	}
+	})
 }
 
 // DoChannelCloseEvent 通道关闭事件
@@ -167,12 +167,14 @@ func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
 
-	for group, clientChannelInfoTable := range pm.GroupChannelTable.GroupChannelTable {
-		delete(clientChannelInfoTable, ctx)
-
-		format := "NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s"
-		logger.Infof(format, remoteAddr, group)
-	}
+	pm.GroupChannelTable.ForeachByWPerm(func(group string, clientChannelInfoTable map[netm.Context]*ChannelInfo) {
+		_, ok := clientChannelInfoTable[ctx]
+		if ok {
+			delete(clientChannelInfoTable, ctx)
+			format := "NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s"
+			logger.Infof(format, remoteAddr, group)
+		}
+	})
 }
 
 // PickProducerChannelRandomly 事务消息

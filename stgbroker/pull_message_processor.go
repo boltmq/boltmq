@@ -50,7 +50,7 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Since 2017/9/5
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
-		logger.Info("唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
+		logger.Info("....唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
 
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
@@ -67,10 +67,9 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 
 		_, err = ctx.WriteSerialObject(response)
 		if err != nil {
-			logger.Errorf("processRequestWrapper response to %s failed %s. \n request:%s, response:%s",
+			logger.Errorf("processRequestWrapper response to %s failed %s. ### request:%s, ### response:%s",
 				ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
-		logger.Infof("............唤醒HoldPullRequest response:%#v", response)
 	}()
 }
 
@@ -81,7 +80,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	requestHeader := &header.PullMessageRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("Pull Message: Decode Request Throw Error:%s", err.Error())
 	}
 
 	response.Opaque = request.Opaque
@@ -211,7 +210,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				context := new(mqtrace.ConsumeMessageContext)
 				context.ConsumerGroup = requestHeader.ConsumerGroup
 				context.Topic = requestHeader.Topic
-				context.ClientHost = ctx.LocalAddr().String()
+				context.ClientHost = ctx.RemoteAddr().String()
 				context.StoreHost = pull.BrokerController.GetBrokerAddr()
 				context.QueueId = requestHeader.QueueId
 
@@ -269,7 +268,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
 					ctx.RemoteAddr().String(), err.Error())
 			}
-			// TODO getMessageResult.Release()
+			getMessageResult.Release()
 			response = nil
 		case code.PULL_NOT_FOUND:
 			// 长轮询
@@ -323,9 +322,6 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 	storeOffsetEnable = storeOffsetEnable && hasCommitOffsetFlag // 说明Consumer设置了标志位
 	// 只有Master支持存储offset
 	storeOffsetEnable = storeOffsetEnable && pull.BrokerController.MessageStoreConfig.BrokerRole != config.SLAVE
-
-	//logger.Infof("brokerAllowSuspend:%v, requestHeader.SysFlag:%v,  hasCommitOffsetFlag:%v, storeOffsetEnable:%v, requestHeader:%#v",
-	//	brokerAllowSuspend, requestHeader.SysFlag, hasCommitOffsetFlag, storeOffsetEnable, requestHeader)
 
 	if storeOffsetEnable {
 		pull.BrokerController.ConsumerOffsetManager.CommitOffset(requestHeader.ConsumerGroup,

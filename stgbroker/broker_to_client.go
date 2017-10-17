@@ -53,6 +53,7 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGro
 // Since 2017/9/11
 func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, requestHeader *header.CheckTransactionStateRequestHeader,
 	selectMapedBufferResult *stgstorelog.SelectMapedBufferResult) {
+	protocol.CreateDefaultResponseCommand()
 	request := protocol.CreateRequestCommand(code.CHECK_TRANSACTION_STATE, requestHeader)
 	request.MarkOnewayRPC()
 
@@ -62,7 +63,7 @@ func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, re
 	//if err != nil {
 	//	logger.Errorf("invokeProducer failed, %s", err.Error())
 	//}
-	// selectMapedBufferResult.Release()
+	selectMapedBufferResult.Release()
 }
 
 // CallClient 调用客户端

@@ -19,7 +19,7 @@ type ConfigManager interface {
 
 type ConfigManagerExt struct {
 	ConfigManager ConfigManager
-	configLock    *sync.RWMutex
+	sync.RWMutex
 }
 
 func NewConfigManagerExt(configManager ConfigManager) *ConfigManagerExt {
@@ -55,6 +55,8 @@ func (cme *ConfigManagerExt) Load() bool {
 }
 
 func (cme *ConfigManagerExt) Persist() {
+	cme.Lock()
+	defer cme.Unlock()
 	defer utils.RecoveredFn()
 
 	buf := strings.TrimSpace(cme.ConfigManager.Encode(true))
