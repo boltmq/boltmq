@@ -7,6 +7,8 @@ import (
 	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"math"
+	"strconv"
+	"io/ioutil"
 )
 
 var (
@@ -48,12 +50,12 @@ func Test_write_read(t *testing.T) {
 			fmt.Printf("result == nil %d \r\n", i)
 		}
 
-		// result.relase()
 		fmt.Printf("read %d ok %d \r\n", i, result.Status)
+		result.Release()
 	}
 
 	master.Shutdown()
-	//master.Destroy()
+	master.Destroy()
 
 }
 
@@ -215,15 +217,18 @@ func TestDefaultMessageStore_SelectOneMessageByOffset(t *testing.T) {
 		t.Fail()
 		t.Error("select one message by offset error, message is nil")
 	}
+	selectResult.Release()
 
 	selectResult = master.SelectOneMessageByOffset(12637)
 	if selectResult == nil {
 		t.Fail()
 		t.Error("select one message by offset error, message is nil")
 	}
+	selectResult.Release()
 
 	selectResult = master.SelectOneMessageByOffset(12638)
 	if selectResult != nil {
+		selectResult.Release()
 		t.Fail()
 		t.Error("select one message by offset error")
 	}
@@ -242,21 +247,25 @@ func TestDefaultMessageStore_SelectOneMessageByOffsetAndSize(t *testing.T) {
 		t.Fail()
 		t.Error("select one message by offset error, message is nil")
 	}
+	selectResult.Release()
 
 	selectResult = master.SelectOneMessageByOffsetAndSize(12637, 127)
 	if selectResult == nil {
 		t.Fail()
 		t.Error("select one message by offset error, message is nil")
 	}
+	selectResult.Release()
 
 	selectResult = master.SelectOneMessageByOffsetAndSize(12637, 128)
 	if selectResult != nil {
+		selectResult.Release()
 		t.Fail()
-		t.Error("select one message by offset error, message is nil")
+		t.Error("select one message by offset error, message is not nil")
 	}
 
 	selectResult = master.SelectOneMessageByOffsetAndSize(12638, 127)
 	if selectResult != nil {
+		selectResult.Release()
 		t.Fail()
 		t.Error("select one message by offset error")
 	}
@@ -370,7 +379,7 @@ func TestDefaultMessageStore_load(t *testing.T) {
 	}
 	master.Shutdown()
 	time.Sleep(time.Duration(10000 * time.Millisecond))
-	//master.Destroy()
+	master.Destroy()
 }
 
 func TestDefaultMessageStore_load2(t *testing.T) {
@@ -402,9 +411,70 @@ func TestDefaultMessageStore_load2(t *testing.T) {
 				fmt.Printf("result == nil queue-%d %d \r\n", j, i)
 			}
 
+			result.Release()
 			fmt.Printf("read queue-%d %d ok %d \r\n", j, i, result.Status)
 		}
 	}
 
 	master.Shutdown()
+	master.Destroy()
+}
+
+func TestDefaultMessageStore_cleanFilesPeriodically(t *testing.T) {
+	messageStoreConfig := buildMessageStoreConfig()
+	messageStoreConfig.FileReservedTime = 0
+	messageStoreConfig.DeleteWhen = strconv.Itoa(time.Now().Hour())
+	master := NewDefaultMessageStore(messageStoreConfig, nil)
+
+	master.Load()
+
+	err := master.Start()
+	if err != nil {
+		logger.Error("start message store failed:", err.Error())
+	}
+
+	putMessage(master, 100)
+	time.Sleep(1 * time.Minute)
+
+	commitLogDir := master.MessageStoreConfig.StorePathRootDir + GetPathSeparator() + "commitlog"
+	files, err := ioutil.ReadDir(commitLogDir)
+	if err != nil {
+		t.Fail()
+		t.Error("clean files periodically method error:", err.Error())
+	}
+
+	if len(files) != 1 {
+		t.Fail()
+		t.Error("clean files periodically method error, expection:1, actuality:", len(files))
+	}
+
+	if files[0].Name() != "00000000000000008192" {
+		t.Fail()
+		t.Error("clean files periodically method error, expection:00000000000000008192, actuality:", files[1].Name())
+	}
+
+	for i := 0; i < 100; i++ {
+		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
+		if result == nil {
+			fmt.Printf("result == nil %d \r\n", i)
+		}
+
+		fmt.Printf("read %d ok %d \r\n", i, result.Status)
+		result.Release()
+
+		if i < 64 && result.Status != OFFSET_TOO_SMALL {
+			t.Fail()
+			t.Errorf("clean files periodically method error, expection:%d, actuality:%d",
+				OFFSET_TOO_SMALL, result.Status)
+		}
+
+		if i > 64 && result.Status != FOUND {
+			t.Fail()
+			t.Errorf("clean files periodically method error, expection:%d, actuality:%d",
+				OFFSET_TOO_SMALL, result.Status)
+		}
+	}
+
+	master.Shutdown()
+	master.Destroy()
 }

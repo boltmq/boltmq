@@ -217,6 +217,7 @@ func (self *CommitLog) pickupStoretimestamp(offset int64, size int32) int64 {
 	if offset > self.getMinOffset() {
 		result := self.getMessage(offset, size)
 		if result != nil {
+			defer result.Release()
 			result.MappedByteBuffer.ReadPos = message.MessageStoreTimestampPostion
 			storeTimestamp := result.MappedByteBuffer.ReadInt64()
 			return storeTimestamp

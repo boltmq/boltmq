@@ -25,7 +25,7 @@ func NewSelectMapedBufferResult(startOffset int64, mappedByteBuffer *MappedByteB
 	}
 }
 
-func (self *SelectMapedBufferResult) release() {
+func (self *SelectMapedBufferResult) Release() {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 

@@ -81,7 +81,7 @@ func (self *CleanCommitLogService) deleteExpiredFiles() {
 
 		// 是否立刻强制删除文件
 		cleanAtOnce := self.defaultMessageStore.MessageStoreConfig.CleanFileForciblyEnable && self.cleanImmediately
-		logger.Info("begin to delete before %d hours file. timeup: %t spacefull: %t manualDeleteFileSeveralTimes: %d cleanAtOnce: %t",
+		logger.Infof("begin to delete before %d hours file. timeup: %t spacefull: %t manualDeleteFileSeveralTimes: %d cleanAtOnce: %t",
 			fileReservedTime, timeup, spacefull, self.manualDeleteFileSeveralTimes, cleanAtOnce)
 
 		// 小时转化成毫秒
