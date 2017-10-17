@@ -102,8 +102,7 @@ func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *Channel
 // Author rongzhihong
 // Since 2017/9/11
 func (cm *ConsumerManager) ScanNotActiveChannel() {
-	iterator := cm.consumerTable.Iterator()
-	for iterator.HasNext() {
+	for iterator := cm.consumerTable.Iterator(); iterator.HasNext(); {
 		key, value, _ := iterator.Next()
 		group, ok := key.(string)
 		if !ok {

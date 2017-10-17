@@ -73,17 +73,17 @@ func (serv *PullRequestHoldService) SuspendPullRequest(topic string, queueId int
 // Author rongzhihong
 // Since 2017/9/5
 func (serv *PullRequestHoldService) checkHoldRequest() {
-	iterator := serv.pullRequestTable.Iterator()
-	for iterator.HasNext() {
-		key, _, _ := iterator.Next()
+	for iter := serv.pullRequestTable.Iterator(); iter.HasNext(); {
+		key, _, _ := iter.Next()
 		if item, ok := key.(string); ok {
 
 			kArray := strings.Split(item, serv.TOPIC_QUEUEID_SEPARATOR)
-			if 2 == len(kArray) {
+			if kArray != nil && 2 == len(kArray) {
 				topic := kArray[0]
 				queueId, err := strconv.Atoi(kArray[1])
 				if err != nil {
 					logger.Errorf("queueId=%s: string to int fail.", kArray[1])
+					continue
 				}
 				offset := serv.brokerController.MessageStore.GetMaxOffsetInQueue(topic, int32(queueId))
 				serv.notifyMessageArriving(topic, int32(queueId), offset)

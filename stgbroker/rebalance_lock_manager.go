@@ -16,8 +16,8 @@ import (
 // Author rongzhihong
 // Since 2017/9/20
 type RebalanceLockManager struct {
-	ReentrantLock sync.RWMutex
-	mqLockTable   *rebalance.MqLockTable
+	mqLockTable *rebalance.MqLockTable
+	sync.RWMutex
 }
 
 // NewRebalanceLockManager 初始化
@@ -33,6 +33,10 @@ func NewRebalanceLockManager() *RebalanceLockManager {
 // Author rongzhihong
 // Since 2017/9/20
 func (manager *RebalanceLockManager) isLocked(group string, mq *message.MessageQueue, clientId string) bool {
+	manager.Lock()
+	defer manager.Unlock()
+	defer utils.RecoveredFn()
+
 	groupValue := manager.mqLockTable.Get(group)
 	if groupValue != nil {
 		lockEntry := groupValue.Get(mq)
@@ -53,8 +57,8 @@ func (manager *RebalanceLockManager) isLocked(group string, mq *message.MessageQ
 func (manager *RebalanceLockManager) TryLock(group string, mq *message.MessageQueue, clientId string) bool {
 	// 没有被锁住
 	if !manager.isLocked(group, mq, clientId) {
-		manager.ReentrantLock.Lock()
-		defer manager.ReentrantLock.Unlock()
+		manager.Lock()
+		defer manager.Unlock()
 		defer utils.RecoveredFn()
 
 		groupValue := manager.mqLockTable.Get(group)
@@ -67,11 +71,9 @@ func (manager *RebalanceLockManager) TryLock(group string, mq *message.MessageQu
 		if nil == lockEntry {
 			lockEntry = body.NewLockEntry()
 			lockEntry.ClientId = clientId
+			lockEntry.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 			groupValue.Put(mq, lockEntry)
-			logger.Infof("tryLock, message queue not locked, I got it. Group: %s NewClientId: %s %s",
-				group,
-				clientId,
-				mq)
+			logger.Infof("tryLock, message queue not locked, I got it. Group: %s NewClientId: %s %s", group, clientId, mq.ToString())
 		}
 
 		if lockEntry.IsLocked(clientId) {
@@ -86,14 +88,14 @@ func (manager *RebalanceLockManager) TryLock(group string, mq *message.MessageQu
 			lockEntry.ClientId = clientId
 			lockEntry.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 
-			logger.Warnf("tryLock, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %v",
-				group, oldClientId, clientId, mq)
+			logger.Warnf("tryLock, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %s",
+				group, oldClientId, clientId, mq.ToString())
 			return true
 		}
 
 		// 锁被别的Client占用
-		logger.Warnf("tryLock, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %v",
-			group, oldClientId, clientId, mq)
+		logger.Warnf("tryLock, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %s",
+			group, oldClientId, clientId, mq.ToString())
 		return false
 
 	} else {
@@ -123,8 +125,8 @@ func (manager *RebalanceLockManager) TryLockBatch(group string, mqs set.Set, cli
 	}
 
 	if len(notLockedMqs.ToSlice()) > 0 {
-		manager.ReentrantLock.Lock()
-		defer manager.ReentrantLock.Unlock()
+		manager.Lock()
+		defer manager.Unlock()
 		defer utils.RecoveredFn()
 
 		groupValue := manager.mqLockTable.Get(group)
@@ -140,10 +142,11 @@ func (manager *RebalanceLockManager) TryLockBatch(group string, mqs set.Set, cli
 				if nil == lockEntry {
 					lockEntry = body.NewLockEntry()
 					lockEntry.ClientId = clientId
+					lockEntry.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 					groupValue.Put(mq, lockEntry)
 
-					logger.Infof("tryLockBatch, message queue not locked, I got it. Group: %s NewClientId: %s %#v",
-						group, clientId, mq)
+					logger.Infof("tryLockBatch, message queue not locked, I got it. Group: %s NewClientId: %s %s",
+						group, clientId, mq.ToString())
 				}
 
 				// 已经锁定
@@ -179,8 +182,8 @@ func (manager *RebalanceLockManager) TryLockBatch(group string, mqs set.Set, cli
 // Author rongzhihong
 // Since 2017/9/20
 func (manager *RebalanceLockManager) UnlockBatch(group string, mqs set.Set, clientId string) {
-	manager.ReentrantLock.Lock()
-	defer manager.ReentrantLock.Unlock()
+	manager.Lock()
+	defer manager.Unlock()
 	defer utils.RecoveredFn()
 
 	groupValue := manager.mqLockTable.Get(group)

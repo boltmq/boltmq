@@ -73,8 +73,8 @@ func (table *SubscriptionGroupTable) Foreach(fn func(k string, v *SubscriptionGr
 // Author rongzhihong
 // Since 2017/9/18
 func (table *SubscriptionGroupTable) Clear() {
-	table.RLock()
-	defer table.RUnlock()
+	table.Lock()
+	defer table.Unlock()
 
 	table.SubscriptionGroupTable = make(map[string]*SubscriptionGroupConfig, 1024)
 }
@@ -90,10 +90,9 @@ func (table *SubscriptionGroupTable) PutAll(offsetMap *syncmap.Map) {
 		return
 	}
 
-	itor := offsetMap.Iterator()
-	for itor.HasNext() {
-		key, value, _ := itor.Next()
-		if groupName, ok := key.(string); ok && key != "" {
+	for iter := offsetMap.Iterator(); iter.HasNext(); {
+		key, value, _ := iter.Next()
+		if groupName, ok := key.(string); ok && groupName != "" {
 			if subscriptionGroupConfig, ok := value.(*SubscriptionGroupConfig); ok {
 				table.SubscriptionGroupTable[groupName] = subscriptionGroupConfig
 			}
