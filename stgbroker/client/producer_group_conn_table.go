@@ -62,3 +62,15 @@ func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[netm.Contex
 		fn(k, v)
 	}
 }
+
+// ForeachByWPerm 写操作迭代
+// Author rongzhihong
+// Since 2017/10/17
+func (table *ProducerGroupConnTable) ForeachByWPerm(fn func(k string, v map[netm.Context]*ChannelInfo)) {
+	table.Lock()
+	defer table.Unlock()
+
+	for k, v := range table.GroupChannelTable {
+		fn(k, v)
+	}
+}

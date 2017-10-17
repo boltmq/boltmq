@@ -194,9 +194,12 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 	if response != nil {
 		switch response.Code {
 		case code.FLUSH_DISK_TIMEOUT:
+			fallthrough
 		case code.FLUSH_SLAVE_TIMEOUT:
+			fallthrough
 		case code.SLAVE_NOT_AVAILABLE:
-			logger.Warnf("brokerName %v SLAVE_NOT_AVAILABLE", brokerName)
+			logger.Warnf("brokerName %v %s", brokerName, code.ParseResponse(response.Code))
+			fallthrough
 		case code.SUCCESS:
 			sendStatus := SEND_OK
 			switch response.Code {
@@ -209,6 +212,7 @@ func (impl *MQClientAPIImpl) processSendResponse(brokerName string, msg *message
 			case code.SUCCESS:
 				sendStatus = SEND_OK
 			default:
+				return nil, errors.New("processSendResponse error=" + response.Remark)
 			}
 			responseHeader := &header.SendMessageResponseHeader{}
 			response.DecodeCommandCustomHeader(responseHeader)
