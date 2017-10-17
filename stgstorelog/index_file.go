@@ -57,11 +57,13 @@ func (self *IndexFile) load() {
 
 func (self *IndexFile) flush() {
 	beginTime := time.Now().UnixNano() / 1000000
-	self.indexHeader.updateByteBuffer()
-	self.mappedByteBuffer.flush()
-	self.mapedFile.release()
-	endTime := time.Now().UnixNano() / 1000000
-	logger.Info("flush index file eclipse time(ms) ", endTime-beginTime)
+	if self.mapedFile.hold() {
+		self.indexHeader.updateByteBuffer()
+		self.mappedByteBuffer.flush()
+		self.mapedFile.release()
+		endTime := time.Now().UnixNano() / 1000000
+		logger.Info("flush index file eclipse time(ms) ", endTime-beginTime)
+	}
 }
 
 func (self *IndexFile) isWriteFull() bool {
@@ -148,5 +150,5 @@ func (self *IndexFile) indexKeyHashCode(key string) int32 {
 }
 
 func (self *IndexFile) destroy(intervalForcibly int64) bool {
-	return self.mapedFile.destroy()
+	return self.mapedFile.destroy(intervalForcibly)
 }

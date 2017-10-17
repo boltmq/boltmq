@@ -86,6 +86,7 @@ func (self *ConsumeQueue) correctMinOffset(phyMinOffset int64) {
 	if mapedFile != nil {
 		result := mapedFile.selectMapedBuffer(0)
 		if result != nil {
+			defer result.Release()
 			for i := 0; i < int(result.Size); i += CQStoreUnitSize {
 				offsetPy := result.MappedByteBuffer.ReadInt64()
 				result.MappedByteBuffer.ReadInt32()
@@ -205,6 +206,8 @@ func (self *ConsumeQueue) getOffsetInQueueByTime(timestamp int64) int64 {
 		// 取出该mapedFile里面所有的映射空间(没有映射的空间并不会返回,不会返回文件空洞)
 		selectBuffer := mapedFile.selectMapedBuffer(0)
 		if selectBuffer != nil {
+			defer selectBuffer.Release()
+
 			buffer := selectBuffer.MappedByteBuffer
 			high = buffer.WritePos - CQStoreUnitSize
 
@@ -438,4 +441,10 @@ func (self *ConsumeQueue) resetMsgStoreItemMemory(length int32) {
 	if self.byteBufferIndex.WritePos > self.byteBufferIndex.Limit {
 		self.byteBufferIndex.WritePos = self.byteBufferIndex.Limit
 	}
+}
+
+func (self *ConsumeQueue) deleteExpiredFile(offset int64) int {
+	count := self.mapedFileQueue.deleteExpiredFileByOffset(offset, CQStoreUnitSize)
+	self.correctMinOffset(offset)
+	return count
 }

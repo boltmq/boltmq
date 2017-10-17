@@ -219,6 +219,54 @@ func (self *IndexService) destroy() {
 	self.indexFileList = list.New()
 }
 
+func (self *IndexService) deleteExpiredFile(offset int64) {
+	self.readWriteLock.RLock()
+	defer self.readWriteLock.RUnlock()
+
+	files := list.New()
+
+	if self.indexFileList.Len() > 0 {
+		firstElement := self.indexFileList.Front()
+		firstIndexFile := firstElement.Value.(*IndexFile)
+		endPhyOffset := firstIndexFile.getEndPhyOffset()
+		if endPhyOffset < offset {
+			files.PushBackList(self.indexFileList)
+		}
+	}
+
+	if files.Len() > 0 {
+		expiredFiles := list.New()
+		for element := files.Front(); element != nil; element = element.Next() {
+			indexFile := element.Value.(*IndexFile)
+			if indexFile.getEndPhyOffset() < offset {
+				expiredFiles.PushBack(indexFile)
+			} else {
+				break
+			}
+		}
+
+		self.deleteExpiredFiles(expiredFiles)
+	}
+}
+
+func (self *IndexService) deleteExpiredFiles(files *list.List) {
+	if files.Len() > 0 {
+		self.readWriteLock.Lock()
+		defer self.readWriteLock.Unlock()
+
+		for e := files.Front(); e != nil; e = e.Next() {
+			expiredFile := e.Value.(*IndexFile)
+			destroyed := expiredFile.destroy(3000)
+			if !destroyed {
+				logger.Error("deleteExpiredFile destroy failed, ", expiredFile.mapedFile.fileName)
+				break
+			}
+
+			self.indexFileList.Remove(e)
+		}
+	}
+}
+
 func (self *IndexService) queryOffset(topic, key string, maxNum int32, begin, end int64) *QueryMessageResult {
 	// TODO
 	return nil

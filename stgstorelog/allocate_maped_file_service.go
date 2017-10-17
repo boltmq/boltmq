@@ -136,11 +136,11 @@ func (self *AllocateMapedFileService) Shutdown() {
 		if ok {
 			request := value.(*AllocateRequest)
 			logger.Info("delete pre allocated maped file, ", request.mapedFile.fileName)
-			success := request.mapedFile.destroy()
+			success := request.mapedFile.destroy(1000)
 			if !success {
 				time.Sleep(time.Millisecond * 1)
 				for i := 0; i < 3; i++ {
-					if request.mapedFile.destroy() {
+					if request.mapedFile.destroy(1000) {
 						break
 					}
 				}

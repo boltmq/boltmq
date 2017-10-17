@@ -79,8 +79,8 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.AllocateMapedFileService = nil
 	ms.consumeTopicTable = make(map[string]*ConsumeQueueTable)
 	ms.CommitLog = NewCommitLog(ms)
-	ms.CleanCommitLogService = new(CleanCommitLogService)
-	ms.CleanConsumeQueueService = new(CleanConsumeQueueService)
+	ms.CleanCommitLogService = NewCleanCommitLogService(ms)
+	ms.CleanConsumeQueueService = NewCleanConsumeQueueService(ms)
 	ms.StoreStatsService = NewStoreStatsService()
 	ms.IndexService = NewIndexService(ms)
 	ms.HAService = NewHAService(ms)
@@ -339,7 +339,7 @@ func (self *DefaultMessageStore) Shutdown() {
 		self.ShutdownFlag = true
 
 		if self.storeTicker != nil {
-			// self.storeTicker.Stop()
+			self.storeTicker.Stop()
 		}
 
 		time.After(time.Millisecond * 1000 * 3) // 等待其他调用停止
@@ -474,8 +474,8 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 			}
 		} else {
 			bufferConsumeQueue := consumeQueue.getIndexBuffer(offset)
-			// TODO defer bufferConsumeQueue.release()
 			if bufferConsumeQueue != nil {
+				defer bufferConsumeQueue.Release()
 				status = NO_MATCHED_MESSAGE
 				nextPhyFileStartOffset := int64(LongMinValue)
 				MaxFilterMessageCount := 16000
@@ -661,6 +661,7 @@ func (self *DefaultMessageStore) putMessagePostionInfo(topic string, queueId int
 func (self *DefaultMessageStore) LookMessageByOffset(commitLogOffset int64) *message.MessageExt {
 	selectResult := self.CommitLog.getMessage(commitLogOffset, 4)
 	if selectResult != nil {
+		defer selectResult.Release()
 		size := selectResult.MappedByteBuffer.ReadInt32()
 		return self.lookMessageByOffset(commitLogOffset, size)
 	}
@@ -716,6 +717,7 @@ func (self *DefaultMessageStore) CheckInDiskByConsumeOffset(topic string, queueI
 	if consumeQueue != nil {
 		bufferConsumeQueue := consumeQueue.getIndexBuffer(consumeOffset)
 		if bufferConsumeQueue != nil {
+			defer bufferConsumeQueue.Release()
 			maxOffsetPy := self.CommitLog.MapedFileQueue.getMaxOffset()
 
 			for i := 0; i < bufferConsumeQueue.MappedByteBuffer.WritePos; {
@@ -737,6 +739,7 @@ func (self *DefaultMessageStore) CheckInDiskByConsumeOffset(topic string, queueI
 func (self *DefaultMessageStore) SelectOneMessageByOffset(commitLogOffset int64) *SelectMapedBufferResult {
 	selectResult := self.CommitLog.getMessage(commitLogOffset, 4)
 	if selectResult != nil {
+		defer selectResult.Release()
 		size := selectResult.MappedByteBuffer.ReadInt32()
 		return self.CommitLog.getMessage(commitLogOffset, size)
 	}
@@ -773,6 +776,8 @@ func (self *DefaultMessageStore) GetEarliestMessageTime(topic string, queueId in
 	if logicQueue != nil {
 		result := logicQueue.getIndexBuffer(logicQueue.minLogicOffset / CQStoreUnitSize)
 		if result != nil {
+			defer result.Release()
+
 			phyOffset := result.MappedByteBuffer.ReadInt64()
 			size := result.MappedByteBuffer.ReadInt32()
 			storeTime := self.CommitLog.pickupStoretimestamp(phyOffset, size)
@@ -821,6 +826,7 @@ func (self *DefaultMessageStore) GetMessageStoreTimeStamp(topic string, queueId 
 	if logicQueue != nil {
 		result := logicQueue.getIndexBuffer(offset)
 		if result != nil {
+			defer result.Release()
 			phyOffset := result.MappedByteBuffer.ReadInt64()
 			size := result.MappedByteBuffer.ReadInt32()
 			storeTime := self.CommitLog.pickupStoretimestamp(phyOffset, size)
@@ -927,9 +933,12 @@ func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minO
 
 					messageIds[msgId] = nextOffset
 					if nextOffset > maxOffset {
+						bufferConsumeQueue.Release()
 						return messageIds
 					}
 				}
+
+				bufferConsumeQueue.Release()
 			}
 		}
 	}
@@ -962,14 +971,12 @@ func (self *DefaultMessageStore) destroyLogics() {
 }
 
 func (self *DefaultMessageStore) addScheduleTask() {
-	/*
 	self.storeTicker = timeutil.NewTicker(true, 1000*60*time.Millisecond,
 		time.Duration(self.MessageStoreConfig.CleanResourceInterval)*time.Millisecond, func() {
 			self.cleanFilesPeriodically()
 		})
 
 	self.storeTicker.Start()
-	*/
 }
 
 func (self *DefaultMessageStore) cleanFilesPeriodically() {

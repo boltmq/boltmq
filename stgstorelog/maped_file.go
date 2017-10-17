@@ -14,6 +14,7 @@ import (
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
+	"time"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
 type MapedFile struct {
+	ReferenceResource
 	// 当前映射的虚拟内存总大小
 	TotalMapedVitualMemory int64
 	// 当前JVM中mmap句柄数量
@@ -56,6 +58,13 @@ type MapedFile struct {
 // Since: 2017/8/5
 func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mapedFile := new(MapedFile)
+	// 初始化ReferenceResource信息
+	mapedFile.refCount = 1
+	mapedFile.available = true
+	mapedFile.cleanupOver = false
+	mapedFile.firstShutdownTimestamp = 0
+	mapedFile.mutexs = new(sync.Mutex)
+
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
 	mapedFile.rwLock = new(sync.RWMutex)
@@ -158,18 +167,20 @@ func (self *MapedFile) appendMessage(data []byte) bool {
 // Since: 2017/8/6
 func (self *MapedFile) Commit(flushLeastPages int32) (flushPosition int64) {
 	if self.isAbleToFlush(flushLeastPages) {
-		// 对文件加写锁
-		self.rwLock.Lock()
-		// 获取当前写的位置
-		currPos := self.wrotePostion
-		// 将mappedByteBuffer的数据强制刷新到磁盘文件中
-		self.Flush()
-		//self.mmapBytes
-		// 刷新完毕，则将committedPosition即flush的位置更新为当前位置记录
-		self.committedPosition = currPos
-		// 释放锁
-		self.rwLock.Unlock()
+		if self.hold() {
+			self.rwLock.Lock()           // 对文件加写锁
+			currPos := self.wrotePostion // 获取当前写的位置
+			self.Flush()                 // 将mappedByteBuffer的数据强制刷新到磁盘文件中
+			//self.mmapBytes
+			self.committedPosition = currPos // 刷新完毕，则将committedPosition即flush的位置更新为当前位置记录
+			self.rwLock.Unlock()             // 释放锁
+			self.release()
+		} else {
+			logger.Warn("in commit, hold failed, commit offset = ", atomic.LoadInt64(&self.committedPosition))
+			self.committedPosition = atomic.LoadInt64(&self.wrotePostion)
+		}
 	}
+
 	return self.committedPosition
 }
 
@@ -213,28 +224,49 @@ func (self *MapedFile) isFull() bool {
 	return self.fileSize == int64(self.wrotePostion)
 }
 
-func (self *MapedFile) destroy() bool {
-	// TODO: 次数没有使用this.shutdown(intervalForcibly)，是否有问题？？？
-	self.Unmap()
+func (self *MapedFile) destroy(intervalForcibly int64) bool {
+	self.shutdown(intervalForcibly)
 
-	if err := os.Remove(self.file.Name()); err != nil {
-		logger.Errorf("message store delete file %s error: ", self.file.Name(), err.Error())
-		return false
+	if self.isCleanupOver() {
+		self.Unmap()
+		self.file.Close()
+		logger.Infof("close file %s OK", self.fileName)
+
+		if err := os.Remove(self.file.Name()); err != nil {
+			logger.Errorf("message store delete file %s error: ", self.file.Name(), err.Error())
+			return false
+		}
 	}
+
 	return true
+}
+
+func (self *MapedFile) shutdown(intervalForcibly int64) {
+	if self.available {
+		self.available = false
+		self.firstShutdownTimestamp = time.Now().UnixNano() / 1000000
+		self.release()
+	} else if self.refCount > 0 { // 强制shutdown
+		if (time.Now().UnixNano()/1000000 - self.firstShutdownTimestamp) >= intervalForcibly {
+			self.refCount = -1000 - self.refCount
+			self.release()
+		}
+	}
 }
 
 func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	if pos < self.wrotePostion && pos >= 0 {
-		size := self.mappedByteBuffer.WritePos - int(pos)
-		if self.mappedByteBuffer.WritePos > len(self.mappedByteBuffer.MMapBuf) {
-			return nil
-		}
+		if self.hold() {
+			size := self.mappedByteBuffer.WritePos - int(pos)
+			if self.mappedByteBuffer.WritePos > len(self.mappedByteBuffer.MMapBuf) {
+				return nil
+			}
 
-		newMmpBuffer := NewMappedByteBuffer(self.mappedByteBuffer.Bytes())
-		newMmpBuffer.WritePos = self.mappedByteBuffer.WritePos
-		newMmpBuffer.ReadPos = int(pos)
-		return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
+			newMmpBuffer := NewMappedByteBuffer(self.mappedByteBuffer.Bytes())
+			newMmpBuffer.WritePos = self.mappedByteBuffer.WritePos
+			newMmpBuffer.ReadPos = int(pos)
+			return NewSelectMapedBufferResult(self.fileFromOffset+pos, newMmpBuffer, int32(size), self)
+		}
 	}
 
 	return nil
@@ -242,15 +274,18 @@ func (self *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 
 func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
 	if (pos + int64(size)) <= self.wrotePostion {
-		end := pos + int64(size)
-		if end > int64(len(self.mappedByteBuffer.MMapBuf)) {
-			return nil
-		}
+		if self.hold() {
+			end := pos + int64(size)
+			if end > int64(len(self.mappedByteBuffer.MMapBuf)) {
+				return nil
+			}
 
-		byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[pos:end])
-		byteBuffer.WritePos = int(size)
-		return &SelectMapedBufferResult{StartOffset: self.fileFromOffset + pos,
-			MappedByteBuffer: byteBuffer, Size: size, MapedFile: self}
+			byteBuffer := NewMappedByteBuffer(self.mappedByteBuffer.MMapBuf[pos:end])
+			byteBuffer.WritePos = int(size)
+			return NewSelectMapedBufferResult(self.fileFromOffset+pos, byteBuffer, size, self)
+		} else {
+			logger.Warn("matched, but hold failed, request pos: %d, fileFromOffset: %d", pos, self.fileFromOffset)
+		}
 	} else {
 		logger.Warnf("selectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
 			pos, size, self.fileFromOffset)
@@ -259,12 +294,45 @@ func (self *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *Sel
 	return nil
 }
 
+func (self *MapedFile) cleanup(currentRef int64) bool {
+	// 如果没有被shutdown，则不可以unmap文件，否则会crash
+	if self.isAvailable() {
+		logger.Errorf("this file[REF:%d] %s have cleanup, do not do it again.", currentRef, self.fileName)
+		return false
+	}
+
+	// 如果已经cleanup，再次操作会引起crash
+	if self.isCleanupOver() {
+		logger.Errorf("this file[REF:%d] %s have cleanup, do not do it again.", currentRef, self.fileName)
+		return true
+	}
+
+	clean(self.mappedByteBuffer)
+	// TotalMapedVitualMemory
+	// TotalMapedFiles
+	logger.Infof("unmap file[REF:%d] %s OK", currentRef, self.fileName)
+
+	return true
+}
+
 func (self *MapedFile) release() {
-	if self.committedPosition < self.wrotePostion {
+	atomic.AddInt64(&self.refCount, -1)
+	if atomic.LoadInt64(&self.refCount) > 0 {
+		return
+	}
+
+	self.rwLock.Lock()
+	self.cleanupOver = self.cleanup(atomic.LoadInt64(&self.refCount))
+	self.rwLock.Unlock()
+}
+
+func clean(mappedByteBuffer *MappedByteBuffer) {
+	if mappedByteBuffer == nil {
 		return
 	}
 
 	// TODO
+	mappedByteBuffer.unmap()
 }
 
 func ensureDirOK(dirName string) error {

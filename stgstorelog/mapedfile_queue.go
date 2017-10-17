@@ -88,7 +88,9 @@ func (self *MapedFileQueue) copyMapedFiles(reservedMapedFiles int) []*MapedFile 
 	// Iterate through list and print its contents.
 	for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
 		mf := e.Value.(*MapedFile)
-		mapedFileSlice = append(mapedFileSlice, mf)
+		if mf != nil {
+			mapedFileSlice = append(mapedFileSlice, mf)
+		}
 	}
 	return mapedFileSlice
 }
@@ -109,7 +111,7 @@ func (self *MapedFileQueue) truncateDirtyFiles(offset int64) {
 				mf.mappedByteBuffer.WritePos = int(pos)
 				mf.committedPosition = pos
 			} else {
-				mf.destroy()
+				mf.destroy(1000)
 				willRemoveFiles.PushBack(mf)
 			}
 		}
@@ -121,13 +123,20 @@ func (self *MapedFileQueue) truncateDirtyFiles(offset int64) {
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/7
 func (self *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
-	if mfs.Len() != 0 {
+	if mfs != nil && mfs.Len() > 0 {
 		self.rwLock.Lock()
 		defer self.rwLock.Unlock()
-		for e := mfs.Front(); e != nil; e = e.Next() {
-			success := self.mapedFiles.Remove(e)
-			if success == false {
-				logger.Error("deleteExpiredFile remove failed.")
+		for de := mfs.Front(); de != nil; de = de.Next() {
+			for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
+				deleteFile := de.Value.(*MapedFile)
+				file := e.Value.(*MapedFile)
+
+				if deleteFile.fileName == file.fileName {
+					success := self.mapedFiles.Remove(e)
+					if success == false {
+						logger.Error("deleteExpiredFile remove failed.")
+					}
+				}
 			}
 		}
 	}
@@ -288,7 +297,7 @@ func (self *MapedFileQueue) deleteLastMapedFile() {
 	if self.mapedFiles.Len() != 0 {
 		last := self.mapedFiles.Back()
 		lastMapedFile := last.Value.(*MapedFile)
-		lastMapedFile.destroy()
+		lastMapedFile.destroy(1000)
 		self.mapedFiles.Remove(last)
 		logger.Info("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
 	}
@@ -305,28 +314,34 @@ func (self *MapedFileQueue) deleteExpiredFileByTime(expiredTime int64, deleteFil
 	if len(files) == 0 {
 		return 0
 	}
-	var toBeDeleteMfList list.List
+	toBeDeleteMfList := list.New()
 	var delCount int = 0
 	// 最后一个文件处于写状态，不能删除
-	for index, mf := range files {
-		liveMaxTimestamp := mf.storeTimestamp + expiredTime
-		if timeutil.NowTimestamp() > liveMaxTimestamp || cleanImmediately {
-			// TODO: 此处不存在destroy失败的情况？
-			mf.destroy()
-			toBeDeleteMfList.PushBack(mf)
-			delCount++
-			// 每次触发删除文件，最多删除多少个文件
-			if toBeDeleteMfList.Len() >= self.DeleteFilesBatchMax {
-				break
-			}
-			// 删除最后一个文件不需要等待
-			if deleteFilesInterval > 0 && (index+1) < len(files) {
-				time.Sleep(time.Second * time.Duration(deleteFilesInterval))
+	mfsLength := len(files) - 1
+	for i := 0; i < mfsLength; i++ {
+		mf := files[i]
+		if mf != nil {
+			liveMaxTimestamp := mf.storeTimestamp + expiredTime
+			if timeutil.CurrentTimeMillis() > liveMaxTimestamp || cleanImmediately {
+				if mf.destroy(intervalForcibly) {
+					toBeDeleteMfList.PushBack(mf)
+					delCount++
+					// 每次触发删除文件，最多删除多少个文件
+					if toBeDeleteMfList.Len() >= self.DeleteFilesBatchMax {
+						break
+					}
+					// 删除最后一个文件不需要等待
+					if deleteFilesInterval > 0 && (i+1) < mfsLength {
+						time.Sleep(time.Second * time.Duration(deleteFilesInterval))
+					}
+				} else {
+					break
+				}
 			}
 		}
 	}
 
-	self.deleteExpiredFile(&toBeDeleteMfList)
+	self.deleteExpiredFile(toBeDeleteMfList)
 
 	return delCount
 }
@@ -337,25 +352,45 @@ func (self *MapedFileQueue) deleteExpiredFileByTime(expiredTime int64, deleteFil
 // Author: tantexian, <tantexian@qq.com>
 // Since: 17/8/9
 func (self *MapedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int) int {
-	var toBeDeleteFileList *list.List
+	toBeDeleteFileList := list.New()
 	deleteCount := 0
 	mfs := self.copyMapedFiles(0)
-	// 最后一个文件处于写状态，不能删除
-	mfs = mfs[:len(mfs)-2]
-	for _, mf := range mfs {
-		// TODO: 此处是否可以直接destroy？
-		// FIXME: 根据offset删除逻辑队列consumerQueue待实现
-		canDestory := false
-		toBeDeleteFileList.PushBack(mf)
-		mf.destroy()
-		// 当前文件是否可以删除
-		//canDestory = (maxOffsetInLogicQueue < offset)
 
-		if canDestory {
-			toBeDeleteFileList.PushBack(mf)
-			deleteCount++
+	if mfs != nil && len(mfs) > 0 {
+		// 最后一个文件处于写状态，不能删除
+		mfsLength := len(mfs) - 1
+
+		for i := 0; i < mfsLength; i++ {
+			destroy := true
+			mf := mfs[i]
+
+			if mf == nil {
+				continue
+			}
+
+			result := mf.selectMapedBuffer(self.mapedFileSize - int64(unitsize))
+
+			if result != nil {
+				maxOffsetInLogicQueue := result.MappedByteBuffer.ReadInt64()
+				result.Release()
+				// 当前文件是否可以删除
+				destroy = maxOffsetInLogicQueue < offset
+				if destroy {
+					logger.Infof("physic min offset %d, logics in current mapedfile max offset %d, delete it",
+						offset, maxOffsetInLogicQueue)
+				}
+			} else {
+				logger.Warn("this being not excuted forever.")
+				break
+			}
+
+			if destroy && mf.destroy(1000*60) {
+				toBeDeleteFileList.PushBack(mf)
+				deleteCount++
+			}
 		}
 	}
+
 	self.deleteExpiredFile(toBeDeleteFileList)
 	return deleteCount
 }
@@ -448,21 +483,23 @@ func (self *MapedFileQueue) getMapedMemorySize() int64 {
 }
 
 func (self *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
-	mapFile := self.getFirstMapedFile()
+	mapFile := self.getFirstMapedFileOnLock()
 	if mapFile != nil {
-		logger.Warn("the mapedfile was destroyed once, but still alive, ", mapFile.fileName)
+		if !mapFile.isAvailable() {
+			logger.Warn("the mapedfile was destroyed once, but still alive, ", mapFile.fileName)
 
-		result := mapFile.destroy()
-		if result {
-			logger.Info("the mapedfile redelete OK, ", mapFile.fileName)
-			tmps := list.New()
-			tmps.PushBack(mapFile)
-			self.deleteExpiredFile(tmps)
-		} else {
-			logger.Warn("the mapedfile redelete Failed, ", mapFile.fileName)
+			result := mapFile.destroy(intervalForcibly)
+			if result {
+				logger.Info("the mapedfile redelete OK, ", mapFile.fileName)
+				tmps := list.New()
+				tmps.PushBack(mapFile)
+				self.deleteExpiredFile(tmps)
+			} else {
+				logger.Warn("the mapedfile redelete Failed, ", mapFile.fileName)
+			}
+
+			return result
 		}
-
-		return result
 	}
 
 	return false
@@ -490,7 +527,7 @@ func (self *MapedFileQueue) destroy() {
 			logger.Warnf("maped file queue destroy type conversion error")
 			continue
 		}
-		mapedFile.destroy()
+		mapedFile.destroy(1000 * 3)
 	}
 
 	self.mapedFiles.Init()
