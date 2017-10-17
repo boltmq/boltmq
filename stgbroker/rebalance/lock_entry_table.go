@@ -11,7 +11,7 @@ import (
 // Since 2017/9/20
 type LockEntryTable struct {
 	lockEntryTable map[*message.MessageQueue]*body.LockEntry
-	lockEntryLock  sync.RWMutex
+	sync.RWMutex
 }
 
 func NewLockEntryTable() *LockEntryTable {
@@ -21,26 +21,36 @@ func NewLockEntryTable() *LockEntryTable {
 }
 
 func (lockTable *LockEntryTable) Put(key *message.MessageQueue, value *body.LockEntry) {
-	lockTable.lockEntryLock.Lock()
-	defer lockTable.lockEntryLock.Unlock()
+	lockTable.Lock()
+	defer lockTable.Unlock()
 	lockTable.lockEntryTable[key] = value
 }
 
 func (lockTable *LockEntryTable) Get(key *message.MessageQueue) *body.LockEntry {
-	lockTable.lockEntryLock.Lock()
-	defer lockTable.lockEntryLock.Unlock()
-	return lockTable.lockEntryTable[key]
+	lockTable.Lock()
+	defer lockTable.Unlock()
+
+	v, ok := lockTable.lockEntryTable[key]
+	if !ok {
+		return nil
+	}
+	return v
 }
 
 func (lockTable *LockEntryTable) Remove(key *message.MessageQueue) {
-	lockTable.lockEntryLock.Lock()
-	defer lockTable.lockEntryLock.Unlock()
+	lockTable.Lock()
+	defer lockTable.Unlock()
+
+	_, ok := lockTable.lockEntryTable[key]
+	if ok {
+		return
+	}
 	delete(lockTable.lockEntryTable, key)
 }
 
 func (lockTable *LockEntryTable) Foreach(fn func(k *message.MessageQueue, v *body.LockEntry)) {
-	lockTable.lockEntryLock.Lock()
-	defer lockTable.lockEntryLock.Unlock()
+	lockTable.RLock()
+	defer lockTable.RUnlock()
 
 	for k, v := range lockTable.lockEntryTable {
 		fn(k, v)

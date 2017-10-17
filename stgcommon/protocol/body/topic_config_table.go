@@ -81,6 +81,15 @@ func (table *TopicConfigTable) Foreach(fn func(k string, v *stgcommon.TopicConfi
 	}
 }
 
+func (table *TopicConfigTable) ForeachUpdate(fn func(k string, v *stgcommon.TopicConfig)) {
+	table.Lock()
+	defer table.Unlock()
+
+	for k, v := range table.TopicConfigs {
+		fn(k, v)
+	}
+}
+
 // Clear 清空map
 // author rongzhihong
 // since 2017/9/18
@@ -94,8 +103,8 @@ func (table *TopicConfigTable) Clear() {
 // author rongzhihong
 // since 2017/9/18
 func (table *TopicConfigTable) PutAll(topicConfigTable map[string]*stgcommon.TopicConfig) {
-	table.RLock()
-	defer table.RUnlock()
+	table.Lock()
+	defer table.Unlock()
 
 	for k, v := range topicConfigTable {
 		table.TopicConfigs[k] = v

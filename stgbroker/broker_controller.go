@@ -299,7 +299,7 @@ func (self *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bo
 	topicConfigWrapper := self.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !self.BrokerConfig.HasWriteable() || !self.BrokerConfig.HasReadable() {
 		topicConfigTable := topicConfigWrapper.TopicConfigTable
-		self.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(topic string, topicConfig *stgcommon.TopicConfig) {
+		self.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.ForeachUpdate(func(topic string, topicConfig *stgcommon.TopicConfig) {
 			topicConfig.Perm = self.BrokerConfig.BrokerPermission
 		})
 		topicConfigWrapper.TopicConfigTable = topicConfigTable
