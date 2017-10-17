@@ -78,8 +78,10 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 
 	if exist == false {
 		// 如果文件不存在则新建filesize大小文件
-		bytes := make([]byte, filesize)
-		file.Write(bytes)
+		if err := os.Truncate(filePath, filesize); err != nil {
+			logger.Error("maped file set file size error:", err.Error())
+			return nil, err
+		}
 	}
 
 	fileName := filepath.Base(mapedFile.file.Name())
