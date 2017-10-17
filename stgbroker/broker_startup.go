@@ -2,9 +2,6 @@ package stgbroker
 
 import (
 	"fmt"
-	"os"
-	"strings"
-
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
@@ -12,6 +9,8 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/toolkits/file"
+	"os"
+	"strings"
 )
 
 const (
@@ -60,7 +59,9 @@ func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg)
-	logger.Infof("broker.UserHomeDir && store.StorePathRootDir = %s", brokerConfig.SmartgoDataPath)
+	logger.Infof("broker.UserHomeDir = %s", brokerConfig.SmartgoDataPath)
+	logger.Infof("store.StorePathRootDir = %s", brokerConfig.SmartgoDataPath)
+
 	if !brokerConfig.CheckBrokerConfigAttr() {
 		logger.Flush()
 		os.Exit(0)
