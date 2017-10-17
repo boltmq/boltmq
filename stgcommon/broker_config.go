@@ -118,11 +118,11 @@ func NewBrokerConfig(brokerName, brokerClusterName string) *BrokerConfig {
 // Author gaoyanlei
 // Since 2017/8/8
 func localHostName() string {
-	host, err := os.Hostname()
+	hostname, err := os.Hostname()
 	if err != nil {
 		return defaultHostName
 	}
-	return host
+	return hostname
 }
 
 // CheckBrokerConfigAttr 校验broker启动的所必需的SmartGoHome、namesrv配置

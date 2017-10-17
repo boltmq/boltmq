@@ -16,6 +16,6 @@ type ConsumeConcurrentlyContext struct {
 	AckIndex                  int
 }
 
-func NeWConsumeConcurrentlyContext(mq *message.MessageQueue) *ConsumeConcurrentlyContext {
+func NewConsumeConcurrentlyContext(mq *message.MessageQueue) *ConsumeConcurrentlyContext {
 	return &ConsumeConcurrentlyContext{mq,0,math.MaxInt32}
 }

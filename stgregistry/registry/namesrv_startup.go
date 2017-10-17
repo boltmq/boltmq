@@ -46,13 +46,13 @@ func CreateNamesrvController() *DefaultNamesrvController {
 	cfg := namesrv.NewNamesrvConfig()
 	logger.Info("%s", cfg.ToString())
 
-	registryPort := static.REGISTRY_PORT
+	listenPort := static.REGISTRY_PORT
 	if namesrvPort, err := strconv.Atoi(stgcommon.GetNamesrvPort()); err == nil && namesrvPort > 0 {
-		registryPort = namesrvPort
+		listenPort = namesrvPort
 	}
-	remotingServer := remoting.NewDefalutRemotingServer(static.REGISTRY_IP, registryPort)
+	remotingServer := remoting.NewDefalutRemotingServer(static.REGISTRY_IP, listenPort)
 	controller := NewNamesrvController(cfg, remotingServer)
 
-	logger.Info("create name server controller success")
+	logger.Info("create name server controller success. listenPort=%d", listenPort)
 	return controller
 }

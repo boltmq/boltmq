@@ -3,14 +3,11 @@ package listener
 // ConsumeConcurrentlyStatus: 普通消费状态回执
 // Author: yintongqiang
 // Since:  2017/8/10
-
 type ConsumeConcurrentlyStatus int
 
 const (
-	// Success consumption
-	CONSUME_SUCCESS ConsumeConcurrentlyStatus = iota
-	// Failure consumption,later try to consume
-	RECONSUME_LATER
+	CONSUME_SUCCESS ConsumeConcurrentlyStatus = iota // Success consumption
+	RECONSUME_LATER                                  // Failure consumption,later try to consume
 )
 
 func (cct ConsumeConcurrentlyStatus) String() string {

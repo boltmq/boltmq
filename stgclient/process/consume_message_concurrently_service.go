@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	set "github.com/deckarep/golang-set"
 	"strings"
@@ -21,8 +22,7 @@ type ConsumeMessageConcurrentlyService struct {
 	defaultMQPushConsumer     *DefaultMQPushConsumer
 	messageListener           consumer.MessageListenerConcurrently
 	consumerGroup             string
-	// 模拟线程池
-	consumeExecutor chan int
+	consumeExecutor           chan int // 模拟线程池
 }
 
 type consumeRequest struct {
@@ -41,22 +41,23 @@ func (consume *consumeRequest) run() {
 		return
 	}
 	var msgListener consumer.MessageListenerConcurrently = consume.messageListener.(consumer.MessageListenerConcurrently)
-	context := consumer.NeWConsumeConcurrentlyContext(consume.messageQueue)
-	groupTopic := stgcommon.GetRetryTopic(consume.consumerGroup)
-	for _, msg := range consume.msgs {
-		retryTopic := msg.GetProperty(message.PROPERTY_RETRY_TOPIC)
-		if !strings.EqualFold(retryTopic, "") && strings.EqualFold(groupTopic, msg.Topic) {
-			msg.Topic = retryTopic
-		}
-	}
+	context := consumer.NewConsumeConcurrentlyContext(consume.messageQueue)
+	//groupTopic := stgcommon.GetRetryTopic(consume.consumerGroup)
+	//for _, msg := range consume.msgs {
+	//	retryTopic := msg.GetProperty(message.PROPERTY_RETRY_TOPIC)
+	//	if !strings.EqualFold(retryTopic, "") && strings.EqualFold(groupTopic, msg.Topic) {
+	//		msg.Topic = retryTopic
+	//	}
+	//}
+	consume.ConsumeMessageConcurrentlyService.resetRetryTopic(consume.msgs)
 	status := msgListener.ConsumeMessage(consume.msgs, context)
 	// 用于客户端返回不正常处理
 	if status != listener.CONSUME_SUCCESS && status != listener.RECONSUME_LATER {
-		logger.Warnf("consumeMessage return error, Group: %v Msgs: %v MQ: %v",consume.consumerGroup,consume.msgs,consume.messageQueue.ToString())
+		logger.Warnf("consumeMessage return error, Group: %v Msgs: %v MQ: %v", consume.consumerGroup, consume.msgs, consume.messageQueue.ToString())
 		status = listener.RECONSUME_LATER
 	}
 	//todo 消费统计
-    // 处理队列没有drop对消费结果进行处理
+	// 处理队列没有drop对消费结果进行处理
 	if !consume.processQueue.Dropped {
 		consume.processConsumeResult(status, context, consume)
 	}
@@ -176,6 +177,56 @@ func (service *ConsumeMessageConcurrentlyService) SubmitConsumeRequest(msgs []*m
 			consumeRequest := &consumeRequest{msgs: msgThis, processQueue: processQueue, messageQueue: messageQueue, ConsumeMessageConcurrentlyService: service}
 			service.consumeExecutor <- 1
 			go consumeRequest.run()
+		}
+	}
+}
+
+func (service *ConsumeMessageConcurrentlyService) ConsumeMessageDirectly(msg *message.MessageExt, brokerName string) *body.ConsumeMessageDirectlyResult {
+	result := &body.ConsumeMessageDirectlyResult{}
+	result.Order = false
+	result.AutoCommit = true
+
+	msgs := make([]*message.MessageExt, 0)
+	msgs = append(msgs, msg)
+
+	mq := message.NewMessageQueue()
+	mq.BrokerName = brokerName
+	mq.QueueId = int(msg.QueueId)
+	mq.Topic = msg.Topic
+	context := consumer.NewConsumeConcurrentlyContext(mq)
+
+	service.resetRetryTopic(msgs)
+
+	beginTime := stgcommon.GetCurrentTimeMillis()
+	status := int(service.messageListener.ConsumeMessage(msgs, context))
+	if status < 0 {
+		result.ConsumeResult = body.CR_RETURN_NULL
+	} else {
+		switch status {
+		case int(listener.CONSUME_SUCCESS):
+			result.ConsumeResult = body.CR_SUCCESS
+		case int(listener.RECONSUME_LATER):
+			result.ConsumeResult = body.CR_LATER
+		default:
+
+		}
+	}
+
+	result.SpentTimeMills = stgcommon.GetCurrentTimeMillis() - beginTime
+	logger.Infof("consumeMessageDirectly Result: %s", result.ToString())
+	return result
+}
+
+func (service *ConsumeMessageConcurrentlyService) resetRetryTopic(msgs []*message.MessageExt) {
+	if msgs == nil || len(msgs) == 0 {
+		return
+	}
+
+	groupTopic := stgcommon.GetRetryTopic(service.consumerGroup)
+	for _, msg := range msgs {
+		retryTopic := msg.GetProperty(message.PROPERTY_RETRY_TOPIC)
+		if !strings.EqualFold(retryTopic, "") && groupTopic == msg.Topic {
+			msg.Topic = retryTopic
 		}
 	}
 }

@@ -2,22 +2,21 @@ package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
-	//"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
-	set "github.com/deckarep/golang-set"
-	"strings"
-	lock "sync"
-	//"time"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
+	set "github.com/deckarep/golang-set"
 	"sort"
 	"strconv"
+	"strings"
+	lock "sync"
 	"time"
 )
 
@@ -230,11 +229,11 @@ func (mqClientInstance *MQClientInstance) prepareHeartbeatData() *heartbeat.Hear
 		if v != nil && l {
 			impl := v.(consumer.MQConsumerInner)
 			consumerData := heartbeat.ConsumerData{GroupName: impl.GroupName(),
-				ConsumeType: impl.ConsumeType(),
-				ConsumeFromWhere: impl.ConsumeFromWhere(),
-				MessageModel: impl.MessageModel(),
+				ConsumeType:         impl.ConsumeType(),
+				ConsumeFromWhere:    impl.ConsumeFromWhere(),
+				MessageModel:        impl.MessageModel(),
 				SubscriptionDataSet: set.NewSet(),
-				UnitMode: impl.IsUnitMode()}
+				UnitMode:            impl.IsUnitMode()}
 			for data := range impl.Subscriptions().Iterator().C {
 				consumerData.SubscriptionDataSet.Add(data)
 			}
@@ -644,4 +643,16 @@ func (mqClientInstance *MQClientInstance) doRebalance() {
 			impl.(consumer.MQConsumerInner).DoRebalance()
 		}
 	}
+}
+
+func (self *MQClientInstance) ConsumeMessageDirectly(msg *message.MessageExt, consumerGroup, brokerName string) *body.ConsumeMessageDirectlyResult {
+	mqConsumerInner, err := self.ConsumerTable.Get(consumerGroup)
+	if err != nil || mqConsumerInner == nil {
+		return nil
+	}
+	if consumer, ok := mqConsumerInner.(*DefaultMQPushConsumerImpl); ok && consumer != nil {
+		result := consumer.consumeMessageService.ConsumeMessageDirectly(msg, brokerName)
+		return result
+	}
+	return nil
 }

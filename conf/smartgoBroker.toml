@@ -10,5 +10,5 @@ brokerRole="SYNC_MASTER"
 flushDiskType="SYNC_FLUSH"
 autoCreateTopicEnable=true
 
-#smartgoDataPath="/root/namesrv"
+#smartgoDataPath="/root/store"
 #brokerPort=10911
