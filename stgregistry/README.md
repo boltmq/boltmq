@@ -59,7 +59,7 @@ mv start registry
 ### 单实例启动`registry`
 ```bash
 mkdir ./logs
-touch logs/registry.log  # 第一次启动，确保./logs/registry.log文件存在
+touch ./logs/registry.log  # 第一次启动，确保./logs/registry.log文件存在
 nohup ./registry &
 ```
 
@@ -69,7 +69,7 @@ nohup ./registry &
 
 # 在目录A执行
 mkdir ./logs
-touch logs/registryA.log
+touch ./logs/registryA.log
 nohup ./registryA -p 9876 -c ./cfgA.json  &
 
 
@@ -82,7 +82,7 @@ nohup ./registryB -p 9872 -c ./cfgB.json &
 ### 查看`registry`日志
 ```bash
 tailf nohup.out
-tailf registry.log
+tailf ./logs/registry.log
 ```
 
 ## 信号类型

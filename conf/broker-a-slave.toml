@@ -3,10 +3,10 @@
 #the Broker config for start
 brokerClusterName="DefaultCluster"
 brokerName="broker-a"
-brokerId=0
+brokerId=1
 deleteWhen=04
 fileReservedTime=48
-brokerRole="SYNC_MASTER"
+brokerRole="SLAVE"
 flushDiskType="SYNC_FLUSH"
 autoCreateTopicEnable=true
 

@@ -100,11 +100,17 @@ func ParseSmartgoBrokerConfig(smartgoBrokerFileName ...string) (*stgcommon.Smart
 	cfgName := getSmartgoBrokerConfigName(smartgoBrokerFileName...)
 	cfgPath := stgcommon.GetSmartGoHome() + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
 	if !file.IsExist(cfgPath) {
-		firstPath := cfgPath
-		firstPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
-		if !file.IsExist(firstPath) {
-			cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName // 在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
-			logger.Infof("idea special brokerConfigPath = %s", cfgPath)
+		if !file.IsExist(cfgPath) {
+			cfgPath = file.SelfDir() + "/conf/" + cfgName // 各种部署目录
+			logger.Infof("deploy brokerConfigPath = %s", cfgPath)
+		}
+		if !file.IsExist(cfgPath) {
+			cfgPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
+			if !file.IsExist(cfgPath) {
+				// 在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
+				cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
+				logger.Infof("idea special brokerConfigPath = %s", cfgPath)
+			}
 		}
 	}
 
@@ -118,7 +124,8 @@ func ParseSmartgoBrokerConfig(smartgoBrokerFileName ...string) (*stgcommon.Smart
 
 	logger.Info(cfg.ToString())
 	if cfg.IsBlank() {
-		logger.Errorf("please set `brokerClusterName` and `brokerName` value with %s", cfgName)
+		format := "read %s failed. please set `brokerClusterName` and `brokerName` value with %s"
+		logger.Errorf(format, cfgPath, cfgName)
 		return nil, false
 	}
 
