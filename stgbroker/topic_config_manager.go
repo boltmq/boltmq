@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	set "github.com/deckarep/golang-set"
 	"sync"
 )
@@ -149,17 +150,19 @@ func (tcm *TopicConfigManager) SelectTopicConfig(topic string) *stgcommon.TopicC
 // Since 2017/8/10
 func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopic,
 	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
+
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
-	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
-	// 是否新创建topic
-	createNew := false
+	defer utils.RecoveredFn()
 
+	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	// 如果获取到topic并且没有出错则反会topicConig
 	if tc != nil {
 		return tc, nil
 	}
 
+	// 是否新创建topic
+	createNew := false
 	autoCreateTopicEnable := tcm.BrokerController.BrokerConfig.AutoCreateTopicEnable
 
 	// 如果通过topic获取不到topic或者服务器不允许自动创建 则直接返回
@@ -215,14 +218,19 @@ func (tcm *TopicConfigManager) CreateTopicInSendMessageMethod(topic, defaultTopi
 // Author gaoyanlei
 // Since 2017/8/11
 func (tcm *TopicConfigManager) CreateTopicInSendMessageBackMethod(topic string, clientDefaultTopicQueueNums int32, perm, topicSysFlag int) (topicConfig *stgcommon.TopicConfig, err error) {
-	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
-	// 是否新创建topic
-	createNew := false
+	tcm.lockTopicConfigTable.Lock()
+	defer tcm.lockTopicConfigTable.Unlock()
+	defer utils.RecoveredFn()
 
+	tc := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Get(topic)
 	// 如果获取到topic并且没有出错则反会topicConig
 	if tc != nil {
 		return tc, nil
 	}
+
+	// 是否新创建topic
+	createNew := false
+
 	topicConfig = &stgcommon.TopicConfig{
 		TopicName:      topic,
 		WriteQueueNums: clientDefaultTopicQueueNums,

@@ -213,6 +213,7 @@ func (cmp *ClientManageProcessor) getConsumerListByGroup(ctx netm.Context, reque
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
+		return nil, err
 	}
 
 	consumerGroupInfo := cmp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
