@@ -16,8 +16,8 @@ var (
 	topic           = "cloudzone1"
 	tag             = "tagA"
 	producerGroupId = "producerGroupId-200"
-	goThreadNum     = 1000
-	everyThreadNum  = 500
+	goThreadNum     = 150
+	everyThreadNum  = 8000
 )
 
 func main() {
