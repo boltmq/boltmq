@@ -37,7 +37,7 @@ func NewSendMessageProcessor(brokerController *BrokerController) *SendMessagePro
 func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 
 	if request.Code == code.CONSUMER_SEND_MSG_BACK {
-		return smp.consumerSendMsgBack(ctx, request), nil
+		return smp.ConsumerSendMsgBack(ctx, request), nil
 	}
 
 	requestHeader := smp.abstractSendMessageProcessor.parseRequestHeader(request)
@@ -47,7 +47,7 @@ func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *proto
 
 	mqtraceContext := smp.abstractSendMessageProcessor.buildMsgContext(ctx, requestHeader)
 	smp.abstractSendMessageProcessor.ExecuteSendMessageHookBefore(ctx, request, mqtraceContext)
-	response := smp.sendMessage(ctx, request, mqtraceContext, requestHeader)
+	response := smp.SendMessage(ctx, request, mqtraceContext, requestHeader)
 	smp.abstractSendMessageProcessor.ExecuteSendMessageHookAfter(response, mqtraceContext)
 	return response, nil
 }
