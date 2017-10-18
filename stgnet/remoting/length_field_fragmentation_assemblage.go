@@ -9,26 +9,26 @@ import (
 	"github.com/go-errors/errors"
 )
 
-type LengthFieldFramePacket struct {
-	maxFrameLength      int                      // 最大帧的长度
-	lengthFieldOffset   int                      // 长度属性的起始偏移量
-	lengthFieldLength   int                      // 长度属性的长度
-	initialBytesToStrip int                      // 业务数据需要跳过的长度
-	bufTableLock        sync.RWMutex             // 报文缓存的读写锁
-	bufTable            map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理。
+type LengthFieldFragmentationAssemblage struct {
+	maxFrameLength       int                      // 最大帧的长度
+	lengthFieldOffset    int                      // 长度属性的起始偏移量
+	lengthFieldLength    int                      // 长度属性的长度
+	initialBytesToStrip  int                      // 业务数据需要跳过的长度
+	fragmentationTableMu sync.RWMutex             // 报文缓存的读写锁
+	fragmentationTable   map[string]*bytes.Buffer // 按连接地址对包进行处理，每个连接有独立goroutine处理。
 }
 
-func NewLengthFieldFramePacket(maxFrameLength, lengthFieldOffset, lengthFieldLength, initialBytesToStrip int) *LengthFieldFramePacket {
-	return &LengthFieldFramePacket{
+func NewLengthFieldFragmentationAssemblage(maxFrameLength, lengthFieldOffset, lengthFieldLength, initialBytesToStrip int) *LengthFieldFragmentationAssemblage {
+	return &LengthFieldFragmentationAssemblage{
 		maxFrameLength:      maxFrameLength,
 		lengthFieldOffset:   lengthFieldOffset,
 		lengthFieldLength:   lengthFieldLength,
 		initialBytesToStrip: initialBytesToStrip,
-		bufTable:            make(map[string]*bytes.Buffer),
+		fragmentationTable:  make(map[string]*bytes.Buffer),
 	}
 }
 
-func (lffp *LengthFieldFramePacket) UnPack(addr string, buffer []byte) (bufs []*bytes.Buffer, e error) {
+func (lffp *LengthFieldFragmentationAssemblage) UnPack(addr string, buffer []byte) (bufs []*bytes.Buffer, e error) {
 	var (
 		length = len(buffer)
 	)
@@ -41,14 +41,14 @@ func (lffp *LengthFieldFramePacket) UnPack(addr string, buffer []byte) (bufs []*
 	}
 
 	// 缓存报文
-	lffp.bufTableLock.RLock()
-	buf, ok := lffp.bufTable[addr]
-	lffp.bufTableLock.RUnlock()
+	lffp.fragmentationTableMu.RLock()
+	buf, ok := lffp.fragmentationTable[addr]
+	lffp.fragmentationTableMu.RUnlock()
 	if !ok {
 		buf = &bytes.Buffer{}
-		lffp.bufTableLock.Lock()
-		lffp.bufTable[addr] = buf
-		lffp.bufTableLock.Unlock()
+		lffp.fragmentationTableMu.Lock()
+		lffp.fragmentationTable[addr] = buf
+		lffp.fragmentationTableMu.Unlock()
 	}
 
 	_, e = buf.Write(buffer)
@@ -60,7 +60,7 @@ func (lffp *LengthFieldFramePacket) UnPack(addr string, buffer []byte) (bufs []*
 	return lffp.readBuffer(addr, buf)
 }
 
-func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (bufs []*bytes.Buffer, e error) {
+func (lffp *LengthFieldFragmentationAssemblage) readBuffer(addr string, buf *bytes.Buffer) (bufs []*bytes.Buffer, e error) {
 	var (
 		start       int
 		end         int
@@ -88,9 +88,9 @@ func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (
 		// 报文传输出错或报文到达顺序与发送顺序不一致，顺序问题之后考虑。
 		if frameLength > lffp.maxFrameLength {
 			// 丢弃报文
-			lffp.bufTableLock.Lock()
-			delete(lffp.bufTable, addr)
-			lffp.bufTableLock.Unlock()
+			lffp.fragmentationTableMu.Lock()
+			delete(lffp.fragmentationTable, addr)
+			lffp.fragmentationTableMu.Unlock()
 			logger.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
 			e = errors.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
 			break
@@ -112,14 +112,14 @@ func (lffp *LengthFieldFramePacket) readBuffer(addr string, buf *bytes.Buffer) (
 	return
 }
 
-func (lffp *LengthFieldFramePacket) adjustBuffer(addr string, buf *bytes.Buffer, frameLength int) (*bytes.Buffer, error) {
+func (lffp *LengthFieldFragmentationAssemblage) adjustBuffer(addr string, buf *bytes.Buffer, frameLength int) (*bytes.Buffer, error) {
 	// buffer中报文长度
 	distance := buf.Len() - frameLength
 	if distance == 0 {
 		// buffer数据已经读取完
-		lffp.bufTableLock.Lock()
-		delete(lffp.bufTable, addr)
-		lffp.bufTableLock.Unlock()
+		lffp.fragmentationTableMu.Lock()
+		delete(lffp.fragmentationTable, addr)
+		lffp.fragmentationTableMu.Unlock()
 	}
 
 	// 读取报文掉过的长度
@@ -139,7 +139,7 @@ func (lffp *LengthFieldFramePacket) adjustBuffer(addr string, buf *bytes.Buffer,
 	return nbuf, nil
 }
 
-func (lffp *LengthFieldFramePacket) readLengthFieldLength(lengthFieldBytes []byte) (int, error) {
+func (lffp *LengthFieldFragmentationAssemblage) readLengthFieldLength(lengthFieldBytes []byte) (int, error) {
 	var (
 		frameLength int
 	)

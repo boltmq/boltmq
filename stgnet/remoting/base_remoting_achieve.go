@@ -24,7 +24,7 @@ type BaseRemotingAchieve struct {
 	processorTable          map[int32]RequestProcessor // 注册的处理器
 	processorTableLock      sync.RWMutex
 	timeoutTimer            *time.Timer
-	framePacketActuator     FramePacketActuator
+	fragmentationActuator   PacketFragmentationAssembler
 	isRunning               bool
 }
 
@@ -56,9 +56,9 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx netm.Context) 
 		return
 	}
 
-	if ra.framePacketActuator != nil {
+	if ra.fragmentationActuator != nil {
 		// 粘包处理，之后使用队列缓存
-		bufs, err := ra.framePacketActuator.UnPack(ctx.Addr(), buffer)
+		bufs, err := ra.fragmentationActuator.UnPack(ctx.Addr(), buffer)
 		if err != nil {
 			logger.Fatalf("processReceived unPack buffer failed: %v", err)
 			return

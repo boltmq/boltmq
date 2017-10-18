@@ -22,7 +22,7 @@ func NewDefalutRemotingServer(host string, port int) *DefalutRemotingServer {
 		port: port,
 	}
 	remotingServe.responseTable = make(map[int32]*ResponseFuture)
-	remotingServe.framePacketActuator = NewLengthFieldFramePacket(FRAME_MAX_LENGTH, 0, 4, 0)
+	remotingServe.fragmentationActuator = NewLengthFieldFragmentationAssemblage(FRAME_MAX_LENGTH, 0, 4, 0)
 	remotingServe.bootstrap = netm.NewBootstrap()
 	return remotingServe
 }
