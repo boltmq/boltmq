@@ -17,7 +17,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strings"
-	cprotocol"git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 )
 
 // MQClientAPIImpl: 内部使用核心处理api
@@ -34,7 +33,7 @@ func NewMQClientAPIImpl(clientRemotingProcessor *ClientRemotingProcessor) *MQCli
 		DefalutRemotingClient:   remoting.NewDefalutRemotingClient(),
 		ClientRemotingProcessor: clientRemotingProcessor,
 	}
-	mClientAPIImpl.DefalutRemotingClient.RegisterProcessor(cprotocol.NOTIFY_CONSUMER_IDS_CHANGED, clientRemotingProcessor)
+	mClientAPIImpl.DefalutRemotingClient.RegisterProcessor(code.NOTIFY_CONSUMER_IDS_CHANGED, clientRemotingProcessor)
 	return mClientAPIImpl
 }
 
@@ -118,9 +117,15 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
+	//logger.Infof("topicWithProjectGroup --> %s", topicWithProjectGroup)
+
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(code.GET_ROUTEINTO_BY_TOPIC, requestHeader)
+	//logger.Infof("GetTopicRouteInfoFromNameServer().request --> %s", request.ToString())
+
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
+	//logger.Infof("GetTopicRouteInfoFromNameServer().response --> %s", response.ToString())
+
 	if response != nil {
 		switch response.Code {
 		case code.SUCCESS:
@@ -131,8 +136,8 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 				return topicRouteData
 			}
 		default:
-			logger.Errorf("response code=%v,remark=%v", response.Code, response.Remark)
-			//panic(response.Remark)
+			logger.Errorf("%s", response.ToString())
+			//panic(response.Remark) // 新topic，client启动启动后第一次消费，获取不到重试队列topic的路由信息
 		}
 
 	} else {

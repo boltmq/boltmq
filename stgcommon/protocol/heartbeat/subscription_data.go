@@ -1,6 +1,9 @@
 package heartbeat
 
-import set "github.com/deckarep/golang-set"
+import (
+	"fmt"
+	set "github.com/deckarep/golang-set"
+)
 
 // SubscriptionData: 订阅信息结构体
 // Author: yintongqiang
@@ -23,4 +26,12 @@ type SubscriptionDataPlus struct {
 	TagsSet         []string `json:"tagsSet"`
 	CodeSet         []int32  `json:"codeSet"`
 	SubVersion      int      `json:"subVersion"`
+}
+
+func (self *SubscriptionData) ToString() string {
+	if self == nil {
+		return "SubscriptionData is nil"
+	}
+	format := "SubscriptionData {Topic=%s, SubString=%s, TagsSet=%s, CodeSet=%s, SubVersion=%d, ClassFilterMode=%t}"
+	return fmt.Sprintf(format, self.Topic, self.SubString, self.TagsSet.String(), self.CodeSet.String(), self.SubString, self.ClassFilterMode)
 }

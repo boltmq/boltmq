@@ -160,8 +160,8 @@ func (backImpl *PullCallBackImpl) OnSuccess(pullResultExt *PullResultExt) {
 		if pullResult.NextBeginOffset < prevRequestOffset || firstMsgOffset < prevRequestOffset {
 			logger.Warnf(
 				"[BUG] pull message result maybe data wrong, nextBeginOffset: %v firstMsgOffset: %v prevRequestOffset: %v", //
-				pullResult.NextBeginOffset,                                                                                 //
-				firstMsgOffset,                                                                                             //
+				pullResult.NextBeginOffset, //
+				firstMsgOffset,             //
 				prevRequestOffset)
 		}
 	case consumer.NO_NEW_MSG:
@@ -348,17 +348,19 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) copySubscription() {
 	case heartbeat.CLUSTERING:
 		retryTopic := stgcommon.GetRetryTopic(pushConsumerImpl.defaultMQPushConsumer.consumerGroup)
 		subscriptionData, _ := filter.BuildSubscriptionData(pushConsumerImpl.defaultMQPushConsumer.consumerGroup, retryTopic, "*")
+		logger.Infof("put retryTopic to SubscriptionInner. key=%s, value=%s", retryTopic, subscriptionData.ToString())
 		pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner.Put(retryTopic, subscriptionData)
 	}
-
 }
 
 // 当订阅信息改变时，更新订阅信息
 func (pushConsumerImpl *DefaultMQPushConsumerImpl) updateTopicSubscribeInfoWhenSubscriptionChanged() {
 	subTable := pushConsumerImpl.rebalanceImpl.(*RebalancePushImpl).rebalanceImplExt.SubscriptionInner
 	if subTable != nil {
-		for ite := subTable.Iterator(); ite.HasNext(); {
-			topic, _, _ := ite.Next()
+		logger.Infof("subscriptionInner size = %d", subTable.Size())
+		for itor := subTable.Iterator(); itor.HasNext(); {
+			topic, value, _ := ite.Next()
+			logger.Infof("subscriptionInner info ----> %s, %s", topic.(string), value.(*heartbeat.SubscriptionData).ToString())
 			pushConsumerImpl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(topic.(string))
 		}
 	}
