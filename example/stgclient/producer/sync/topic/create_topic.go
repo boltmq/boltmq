@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	namesrvAddr     = "127.0.0.1:9876"
-	topic           = "jcptExample"
+	namesrvAddr     = "10.122.1.200:9876"
+	topic           = "luoji"
 	tag             = "tagA"
 	producerGroupId = "producerGroupId-200"
 )
