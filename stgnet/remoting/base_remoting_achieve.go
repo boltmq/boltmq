@@ -58,7 +58,7 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx netm.Context) 
 
 	if ra.fragmentationActuator != nil {
 		// 粘包处理，之后使用队列缓存
-		bufs, err := ra.fragmentationActuator.UnPack(ctx.Addr(), buffer)
+		bufs, err := ra.fragmentationActuator.Pack(ctx.Addr(), buffer)
 		if err != nil {
 			logger.Fatalf("processReceived unPack buffer failed: %v", err)
 			return
