@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"github.com/toolkits/file"
 	"log"
+	"os"
 )
 
 type Config struct {
@@ -30,8 +31,12 @@ var (
 // Init 模块初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/21
-func InitLogger() {
-	cfgPath := configPath()
+func InitLogger(configPath string) {
+	cfgPath := configPath
+	if cfgPath == "" {
+		cfgPath = getLoggerConfigPath()
+	}
+
 	err := utils.ParseConfig(cfgPath, &cfg)
 	if err == nil {
 		log.Printf("read config file %s success \n", cfgPath)
@@ -42,15 +47,18 @@ func InitLogger() {
 	}
 }
 
-// configPath 获取日志配置文件路径
+// getLoggerConfigPath 获取日志配置文件路径
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/21
-func configPath() (cfgPath string) {
+func getLoggerConfigPath() (cfgPath string) {
 	// export SMARTGO_REGISTRY_CONFIG = "/home/registry/cfg.json"
 	cfgPath = stgcommon.GetSmartRegistryConfig()
 	if !file.IsExist(cfgPath) {
-		fmt.Printf("registry config file is not existent. SMARTGO_REGISTRY_CONFIG=%s \n", cfgPath)
-
+		//fmt.Printf("registry config file is not existent. SMARTGO_REGISTRY_CONFIG=%s \n", cfgPath)
+		if !file.IsExist(cfgPath) {
+			//默认寻找当前目录的cfg.json日志配置文件
+			cfgPath = file.SelfDir() + string(os.PathSeparator) + cfgName
+		}
 		if !file.IsExist(cfgPath) {
 			// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
 			cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName

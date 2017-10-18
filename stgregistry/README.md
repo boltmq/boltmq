@@ -56,11 +56,27 @@ mv start registry
 ```
 
 
-### 启动`registry`
+### 单实例启动`registry`
 ```bash
 mkdir ./logs
 touch logs/registry.log  # 第一次启动，确保./logs/registry.log文件存在
 nohup ./registry &
+```
+
+### 多实例启动`registry`
+```bash
+# 一台服务器启动多个registry实例，确保每个实例监听端口不同，并加载不同的日志配置文件
+
+# 在目录A执行
+mkdir ./logs
+touch logs/registryA.log
+nohup ./registryA -p 9876 -c ./cfgA.json  &
+
+
+# 在目录B执行
+mkdir ./logs
+touch logs/registryB.log
+nohup ./registryB -p 9872 -c ./cfgB.json &
 ```
 
 ### 查看`registry`日志
