@@ -3,6 +3,7 @@ package stgbroker
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
 	"strings"
@@ -42,6 +43,8 @@ func (com *ConsumerOffsetManager) Load() bool {
 }
 
 func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
+	defer utils.RecoveredFn()
+
 	if buf, err := ffjson.Marshal(com.Offsets); err == nil {
 		return string(buf)
 	}
