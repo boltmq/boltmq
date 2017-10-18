@@ -14,9 +14,9 @@ import (
 // Startup 启动Namesrv控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/14
-func Startup(stopChannel chan bool) *DefaultNamesrvController {
+func Startup(stopChannel chan bool, registryPort int) *DefaultNamesrvController {
 	// 构建NamesrvController
-	controller := CreateNamesrvController()
+	controller := CreateNamesrvController(registryPort)
 
 	// NamesrvController初始化
 	initResult := controller.initialize()
@@ -42,11 +42,14 @@ func Startup(stopChannel chan bool) *DefaultNamesrvController {
 // CreateNamesrvController 创建默认Namesrv控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/15
-func CreateNamesrvController() *DefaultNamesrvController {
+func CreateNamesrvController(registryPort int) *DefaultNamesrvController {
 	cfg := namesrv.NewNamesrvConfig()
 	logger.Info("%s", cfg.ToString())
 
 	listenPort := static.REGISTRY_PORT
+	if registryPort > 0 {
+		listenPort = registryPort
+	}
 	if namesrvPort, err := strconv.Atoi(stgcommon.GetNamesrvPort()); err == nil && namesrvPort > 0 {
 		listenPort = namesrvPort
 	}
