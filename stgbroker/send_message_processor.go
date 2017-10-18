@@ -55,7 +55,7 @@ func (smp *SendMessageProcessor) ProcessRequest(ctx netm.Context, request *proto
 // consumerSendMsgBack 客户端返回未消费消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
+func (smp *SendMessageProcessor) ConsumerSendMsgBack(conn netm.Context,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 
@@ -234,7 +234,7 @@ func (smp *SendMessageProcessor) consumerSendMsgBack(conn netm.Context,
 // sendMessage 正常消息
 // Author gaoyanlei
 // Since 2017/8/17
-func (smp *SendMessageProcessor) sendMessage(ctx netm.Context, request *protocol.RemotingCommand,
+func (smp *SendMessageProcessor) SendMessage(ctx netm.Context, request *protocol.RemotingCommand,
 	mqtraceContext *mqtrace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
 	responseHeader := new(header.SendMessageResponseHeader)
 	response := protocol.CreateDefaultResponseCommand(responseHeader)

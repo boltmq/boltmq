@@ -1,7 +1,6 @@
-package stgbroker
+package test
 
 import (
-	"errors"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -11,9 +10,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"testing"
+	"git.oschina.net/cloudzone/smartgo/stgbroker"
 )
 
 // TestPutMessage 测试存消息
@@ -56,13 +55,13 @@ func TestSendMessage(t *testing.T) {
 	brokerController := InitBrokerController()
 	brokerController.MessageStore.Start()
 
-	sendMessage := NewSendMessageProcessor(brokerController)
+	sendMessage := stgbroker.NewSendMessageProcessor(brokerController)
 
 	ctx := CreateCtx()
 	request, requestHeader := CreateSendMessageRequest()
 	mqTraceContext := CreateMqtraceContext()
 
-	respone := sendMessage.sendMessage(ctx, request, mqTraceContext, requestHeader)
+	respone := sendMessage.SendMessage(ctx, request, mqTraceContext, requestHeader)
 	fmt.Println(respone)
 }
 
@@ -73,35 +72,35 @@ func TestConsumerSendMsgBack(t *testing.T) {
 	brokerController := InitBrokerController()
 	brokerController.MessageStore.Start()
 
-	sendMessage := NewSendMessageProcessor(brokerController)
+	sendMessage :=stgbroker.NewSendMessageProcessor(brokerController)
 
 	ctx := CreateCtx()
 
 	request := CreateConsumerSendMsgBackRequest()
 
-	sendMessage.consumerSendMsgBack(ctx, request)
+	sendMessage.ConsumerSendMsgBack(ctx, request)
 }
 
-func InitBrokerController() *BrokerController {
-	// 初始化brokerConfig
-	brokerConfig := stgcommon.NewBrokerConfig("BrokerName", "BrokerClusterName")
-
-	// 初始化brokerConfig
-	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
-
-	// 初始化BrokerController
-	remotingClient := remoting.NewDefalutRemotingClient()
-	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
-
-	// 初始化controller
-	initResult := controller.Initialize()
-	if !initResult {
-		controller.Shutdown()
-		panic(errors.New("init fail"))
-	}
-
-	return controller
-}
+//func InitBrokerController() *stgbroker.BrokerController {
+//	// 初始化brokerConfig
+//	brokerConfig := stgcommon.NewBrokerConfig("BrokerName", "BrokerClusterName")
+//
+//	// 初始化brokerConfig
+//	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
+//
+//	// 初始化BrokerController
+//	remotingClient := remoting.NewDefalutRemotingClient()
+//	controller := stgbroker.NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
+//
+//	// 初始化controller
+//	initResult := controller.Initialize()
+//	if !initResult {
+//		controller.Shutdown()
+//		panic(errors.New("init fail"))
+//	}
+//
+//	return controller
+//}
 
 func CreateCtx() netm.Context {
 	var remoteContext netm.Context
