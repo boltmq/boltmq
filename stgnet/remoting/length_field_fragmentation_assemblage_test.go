@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestUnpackFull(t *testing.T) {
+func TestPackFull(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 0)
@@ -15,7 +15,7 @@ func TestUnpackFull(t *testing.T) {
 
 	buffer := prepareFullBuffer()
 
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -30,7 +30,7 @@ func TestUnpackFull(t *testing.T) {
 	}
 }
 
-func TestUnpackOffsetFull(t *testing.T) {
+func TestPackOffsetFull(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 4)
@@ -38,7 +38,7 @@ func TestUnpackOffsetFull(t *testing.T) {
 
 	buffer := prepareFullBuffer()
 
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -64,14 +64,14 @@ func prepareFullBuffer() []byte {
 	return buf.Bytes()
 }
 
-func TestUnpackPartOf(t *testing.T) {
+func TestPackPartOf(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 0)
 	)
 
 	buffer := preparePartOfOneBuffer()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -82,7 +82,7 @@ func TestUnpackPartOf(t *testing.T) {
 	bufferHeader := buffer
 
 	buffer = preparePartOfTwoBuffer()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -98,14 +98,14 @@ func TestUnpackPartOf(t *testing.T) {
 	}
 }
 
-func TestUnpackOffsetPartOf(t *testing.T) {
+func TestPackOffsetPartOf(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 4)
 	)
 
 	buffer := preparePartOfOneBuffer()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -116,7 +116,7 @@ func TestUnpackOffsetPartOf(t *testing.T) {
 	bufferHeader := buffer[4:]
 
 	buffer = preparePartOfTwoBuffer()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -151,14 +151,14 @@ func preparePartOfTwoBuffer() []byte {
 	return buf.Bytes()
 }
 
-func TestUnpackPartOf2(t *testing.T) {
+func TestPackPartOf2(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 0)
 	)
 
 	buffer := preparePartOfOneBuffer2()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -169,7 +169,7 @@ func TestUnpackPartOf2(t *testing.T) {
 	bufferHeader := buffer
 
 	buffer = preparePartOfTwoBuffer2()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -186,14 +186,14 @@ func TestUnpackPartOf2(t *testing.T) {
 	}
 }
 
-func TestUnpackOffsetPartOf2(t *testing.T) {
+func TestPackOffsetPartOf2(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 4)
 	)
 
 	buffer := preparePartOfOneBuffer2()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -204,7 +204,7 @@ func TestUnpackOffsetPartOf2(t *testing.T) {
 	bufferHeader := buffer[4:]
 
 	buffer = preparePartOfTwoBuffer2()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -244,16 +244,16 @@ func preparePartOfTwoBuffer2() []byte {
 	return buf.Bytes()
 }
 
-func TestDiscardUnpackOffsetPartOf(t *testing.T) {
+func TestDiscardPackOffsetPartOf(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 0)
 	)
 
 	buffer := preparePartOfOneDiscardBuffer()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
-		t.Logf("UnPack failed: %s", e)
+		t.Logf("Pack failed: %s", e)
 	}
 
 	if len(bufs) != 0 {
@@ -261,7 +261,7 @@ func TestDiscardUnpackOffsetPartOf(t *testing.T) {
 	}
 
 	buffer = preparePartOfTwoDiscardBuffer()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}
@@ -271,16 +271,16 @@ func TestDiscardUnpackOffsetPartOf(t *testing.T) {
 	}
 }
 
-func TestDiscardUnpackPartOf(t *testing.T) {
+func TestDiscardPackPartOf(t *testing.T) {
 	var (
 		addr                               = "192.168.0.1:10000"
 		lengthFieldFragmentationAssemblage = NewLengthFieldFragmentationAssemblage(8388608, 0, 4, 4)
 	)
 
 	buffer := preparePartOfOneDiscardBuffer()
-	bufs, e := lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e := lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
-		t.Logf("UnPack failed: %s", e)
+		t.Logf("Pack failed: %s", e)
 	}
 
 	if len(bufs) != 0 {
@@ -288,7 +288,7 @@ func TestDiscardUnpackPartOf(t *testing.T) {
 	}
 
 	buffer = preparePartOfTwoDiscardBuffer()
-	bufs, e = lengthFieldFragmentationAssemblage.UnPack(addr, buffer)
+	bufs, e = lengthFieldFragmentationAssemblage.Pack(addr, buffer)
 	if e != nil {
 		t.Errorf("Test failed: %s", e)
 	}

@@ -28,27 +28,27 @@ func NewLengthFieldFragmentationAssemblage(maxFrameLength, lengthFieldOffset, le
 	}
 }
 
-func (lffp *LengthFieldFragmentationAssemblage) UnPack(addr string, buffer []byte) (bufs []*bytes.Buffer, e error) {
+func (lfpfa *LengthFieldFragmentationAssemblage) Pack(addr string, buffer []byte) (bufs []*bytes.Buffer, e error) {
 	var (
 		length = len(buffer)
 	)
 
-	if length > lffp.maxFrameLength {
+	if length > lfpfa.maxFrameLength {
 		// 报文长度大于设置最大长度，丢弃报文（之后考虑其它方式）
-		logger.Errorf("buffer length[%d] > maxFrameLength[%d], discard.", length, lffp.maxFrameLength)
-		e = errors.Errorf("buffer length[%d] > maxFrameLength[%d], discard.", length, lffp.maxFrameLength)
+		logger.Errorf("buffer length[%d] > maxFrameLength[%d], discard.", length, lfpfa.maxFrameLength)
+		e = errors.Errorf("buffer length[%d] > maxFrameLength[%d], discard.", length, lfpfa.maxFrameLength)
 		return
 	}
 
 	// 缓存报文
-	lffp.fragmentationTableMu.RLock()
-	buf, ok := lffp.fragmentationTable[addr]
-	lffp.fragmentationTableMu.RUnlock()
+	lfpfa.fragmentationTableMu.RLock()
+	buf, ok := lfpfa.fragmentationTable[addr]
+	lfpfa.fragmentationTableMu.RUnlock()
 	if !ok {
 		buf = &bytes.Buffer{}
-		lffp.fragmentationTableMu.Lock()
-		lffp.fragmentationTable[addr] = buf
-		lffp.fragmentationTableMu.Unlock()
+		lfpfa.fragmentationTableMu.Lock()
+		lfpfa.fragmentationTable[addr] = buf
+		lfpfa.fragmentationTableMu.Unlock()
 	}
 
 	_, e = buf.Write(buffer)
@@ -57,19 +57,19 @@ func (lffp *LengthFieldFragmentationAssemblage) UnPack(addr string, buffer []byt
 		return
 	}
 
-	return lffp.readBuffer(addr, buf)
+	return lfpfa.pack(addr, buf)
 }
 
-func (lffp *LengthFieldFragmentationAssemblage) readBuffer(addr string, buf *bytes.Buffer) (bufs []*bytes.Buffer, e error) {
+func (lfpfa *LengthFieldFragmentationAssemblage) pack(addr string, buf *bytes.Buffer) (bufs []*bytes.Buffer, e error) {
 	var (
-		start       int
-		end         int
-		length      int
-		frameLength int
+		start        int
+		end          int
+		length       int
+		packetLength int
 	)
 
-	start = lffp.lengthFieldOffset
-	end = lffp.lengthFieldOffset + lffp.lengthFieldLength
+	start = lfpfa.lengthFieldOffset
+	end = lfpfa.lengthFieldOffset + lfpfa.lengthFieldLength
 
 	for {
 		length = buf.Len()
@@ -80,29 +80,29 @@ func (lffp *LengthFieldFragmentationAssemblage) readBuffer(addr string, buf *byt
 
 		// 读取报文长度
 		lengthFieldBytes := buf.Bytes()[start:end]
-		frameLength, e = lffp.readLengthFieldLength(lengthFieldBytes)
+		packetLength, e = lfpfa.readLengthFieldLength(lengthFieldBytes)
 		if e != nil {
 			break
 		}
 
 		// 报文传输出错或报文到达顺序与发送顺序不一致，顺序问题之后考虑。
-		if frameLength > lffp.maxFrameLength {
+		if packetLength > lfpfa.maxFrameLength {
 			// 丢弃报文
-			lffp.fragmentationTableMu.Lock()
-			delete(lffp.fragmentationTable, addr)
-			lffp.fragmentationTableMu.Unlock()
-			logger.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
-			e = errors.Errorf("frame length[%d] > maxFrameLength[%d], discard.", frameLength, lffp.maxFrameLength)
+			lfpfa.fragmentationTableMu.Lock()
+			delete(lfpfa.fragmentationTable, addr)
+			lfpfa.fragmentationTableMu.Unlock()
+			logger.Errorf("frame length[%d] > maxFrameLength[%d], discard.", packetLength, lfpfa.maxFrameLength)
+			e = errors.Errorf("frame length[%d] > maxFrameLength[%d], discard.", packetLength, lfpfa.maxFrameLength)
 			break
 		}
 
 		// 长度小于报文长度，等待下个报文
-		if length-end < frameLength {
+		if length-end < packetLength {
 			break
 		}
 
 		// 报文长度足够，读取报文并调整buffer
-		rbuf, e := lffp.adjustBuffer(addr, buf, frameLength+end)
+		rbuf, e := lfpfa.adjustBuffer(addr, buf, packetLength+end)
 		if e != nil {
 			break
 		}
@@ -112,23 +112,24 @@ func (lffp *LengthFieldFragmentationAssemblage) readBuffer(addr string, buf *byt
 	return
 }
 
-func (lffp *LengthFieldFragmentationAssemblage) adjustBuffer(addr string, buf *bytes.Buffer, frameLength int) (*bytes.Buffer, error) {
+func (lfpfa *LengthFieldFragmentationAssemblage) adjustBuffer(addr string, buf *bytes.Buffer, packetLength int) (*bytes.Buffer, error) {
 	// buffer中报文长度
-	distance := buf.Len() - frameLength
+	distance := buf.Len() - packetLength
 	if distance == 0 {
 		// buffer数据已经读取完
-		lffp.fragmentationTableMu.Lock()
-		delete(lffp.fragmentationTable, addr)
-		lffp.fragmentationTableMu.Unlock()
+		lfpfa.fragmentationTableMu.Lock()
+		delete(lfpfa.fragmentationTable, addr)
+		lfpfa.fragmentationTableMu.Unlock()
 	}
 
 	// 读取报文掉过的长度
-	if lffp.initialBytesToStrip > 0 {
-		buf.Next(lffp.initialBytesToStrip)
+	if lfpfa.initialBytesToStrip > 0 {
+		buf.Next(lfpfa.initialBytesToStrip)
+		packetLength -= lfpfa.initialBytesToStrip
 	}
 
 	// 读取报文
-	buffer := buf.Next(frameLength)
+	buffer := buf.Next(packetLength)
 
 	nbuf := &bytes.Buffer{}
 	_, err := nbuf.Write(buffer)
@@ -139,26 +140,26 @@ func (lffp *LengthFieldFragmentationAssemblage) adjustBuffer(addr string, buf *b
 	return nbuf, nil
 }
 
-func (lffp *LengthFieldFragmentationAssemblage) readLengthFieldLength(lengthFieldBytes []byte) (int, error) {
+func (lfpfa *LengthFieldFragmentationAssemblage) readLengthFieldLength(lengthFieldBytes []byte) (int, error) {
 	var (
-		frameLength int
+		packetLength int
 	)
-	switch lffp.lengthFieldLength {
+	switch lfpfa.lengthFieldLength {
 	case 1:
-		frameLength = int(lengthFieldBytes[0])
+		packetLength = int(lengthFieldBytes[0])
 	case 2:
 		lengthField := binary.BigEndian.Uint16(lengthFieldBytes)
-		frameLength = int(lengthField)
+		packetLength = int(lengthField)
 	case 4:
 		lengthField := binary.BigEndian.Uint32(lengthFieldBytes)
-		frameLength = int(lengthField)
+		packetLength = int(lengthField)
 	case 8:
 		lengthField := binary.BigEndian.Uint64(lengthFieldBytes)
-		frameLength = int(lengthField)
+		packetLength = int(lengthField)
 	default:
-		logger.Warnf("not support lengthFieldLength[%d].", lffp.lengthFieldLength)
-		return 0, errors.Errorf("not support lengthFieldLength[%d].", lffp.lengthFieldLength)
+		logger.Warnf("not support lengthFieldLength[%d].", lfpfa.lengthFieldLength)
+		return 0, errors.Errorf("not support lengthFieldLength[%d].", lfpfa.lengthFieldLength)
 	}
 
-	return frameLength, nil
+	return packetLength, nil
 }
