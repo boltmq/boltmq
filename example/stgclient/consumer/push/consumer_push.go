@@ -7,9 +7,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
-	"time"
-	"sync/atomic"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"sync/atomic"
+	"time"
 )
 
 type MessageListenerImpl struct {
@@ -44,12 +44,19 @@ func taskC() {
 	}
 }
 
+var (
+	namesrvAddr     = "10.112.68.89:9876"
+	topic           = "cloudzone1"
+	tag             = "tagA"
+	consumerGroupId = "consumerGroupId-200"
+)
+
 func main() {
-	defaultMQPushConsumer := process.NewDefaultMQPushConsumer("consumer5")
+	defaultMQPushConsumer := process.NewDefaultMQPushConsumer(consumerGroupId)
 	defaultMQPushConsumer.SetConsumeFromWhere(heartbeat.CONSUME_FROM_LAST_OFFSET)
 	defaultMQPushConsumer.SetMessageModel(heartbeat.CLUSTERING)
-	defaultMQPushConsumer.SetNamesrvAddr("10.112.68.189:9876")
-	defaultMQPushConsumer.Subscribe("cloudzone1", "tagA")
+	defaultMQPushConsumer.SetNamesrvAddr(namesrvAddr)
+	defaultMQPushConsumer.Subscribe(topic, tag)
 	defaultMQPushConsumer.RegisterMessageListener(&MessageListenerImpl{StartTime: time.Now().Unix(), MapContent: sync.NewMap()})
 	defaultMQPushConsumer.Start()
 	go taskC()

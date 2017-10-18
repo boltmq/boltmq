@@ -20,17 +20,19 @@ import (
 // Since:  2017/8/8
 
 type DefaultMQProducerImpl struct {
-	DefaultMQProducer *DefaultMQProducer
-	// topic *TopicPublishInfo
+	DefaultMQProducer     *DefaultMQProducer
 	TopicPublishInfoTable *sync.Map
 	ServiceState          stgcommon.ServiceState
 	MQClientFactory       *MQClientInstance
+	// topic *TopicPublishInfo
 }
 
 func NewDefaultMQProducerImpl(defaultMQProducer *DefaultMQProducer) *DefaultMQProducerImpl {
-	return &DefaultMQProducerImpl{DefaultMQProducer: defaultMQProducer,
+	return &DefaultMQProducerImpl{
+		DefaultMQProducer:     defaultMQProducer,
 		TopicPublishInfoTable: sync.NewMap(),
-		ServiceState: stgcommon.CREATE_JUST}
+		ServiceState:          stgcommon.CREATE_JUST,
+	}
 }
 
 func (defaultMQProducerImpl *DefaultMQProducerImpl) start() error {
@@ -128,7 +130,8 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) SendByTimeout(msg *message.M
 func (defaultMQProducerImpl *DefaultMQProducerImpl) sendDefaultImpl(msg *message.Message, communicationMode CommunicationMode,
 	sendCallback SendCallback, timeout int64) (*SendResult, error) {
 	if defaultMQProducerImpl.ServiceState != stgcommon.RUNNING {
-		panic(errors.New("The producer service state not OK"))
+		format := "The producer service state not OK. serviceState=%s"
+		panic(fmt.Errorf(format, defaultMQProducerImpl.ServiceState.String()))
 	}
 	CheckMessage(msg, *defaultMQProducerImpl.DefaultMQProducer)
 	maxTimeout := defaultMQProducerImpl.DefaultMQProducer.SendMsgTimeout + 1000
@@ -271,7 +274,11 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) UpdateTopicPublishInfo(topic
 
 // 查询topic不存在则从nameserver更新
 func (defaultMQProducerImpl *DefaultMQProducerImpl) tryToFindTopicPublishInfo(topic string) *TopicPublishInfo {
-	info, _ := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
+	info, err := defaultMQProducerImpl.TopicPublishInfoTable.Get(topic)
+	if err != nil {
+		return nil
+	}
+
 	if nil == info || len(info.(*TopicPublishInfo).MessageQueueList) == 0 {
 		defaultMQProducerImpl.TopicPublishInfoTable.PutIfAbsent(topic, &TopicPublishInfo{})
 		defaultMQProducerImpl.MQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(topic)
