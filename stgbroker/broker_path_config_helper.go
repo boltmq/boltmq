@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	childDir  = "store"
 	configDir = "config"
 	separator = string(os.PathSeparator)
 )
@@ -14,19 +13,19 @@ const (
 // Author gaoyanlei
 // Since 2017/8/21
 func GetTopicConfigPath(rootDir string) string {
-	return rootDir + separator + childDir + separator + configDir + separator + "topics.json"
+	return rootDir + separator + configDir + separator + "topics.json"
 }
 
 // GetConsumerOffsetPath 获取consumerOffset.json路径
 // Author gaoyanlei
 // Since 2017/8/21
 func GetConsumerOffsetPath(rootDir string) string {
-	return rootDir + separator + childDir + separator + configDir + separator + "consumerOffset.json"
+	return rootDir + separator + configDir + separator + "consumerOffset.json"
 }
 
 // GetSubscriptionGroupPath 获取subscriptionGroup.json路径
 // Author gaoyanlei
 // Since 2017/8/21
 func GetSubscriptionGroupPath(rootDir string) string {
-	return rootDir + separator + childDir + separator + configDir + separator + "subscriptionGroup.json"
+	return rootDir + separator + configDir + separator + "subscriptionGroup.json"
 }

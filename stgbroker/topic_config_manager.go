@@ -369,5 +369,9 @@ func (self *TopicConfigManager) Decode(content []byte) {
 }
 
 func (self *TopicConfigManager) ConfigFilePath() string {
-	return GetTopicConfigPath(stgcommon.GetUserHomeDir())
+	homeDir := stgcommon.GetUserHomeDir()
+	if self.BrokerController.BrokerConfig.StorePathRootDir != "" {
+		homeDir = self.BrokerController.BrokerConfig.StorePathRootDir
+	}
+	return GetTopicConfigPath(homeDir)
 }

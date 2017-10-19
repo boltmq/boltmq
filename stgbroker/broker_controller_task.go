@@ -80,7 +80,9 @@ func (self *BrokerControllerTask) startDeleteTopicTask() {
 	self.DeleteTopicTask = timeutil.NewTicker(false, 5*time.Minute, 10*time.Second, func() {
 		topics := self.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Keys()
 		removedTopicCount := self.BrokerController.MessageStore.CleanUnusedTopic(topics)
-		logger.Infof("DeleteTopicTask removed topic count: %d", removedTopicCount)
+		if removedTopicCount > 0 {
+			logger.Infof("DeleteTopicTask removed topic count: %d", removedTopicCount)
+		}
 	})
 	self.DeleteTopicTask.Start()
 	logger.Infof("DeleteTopicTask start ok")
@@ -149,7 +151,9 @@ func (self *BrokerControllerTask) startSlaveSynchronizeTask() {
 func (self *BrokerControllerTask) startPrintMasterAndSlaveDiffTask() {
 	self.PrintMasterAndSlaveDiffTask = timeutil.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
 		diff := self.BrokerController.MessageStore.SlaveFallBehindMuch()
-		logger.Infof("slave fall behind master, how much, %d bytes", diff) // warn and notify me
+		if diff > 0 {
+			logger.Infof("slave fall behind master, how much: %d bytes", diff) // warn and notify me
+		}
 	})
 	self.PrintMasterAndSlaveDiffTask.Start()
 	logger.Infof("PrintMasterAndSlaveDiffTask start ok")

@@ -10,5 +10,5 @@ brokerRole="SLAVE"
 flushDiskType="SYNC_FLUSH"
 autoCreateTopicEnable=true
 
-#storePathRootDir="/home/smartgo/data"
+storePathRootDir="/home/smartgo/store"
 #brokerPort=10911
