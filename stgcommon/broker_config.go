@@ -128,9 +128,9 @@ func localHostName() string {
 // CheckBrokerConfigAttr 校验broker启动的所必需的SmartGoHome、namesrv配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func (self *BrokerConfig) CheckBrokerConfigAttr() bool {
-	// 如果没有设置home环境变量，则启动失败
-	if "" == self.SmartGoHome {
+func (self *BrokerConfig) CheckBrokerConfigAttr(smartgoBrokerFilePath ...string) bool {
+	// 如果没有使用-c指令， 也没有设置SmartGoHome环境变量，则启动失败
+	if smartgoBrokerFilePath == nil && strings.TrimSpace(smartgoBrokerFilePath[0]) == "" && self.SmartGoHome == "" {
 		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
 		logger.Infof(format, SMARTGO_HOME_ENV)
 		return false
