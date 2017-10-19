@@ -8,7 +8,7 @@ import (
 func TestTickersClose(t *testing.T) {
 	var i int
 
-	tk := NewTicker(true, 0, 100*time.Millisecond, func() {
+	tk := NewTicker(true, -1, 100*time.Millisecond, func() {
 		i++
 	})
 	ts := NewTickers()
@@ -30,7 +30,7 @@ func TestTickersClose(t *testing.T) {
 func TestTickersRemove(t *testing.T) {
 	var i int
 
-	tk := NewTicker(true, 0, 100*time.Millisecond, func() {
+	tk := NewTicker(true, -1, 100*time.Millisecond, func() {
 		i++
 	})
 	ts := NewTickers()
@@ -75,7 +75,7 @@ func TestTickersDelay(t *testing.T) {
 func TestTickersWait(t *testing.T) {
 	var i int
 
-	tk := NewTicker(true, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(true, -1, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
@@ -97,7 +97,7 @@ func TestTickersWait(t *testing.T) {
 func TestTickersNotWait(t *testing.T) {
 	var i int
 
-	tk := NewTicker(false, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(false, -1, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
@@ -121,17 +121,17 @@ func TestTickersMutil(t *testing.T) {
 	var j int
 	var k int
 
-	tk := NewTicker(true, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(true, -1, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
 
-	tk2 := NewTicker(true, 0, 400*time.Millisecond, func() {
+	tk2 := NewTicker(true, -1, 400*time.Millisecond, func() {
 		time.Sleep(300 * time.Millisecond)
 		j++
 	})
 
-	tk3 := NewTicker(true, 0, 1500*time.Millisecond, func() {
+	tk3 := NewTicker(true, -1, 1500*time.Millisecond, func() {
 		time.Sleep(1300 * time.Millisecond)
 		k++
 	})
@@ -166,17 +166,17 @@ func TestTickersMutilNotWait(t *testing.T) {
 	var j int
 	var k int
 
-	tk := NewTicker(false, 0, 300*time.Millisecond, func() {
+	tk := NewTicker(false, -1, 300*time.Millisecond, func() {
 		time.Sleep(200 * time.Millisecond)
 		i++
 	})
 
-	tk2 := NewTicker(false, 0, 400*time.Millisecond, func() {
+	tk2 := NewTicker(false, -1, 400*time.Millisecond, func() {
 		time.Sleep(300 * time.Millisecond)
 		j++
 	})
 
-	tk3 := NewTicker(false, 0, 1500*time.Millisecond, func() {
+	tk3 := NewTicker(false, -1, 1500*time.Millisecond, func() {
 		time.Sleep(1300 * time.Millisecond)
 		k++
 	})
