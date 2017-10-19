@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/static"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
@@ -13,10 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
-
-const (
-	brokerConfigName = "broker-a.toml"
 )
 
 // Start 启动BrokerController
@@ -62,7 +59,7 @@ func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
 	logger.Infof("broker.StorePathRootDir = %s", brokerConfig.StorePathRootDir)
 	logger.Infof("store.StorePathRootDir = %s", brokerConfig.StorePathRootDir)
 
-	if !brokerConfig.CheckBrokerConfigAttr() {
+	if !brokerConfig.CheckBrokerConfigAttr(smartgoBrokerFilePath...) {
 		logger.Flush()
 		os.Exit(0)
 	}
@@ -135,7 +132,7 @@ func getSmartgoBrokerConfigName(smartgoBrokerFilePath ...string) string {
 		cfgName := value[index+1 : len(value)]
 		return cfgName
 	}
-	return brokerConfigName
+	return static.BROKER_CONFIG_NAME
 }
 
 // getSmartgoBrokerConfigPath 获得启动broker的toml文件完整路径
