@@ -21,8 +21,8 @@ var (
 	def_bodyDataSize    = 20                    // body数据长度
 )
 
-// ./tps -p producerGroupId-200 -topic cloudzone123 -tag tagA -h 10.112.68.189:9876 -n 200 -c 50000 -s 20
-// ./tps -n 200 -c 50000 -s 20
+// 启动命令(1) ./tps -p producerGroupId-200 -topic cloudzone123 -tag tagA -h 10.112.68.189:9876 -n 200 -c 50000 -s 20
+// 启动命令(2)  ./tps -n 200 -c 50000 -s 20
 func main() {
 
 	producerGroupId := flag.String("p", def_producerGroupId, "the producer group id ")
