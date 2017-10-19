@@ -187,7 +187,8 @@ func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *st
 func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
 	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
 	messageStoreConfig.StorePathRootDir = brokerConfig.StorePathRootDir
-	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir
+	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir + "/commitlog"
+	messageStoreConfig.TranRedoLogStorePath = brokerConfig.StorePathRootDir + "/transaction"
 
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
 	if messageStoreConfig.BrokerRole == config.SLAVE {
