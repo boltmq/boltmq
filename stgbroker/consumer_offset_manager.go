@@ -58,7 +58,11 @@ func (com *ConsumerOffsetManager) Decode(buf []byte) {
 }
 
 func (com *ConsumerOffsetManager) ConfigFilePath() string {
-	return GetConsumerOffsetPath(stgcommon.GetUserHomeDir())
+	homeDir := stgcommon.GetUserHomeDir()
+	if com.BrokerController.BrokerConfig.StorePathRootDir != "" {
+		homeDir = com.BrokerController.BrokerConfig.StorePathRootDir
+	}
+	return GetConsumerOffsetPath(homeDir)
 }
 
 // ScanUnsubscribedTopic 扫描被删除Topic，并删除该Topic对应的Offset

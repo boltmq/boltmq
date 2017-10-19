@@ -90,7 +90,11 @@ func (self *SubscriptionGroupManager) Decode(buf []byte) {
 }
 
 func (self *SubscriptionGroupManager) ConfigFilePath() string {
-	return GetSubscriptionGroupPath(stgcommon.GetUserHomeDir())
+	homeDir := stgcommon.GetUserHomeDir()
+	if self.BrokerController.BrokerConfig.StorePathRootDir != "" {
+		homeDir = self.BrokerController.BrokerConfig.StorePathRootDir
+	}
+	return GetSubscriptionGroupPath(homeDir)
 }
 
 // UpdateSubscriptionGroupConfig 更新订阅组配置
