@@ -34,8 +34,8 @@ func main() {
 	defaultMQProducer.Start()
 	for i := 0; i < *gonum; i++ {
 		body := "I'm so diao!呵呵" + strconv.Itoa(i)
-		if *msgDataSize > 0 {
-			body = strings.Repeat("a", *msgDataSize)
+		if *bodyDataSize > 0 {
+			body = strings.Repeat("a", *bodyDataSize)
 		}
 		sendResult, err := defaultMQProducer.Send(message.NewMessage(*topic, *tag, []byte(body)))
 		if err != nil {
