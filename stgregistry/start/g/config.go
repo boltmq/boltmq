@@ -53,19 +53,19 @@ func InitLogger(configPath string) {
 func getLoggerConfigPath() (cfgPath string) {
 	// export SMARTGO_REGISTRY_CONFIG = "/home/registry/cfg.json"
 	cfgPath = stgcommon.GetSmartRegistryConfig()
-	if !file.IsExist(cfgPath) {
-		//fmt.Printf("registry config file is not existent. SMARTGO_REGISTRY_CONFIG=%s \n", cfgPath)
-		if !file.IsExist(cfgPath) {
-			//默认寻找当前目录的cfg.json日志配置文件
-			cfgPath = file.SelfDir() + string(os.PathSeparator) + cfgName
-		}
-		if !file.IsExist(cfgPath) {
-			// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
-			cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName
-			fmt.Printf("idea special registryConfigPath = %s \n", cfgPath)
-			return cfgPath
-		}
+	if file.IsExist(cfgPath) {
+		return cfgPath
 	}
+
+	// 默认寻找当前目录的cfg.json日志配置文件
+	cfgPath = file.SelfDir() + string(os.PathSeparator) + cfgName
+	if file.IsExist(cfgPath) {
+		return cfgPath
+	}
+
+	// 此处为了兼容能够直接在idea上面利用start/g/默认配置文件目录
+	cfgPath = stgcommon.GetSmartgoConfigDir(cfg) + cfgName
+	fmt.Printf("idea special registryConfigPath = %s \n", cfgPath)
 	return cfgPath
 }
 

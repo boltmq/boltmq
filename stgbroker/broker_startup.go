@@ -4,25 +4,27 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/toolkits/file"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 const (
-	brokerConfigName = "smartgoBroker.toml"
+	brokerConfigName = "broker-a.toml"
 )
 
 // Start 启动BrokerController
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
-func Start(stopChan chan bool, smartgoBrokerFileName string) *BrokerController {
+func Start(stopChan chan bool, smartgoBrokerFilePath string) *BrokerController {
 	// 构建BrokerController控制器、初始化BrokerController
-	controller := CreateBrokerController(smartgoBrokerFileName)
+	controller := CreateBrokerController(smartgoBrokerFilePath)
 
 	// 注册ShutdownHook钩子
 	controller.registerShutdownHook(stopChan)
@@ -42,16 +44,14 @@ func Start(stopChan chan bool, smartgoBrokerFileName string) *BrokerController {
 }
 
 // CreateBrokerController 创建BrokerController对象
-//
-// 注意：
-// (1)通过IDEA编辑器，启动test()用例、启动main()入口，两种方式读取conf/smartgoBroker.toml得到的相对路径有所区别
-// (2)如果在服务器通过cmd命令行读取conf/smartgoBroker.toml，则可以正常读取
-//
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
-func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
+func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
+	cfgName := getSmartgoBrokerConfigName(smartgoBrokerFilePath...)
+	cfgPath := getSmartgoBrokerConfigPath(cfgName)
+
 	// 读取并转化*.toml配置项的值
-	cfg, ok := ParseSmartgoBrokerConfig(smartgoBrokerFileName...)
+	cfg, ok := parseSmartgoBrokerConfig(cfgName, cfgPath)
 	if !ok || cfg == nil {
 		logger.Flush()
 		os.Exit(0)
@@ -59,8 +59,8 @@ func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
 
 	// 初始化brokerConfig，并校验broker启动的所必需的SmartGoHome、Namesrv配置
 	brokerConfig := stgcommon.NewCustomBrokerConfig(cfg)
-	logger.Infof("broker.UserHomeDir = %s", brokerConfig.SmartgoDataPath)
-	logger.Infof("store.StorePathRootDir = %s", brokerConfig.SmartgoDataPath)
+	logger.Infof("broker.StorePathRootDir = %s", brokerConfig.StorePathRootDir)
+	logger.Infof("store.StorePathRootDir = %s", brokerConfig.StorePathRootDir)
 
 	if !brokerConfig.CheckBrokerConfigAttr() {
 		logger.Flush()
@@ -78,7 +78,7 @@ func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
 	// 构建BrokerController结构体
 	remotingClient := remoting.NewDefalutRemotingClient()
 	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
-	controller.ConfigFile = brokerConfig.SmartgoDataPath
+	controller.ConfigFile = brokerConfig.StorePathRootDir
 
 	// 初始化controller
 	initResult := controller.Initialize()
@@ -93,46 +93,32 @@ func CreateBrokerController(smartgoBrokerFileName ...string) *BrokerController {
 	return controller
 }
 
-// ParseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
+// parseSmartgoBrokerConfig 读取并转化Broker启动所必须的配置文件
+//
+// 注意：broker、store等模块的存取数据目录(优先级从高到低)
+// (1)smartgoBroker.toml.SmartgoDataPath
+// (2)$SMARTGO_DATA_PATH
+// (3)user.Current().HomeDir
+//
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func ParseSmartgoBrokerConfig(smartgoBrokerFileName ...string) (*stgcommon.SmartgoBrokerConfig, bool) {
-	cfgName := getSmartgoBrokerConfigName(smartgoBrokerFileName...)
-	cfgPath := stgcommon.GetSmartGoHome() + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
-	if !file.IsExist(cfgPath) {
-		if !file.IsExist(cfgPath) {
-			cfgPath = file.SelfDir() + "/conf/" + cfgName // 各种部署目录
-			logger.Infof("deploy brokerConfigPath = %s", cfgPath)
-		}
-		if !file.IsExist(cfgPath) {
-			cfgPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
-			if !file.IsExist(cfgPath) {
-				// 在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
-				cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
-				logger.Infof("idea special brokerConfigPath = %s", cfgPath)
-			}
-		}
-	}
-
+func parseSmartgoBrokerConfig(cfgName, cfgPath string) (*stgcommon.SmartgoBrokerConfig, bool) {
 	// 读取并转化*.toml配置项的值
 	var cfg stgcommon.SmartgoBrokerConfig
 	parseutil.ParseConf(cfgPath, &cfg)
 	if &cfg == nil {
-		logger.Errorf("read %s failed", cfgPath)
+		logger.Errorf("read %s error", cfgPath)
 		return nil, false
 	}
 
 	logger.Info(cfg.ToString())
 	if cfg.IsBlank() {
-		format := "read %s failed. please set `brokerClusterName` and `brokerName` value with %s"
-		logger.Errorf(format, cfgPath, cfgName)
+		logger.Errorf("read broker toml failed. %s", cfgPath)
 		return nil, false
 	}
 
-	// TODO:处理broker、store等模块的存取数据目录, 优先级从高到低:
-	// smartgoBroker.toml文件SmartgoDataPath属性值 >> 环境变量“SMARTGO_DATA_PATH” >> 操作系统的user.Current().HomeDir属性
-	if strings.TrimSpace(cfg.SmartgoDataPath) == "" {
-		cfg.SmartgoDataPath = stgcommon.GetUserHomeDir() + separator + "store"
+	if strings.TrimSpace(cfg.StorePathRootDir) == "" {
+		cfg.StorePathRootDir = stgcommon.GetUserHomeDir() + separator + "store"
 	}
 	return &cfg, true
 }
@@ -140,11 +126,51 @@ func ParseSmartgoBrokerConfig(smartgoBrokerFileName ...string) (*stgcommon.Smart
 // getSmartgoBrokerConfigName 获得启动broker的toml文件名称
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/10/16
-func getSmartgoBrokerConfigName(smartgoBrokerFileName ...string) string {
-	if smartgoBrokerFileName != nil && len(smartgoBrokerFileName) > 0 && smartgoBrokerFileName[0] != "" {
-		return strings.TrimSpace(smartgoBrokerFileName[0])
+func getSmartgoBrokerConfigName(smartgoBrokerFilePath ...string) string {
+	defer utils.RecoveredFn()
+
+	if smartgoBrokerFilePath != nil && len(smartgoBrokerFilePath) > 0 && smartgoBrokerFilePath[0] != "" {
+		value := filepath.ToSlash(strings.TrimSpace(smartgoBrokerFilePath[0]))
+		index := strings.LastIndex(value, "/")
+		cfgName := value[index+1 : len(value)]
+		return cfgName
 	}
 	return brokerConfigName
+}
+
+// getSmartgoBrokerConfigPath 获得启动broker的toml文件完整路径
+//
+// 注意：toml文件完整路径优先级(如下从高到低): 带有$SMARTGO_HOME的路径优先级最高、最末尾smartgo源码路径的优先级最低
+// (1)$SMARTGO_HOME/conf/broker-a.toml
+// (2)./conf/broker-a.toml
+// (3)../../conf/broker-a.toml
+// (4)$GOPATH/src/git.oschina.net/cloudzone/smartgo/conf/broker-a.toml
+//
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/16
+func getSmartgoBrokerConfigPath(cfgName string) string {
+	cfgPath := stgcommon.GetSmartGoHome() + "/conf/" + cfgName // 各种main()启动broker,读取环境变量对应的路径
+	if file.IsExist(cfgPath) {
+		logger.Infof("environment brokerConfigPath = %s", cfgPath)
+		return cfgPath
+	}
+
+	cfgPath = file.SelfDir() + "/conf/" + cfgName // 各种部署目录
+	if file.IsExist(cfgPath) {
+		logger.Infof("current brokerConfigPath = %s", cfgPath)
+		return cfgPath
+	}
+
+	cfgPath = "../../conf/" + cfgName // 各种test用例启动broker,读取相对路径
+	if file.IsExist(cfgPath) {
+		logger.Infof("test case brokerConfigPath = %s", cfgPath)
+		return cfgPath
+	}
+
+	// 在IDEA上面利用conf/smartgoBroker.toml默认配置文件目录
+	cfgPath = stgcommon.GetSmartgoConfigDir() + cfgName
+	logger.Infof("idea special brokerConfigPath = %s", cfgPath)
+	return cfgPath
 }
 
 // checkMessageStoreConfigAttr 校验messageStoreConfig配置
@@ -163,7 +189,7 @@ func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *st
 // Since: 2017/9/22
 func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
 	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
-	messageStoreConfig.StorePathRootDir = brokerConfig.SmartgoDataPath
+	messageStoreConfig.StorePathRootDir = brokerConfig.StorePathRootDir
 
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
 	if messageStoreConfig.BrokerRole == config.SLAVE {

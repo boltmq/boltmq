@@ -20,7 +20,7 @@ mv start broker
 ```bash
 cd $SMARTGO_HOME
 mkdir -p $SMARTGO_HOME/conf
-cp $GOPATH/src/git.oschina.net/cloudzone/smartgo/conf/smartgoBroker.toml $SMARTGO_HOME/conf/
+cp $GOPATH/src/git.oschina.net/cloudzone/smartgo/conf/broker-a.toml $SMARTGO_HOME/conf/
 mkdir ./logs
 touch ./logs/broker.log  # 第一次启动确保./logs/registry.log文件存在
 nohup ./broker &
@@ -28,14 +28,14 @@ nohup ./broker &
 
 ### 多实例启动`broker`
 ```bash
-# 编辑smartgoBroker.toml, 确保每个brokerRole、brokerId不相同
-# (1)如果在一台服务器启动多个broker实例，请在smartgoBroker.toml文件的brokerPort字段更新监听端口
-# (2)如果在一台服务器启动多个broker实例，请在smartgoBroker.toml文件的smartgoDataPath字段设置不同实例的数据目录
+# 编辑broker-a.toml, 确保每个brokerRole、brokerId不相同
+# (1)如果在一台服务器启动多个broker实例，请在broker-a.toml文件的brokerPort字段更新监听端口
+# (2)如果在一台服务器启动多个broker实例，请在broker-a.toml文件的smartgoDataPath字段设置不同实例的数据目录
 vim $SMARTGO_HOME/conf/smartgoBroker.toml
 
 cd $SMARTGO_HOME
 mkdir -p $SMARTGO_HOME/conf
-cp $GOPATH/src/git.oschina.net/cloudzone/smartgo/conf/smartgoBroker.toml $SMARTGO_HOME/conf/
+cp $GOPATH/src/git.oschina.net/cloudzone/smartgo/conf/broker-a.toml $SMARTGO_HOME/conf/
 mkdir ./logs
 touch ./logs/broker.log  # 第一次启动确保./logs/broker.log文件存在
 

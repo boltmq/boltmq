@@ -279,9 +279,9 @@ func GetSmartGoHome() string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/27
 func GetUserHomeDir() string {
-	smartgoDataPath := strings.TrimSpace(os.Getenv(SMARTGO_DATA_PATH_ENV))
-	if smartgoDataPath != "" {
-		return smartgoDataPath
+	storePathRootDir := strings.TrimSpace(os.Getenv(SMARTGO_DATA_PATH_ENV))
+	if storePathRootDir != "" {
+		return storePathRootDir
 	}
 
 	currentUser, _ := user.Current()

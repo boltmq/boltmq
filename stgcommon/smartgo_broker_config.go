@@ -18,7 +18,7 @@ type SmartgoBrokerConfig struct {
 	BrokerRole            string // broker角色 主/备
 	FlushDiskType         string // 刷盘方式
 	AutoCreateTopicEnable bool   // 是否允许客户端自动创建Topic
-	SmartgoDataPath       string // broker、store等模块的数据存储目录
+	StorePathRootDir      string // broker、store等模块的数据存储目录
 }
 
 // ToString 打印smartgoBroker配置项
@@ -30,9 +30,9 @@ func (self *SmartgoBrokerConfig) ToString() string {
 	}
 
 	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, BrokerPort=%d, DeleteWhen=%d, "
-	format += "FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, SmartgoDataPath=%s ]"
+	format += "FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, StorePathRootDir=%s ]"
 	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.BrokerPort, self.DeleteWhen,
-		self.FileReservedTime, self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.SmartgoDataPath)
+		self.FileReservedTime, self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.StorePathRootDir)
 	return info
 }
 
