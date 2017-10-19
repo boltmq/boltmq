@@ -294,6 +294,13 @@ var versionTable = map[int]string{
 	139: "V3_5_9",
 }
 
+// GetCurrentDesc 通过当前MQ版本描述
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/6
+func GetCurrentDesc() string {
+	return GetVersionDesc(CurrentVersion)
+}
+
 // GetVersionDesc 通过MQ版本号查找对应的版本描述
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6

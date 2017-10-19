@@ -21,7 +21,7 @@ const (
 // Since 2017/8/8
 type BrokerConfig struct {
 	SmartGoHome                        string `json:"smartgoHome"`                        // 环境变量"SMARTGO_HOME"(smartgo工程目录)
-	SmartgoDataPath                    string `json:"smartgoDataPath"`                    // broker、store等模块的数据存储目录
+	StorePathRootDir                   string `json:"storePathRootDir"`                   // broker、store等模块的数据存储目录
 	NamesrvAddr                        string `json:"namesrvAddr"`                        // namsrv地址
 	BrokerIP1                          string `json:"brokerIP1"`                          // 本机ip1地址
 	BrokerIP2                          string `json:"brokerIP2"`                          // 本机ip2地址
@@ -99,7 +99,7 @@ func NewCustomBrokerConfig(cfg *SmartgoBrokerConfig) *BrokerConfig {
 	brokerConfig.BrokerClusterName = cfg.BrokerClusterName
 	brokerConfig.AutoCreateTopicEnable = cfg.AutoCreateTopicEnable
 	brokerConfig.BrokerId = cfg.BrokerId
-	brokerConfig.SmartgoDataPath = cfg.SmartgoDataPath
+	brokerConfig.StorePathRootDir = cfg.StorePathRootDir
 	brokerConfig.BrokerPort = cfg.BrokerPort
 	return brokerConfig
 }

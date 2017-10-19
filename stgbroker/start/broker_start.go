@@ -9,8 +9,15 @@ import (
 
 func main() {
 
-	c := flag.String("c", "configFile", "Broker config properties file")
+	c := flag.String("c", "configPath", "Broker config *.toml file")
+	h := flag.Bool("h", false, "help")
+
 	flag.Parse()
+
+	if *h {
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	// 使用-c指令,但是没有给默认值
 	if *c == "" {
@@ -18,14 +25,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 没有使用-c指令，那么c="configFile"表示默认值
-	cfgName := ""
-	if *c != "configFile" {
-		cfgName = *c
+	// 没有使用-c指令，那么*c="configPath"表示默认值
+	cfgPath := ""
+	if *c != "configPath" {
+		cfgPath = *c
 	}
 
 	stopChannel := make(chan bool, 1) // the 'stopChannel' variable to handle controller.shutdownHook()
-	stgbroker.Start(stopChannel, cfgName)
+	stgbroker.Start(stopChannel, cfgPath)
 
 	for {
 		select {
