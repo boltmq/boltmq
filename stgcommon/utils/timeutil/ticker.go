@@ -37,7 +37,7 @@ func (t *Ticker) start() {
 	t.tm = time.NewTimer(t.d)
 	t.isRun = true
 
-	if t.delay > 0 {
+	if t.delay >= 0 {
 		time.Sleep(t.delay)
 		t.fn()
 	}
