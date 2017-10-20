@@ -50,7 +50,7 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 // Since 2017/9/5
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
-		logger.Info("....唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
+		//logger.Info("....唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
 
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
@@ -273,7 +273,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 		case code.PULL_NOT_FOUND:
 			// 长轮询
 			if brokerAllowSuspend && hasSuspendFlag {
-				logger.Infof("进入hold pull: ExtFields=%#v, Opaque=%d", request.ExtFields, request.Opaque)
+				//logger.Infof("进入hold pull: ExtFields=%#v, Opaque=%d", request.ExtFields, request.Opaque)
 				pollingTimeMills := suspendTimeoutMillisLong
 				if !pull.BrokerController.BrokerConfig.LongPollingEnable {
 					pollingTimeMills = pull.BrokerController.BrokerConfig.ShortPollingTimeMills

@@ -123,6 +123,7 @@ func (com *ConsumerOffsetManager) CommitOffset(group, topic string, queueId int,
 func (com *ConsumerOffsetManager) commitOffset(key string, queueId int, offset int64) {
 	com.persistLock.Lock()
 	defer com.persistLock.Unlock()
+	defer utils.RecoveredFn()
 	value := com.Offsets.Get(key)
 	if value == nil {
 		table := make(map[int]int64)
