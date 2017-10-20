@@ -106,7 +106,7 @@ func (self *SlaveSynchronize) syncSubscriptionGroupConfig() {
 		return
 	}
 
-	if !subscriptionWrapper.DataVersion.Equals(&self.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion) {
+	if !subscriptionWrapper.DataVersion.Equals(&(self.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion)) {
 		dataVersion := stgcommon.NewDataVersion(subscriptionWrapper.DataVersion.Timestamp)
 		dataVersion.Counter = subscriptionWrapper.DataVersion.Counter
 

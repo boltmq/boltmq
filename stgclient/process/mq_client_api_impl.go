@@ -117,15 +117,11 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	//logger.Infof("topicWithProjectGroup --> %s", topicWithProjectGroup)
 
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(code.GET_ROUTEINTO_BY_TOPIC, requestHeader)
-	//logger.Infof("GetTopicRouteInfoFromNameServer().request --> %s", request.ToString())
 
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
-	//logger.Infof("GetTopicRouteInfoFromNameServer().response --> %s", response.ToString())
-
 	if response != nil {
 		switch response.Code {
 		case code.SUCCESS:

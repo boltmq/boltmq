@@ -36,17 +36,17 @@ func NewMomentStatsItemSet(statsName string) *MomentStatsItemSet {
 // GetAndCreateStatsItem  GetAndCreateStatsItem
 // Author rongzhihong
 // Since 2017/9/19
-func (mom *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentStatsItem {
-	mom.Lock()
-	defer mom.Unlock()
+func (moment *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentStatsItem {
+	moment.Lock()
+	defer moment.Unlock()
 	defer utils.RecoveredFn()
 
-	statsItem := mom.StatsItemTable[statsKey]
+	statsItem := moment.StatsItemTable[statsKey]
 	if nil == statsItem {
 		statsItem = NewMomentStatsItem()
-		statsItem.StatsName = mom.StatsName
+		statsItem.StatsName = moment.StatsName
 		statsItem.StatsKey = statsKey
-		mom.StatsItemTable[statsKey] = statsItem
+		moment.StatsItemTable[statsKey] = statsItem
 	}
 	return statsItem
 }
@@ -54,32 +54,31 @@ func (mom *MomentStatsItemSet) GetAndCreateStatsItem(statsKey string) *MomentSta
 // SetValue  statsKey的数值加value
 // Author rongzhihong
 // Since 2017/9/19
-func (mom *MomentStatsItemSet) SetValue(statsKey string, value int64) {
-	statsItem := mom.GetAndCreateStatsItem(statsKey)
+func (moment *MomentStatsItemSet) SetValue(statsKey string, value int64) {
+	statsItem := moment.GetAndCreateStatsItem(statsKey)
 	atomic.AddInt64(&(statsItem.ValueCounter), value)
 }
 
 // init  init
 // Author rongzhihong
 // Since 2017/9/19
-func (mom *MomentStatsItemSet) init() {
+func (moment *MomentStatsItemSet) init() {
 	diffMin := float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 
-	mom.MomentStatsTaskTickers.Register("momentStatsItemSet_printAtMinutesTicker",
-		timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond,
-			5*time.Minute, func() { mom.printAtMinutes() }))
+	moment.MomentStatsTaskTickers.Register("momentStatsItemSet_printAtMinutesTicker",
+		timeutil.NewTicker(false, time.Duration(delayMin)*time.Millisecond, 5*time.Minute, func() { moment.printAtMinutes() }))
 }
 
 // printAtMinutes  输出每分钟数据
 // Author rongzhihong
 // Since 2017/9/19
-func (mom *MomentStatsItemSet) printAtMinutes() {
-	mom.Lock()
-	defer mom.Unlock()
+func (moment *MomentStatsItemSet) printAtMinutes() {
+	moment.RLock()
+	defer moment.RUnlock()
 	defer utils.RecoveredFn()
 
-	for _, momentStatsItem := range mom.StatsItemTable {
+	for _, momentStatsItem := range moment.StatsItemTable {
 		momentStatsItem.printAtMinutes()
 	}
 }

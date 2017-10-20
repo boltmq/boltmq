@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"bytes"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
@@ -9,20 +8,19 @@ import (
 	"math"
 	"sync/atomic"
 	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/list"
 )
 
 // StatsItem 统计单元
 // Author rongzhihong
 // Since 2017/9/19
 type StatsItem struct {
-	ValueCounter int64                  `json:"valueCounter"` // 具体的统计值
-	TimesCounter int64                  `json:"timesCounter"` // 统计次数
-	CsListMinute *list.BufferLinkedList `json:"csListMinute"` // 最近一分钟内的镜像，数量6，10秒钟采样一次
-	CsListHour   *list.BufferLinkedList `json:"csListHour"`   // 最近一小时内的镜像，数量6，10分钟采样一次
-	CsListDay    *list.BufferLinkedList `json:"csListDay"`    // 最近一天内的镜像，数量24，1小时采样一次
-	StatsName    string                 `json:"statsName"`
-	StatsKey     string                 `json:"statsKey"`
+	ValueCounter int64             `json:"valueCounter"` // 具体的统计值
+	TimesCounter int64             `json:"timesCounter"` // 统计次数
+	CsListMinute *CallSnapshotPlus `json:"csListMinute"` // 最近一分钟内的镜像，数量6，10秒钟采样一次
+	CsListHour   *CallSnapshotPlus `json:"csListHour"`   // 最近一小时内的镜像，数量6，10分钟采样一次
+	CsListDay    *CallSnapshotPlus `json:"csListDay"`    // 最近一天内的镜像，数量24，1小时采样一次
+	StatsName    string            `json:"statsName"`
+	StatsKey     string            `json:"statsKey"`
 }
 
 // NewStatsItem 统计单元初始化
@@ -30,9 +28,9 @@ type StatsItem struct {
 // Since 2017/9/19
 func NewStatsItem() *StatsItem {
 	statsItem := new(StatsItem)
-	statsItem.CsListMinute = list.NewBufferLinkedList()
-	statsItem.CsListHour = list.NewBufferLinkedList()
-	statsItem.CsListDay = list.NewBufferLinkedList()
+	statsItem.CsListMinute = NewCallSnapshotPlus()
+	statsItem.CsListHour = NewCallSnapshotPlus()
+	statsItem.CsListDay = NewCallSnapshotPlus()
 	atomic.AddInt64(&(statsItem.ValueCounter), 0)
 	atomic.AddInt64(&(statsItem.TimesCounter), 0)
 	return statsItem
@@ -41,7 +39,9 @@ func NewStatsItem() *StatsItem {
 // computeStatsData 计算获得统计数据
 // Author rongzhihong
 // Since 2017/9/19
-func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *StatsSnapshot {
+func (statsItem *StatsItem) computeStatsData(csList *CallSnapshotPlus) *StatsSnapshot {
+	csList.RLock()
+	defer csList.RUnlock()
 	defer utils.RecoveredFn()
 
 	var (
@@ -49,34 +49,28 @@ func (statsItem *StatsItem) computeStatsData(csList *list.BufferLinkedList) *Sta
 		avgpt float64 = 0.0
 		sum   int64   = 0
 	)
+
 	statsSnapshot := NewStatsSnapshot()
 
 	if csList.Size() > 0 {
-		firstBuffer, isHasFirst := csList.Get(0)
-		lastBuffer, isHasLast := csList.Get(csList.Size() - 1)
+		first := csList.Get(0)
+		last := csList.Get(csList.Size() - 1)
 
-		if isHasFirst && isHasLast && firstBuffer != nil && lastBuffer != nil {
-			first := &CallSnapshot{}
-			stgcommon.Decode(firstBuffer.Bytes(), first)
+		sum = last.Value - first.Value
+		if last.Timestamp-first.Timestamp > 0 {
+			tps = float64(sum) * 1000.0 / float64(last.Timestamp-first.Timestamp)
+		}
 
-			last := &CallSnapshot{}
-			stgcommon.Decode(lastBuffer.Bytes(), last)
-
-			sum = last.Value - first.Value
-			if last.Timestamp-first.Timestamp > 0 {
-				tps = float64(sum) * 1000.0 / float64(last.Timestamp-first.Timestamp)
-			}
-
-			timesDiff := last.Times - first.Times
-			if timesDiff > 0 {
-				avgpt = float64(sum) / float64(timesDiff)
-			}
+		timesDiff := last.Times - first.Times
+		if timesDiff > 0 {
+			avgpt = float64(sum) / float64(timesDiff)
 		}
 	}
 
 	statsSnapshot.Sum = sum
 	statsSnapshot.Tps = tps
 	statsSnapshot.Avgpt = avgpt
+
 	return statsSnapshot
 }
 
@@ -171,15 +165,12 @@ func (statsItem *StatsItem) PrintAtDay() {
 func (statsItem *StatsItem) SamplingInSeconds() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{
+	callSnapshot := CallSnapshot{
 		Timestamp: timeutil.CurrentTimeMillis(),
 		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
 		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
 	}
-
-	content := stgcommon.Encode(callSnapshot)
-	statsItem.CsListMinute.Add(bytes.NewBuffer(content))
-
+	statsItem.CsListMinute.Put(callSnapshot)
 	if statsItem.CsListMinute.Size() > 7 {
 		statsItem.CsListMinute.Remove(0)
 	}
@@ -191,16 +182,13 @@ func (statsItem *StatsItem) SamplingInSeconds() {
 func (statsItem *StatsItem) SamplingInMinutes() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{
+	callSnapshot := CallSnapshot{
 		Timestamp: timeutil.CurrentTimeMillis(),
 		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
 		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
 	}
 
-	content := stgcommon.Encode(callSnapshot)
-	bytesBuffer := bytes.NewBuffer(content)
-	statsItem.CsListHour.Add(bytesBuffer)
-
+	statsItem.CsListHour.Put(callSnapshot)
 	if statsItem.CsListHour.Size() > 7 {
 		statsItem.CsListHour.Remove(0)
 	}
@@ -212,16 +200,13 @@ func (statsItem *StatsItem) SamplingInMinutes() {
 func (statsItem *StatsItem) SamplingInHour() {
 	defer utils.RecoveredFn()
 
-	callSnapshot := &CallSnapshot{
+	callSnapshot := CallSnapshot{
 		Timestamp: timeutil.CurrentTimeMillis(),
 		Times:     atomic.LoadInt64(&(statsItem.TimesCounter)),
 		Value:     atomic.LoadInt64(&(statsItem.ValueCounter)),
 	}
 
-	content := stgcommon.Encode(callSnapshot)
-	bytesBuffer := bytes.NewBuffer(content)
-	statsItem.CsListDay.Add(bytesBuffer)
-
+	statsItem.CsListDay.Put(callSnapshot)
 	if statsItem.CsListDay.Size() > 25 {
 		statsItem.CsListDay.Remove(0)
 	}
