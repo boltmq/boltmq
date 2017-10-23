@@ -12,9 +12,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"time"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/mmap"
-	"time"
 )
 
 const (
