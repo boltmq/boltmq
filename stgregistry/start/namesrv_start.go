@@ -23,7 +23,7 @@ func main() {
 		os.Exit(0)
 	}
 	if *v {
-		fmt.Println("version:", mqversion.GetCurrentDesc())
+		fmt.Println(mqversion.GetCurrentDesc())
 		os.Exit(0)
 	}
 

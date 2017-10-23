@@ -86,6 +86,11 @@ stgregistry/start/register
 stgregistry/start/start
 stgregistry/start/start.exe
 
+stgregistry/start/gitversion
+stgregistry/start/registry-v3.2.6/
+stgregistry/start/registry-bin-v3.2.6/
+stgregistry/start/registry-bin-v3.2.6.tar.gz
+stgregistry/start/registry-v3.2.6.tar.gz
 
 stgbroker/start/start
 stgbroker/start/start.exe
@@ -93,6 +98,15 @@ stgbroker/start/nohup.out
 stgbroker/start/broker
 stgbroker/start/broker.exe
 stgbroker/start/demo
+stgbroker/start/logs/
+stgbroker/start/logs/*.log
+
+stgbroker/start/gitversion
+stgbroker/start/broker-v3.2.6/
+stgbroker/start/broker-bin-v3.2.6/
+stgbroker/start/broker-bin-v3.2.6.tar.gz
+stgbroker/start/broker-v3.2.6.tar.gz
+stgbroker/start/conf
 
 
 

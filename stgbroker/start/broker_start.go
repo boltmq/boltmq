@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"os"
 )
 
@@ -11,11 +12,17 @@ func main() {
 
 	c := flag.String("c", "configPath", "Broker config *.toml file")
 	h := flag.Bool("h", false, "help")
+	v := flag.Bool("v", false, "version")
 
 	flag.Parse()
 
 	if *h {
 		flag.Usage()
+		os.Exit(0)
+	}
+
+	if *v {
+		fmt.Println(mqversion.GetCurrentDesc())
 		os.Exit(0)
 	}
 
