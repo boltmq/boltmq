@@ -6,12 +6,14 @@ package mmap
 
 import (
 	"bytes"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"github.com/toolkits/file"
 )
 
 var testData = []byte("0123456789ABCDEF")
@@ -181,4 +183,72 @@ func TestRandReadWrite(t *testing.T) {
 	mmap.Flush()
 
 	//logger.Info("mmap == %v", string(mmap))
+}
+
+func BenchmarkReadWrite(b *testing.B) {
+	var (
+		bigFilePath       = "bigdata.tmp"
+		fileSize    int64 = 1024 * 1024 * 1024
+		f           *os.File
+		e           error
+		wSizeEvery  int = 200
+	)
+
+	b.StopTimer()
+	if file.IsExist(bigFilePath) {
+		f, e = os.OpenFile(bigFilePath, os.O_RDWR, 0644)
+		if e != nil {
+			b.Error(e)
+			return
+		}
+	} else {
+		f, e = os.OpenFile(bigFilePath, os.O_RDWR|os.O_CREATE, 0644)
+		if e != nil {
+			b.Error(e)
+			return
+		}
+
+		if e = os.Truncate(bigFilePath, fileSize); e != nil {
+			b.Error(e)
+			return
+		}
+	}
+
+	b.StartTimer()
+	//b.ResetTimer()
+	m, e := Map(f, RDWR, 0)
+	if e != nil {
+		b.Error(e)
+		return
+	}
+
+	bytes := newBytes(wSizeEvery)
+
+	for i := 0; i < b.N; i++ {
+		//if i >= int(fileSize) {
+		//break
+		//}
+		m[i] = bytes[i%wSizeEvery]
+	}
+
+	e = m.Flush()
+	if e != nil {
+		b.Error(e)
+		return
+	}
+
+	e = m.Unmap()
+	if e != nil {
+		b.Error(e)
+		return
+	}
+}
+
+func newBytes(size int) []byte {
+	bytes := make([]byte, size)
+	for i := 0; i < size; i++ {
+		bytes[i] = byte(i + 1)
+	}
+
+	return bytes
 }
