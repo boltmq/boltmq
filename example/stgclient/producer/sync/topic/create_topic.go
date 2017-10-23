@@ -13,6 +13,7 @@ var (
 	def_threadNum       = 3600
 )
 
+// 启动命令 ./topic -p producerGroupId-200 -topic cloudzoneA -h 10.112.68.189:9876
 func main() {
 	producerGroupId := flag.String("p", def_producerGroupId, "the producer group id ")
 	topic := flag.String("topic", def_topic, "the topic for use")
