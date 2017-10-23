@@ -39,14 +39,15 @@ func (pm *ProducerManager) generateRandmonNum() int {
 // GetGroupChannelTable 获得组通道
 // Author gaoyanlei
 // Since 2017/8/24
-func (pm *ProducerManager) GetGroupChannelTable() {
-	newGroupChannelTable := make(map[string]map[netm.Context]*ChannelInfo)
+func (pm *ProducerManager) GetGroupChannelTable() *ProducerGroupConnTable {
+	newGroupChannelTable := NewProducerGroupConnTable()
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
 
-	pm.GroupChannelTable.foreach(func(k string, v map[netm.Context]*ChannelInfo) {
-		newGroupChannelTable[k] = v
+	pm.GroupChannelTable.foreach(func(k string, v map[string]*ChannelInfo) {
+		newGroupChannelTable.GroupChannelTable[k] = v
 	})
+	return newGroupChannelTable
 }
 
 // registerProducer producer注册
@@ -57,13 +58,13 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 
 	channelTable := pm.GroupChannelTable.Get(group)
 	if nil == channelTable {
-		channelTable = make(map[netm.Context]*ChannelInfo)
+		channelTable = make(map[string]*ChannelInfo)
 		pm.GroupChannelTable.Put(group, channelTable)
 	}
 
-	clientChannelInfoFound, ok := channelTable[channelInfo.Context]
+	clientChannelInfoFound, ok := channelTable[channelInfo.Context.Addr()]
 	if !ok || nil == clientChannelInfoFound {
-		channelTable[channelInfo.Context] = channelInfo
+		channelTable[channelInfo.Context.Addr()] = channelInfo
 		logger.Infof("new producer connected, group: %s channel: %s", group, channelInfo.Addr)
 	}
 
@@ -92,7 +93,7 @@ func (pm *ProducerManager) RegisterProducer(group string, channelInfo *ChannelIn
 		logger.Infof(format, group, groupdHashCode, channelInfo.ToString())
 	}
 
-	if bClientChannelInfoFound {
+	if bClientChannelInfoFound && clientChannelInfoFound != nil {
 		clientChannelInfoFound.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 	}
 
@@ -107,7 +108,7 @@ func (pm *ProducerManager) UnregisterProducer(group string, channelInfo *Channel
 
 	connTable := pm.GroupChannelTable.Get(group)
 	if nil != connTable {
-		delete(connTable, channelInfo.Context)
+		delete(connTable, channelInfo.Context.Addr())
 		logger.Infof("unregister a producer %s from groupChannelTable %s", group, channelInfo.Addr)
 
 		if pm.GroupChannelTable.Size() <= 0 {
@@ -147,7 +148,7 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 
 	defer utils.RecoveredFn()
 
-	pm.GroupChannelTable.ForeachByWPerm(func(group string, chlMap map[netm.Context]*ChannelInfo) {
+	pm.GroupChannelTable.ForeachByWPerm(func(group string, chlMap map[string]*ChannelInfo) {
 		for key, info := range chlMap {
 			diff := timeutil.CurrentTimeMillis() - info.LastUpdateTimestamp
 			if diff > pm.ChannelExpiredTimeout {
@@ -167,10 +168,10 @@ func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 	pm.GroupChannelLock.Lock()
 	defer pm.GroupChannelLock.Unlock()
 
-	pm.GroupChannelTable.ForeachByWPerm(func(group string, clientChannelInfoTable map[netm.Context]*ChannelInfo) {
-		_, ok := clientChannelInfoTable[ctx]
+	pm.GroupChannelTable.ForeachByWPerm(func(group string, clientChannelInfoTable map[string]*ChannelInfo) {
+		_, ok := clientChannelInfoTable[ctx.Addr()]
 		if ok {
-			delete(clientChannelInfoTable, ctx)
+			delete(clientChannelInfoTable, ctx.Addr())
 			format := "NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s"
 			logger.Infof(format, remoteAddr, group)
 		}
@@ -181,6 +182,9 @@ func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 // Author rongzhihong
 // Since 2017/9/17
 func (pm *ProducerManager) PickProducerChannelRandomly(producerGroupHashCode int) *ChannelInfo {
+	pm.HashCodeChannelLock.Lock()
+	defer pm.HashCodeChannelLock.Unlock()
+
 	channelInfoList, ok := pm.hashcodeChannelTable[int64(producerGroupHashCode)]
 	if ok && channelInfoList != nil && channelInfoList.Len() > 0 {
 		index := pm.generateRandmonNum() % channelInfoList.Len()
@@ -199,7 +203,7 @@ func (pm *ProducerManager) PickProducerChannelRandomly(producerGroupHashCode int
 // Since 2017/9/17
 func contains(lst *list.List, value *ChannelInfo) (bool, *list.Element) {
 	for e := lst.Front(); e != nil; e = e.Next() {
-		if info, ok := (e.Value).(*ChannelInfo); ok && info == value {
+		if info, ok := (e.Value).(*ChannelInfo); ok && info.Addr == value.Addr {
 			return true, e
 		}
 	}

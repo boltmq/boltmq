@@ -70,11 +70,8 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType hea
 	} else {
 		if info, ok := infoOld.(*ChannelInfo); ok {
 			if !strings.EqualFold(infoNew.ClientId, info.ClientId) {
-				logger.Errorf(
-					"[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
-					cg.GroupName,                      //
-					info.Context.LocalAddr().String(), //
-					infoNew.Context.LocalAddr().String())
+				logger.Errorf("[BUG] consumer channel exist in broker, but clientId not equal. GROUP: %s OLD: %s NEW: %s ",
+					cg.GroupName, info.ToString(), infoNew.ToString())
 				cg.ConnTable.Put(infoNew.Context.Addr(), infoNew)
 			}
 		}
