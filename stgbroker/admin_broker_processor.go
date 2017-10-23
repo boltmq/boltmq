@@ -578,7 +578,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 		logger.Error(err)
 	}
 
-	channelInfoHashMap := abp.BrokerController.ProducerManager.GroupChannelTable.Get(requestHeader.ProducerGroup)
+	channelInfoHashMap := abp.BrokerController.ProducerManager.GetGroupChannelTable().Get(requestHeader.ProducerGroup)
 	if channelInfoHashMap != nil {
 		bodydata := body.NewProducerConnection()
 		for _, info := range channelInfoHashMap {
@@ -598,8 +598,8 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 		return response, nil
 	}
 
-	response.Code = code.CONSUMER_NOT_ONLINE
-	response.Remark = fmt.Sprintf("the producer group[%s] not online", requestHeader.ProducerGroup)
+	response.Code = code.SYSTEM_ERROR
+	response.Remark = fmt.Sprintf("the producer group[%s] not exist", requestHeader.ProducerGroup)
 	return response, nil
 }
 

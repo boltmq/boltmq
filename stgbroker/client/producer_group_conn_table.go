@@ -1,18 +1,17 @@
 package client
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"sync"
 )
 
 type ProducerGroupConnTable struct {
-	GroupChannelTable map[string]map[netm.Context]*ChannelInfo
+	GroupChannelTable map[string]map[string]*ChannelInfo // key:group value: map[channel.Addr()]ChannelInfo
 	sync.RWMutex      `json:"-"`
 }
 
 func NewProducerGroupConnTable() *ProducerGroupConnTable {
 	return &ProducerGroupConnTable{
-		GroupChannelTable: make(map[string]map[netm.Context]*ChannelInfo),
+		GroupChannelTable: make(map[string]map[string]*ChannelInfo),
 	}
 }
 
@@ -23,13 +22,13 @@ func (table *ProducerGroupConnTable) Size() int {
 	return len(table.GroupChannelTable)
 }
 
-func (table *ProducerGroupConnTable) Put(k string, v map[netm.Context]*ChannelInfo) {
+func (table *ProducerGroupConnTable) Put(k string, v map[string]*ChannelInfo) {
 	table.Lock()
 	defer table.Unlock()
 	table.GroupChannelTable[k] = v
 }
 
-func (table *ProducerGroupConnTable) Get(k string) map[netm.Context]*ChannelInfo {
+func (table *ProducerGroupConnTable) Get(k string) map[string]*ChannelInfo {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -41,7 +40,7 @@ func (table *ProducerGroupConnTable) Get(k string) map[netm.Context]*ChannelInfo
 	return v
 }
 
-func (table *ProducerGroupConnTable) Remove(k string) map[netm.Context]*ChannelInfo {
+func (table *ProducerGroupConnTable) Remove(k string) map[string]*ChannelInfo {
 	table.Lock()
 	defer table.Unlock()
 
@@ -54,7 +53,7 @@ func (table *ProducerGroupConnTable) Remove(k string) map[netm.Context]*ChannelI
 	return v
 }
 
-func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[netm.Context]*ChannelInfo)) {
+func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[string]*ChannelInfo)) {
 	table.RLock()
 	defer table.RUnlock()
 
@@ -66,7 +65,7 @@ func (table *ProducerGroupConnTable) foreach(fn func(k string, v map[netm.Contex
 // ForeachByWPerm 写操作迭代
 // Author rongzhihong
 // Since 2017/10/17
-func (table *ProducerGroupConnTable) ForeachByWPerm(fn func(k string, v map[netm.Context]*ChannelInfo)) {
+func (table *ProducerGroupConnTable) ForeachByWPerm(fn func(k string, v map[string]*ChannelInfo)) {
 	table.Lock()
 	defer table.Unlock()
 
