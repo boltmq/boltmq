@@ -21,7 +21,7 @@ var (
 	def_bodyDataSize    = 20                    // body数据长度
 )
 
-// 启动命令(1) ./tps -p producerGroupId-200 -topic cloudzone123 -tag tagA -h 10.112.68.189:9876 -n 200 -c 50000 -s 20
+// 启动命令(1) ./tps -p producerGroupId-200 -topic cloudzoneA -tag tagA -h 10.112.68.189:9876 -n 200 -c 5000 -s 20
 // 启动命令(2)  ./tps -n 200 -c 50000 -s 20
 func main() {
 
