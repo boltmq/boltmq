@@ -43,6 +43,8 @@ func (com *ConsumerOffsetManager) Load() bool {
 }
 
 func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
+	com.persistLock.RLock()
+	defer com.persistLock.RUnlock()
 	defer utils.RecoveredFn()
 
 	if buf, err := ffjson.Marshal(com.Offsets); err == nil {
@@ -52,6 +54,10 @@ func (com *ConsumerOffsetManager) Encode(prettyFormat bool) string {
 }
 
 func (com *ConsumerOffsetManager) Decode(buf []byte) {
+	com.persistLock.Lock()
+	defer com.persistLock.Unlock()
+	defer utils.RecoveredFn()
+
 	if len(buf) > 0 {
 		ffjson.Unmarshal(buf, com.Offsets)
 	}
