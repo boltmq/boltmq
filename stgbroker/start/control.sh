@@ -34,7 +34,7 @@ function start() {
         return 1
     fi
 
-    nohup ./$app -c $conf >> $logfile 2>&1 &
+    nohup ./$app -c $targetDir/$conf >> $logfile 2>&1 &
     echo $! > $pidfile
     echo "$app started..., pid=$!"
 }
@@ -79,12 +79,13 @@ function pack() {
     build
     git log -1 --pretty=%h > gitversion
     version=`./$app -v`
+
+    rm -rf $targetDir
     mkdir -p $targetDir
     cp -rf $sourceDir .
     packName=$app-$version.tar.gz
     rm -f $packName
     tar -zcvf $packName control.sh $targetDir $app gitversion
-    rm -rf $targetDir
 }
 
 function packbin() {
@@ -93,6 +94,7 @@ function packbin() {
     version=`./$app -v`
     tar -zcvf $app-bin-$version.tar.gz $app gitversion
 }
+
 
 function help() {
     echo "$0 build|pack|packbin|start|stop|restart|status|tail"
