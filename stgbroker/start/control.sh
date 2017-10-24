@@ -12,7 +12,7 @@ logsDir=logs
 pidfile=$logsDir/broker.pid
 logfile=$logsDir/broker.log
 
-mkdir -p $logsDir $targetDir
+mkdir -p $logsDir
 
 function check_pid() {
     if [ -f $pidfile ];then
@@ -79,6 +79,7 @@ function pack() {
     build
     git log -1 --pretty=%h > gitversion
     version=`./$app -v`
+    mkdir -p $targetDir
     cp -rf $sourceDir .
     packName=$app-$version.tar.gz
     rm -f $packName
