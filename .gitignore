@@ -108,5 +108,7 @@ stgbroker/start/broker-bin-v3.2.6.tar.gz
 stgbroker/start/broker-v3.2.6.tar.gz
 stgbroker/start/conf
 
-
-
+target/
+target/*
+target/*.*
+target/**/*.*
