@@ -76,12 +76,15 @@ example/stgclient/producer/oneway/tps/tps.exe
 example/stgclient/producer/oneway/oneway
 example/stgclient/producer/oneway/oneway.exe
 
+example/stgnet/remoting/benchmark/client/client
+example/stgnet/remoting/benchmark/server/server
 
 stgregistry/start/logs/
 stgregistry/start/logs/*.log
 stgregistry/start/nohup.out
 stgregistry/start/g/cfg.json
 stgregistry/start/registry
+stgregistry/start/registery
 stgregistry/start/register
 stgregistry/start/start
 stgregistry/start/start.exe
@@ -101,6 +104,7 @@ stgbroker/start/demo
 stgbroker/start/logs/
 stgbroker/start/logs/*.log
 
+stgbroker/start/broker_start
 stgbroker/start/gitversion
 stgbroker/start/broker-v3.2.6/
 stgbroker/start/broker-bin-v3.2.6/
