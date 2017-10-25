@@ -43,10 +43,10 @@ func (cm *ConsumerManager) GetConsumerGroupInfo(group string) *ConsumerGroupInfo
 	return nil
 }
 
-func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.SubscriptionData {
+func (cm *ConsumerManager) FindSubscriptionData(group, topic string) *heartbeat.SubscriptionDataPlus {
 	consumerGroupInfo := cm.GetConsumerGroupInfo(group)
 	if consumerGroupInfo != nil {
-		return consumerGroupInfo.FindSubscriptionData(topic)
+		return consumerGroupInfo.FindSubscriptionDataPlus(topic)
 	}
 	return nil
 }
@@ -63,8 +63,8 @@ func (cm *ConsumerManager) RegisterConsumer(group string, channelInfo *ChannelIn
 		if err != nil || prev == nil {
 			consumerGroupInfo = tmp
 		} else {
-			if consumerGroupInfo, ok := prev.(*ConsumerGroupInfo); ok {
-				consumerGroupInfo = consumerGroupInfo
+			if info, ok := prev.(*ConsumerGroupInfo); ok {
+				consumerGroupInfo = info
 			}
 		}
 	}
@@ -90,7 +90,7 @@ func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *Channel
 			if info.ConnTable.IsEmpty() {
 				remove, _ := cm.consumerTable.Remove(group)
 				if remove != nil {
-					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}
 			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, info.GetAllChannel())

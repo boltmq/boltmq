@@ -15,7 +15,7 @@ const (
 	MAX_VALUE             = 0x7fffffffffffffff
 )
 
-// ConsumerOffsetManager Consumer消费管理
+// ConsumerOffsetManager Consumer消费进度管理
 // Author gaoyanlei
 // Since 2017/8/9
 type ConsumerOffsetManager struct {
@@ -109,10 +109,10 @@ func (com *ConsumerOffsetManager) QueryOffset(group, topic string, queueId int) 
 	return -1
 }
 
-// QueryOffsetByGreoupAndTopic 获取group与topuic所有队列offset
+// QueryOffsetByGroupAndTopic 获取group与topuic所有队列offset
 // Author rongzhihong
 // Since 2017/9/12
-func (com *ConsumerOffsetManager) QueryOffsetByGreoupAndTopic(group, topic string) map[int]int64 {
+func (com *ConsumerOffsetManager) QueryOffsetByGroupAndTopic(group, topic string) map[int]int64 {
 	key := topic + TOPIC_GROUP_SEPARATOR + group
 	offsetTable := com.Offsets.Get(key)
 	return offsetTable
