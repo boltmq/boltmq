@@ -23,26 +23,26 @@ func TestConsumerOffsetManagerQueryOffset(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
-	fmt.Println(consumerOffsetManager.QueryOffset("SimpleConsumerGroupIdQB-test","TopicTestMQ",3))
+	fmt.Println(consumerOffsetManager.QueryOffset("SimpleConsumerGroupIdQB-test", "TopicTestMQ", 3))
 }
 
-func TestQueryOffsetByGreoupAndTopic(t *testing.T) {
+func TestQueryOffsetByGroupAndTopic(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
-	fmt.Println(consumerOffsetManager.QueryOffsetByGreoupAndTopic("SimpleConsumerGroupIdQB-test","TopicTestMQ"))
+	fmt.Println(consumerOffsetManager.QueryOffsetByGroupAndTopic("SimpleConsumerGroupIdQB-test", "TopicTestMQ"))
 }
 
 func TestCommitOffset(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
-	consumerOffsetManager.CommitOffset("SimpleConsumerGroupIdQB-test","TopicTestMQ",3,4)
+	consumerOffsetManager.CommitOffset("SimpleConsumerGroupIdQB-test", "TopicTestMQ", 3, 4)
 	consumerOffsetManager.Persist()
 }
 
 func TestScanUnsubscribedTopic(t *testing.T) {
-		// TODO
+	// TODO
 }
 
 func TestWhichTopicByConsumer(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
+	set "github.com/deckarep/golang-set"
 	"strings"
 )
 
@@ -14,7 +15,7 @@ import (
 // Since 2017/8/17
 type ConsumerGroupInfo struct {
 	GroupName           string
-	SubscriptionTable   *sync.Map // key:Topic, val:SubscriptionData
+	SubscriptionTable   *sync.Map // key:Topic, val:SubscriptionDataPlus
 	ConnTable           *sync.Map // key: Channel.Addr() val: ChannelInfo
 	ConsumeType         heartbeat.ConsumeType
 	MessageModel        heartbeat.MessageModel
@@ -34,16 +35,34 @@ func NewConsumerGroupInfo(groupName string, consumeType heartbeat.ConsumeType, m
 	return ConsumerGroupInfo
 }
 
-func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.SubscriptionData {
+func (cg *ConsumerGroupInfo) FindSubscriptionDataPlus(topic string) *heartbeat.SubscriptionDataPlus {
 	value, err := cg.SubscriptionTable.Get(topic)
-	if err != nil {
+	if err != nil || value == nil {
 		return nil
 	}
-
-	if subscriptionData, ok := value.(*heartbeat.SubscriptionData); ok {
+	if subscriptionData, ok := value.(*heartbeat.SubscriptionDataPlus); ok {
 		return subscriptionData
 	}
+	return nil
+}
 
+func (cg *ConsumerGroupInfo) FindSubscriptionData(topic string) *heartbeat.SubscriptionData {
+	value, err := cg.SubscriptionTable.Get(topic)
+	if err != nil || value == nil {
+		return nil
+	}
+	if sdPlus, ok := value.(*heartbeat.SubscriptionDataPlus); ok {
+		subscriptionData := &heartbeat.SubscriptionData{
+			Topic:           sdPlus.Topic,
+			SUB_ALL:         sdPlus.SUB_ALL,
+			SubString:       sdPlus.SubString,
+			SubVersion:      sdPlus.SubVersion,
+			TagsSet:         set.NewSet(sdPlus.TagsSet),
+			CodeSet:         set.NewSet(sdPlus.CodeSet),
+			ClassFilterMode: sdPlus.ClassFilterMode,
+		}
+		return subscriptionData
+	}
 	return nil
 }
 
@@ -111,8 +130,7 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Con
 // Since 2017/9/11
 func (cg *ConsumerGroupInfo) GetAllChannel() []netm.Context {
 	result := []netm.Context{}
-	iterator := cg.ConnTable.Iterator()
-	for iterator.HasNext() {
+	for iterator := cg.ConnTable.Iterator(); iterator.HasNext(); {
 		_, value, _ := iterator.Next()
 		if channel, ok := value.(*ChannelInfo); ok {
 			result = append(result, channel.Context)
@@ -126,15 +144,12 @@ func (cg *ConsumerGroupInfo) GetAllChannel() []netm.Context {
 // Since 2017/9/14
 func (cg *ConsumerGroupInfo) GetAllClientId() []string {
 	result := []string{}
-
-	iterator := cg.ConnTable.Iterator()
-	for iterator.HasNext() {
+	for iterator := cg.ConnTable.Iterator(); iterator.HasNext(); {
 		_, value, _ := iterator.Next()
 		if channel, ok := value.(*ChannelInfo); ok {
 			result = append(result, channel.ClientId)
 		}
 	}
-
 	return result
 }
 
@@ -170,10 +185,10 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 			continue
 		}
 
-		if oldSub, ok := old.(*heartbeat.SubscriptionData); ok {
+		if oldSub, ok := old.(*heartbeat.SubscriptionDataPlus); ok {
 			if sub.SubVersion > oldSub.SubVersion {
 				if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
-					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, old, sub)
+					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, oldSub, sub)
 				}
 				cg.SubscriptionTable.Put(sub.Topic, sub)
 			}
@@ -181,8 +196,7 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 	}
 
 	// 删除老的订阅关系
-	subIt := cg.SubscriptionTable.Iterator()
-	for subIt.HasNext() {
+	for subIt := cg.SubscriptionTable.Iterator(); subIt.HasNext(); {
 		exist := false
 		oldTopic, oldValue, _ := subIt.Next()
 		for _, subItem := range subList {
@@ -207,8 +221,7 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 // Author rongzhihong
 // Since 2017/9/17
 func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
-	iterator := cg.ConnTable.Iterator()
-	for iterator.HasNext() {
+	for iterator := cg.ConnTable.Iterator(); iterator.HasNext(); {
 		_, value, _ := iterator.Next()
 		if info, ok := value.(*ChannelInfo); ok {
 			if strings.EqualFold(info.ClientId, clientId) {
@@ -224,8 +237,7 @@ func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
 // Since 2017/9/17
 func (cg *ConsumerGroupInfo) SubscriptionTableToMap() map[interface{}]interface{} {
 	subscriptionDataMap := map[interface{}]interface{}{}
-	iterator := cg.SubscriptionTable.Iterator()
-	for iterator.HasNext() {
+	for iterator := cg.SubscriptionTable.Iterator(); iterator.HasNext(); {
 		k, v, _ := iterator.Next()
 		subscriptionDataMap[k] = v
 	}

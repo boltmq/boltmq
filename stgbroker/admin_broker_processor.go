@@ -977,7 +977,7 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 
 	correctionOffset := abp.BrokerController.ConsumerOffsetManager.QueryMinOffsetInAllGroup(requestHeader.Topic, requestHeader.FilterGroups)
 
-	compareOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffsetByGreoupAndTopic(requestHeader.CompareGroup, requestHeader.Topic)
+	compareOffset := abp.BrokerController.ConsumerOffsetManager.QueryOffsetByGroupAndTopic(requestHeader.CompareGroup, requestHeader.Topic)
 
 	if compareOffset != nil && len(compareOffset) > 0 {
 		for queueId, v := range compareOffset {
