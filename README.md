@@ -7,9 +7,7 @@
 
 
 ### smartgo是什么？
-SmartGo是什么是参考AMQP、JMS、Mqtt协议、Kafka，RocketMQ，RabbitMq，Nsq多款中间件，
-以及aws，ali、Microsoft等多家云平台开发的智能中间件，
-使用golang语言全新开发的一款分布式、队列模型的智能中间件，具有以下特点：
+SmartGo是能够支持主流消息队列功能及满足物联网MQTT数千万长连接设备推送消息使用golang语言全新开发的一款分布式、队列模型的智能中间件，具有以下特点：
 
 * 支持point-point、pub-sub、request-reply等多种模式
 * 支持严格的消息顺序
