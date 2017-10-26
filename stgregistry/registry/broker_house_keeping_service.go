@@ -20,9 +20,8 @@ type BrokerHousekeepingService struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func NewBrokerHousekeepingService(controller *DefaultNamesrvController) netm.ContextListener {
-	brokerHousekeepingService := &BrokerHousekeepingService{
-		NamesrvController: controller,
-	}
+	brokerHousekeepingService := new(BrokerHousekeepingService)
+	brokerHousekeepingService.NamesrvController = controller
 	return brokerHousekeepingService
 }
 
@@ -41,7 +40,7 @@ func (self *BrokerHousekeepingService) OnContextClose(ctx netm.Context) {
 		logger.Error("OnContextClose() net.conn is nil")
 		return
 	}
-	logger.Warn("BrokerHousekeepingService.OnContextClose() --> %s", ctx.ToString())
+	logger.Warn("BrokerHousekeepingService.OnContextClose() handle request. %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
@@ -53,7 +52,7 @@ func (self *BrokerHousekeepingService) OnContextError(ctx netm.Context) {
 		logger.Error("OnContextError() net.conn is nil")
 		return
 	}
-	logger.Warn("BrokerHousekeepingService.OnContextError() --> %s", ctx.ToString())
+	logger.Warn("BrokerHousekeepingService.OnContextError() handle request. %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }
 
@@ -65,6 +64,6 @@ func (self *BrokerHousekeepingService) OnContextIdle(ctx netm.Context) {
 		logger.Error("OnContextIdle() net.conn is nil")
 		return
 	}
-	logger.Warn("BrokerHousekeepingService.OnContextIdle() --> %s", ctx.ToString())
+	logger.Warn("BrokerHousekeepingService.OnContextIdle() handle request. %s", ctx.ToString())
 	self.NamesrvController.RouteInfoManager.onChannelDestroy(ctx.RemoteAddr().String(), ctx)
 }

@@ -2,6 +2,7 @@ package namesrv
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"strings"
 )
 
@@ -25,18 +26,21 @@ func NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName string
 	return unRegisterBrokerRequestHeader
 }
 
-func (self *UnRegisterBrokerRequestHeader) CheckFields() error {
-	if strings.TrimSpace(self.BrokerName) == "" {
+func (header *UnRegisterBrokerRequestHeader) CheckFields() error {
+	if strings.TrimSpace(header.BrokerName) == "" {
 		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerName is empty")
 	}
-	if strings.TrimSpace(self.BrokerAddr) == "" {
+	if strings.TrimSpace(header.BrokerAddr) == "" {
 		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerAddr is empty")
 	}
-	if strings.TrimSpace(self.ClusterName) == "" {
+	if !stgcommon.CheckIpAndPort(header.BrokerAddr) {
+		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerAddr[%s] is invalid.", header.BrokerAddr)
+	}
+	if strings.TrimSpace(header.ClusterName) == "" {
 		return fmt.Errorf("UnRegisterBrokerRequestHeader.ClusterName is empty")
 	}
-	if self.BrokerId < 0 {
-		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerId is invalid")
+	if header.BrokerId < 0 {
+		return fmt.Errorf("UnRegisterBrokerRequestHeader.BrokerId[%d] is invalid", header.BrokerId)
 	}
 	return nil
 }

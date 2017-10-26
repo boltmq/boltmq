@@ -299,7 +299,7 @@ func (self *MapedFileQueue) deleteLastMapedFile() {
 		lastMapedFile := last.Value.(*MapedFile)
 		lastMapedFile.destroy(1000)
 		self.mapedFiles.Remove(last)
-		logger.Info("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
+		logger.Infof("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
 	}
 }
 

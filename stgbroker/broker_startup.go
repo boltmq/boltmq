@@ -44,6 +44,7 @@ func Start(stopChan chan bool, smartgoBrokerFilePath string) *BrokerController {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/20
 func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
+	defer utils.RecoveredFn()
 	cfgName := getSmartgoBrokerConfigName(smartgoBrokerFilePath...)
 	cfgPath := getSmartgoBrokerConfigPath(cfgName)
 

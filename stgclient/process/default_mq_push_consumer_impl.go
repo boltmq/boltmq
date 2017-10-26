@@ -360,7 +360,7 @@ func (pushConsumerImpl *DefaultMQPushConsumerImpl) updateTopicSubscribeInfoWhenS
 		logger.Infof("subscriptionInner size = %d", subTable.Size())
 		for itor := subTable.Iterator(); itor.HasNext(); {
 			topic, value, _ := itor.Next()
-			logger.Infof("subscriptionInner info ----> %s, %s", topic.(string), value.(*heartbeat.SubscriptionData).ToString())
+			logger.Infof("subscriptionInner info: %s, %s", topic.(string), value.(*heartbeat.SubscriptionData).ToString())
 			pushConsumerImpl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(topic.(string))
 		}
 	}

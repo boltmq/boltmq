@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
 	"github.com/toolkits/file"
 	"strings"
@@ -16,7 +17,7 @@ import (
 // Since: 2017/9/8
 type KVConfigManager struct {
 	ConfigTable       map[string]map[string]string // 数据格式：Namespace[Key[Value]]
-	ReadWriteLock     sync.RWMutex
+	ReadWriteLock     *sync.RWMutex
 	NamesrvController *DefaultNamesrvController
 }
 
@@ -28,6 +29,7 @@ func NewKVConfigManager(controller *DefaultNamesrvController) *KVConfigManager {
 	kvConfigManager := &KVConfigManager{
 		ConfigTable:       make(map[string]map[string]string),
 		NamesrvController: controller,
+		ReadWriteLock:     new(sync.RWMutex),
 	}
 	return kvConfigManager
 }
@@ -39,15 +41,13 @@ func (self *KVConfigManager) printAllPeriodically() {
 	self.ReadWriteLock.RLock()
 	defer self.ReadWriteLock.RUnlock()
 
-	if len(self.ConfigTable) > 0 {
+	if self.ConfigTable != nil && len(self.ConfigTable) > 0 {
 		logger.Info("--------------------------------------------------------")
 		logger.Info("configTable size: %d", len(self.ConfigTable))
-		if self.ConfigTable != nil {
-			for namespace, kvTable := range self.ConfigTable {
-				if kvTable != nil {
-					for key, value := range kvTable {
-						logger.Info("configTable namespace=%s, key=%s, value=%s", namespace, key, value)
-					}
+		for namespace, kvTable := range self.ConfigTable {
+			if kvTable != nil {
+				for key, value := range kvTable {
+					logger.Info("configTable namespace=%s, key=%s, value=%s", namespace, key, value)
 				}
 			}
 		}
@@ -58,6 +58,8 @@ func (self *KVConfigManager) printAllPeriodically() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) persist() {
+	defer utils.RecoveredFn()
+
 	self.ReadWriteLock.RLock()
 	kvConfigWrapper := NewKVConfigSerializeWrapper(self.ConfigTable)
 	content := kvConfigWrapper.CustomEncode(kvConfigWrapper)
@@ -76,6 +78,7 @@ func (self *KVConfigManager) persist() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) deleteKVConfigByValue(namespace, value string) {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.Lock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		cloneKvTable := make(map[string]string)
@@ -99,6 +102,7 @@ func (self *KVConfigManager) deleteKVConfigByValue(namespace, value string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		buf := new(bytes.Buffer)
@@ -120,6 +124,7 @@ func (self *KVConfigManager) getKVConfigByValue(namespace, value string) string 
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVConfig(namespace, key string) string {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		if value, ok := kvTable[key]; ok {
@@ -134,6 +139,7 @@ func (self *KVConfigManager) getKVConfig(namespace, key string) string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.RLock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		tb := body.NewKVTable()
@@ -151,6 +157,7 @@ func (self *KVConfigManager) getKVListByNamespace(namespace string) []byte {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) deleteKVConfig(namespace, key string) {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.Lock()
 	if kvTable, ok := self.ConfigTable[namespace]; ok && kvTable != nil {
 		format := "deleteKVConfig delete a config item, Namespace: %s Key: %s Value: %s"
@@ -167,6 +174,7 @@ func (self *KVConfigManager) deleteKVConfig(namespace, key string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
+	defer utils.RecoveredFn()
 	self.ReadWriteLock.Lock()
 	kvTable, ok := self.ConfigTable[namespace]
 	if !ok || kvTable == nil {
@@ -190,6 +198,7 @@ func (self *KVConfigManager) putKVConfig(namespace, key, value string) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *KVConfigManager) load() error {
+	defer utils.RecoveredFn()
 	// 如果kvConfig.json文件不存在，则创建
 	cfgPath := self.NamesrvController.NamesrvConfig.GetKvConfigPath()
 	cfgName := self.NamesrvController.NamesrvConfig.GetKvConfigName()

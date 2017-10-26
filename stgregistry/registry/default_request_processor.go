@@ -10,6 +10,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
@@ -83,7 +84,7 @@ func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *p
 	case code.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
 		return self.getHasUnitSubUnUnitTopicList(ctx, request) // code=313, 获取含有单元化订阅组的非单元化 Topic 列表
 	default:
-		logger.Warn("invalid request. %s", request.ToString())
+		logger.Warn("invalid request. %s,  %s", ctx.ToString(), request.ToString())
 	}
 
 	return nil, nil
@@ -93,6 +94,7 @@ func (self *DefaultRequestProcessor) ProcessRequest(ctx netm.Context, request *p
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
@@ -144,6 +146,7 @@ func (self *DefaultRequestProcessor) registerBrokerWithFilterServer(ctx netm.Con
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVListByNamespace(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.GetKVListByNamespaceRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -199,6 +202,7 @@ func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(ctx netm.Context
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand(&namesrv.WipeWritePermOfBrokerResponseHeader{})
 
 	requestHeader := &namesrv.WipeWritePermOfBrokerRequestHeader{}
@@ -226,6 +230,7 @@ func (self *DefaultRequestProcessor) wipeWritePermOfBroker(ctx netm.Context, req
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getBrokerClusterInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getAllClusterInfo()
 	response.Body = body
@@ -238,6 +243,7 @@ func (self *DefaultRequestProcessor) getBrokerClusterInfo(ctx netm.Context, requ
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &namesrv.GetRouteInfoRequestHeader{}
@@ -279,6 +285,7 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) putKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.PutKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -296,6 +303,7 @@ func (self *DefaultRequestProcessor) putKVConfig(ctx netm.Context, request *prot
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVConfig(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -340,6 +348,7 @@ func (self *DefaultRequestProcessor) deleteKVConfig(ctx netm.Context, request *p
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand(&namesrv.RegisterBrokerResponseHeader{})
 
 	requestHeader := &namesrv.RegisterBrokerRequestHeader{}
@@ -391,6 +400,7 @@ func (self *DefaultRequestProcessor) registerBroker(ctx netm.Context, request *p
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	logger.Info("DefaultRequestProcessor.unRegisterBroker start ...")
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.UnRegisterBrokerRequestHeader{}
@@ -417,6 +427,7 @@ func (self *DefaultRequestProcessor) unRegisterBroker(ctx netm.Context, request 
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand(&namesrv.GetKVConfigResponseHeader{})
 	requestHeader := &namesrv.GetKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -445,6 +456,7 @@ func (self *DefaultRequestProcessor) getKVConfigByValue(ctx netm.Context, reques
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) deleteKVConfigByValue(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &namesrv.DeleteKVConfigRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -463,6 +475,7 @@ func (self *DefaultRequestProcessor) deleteKVConfigByValue(ctx netm.Context, req
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.GetTopicsByClusterRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -482,6 +495,7 @@ func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, reques
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *DefaultRequestProcessor) getSystemTopicListFromNamesrv(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	defer utils.RecoveredFn()
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getSystemTopicList()
 
