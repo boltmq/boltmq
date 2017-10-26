@@ -1,6 +1,7 @@
 package process
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
@@ -38,6 +39,11 @@ func (adminImpl *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
 
 func (adminImpl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
 	topicRouteData := adminImpl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
+	if topicRouteData == nil {
+		format := "topicRouteData is nil, create topic failed. key=%s, newTopic=%s"
+		panic(fmt.Sprintf(format, key, newTopic))
+		return
+	}
 	brokerDataList := topicRouteData.BrokerDatas
 	if brokerDataList != nil && len(brokerDataList) > 0 {
 		var brokers route.BrokerDatas = brokerDataList

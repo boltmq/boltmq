@@ -34,10 +34,9 @@ func (item *MomentStatsItem) Init() {
 	// 分钟整点执行
 	var diff float64 = float64(stgcommon.ComputNextMinutesTimeMillis() - timeutil.CurrentTimeMillis())
 	var delay int = int(math.Abs(diff))
-	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delay)*time.Millisecond, 5*time.Minute,
-		func() {
-			item.printAtMinutes()
-		})
+	printAtMinutesTicker := timeutil.NewTicker(false, time.Duration(delay)*time.Millisecond, 5*time.Minute, func() {
+		item.printAtMinutes()
+	})
 	printAtMinutesTicker.Start()
 }
 

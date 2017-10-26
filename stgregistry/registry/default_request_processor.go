@@ -3,7 +3,7 @@ package registry
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/help"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
@@ -269,7 +269,7 @@ func (self *DefaultRequestProcessor) getRouteInfoByTopic(ctx netm.Context, reque
 
 	response.Code = code.TOPIC_NOT_EXIST
 	remark := "[no topic route info in name server for the topic: %s], faq: %s"
-	response.Remark = fmt.Sprintf(remark, topic, faq.SuggestTodo(faq.APPLY_TOPIC_URL))
+	response.Remark = fmt.Sprintf(remark, topic, help.SuggestTodo(help.APPLY_TOPIC_URL))
 	logger.Info("getRouteInfoByTopic() end. response is %s", response.ToString())
 
 	return response, nil
