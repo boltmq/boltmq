@@ -1,4 +1,4 @@
-package faq
+package help
 
 import (
 	"fmt"

@@ -30,6 +30,9 @@ type ConsumerDataPlus struct {
 // Author: rongzhihong
 // Since:  2017/9/14
 func (self *ConsumerData) ToString() string {
+	if self == nil {
+		return ""
+	}
 	format := "ConsumerData [groupName=%s, consumeType=%s, messageModel=%s, consumeFromWhere=%s, unitMode=%s, subscriptionDataSet=%s]"
 	content := fmt.Sprintf(format, self.GroupName, self.ConsumeType, self.MessageModel, self.ConsumeFromWhere, self.UnitMode, self.SubscriptionDataSet)
 	return content

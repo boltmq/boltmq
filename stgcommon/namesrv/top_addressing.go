@@ -3,7 +3,7 @@ package namesrv
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/help/faq"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/help"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -63,7 +63,7 @@ func (self *TopAddressing) fetchNameServerAddr(verbose bool, timeoutMills int64)
 	if verbose {
 		format := "connect to %s failed, maybe the domain name %s not bind in /etc/hosts"
 		errorMsg := fmt.Sprintf(format, self.wsAddr, stgcommon.WS_DOMAIN_NAME)
-		errorMsg += faq.SuggestTodo(faq.NAME_SERVER_ADDR_NOT_EXIST_URL)
+		errorMsg += help.SuggestTodo(help.NAME_SERVER_ADDR_NOT_EXIST_URL)
 		fmt.Println(errorMsg)
 	}
 
