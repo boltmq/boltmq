@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
@@ -282,14 +283,14 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 	bodyLen := mappedByteBuffer.ReadInt32()
 	if bodyLen > 0 {
 		if readBody {
-			mappedByteBuffer.Read(make([]byte, bodyLen))
-
+			bodyContent := make([]byte, bodyLen)
+			mappedByteBuffer.Read(bodyContent)
 			if checkCRC {
-				// TODO UtilAll.crc32(bytesContent, 0, bodyLen)
-				if bodyCRC != -1 {
-					//TODO
+				crc, _ := stgcommon.Crc32(bodyContent)
+				if int32(crc) != bodyCRC {
+					logger.Warnf("CRC check failed crc:%d, bodyCRC:%d", crc, bodyCRC)
+					return &DispatchRequest{msgSize: -1}
 				}
-
 			}
 		} else {
 			mappedByteBuffer.ReadPos = mappedByteBuffer.ReadPos + int(bodyLen)
