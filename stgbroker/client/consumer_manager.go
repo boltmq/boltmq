@@ -88,8 +88,8 @@ func (cm *ConsumerManager) UnregisterConsumer(group string, channelInfo *Channel
 		if info, ok := consumerGroupInfo.(*ConsumerGroupInfo); ok {
 			info.UnregisterChannel(channelInfo)
 			if info.ConnTable.IsEmpty() {
-				remove, _ := cm.consumerTable.Remove(group)
-				if remove != nil {
+				removeOld, _ := cm.consumerTable.Remove(group)
+				if removeOld != nil {
 					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}

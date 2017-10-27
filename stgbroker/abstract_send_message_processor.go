@@ -95,16 +95,17 @@ func (asmp *AbstractSendMessageProcessor) msgCheck(ctx netm.Context, requestHead
 	if topicConfig == nil {
 		topicSysFlag := 0
 		if requestHeader.UnitMode {
-			topicSysFlag = sysflag.TopicBuildSysFlag(true, false)
 			if strings.Contains(requestHeader.Topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
 				topicSysFlag = sysflag.TopicBuildSysFlag(false, true)
+			} else {
+				topicSysFlag = sysflag.TopicBuildSysFlag(true, false)
 			}
 		}
 
 		topicConfig, _ = asmp.BrokerController.TopicConfigManager.CreateTopicInSendMessageMethod(
 			requestHeader.Topic,                 // 1
 			requestHeader.DefaultTopic,          // 2
-			ctx.LocalAddr().String(),            // 3
+			ctx.Addr(),                          // 3
 			requestHeader.DefaultTopicQueueNums, // 4
 			topicSysFlag,                        // 5
 		)
@@ -154,7 +155,7 @@ func DoResponse(ctx netm.Context,
 	if !request.IsOnewayRPC() {
 		_, err := ctx.WriteSerialObject(response)
 		if err != nil {
-			logger.Errorf("DoResponse:%s", err.Error())
+			logger.Errorf("SendMessageProcessor process request over, but response failed:%s", err.Error())
 			return
 		}
 	}

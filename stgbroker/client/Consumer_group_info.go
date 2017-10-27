@@ -81,8 +81,8 @@ func (cg *ConsumerGroupInfo) UpdateChannel(infoNew *ChannelInfo, consumeType hea
 	if infoOld == nil || err != nil {
 		prev, err := cg.ConnTable.Put(infoNew.Context.Addr(), infoNew)
 		if prev == nil || err != nil {
-			logger.Infof("new consumer connected, group: %s %v %v channel: %s", cg.GroupName, consumeType,
-				messageModel, infoNew.Context.LocalAddr().String())
+			logger.Infof("new consumer connected, group: %s, consumeType:%v, messageModel:%v, channel: %s", cg.GroupName, consumeType,
+				messageModel, infoNew.Context.Addr())
 			updated = true
 		}
 		infoOld = infoNew

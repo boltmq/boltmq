@@ -158,6 +158,9 @@ func (pm *ProducerManager) ScanNotActiveChannel() {
 				info.Context.Close()
 			}
 		}
+		if len(chlMap) <= 0 {
+			delete(pm.GroupChannelTable.GroupChannelTable, group)
+		}
 	})
 }
 
@@ -174,6 +177,9 @@ func (pm *ProducerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 			delete(clientChannelInfoTable, ctx.Addr())
 			format := "NETTY EVENT: remove channel[%s] from ProducerManager groupChannelTable, producer group: %s"
 			logger.Infof(format, remoteAddr, group)
+		}
+		if len(clientChannelInfoTable) <= 0 {
+			delete(pm.GroupChannelTable.GroupChannelTable, group)
 		}
 	})
 }

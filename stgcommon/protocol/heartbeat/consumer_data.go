@@ -37,3 +37,12 @@ func (self *ConsumerData) ToString() string {
 	content := fmt.Sprintf(format, self.GroupName, self.ConsumeType, self.MessageModel, self.ConsumeFromWhere, self.UnitMode, self.SubscriptionDataSet)
 	return content
 }
+
+// ToString 格式ConsumerDataPlus信息
+// Author: rongzhihong
+// Since:  2017/9/14
+func (self *ConsumerDataPlus) ToString() string {
+	format := "ConsumerData [groupName=%s, consumeType=%v, messageModel=%v, consumeFromWhere=%v, unitMode=%v, subscriptionDataSet=%#v]"
+	content := fmt.Sprintf(format, self.GroupName, self.ConsumeType, self.MessageModel, self.ConsumeFromWhere, self.UnitMode, self.SubscriptionDataSet)
+	return content
+}
