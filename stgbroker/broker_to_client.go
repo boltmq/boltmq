@@ -73,7 +73,7 @@ func (b2c *Broker2Client) CallClient(ctx netm.Context, request *protocol.Remotin
 	return b2c.BrokerController.RemotingServer.InvokeSync(ctx, request, 10000)
 }
 
-// ResetOffset Broker 主动通知 Consumer，offset 需要进行重置列表发生变化
+// ResetOffset Broker 主动通知 Consumer，offset列表发生变化，需要进行重置
 // Author rongzhihong
 // Since 2017/9/18
 func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isForce bool) *protocol.RemotingCommand {

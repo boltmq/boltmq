@@ -7,7 +7,7 @@ import (
 )
 
 type SubscriptionGroupTable struct {
-	SubscriptionGroupTable map[string]*SubscriptionGroupConfig `json:"subscriptionGroupTable"`
+	SubscriptionGroupTable map[string]*SubscriptionGroupConfig `json:"subscriptionGroupTable"` // key:group
 	DataVersion            stgcommon.DataVersion               `json:"dataVersion"`
 	sync.RWMutex           `json:"-"`
 }

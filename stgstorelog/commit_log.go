@@ -63,7 +63,7 @@ func (self *CommitLog) Load() bool {
 
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
 	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
-	// TOD0 crc32
+	// TODO crc32算出冗余值后，recoverAbnormally修复数据有问题，会出现consumer_push死循环的发送消息
 	msg.BodyCRC = 0
 
 	// TODO 事务消息处理

@@ -1,6 +1,7 @@
 package stgbroker
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/longpolling"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/mqtrace"
 	"git.oschina.net/cloudzone/smartgo/stgbroker/pagecache"
@@ -51,24 +52,21 @@ func (pull *PullMessageProcessor) ProcessRequest(ctx netm.Context, request *prot
 func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, request *protocol.RemotingCommand) {
 	go func() {
 		//logger.Info("....唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
-
 		response, err := pull.processRequest(request, ctx, false)
 		if err != nil {
 			logger.Errorf("ExecuteRequestWhenWakeup run, throw error:%s", err.Error())
 			return
 		}
-
 		if response == nil {
 			return
 		}
 
 		response.Opaque = request.Opaque
 		response.MarkResponseType()
-
 		_, err = ctx.WriteSerialObject(response)
 		if err != nil {
-			logger.Errorf("processRequestWrapper response to %s failed %s. ### request:%s, ### response:%s",
-				ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
+			format := "pullMessage response to %s failed %s. ### request:%s, ### response:%s"
+			logger.Errorf(format, ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
 	}()
 }
@@ -163,7 +161,7 @@ func (pull *PullMessageProcessor) processRequest(request *protocol.RemotingComma
 
 		if !subscriptionGroupConfig.ConsumeBroadcastEnable && consumerGroupInfo.MessageModel == heartbeat.BROADCASTING {
 			response.Code = code.NO_PERMISSION
-			response.Remark = "the consumer group[" + requestHeader.ConsumerGroup
+			response.Remark = fmt.Sprintf("the consumer group[%s] can not consume by broadcast way", requestHeader.ConsumerGroup)
 			return response, nil
 		}
 
@@ -348,6 +346,7 @@ func (pull *PullMessageProcessor) generateOffsetMovedEvent(event *topic.OffsetMo
 	msgInner.SetKeys(event.ConsumerGroup)
 	msgInner.Body = event.CustomEncode(event)
 	msgInner.Flag = 0
+	msgInner.PropertiesString = message.MessageProperties2String(msgInner.Properties)
 	msgInner.TagsCode = stgstorelog.TagsString2tagsCode(stgcommon.SINGLE_TAG, msgInner.GetTags())
 
 	msgInner.QueueId = int32(0)

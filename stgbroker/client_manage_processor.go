@@ -57,7 +57,7 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 	heartbeatDataPlus := &heartbeat.HeartbeatDataPlus{}
 	heartbeatDataPlus.Decode(request.Body)
 	consumerDataSet := heartbeatDataPlus.ConsumerDataSet
-	channelInfo := client.NewClientChannelInfo(ctx, heartbeatDataPlus.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
+	channelInfo := client.NewClientChannelInfo(ctx, heartbeatDataPlus.ClientID, request.Language, ctx.Addr(), request.Version)
 	for _, consumerData := range consumerDataSet {
 		subscriptionGroupConfig :=
 			cmp.BrokerController.SubscriptionGroupManager.FindSubscriptionGroupConfig(consumerData.GroupName)
@@ -77,7 +77,7 @@ func (cmp *ClientManageProcessor) heartBeat(ctx netm.Context, request *protocol.
 		changed := cmp.BrokerController.ConsumerManager.RegisterConsumer(consumerData.GroupName, channelInfo,
 			consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
 		if changed {
-			logger.Infof("registerConsumer info changed {} %s", consumerData, ctx.RemoteAddr().String())
+			logger.Infof("registerConsumer info changed: RemoteAddr:%s, consumerData:%v", ctx.RemoteAddr().String(), consumerData.ToString())
 		}
 	}
 
@@ -184,7 +184,7 @@ func (cmp *ClientManageProcessor) updateConsumerOffset(ctx netm.Context, request
 		context := &mqtrace.ConsumeMessageContext{}
 		context.ConsumerGroup = requestHeader.ConsumerGroup
 		context.Topic = requestHeader.Topic
-		context.ClientHost = ctx.LocalAddr().String()
+		context.ClientHost = ctx.RemoteAddr().String()
 		context.Success = true
 		context.Status = listener.CONSUME_SUCCESS.String()
 
@@ -227,8 +227,9 @@ func (cmp *ClientManageProcessor) getConsumerListByGroup(ctx netm.Context, reque
 			response.Code = code.SUCCESS
 			response.Remark = ""
 			return response, nil
+		} else {
+			logger.Warnf("getAllClientId failed, %s %s", requestHeader.ConsumerGroup, ctx.RemoteAddr().String())
 		}
-
 	} else {
 		logger.Warnf("getConsumerGroupInfo failed, %s %s", requestHeader.ConsumerGroup, ctx.RemoteAddr().String())
 	}

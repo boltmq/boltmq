@@ -29,6 +29,7 @@ func NewTopicConfigManager(brokerController *BrokerController) *TopicConfigManag
 	var topicConfigManager = new(TopicConfigManager)
 	topicConfigManager.BrokerController = brokerController
 	topicConfigManager.TopicConfigSerializeWrapper = body.NewTopicConfigSerializeWrapper()
+	topicConfigManager.SystemTopicList = set.NewSet()
 	topicConfigManager.init()
 	topicConfigManager.ConfigManagerExt = NewConfigManagerExt(topicConfigManager)
 	topicConfigManager.DataVersion = stgcommon.NewDataVersion()
@@ -41,7 +42,6 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.SELF_TEST_TOPIC
 		topicConfig := stgcommon.NewTopicConfig(topicName)
-		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -56,7 +56,6 @@ func (self *TopicConfigManager) init() {
 		if autoCreateTopicEnable {
 			topicName := stgcommon.DEFAULT_TOPIC
 			topicConfig := stgcommon.NewTopicConfig(topicName)
-			self.SystemTopicList = set.NewSet()
 			self.SystemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
 			topicConfig.WriteQueueNums = self.BrokerController.BrokerConfig.DefaultTopicQueueNums
@@ -70,7 +69,6 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.BENCHMARK_TOPIC
 		topicConfig := stgcommon.NewTopicConfig(topicName)
-		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
@@ -82,7 +80,6 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerClusterName
 		topicConfig := stgcommon.NewTopicConfig(topicName)
-		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if self.BrokerController.BrokerConfig.ClusterTopicEnable {
@@ -97,7 +94,6 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := self.BrokerController.BrokerConfig.BrokerName
 		topicConfig := stgcommon.NewTopicConfig(topicName)
-		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if self.BrokerController.BrokerConfig.BrokerTopicEnable {
@@ -114,7 +110,6 @@ func (self *TopicConfigManager) init() {
 	{
 		topicName := stgcommon.OFFSET_MOVED_EVENT
 		topicConfig := stgcommon.NewTopicConfig(topicName)
-		self.SystemTopicList = set.NewSet()
 		self.SystemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -284,18 +279,21 @@ func (self *TopicConfigManager) updateOrderTopicConfig(orderKVTable *body.KVTabl
 	for val := range orderTopics.Iter() {
 		if value, ok := val.(string); ok {
 			topicConfig := self.TopicConfigSerializeWrapper.TopicConfigTable.Get(value)
-			if topicConfig != nil {
+			if topicConfig != nil && !topicConfig.Order {
 				topicConfig.Order = true
 				isChange = true
-			} else {
-				// todo: 打印日志？
+				logger.Infof("update order topic config, topic=%s, order=%v", value, true)
 			}
 		}
 	}
-	self.TopicConfigSerializeWrapper.TopicConfigTable.Foreach(func(topic string, topicConfig *stgcommon.TopicConfig) {
-		if topicConfig != nil && !orderTopics.Contains(topicConfig) {
-			topicConfig.Order = true
-			isChange = true
+
+	self.TopicConfigSerializeWrapper.TopicConfigTable.ForeachUpdate(func(topic string, topicConfig *stgcommon.TopicConfig) {
+		if !orderTopics.Contains(topic) {
+			if topicConfig != nil && topicConfig.Order {
+				topicConfig.Order = false
+				isChange = true
+				logger.Infof("update order topic config, topic=%s, order=%v", topic, true)
+			}
 		}
 	})
 
@@ -322,7 +320,7 @@ func (tcm *TopicConfigManager) IsOrderTopic(topic string) bool {
 func (tcm *TopicConfigManager) DeleteTopicConfig(topic string) {
 	value := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Remove(topic)
 	if value != nil {
-		logger.Info("delete topic config OK")
+		logger.Infof("delete topic config OK，TopicConfig：%#v", value)
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 		tcm.ConfigManagerExt.Persist()
 	} else {

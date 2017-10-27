@@ -209,7 +209,7 @@ func (smp *SendMessageProcessor) ConsumerSendMsgBack(conn netm.Context,
 		case stgstorelog.PUTMESSAGE_PUT_OK:
 			backTopic := msgExt.Topic
 			correctTopic := msgExt.GetProperty(message.PROPERTY_RETRY_TOPIC)
-			if correctTopic == "" || len(correctTopic) <= 0 {
+			if correctTopic != "" && len(correctTopic) > 0 {
 				backTopic = correctTopic
 			}
 
@@ -410,7 +410,7 @@ func (smp *SendMessageProcessor) diskUtil() string {
 
 	logisRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathLogis)
 
-	storePathIndex := config.GetStorePathConsumeQueue(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
+	storePathIndex := config.GetStorePathIndex(smp.BrokerController.MessageStoreConfig.StorePathRootDir)
 
 	indexRatio := stgcommon.GetDiskPartitionSpaceUsedPercent(storePathIndex)
 
