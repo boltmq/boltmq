@@ -61,11 +61,15 @@ func (pull *PullMessageProcessor) ExecuteRequestWhenWakeup(ctx netm.Context, req
 			return
 		}
 
+		if ctx.IsClosed() {
+			return
+		}
+
 		response.Opaque = request.Opaque
 		response.MarkResponseType()
 		_, err = ctx.WriteSerialObject(response)
 		if err != nil {
-			format := "pullMessage response to %s failed %s. ### request:%s, ### response:%s"
+			format := "pullMessageHold response to %s failed. error:%s. ### request:%s, ### response:%s"
 			logger.Errorf(format, ctx.RemoteAddr().String(), err.Error(), request.ToString(), response.ToString())
 		}
 	}()

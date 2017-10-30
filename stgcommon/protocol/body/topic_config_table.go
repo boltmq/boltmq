@@ -131,3 +131,16 @@ func (self *TopicConfigTable) ToString() string {
 
 	return fmt.Sprintf("TopicConfigTable [%s]", strings.Join(infos, ","))
 }
+
+// ClearAndPutAll 清空map后，再putAll
+// author rongzhihong
+// since 2017/9/18
+func (table *TopicConfigTable) ClearAndPutAll(topicConfigTable map[string]*stgcommon.TopicConfig) {
+	table.Lock()
+	defer table.Unlock()
+	table.TopicConfigs = make(map[string]*stgcommon.TopicConfig)
+
+	for k, v := range topicConfigTable {
+		table.TopicConfigs[k] = v
+	}
+}

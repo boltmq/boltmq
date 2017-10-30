@@ -142,7 +142,6 @@ func (manager *RebalanceLockManager) TryLockBatch(group string, mqs set.Set, cli
 				if nil == lockEntry {
 					lockEntry = body.NewLockEntry()
 					lockEntry.ClientId = clientId
-					lockEntry.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 					groupValue.Put(mq, lockEntry)
 
 					logger.Infof("tryLockBatch, message queue not locked, I got it. Group: %s NewClientId: %s %s",

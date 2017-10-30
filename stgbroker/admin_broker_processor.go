@@ -73,7 +73,7 @@ func (self *AdminBrokerProcessor) ProcessRequest(ctx netm.Context, request *prot
 	case code.DELETE_SUBSCRIPTIONGROUP:
 		return self.deleteSubscriptionGroup(ctx, request)
 	case code.GET_TOPIC_STATS_INFO:
-		return self.getTopicStatsInfo(ctx, request) // 统计信息，获取Topic统计信息
+		return self.getTopicStatsInfo(ctx, request) // 统计信息，获取Topic的存储统计信息(minOffset、maxOffset、lastUpdatetime)
 	case code.GET_CONSUMER_CONNECTION_LIST:
 		return self.getConsumerConnectionList(ctx, request) // Consumer连接管理
 	case code.GET_PRODUCER_CONNECTION_LIST:
@@ -461,7 +461,7 @@ func (abp *AdminBrokerProcessor) deleteSubscriptionGroup(ctx netm.Context, reque
 	return response, nil
 }
 
-// getTopicStatsInfo 获得Toipc的统计信息
+// getTopicStatsInfo 获取Topic的存储统计信息(minOffset、maxOffset、lastUpdateTime)
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -512,7 +512,6 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 		topicStatsTable.OffsetTable[mq] = topicOffset
 	}
 	content := stgcommon.Encode(&(topicStatsTable.OffsetTable))
-	fmt.Println(content)
 	response.Code = code.SUCCESS
 	response.Body = content
 	response.Remark = ""
@@ -566,7 +565,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 	return response, nil
 }
 
-// getProducerConnectionList 获得消费者连接信息
+// getProducerConnectionList 获得生产者连接信息
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -823,7 +822,7 @@ func (abp *AdminBrokerProcessor) registerFilterServer(ctx netm.Context, request 
 	return response, nil
 }
 
-// queryConsumeTimeSpan 根据 topic 和 group 获取消息的时间跨度
+// queryConsumeTimeSpan 根据 topic 和 group 获取消息的相关时间(最早存储时间、最晚存储时间、最新消费时间)
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) queryConsumeTimeSpan(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -999,7 +998,7 @@ func (abp *AdminBrokerProcessor) queryCorrectionOffset(ctx netm.Context, request
 	return response, nil
 }
 
-// consumeMessageDirectly consumeMessageDirectly
+// consumeMessageDirectly 直接让客户端消费消息
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
@@ -1021,6 +1020,7 @@ func (abp *AdminBrokerProcessor) consumeMessageDirectly(ctx netm.Context, reques
 		readContent := make([]byte, length)
 		selectMapedBufferResult.MappedByteBuffer.Read(readContent)
 		request.Body = readContent
+		selectMapedBufferResult.Release()
 	}
 
 	return abp.callConsumer(code.CONSUME_MESSAGE_DIRECTLY, request, requestHeader.ConsumerGroup, requestHeader.ClientId)

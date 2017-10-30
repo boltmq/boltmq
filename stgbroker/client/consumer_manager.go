@@ -160,7 +160,7 @@ func (cm *ConsumerManager) DoChannelCloseEvent(remoteAddr string, ctx netm.Conte
 					continue
 				}
 				if remove != nil {
-					logger.Infof("ungister consumer ok, no any connection, and remove consumer group, %s", group)
+					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s", group)
 				}
 			}
 			cm.ConsumerIdsChangeListener.ConsumerIdsChanged(group, consumerGroupInfo.GetAllChannel())

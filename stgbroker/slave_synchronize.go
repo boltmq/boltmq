@@ -24,13 +24,13 @@ func NewSlaveSynchronize(brokerController *BrokerController) *SlaveSynchronize {
 }
 
 func (self *SlaveSynchronize) syncAll() {
-	self.syncConsumerOffset()
 	self.syncTopicConfig()
+	self.syncConsumerOffset()
 	self.syncDelayOffset()
 	self.syncSubscriptionGroupConfig()
 }
 
-// syncTopicConfig 同步Topic配置文件
+// syncTopicConfig 同步Topic信息
 // Author rongzhihong
 // Since 2017/9/18
 func (slave *SlaveSynchronize) syncTopicConfig() {
@@ -44,19 +44,16 @@ func (slave *SlaveSynchronize) syncTopicConfig() {
 	}
 
 	if topicWrapper.DataVersion != slave.BrokerController.TopicConfigManager.DataVersion {
-		dataVersion := stgcommon.NewDataVersion(topicWrapper.DataVersion.Timestamp)
-		dataVersion.Counter = topicWrapper.DataVersion.Counter
-
-		slave.BrokerController.TopicConfigManager.DataVersion.AssignNewOne(*dataVersion)
-		slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.Clear()
-
+		dataVersion := stgcommon.DataVersion{Timestamp: topicWrapper.DataVersion.Timestamp, Counter: topicWrapper.DataVersion.Counter}
+		slave.BrokerController.TopicConfigManager.DataVersion.AssignNewOne(dataVersion)
 		topicConfigs := topicWrapper.TopicConfigTable.TopicConfigs
-		slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.PutAll(topicConfigs)
+
+		slave.BrokerController.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.ClearAndPutAll(topicConfigs)
 		slave.BrokerController.TopicConfigManager.ConfigManagerExt.Persist()
 	}
 }
 
-// syncTopicConfig 同步偏移量配置文件
+// syncTopicConfig 同步消费偏移量信息
 // Author rongzhihong
 // Since 2017/9/18
 func (slave *SlaveSynchronize) syncConsumerOffset() {
@@ -75,7 +72,7 @@ func (slave *SlaveSynchronize) syncConsumerOffset() {
 	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s", slave.masterAddr, string(buf))
 }
 
-// syncTopicConfig 同步定时偏移量配置文件
+// syncTopicConfig 同步定时偏移量信息
 // Author rongzhihong
 // Since 2017/9/18
 func (self *SlaveSynchronize) syncDelayOffset() {
@@ -94,7 +91,7 @@ func (self *SlaveSynchronize) syncDelayOffset() {
 	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s", self.masterAddr, delayOffset)
 }
 
-// syncTopicConfig 同步订阅配置文件
+// syncTopicConfig 同步订阅信息
 // Author rongzhihong
 // Since 2017/9/18
 func (self *SlaveSynchronize) syncSubscriptionGroupConfig() {
@@ -106,14 +103,13 @@ func (self *SlaveSynchronize) syncSubscriptionGroupConfig() {
 		return
 	}
 
-	if !subscriptionWrapper.DataVersion.Equals(&(self.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion)) {
-		dataVersion := stgcommon.NewDataVersion(subscriptionWrapper.DataVersion.Timestamp)
-		dataVersion.Counter = subscriptionWrapper.DataVersion.Counter
-
+	slaveDataVersion := self.BrokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion
+	if slaveDataVersion.Timestamp != subscriptionWrapper.DataVersion.Timestamp ||
+		slaveDataVersion.Counter != subscriptionWrapper.DataVersion.Counter {
+		dataVersion := stgcommon.DataVersion{Timestamp: subscriptionWrapper.DataVersion.Timestamp, Counter: subscriptionWrapper.DataVersion.Counter}
 		subscriptionGroupManager := self.BrokerController.SubscriptionGroupManager
-		subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(*dataVersion)
-		subscriptionGroupManager.SubscriptionGroupTable.Clear()
-		subscriptionGroupManager.SubscriptionGroupTable.PutAll(subscriptionWrapper.SubscriptionGroupTable)
+		subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(dataVersion)
+		subscriptionGroupManager.SubscriptionGroupTable.ClearAndPutAll(subscriptionWrapper.SubscriptionGroupTable)
 		subscriptionGroupManager.ConfigManagerExt.Persist()
 
 		buf := subscriptionGroupManager.Encode(false)
