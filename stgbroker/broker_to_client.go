@@ -45,6 +45,7 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGro
 
 	requestHeader := &header.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
 	request := protocol.CreateRequestCommand(code.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
+	request.MarkOnewayRPC()
 	b2c.BrokerController.RemotingServer.InvokeOneway(ctx, request, 10)
 }
 
@@ -53,16 +54,10 @@ func (b2c *Broker2Client) notifyConsumerIdsChanged(ctx netm.Context, consumerGro
 // Since 2017/9/11
 func (b2c *Broker2Client) CheckProducerTransactionState(channel netm.Context, requestHeader *header.CheckTransactionStateRequestHeader,
 	selectMapedBufferResult *stgstorelog.SelectMapedBufferResult) {
-	protocol.CreateDefaultResponseCommand()
 	request := protocol.CreateRequestCommand(code.CHECK_TRANSACTION_STATE, requestHeader)
+	request.Body = selectMapedBufferResult.MappedByteBuffer.Bytes()
 	request.MarkOnewayRPC()
-
-	// TODO WriteSerialObject不支持request请求
-	//oneMessageTransfer := pagecache.NewOneMessageTransfer(request, selectMapedBufferResult)
-	//_, err := channel.WriteSerialObject(oneMessageTransfer)
-	//if err != nil {
-	//	logger.Errorf("invokeProducer failed, %s", err.Error())
-	//}
+	b2c.BrokerController.RemotingServer.InvokeOneway(channel, request, 1000)
 	selectMapedBufferResult.Release()
 }
 
@@ -113,11 +108,13 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 	requestHeader.Topic = topic
 	requestHeader.Group = group
 	requestHeader.IsForce = isForce
+	requestHeader.Timestamp = timeStamp
 
 	request := protocol.CreateRequestCommand(code.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
 	resetOffsetBody := body.NewResetOffsetBody()
 	resetOffsetBody.OffsetTable = offsetTable
 	request.Body = stgcommon.Encode(resetOffsetBody)
+	request.MarkOnewayRPC()
 
 	consumerGroupInfo := b2c.BrokerController.ConsumerManager.GetConsumerGroupInfo(group)
 	// Consumer在线
@@ -194,16 +191,9 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 		return response
 	}
 
-	iterator := channelInfoTable.Iterator()
-	for iterator.HasNext() {
-		key, value, _ := iterator.Next()
-		channel, kok := key.(netm.Context)
+	for iterator := channelInfoTable.Iterator(); iterator.HasNext(); {
+		_, value, _ := iterator.Next()
 		channelInfo, vok := value.(*client.ChannelInfo)
-
-		if !kok {
-			logger.Warnf("The key=%v type is not netm.Context", key)
-			continue
-		}
 		if !vok {
 			logger.Warnf("The value=%v type is not ChannelInfo", value)
 			continue
@@ -223,9 +213,9 @@ func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) 
 		} else if stgcommon.IsBlank(originClientId) || strings.EqualFold(originClientId, clientId) {
 			// 不指定 originClientId 则对所有的 client 进行处理；若指定 originClientId 则只对当前
 			// originClientId 进行处理
-			response, err := b2c.BrokerController.RemotingServer.InvokeSync(channel, request, 5000)
+			response, err := b2c.BrokerController.RemotingServer.InvokeSync(channelInfo.Context, request, 5000)
 			if err != nil {
-				logger.Error(err)
+				logger.Errorf("GetConsumeStatus InvokeSync RemoteAddr:%s, error:%s", channelInfo.Context.Addr(), err.Error())
 			}
 			switch response.Code {
 			case code.SUCCESS:

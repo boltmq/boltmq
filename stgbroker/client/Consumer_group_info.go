@@ -118,8 +118,8 @@ func (cg *ConsumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx netm.Con
 		return false
 	}
 	if info != nil {
-		logger.Warnf("NETTY EVENT: remove not active channel[%v] from ConsumerGroupInfo groupChannelTable, consumer group: %s",
-			info, cg.GroupName)
+		logger.Warnf("NETTY EVENT: remove not active channel[%s] from ConsumerGroupInfo groupChannelTable, consumer group: %s",
+			ctx.Addr(), cg.GroupName)
 		return true
 	}
 	return false

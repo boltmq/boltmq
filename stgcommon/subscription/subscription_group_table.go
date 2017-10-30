@@ -99,3 +99,25 @@ func (table *SubscriptionGroupTable) PutAll(offsetMap *syncmap.Map) {
 		}
 	}
 }
+
+// ClearAndPutAll 清空map,再PutAll
+// Author rongzhihong
+// Since 2017/9/18
+func (table *SubscriptionGroupTable) ClearAndPutAll(offsetMap *syncmap.Map) {
+	table.Lock()
+	defer table.Unlock()
+
+	table.SubscriptionGroupTable = make(map[string]*SubscriptionGroupConfig, 1024)
+	if offsetMap == nil {
+		return
+	}
+
+	for iter := offsetMap.Iterator(); iter.HasNext(); {
+		key, value, _ := iter.Next()
+		if groupName, ok := key.(string); ok && groupName != "" {
+			if subscriptionGroupConfig, ok := value.(*SubscriptionGroupConfig); ok {
+				table.SubscriptionGroupTable[groupName] = subscriptionGroupConfig
+			}
+		}
+	}
+}

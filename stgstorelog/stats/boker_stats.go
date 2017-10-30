@@ -5,7 +5,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
 )
 
-// BrokerStats broker统计
+// BrokerStats broker统计的数据（昨天和今天的Get、Put数据量）
 // Author rongzhihong
 // Since 2017/9/12
 type BrokerStats struct {
