@@ -9,6 +9,7 @@ import (
 
 func TestSubscriptionGroupManagerLoad(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	subscriptionGroupManager := stgbroker.NewSubscriptionGroupManager(brokerController)
 	subscriptionGroupManager.Load()
 	fmt.Println(subscriptionGroupManager.SubscriptionGroupTable.Size())
@@ -16,6 +17,7 @@ func TestSubscriptionGroupManagerLoad(t *testing.T) {
 
 func TestFindSubscriptionGroupConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	subscriptionGroupManager := stgbroker.NewSubscriptionGroupManager(brokerController)
 	subscriptionGroupManager.Load()
 	subscriptionGroupManager.FindSubscriptionGroupConfig("testGroup")
@@ -24,12 +26,14 @@ func TestFindSubscriptionGroupConfig(t *testing.T) {
 
 func TestConfigFilePath(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	subscriptionGroupManager := stgbroker.NewSubscriptionGroupManager(brokerController)
 	fmt.Println(subscriptionGroupManager.ConfigFilePath())
 }
 
 func TestUpdateSubscriptionGroupConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	subscriptionGroupManager := stgbroker.NewSubscriptionGroupManager(brokerController)
 	subscriptionGroupManager.Load()
 	config := &subscription.SubscriptionGroupConfig{
@@ -43,7 +47,8 @@ func TestUpdateSubscriptionGroupConfig(t *testing.T) {
 
 func TestDeleteSubscriptionGroupConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
-	subscriptionGroupManager:= stgbroker.NewSubscriptionGroupManager(brokerController)
+	brokerController.Initialize()
+	subscriptionGroupManager := stgbroker.NewSubscriptionGroupManager(brokerController)
 	subscriptionGroupManager.Load()
 	fmt.Println(subscriptionGroupManager.SubscriptionGroupTable.Size())
 	subscriptionGroupManager.DeleteSubscriptionGroupConfig("testGroup")

@@ -9,6 +9,7 @@ import (
 
 func TestRegisterBroker(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	brokerController.TopicConfigManager.Load()
 	topicConfigWrapper := brokerController.TopicConfigManager.TopicConfigSerializeWrapper
 	api := brokerController.BrokerOuterAPI
@@ -18,6 +19,7 @@ func TestRegisterBroker(t *testing.T) {
 
 func TestUnRegisterBroker(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	brokerController.TopicConfigManager.Load()
 	api := brokerController.BrokerOuterAPI
 	api.Start()

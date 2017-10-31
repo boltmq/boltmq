@@ -12,6 +12,7 @@ func main() {
 	filter := []string{}
 
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	brokerController.TopicConfigManager.Load()
 	topicConfigWrapper := brokerController.TopicConfigManager.TopicConfigSerializeWrapper
 	api := brokerController.BrokerOuterAPI

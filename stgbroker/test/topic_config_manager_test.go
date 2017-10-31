@@ -9,6 +9,7 @@ import (
 
 func TestTopicConfigManagerDecode(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	brokerController.TopicConfigManager.Load()
 	data := brokerController.TopicConfigManager.Encode(false)
 	buf := []byte(data)

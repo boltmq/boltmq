@@ -43,6 +43,7 @@ func main() {
 	logger.Info("example registry broker, client start success")
 
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	brokerController.TopicConfigManager.Load()
 	topicConfigWrapper := brokerController.TopicConfigManager.TopicConfigSerializeWrapper
 
