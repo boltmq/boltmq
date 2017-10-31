@@ -8,6 +8,7 @@ import (
 
 func TestConsumerOffsetManagerLoad(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
 	fmt.Println(consumerOffsetManager.Offsets.Size())
@@ -15,12 +16,14 @@ func TestConsumerOffsetManagerLoad(t *testing.T) {
 
 func TestConsumerOffsetManagerConfigFilePath(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	fmt.Println(consumerOffsetManager.ConfigFilePath())
 }
 
 func TestConsumerOffsetManagerQueryOffset(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
 	fmt.Println(consumerOffsetManager.QueryOffset("SimpleConsumerGroupIdQB-test", "TopicTestMQ", 3))
@@ -28,6 +31,7 @@ func TestConsumerOffsetManagerQueryOffset(t *testing.T) {
 
 func TestQueryOffsetByGroupAndTopic(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
 	fmt.Println(consumerOffsetManager.QueryOffsetByGroupAndTopic("SimpleConsumerGroupIdQB-test", "TopicTestMQ"))
@@ -35,6 +39,7 @@ func TestQueryOffsetByGroupAndTopic(t *testing.T) {
 
 func TestCommitOffset(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
 	consumerOffsetManager.CommitOffset("SimpleConsumerGroupIdQB-test", "TopicTestMQ", 3, 4)
@@ -47,6 +52,7 @@ func TestScanUnsubscribedTopic(t *testing.T) {
 
 func TestWhichTopicByConsumer(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	consumerOffsetManager := stgbroker.NewConsumerOffsetManager(brokerController)
 	consumerOffsetManager.Load()
 	fmt.Println(consumerOffsetManager.WhichGroupByTopic("TopicTestMQ"))

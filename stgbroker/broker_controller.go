@@ -96,7 +96,7 @@ func NewBrokerController(brokerConfig *stgcommon.BrokerConfig, messageStoreConfi
 	return controller
 }
 
-// Initialize BrokerController初始化
+// Initialize 初始化broker必要操作
 // Author rongzhihong
 // Since 2017/9/12
 func (self *BrokerController) Initialize() bool {
@@ -122,6 +122,10 @@ func (self *BrokerController) Initialize() bool {
 
 	result = result && self.MessageStore.Load()
 	if !result {
+		fmt.Println("the broker controller initialize failed")
+		self.Shutdown()
+		logger.Flush()
+		os.Exit(0)
 		return result
 	}
 

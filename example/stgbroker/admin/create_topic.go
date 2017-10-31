@@ -30,6 +30,7 @@ func main() {
 
 	ctx = CreateDefaultContext()
 	controller := stgbroker.CreateBrokerController()
+	controller.Initialize()
 	admin := stgbroker.NewAdminBrokerProcessor(controller)
 	logger.Infof("admin processor ready success")
 

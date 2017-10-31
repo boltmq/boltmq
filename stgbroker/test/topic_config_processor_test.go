@@ -9,6 +9,7 @@ import (
 
 func TestTopicLoad(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.Load()
 	fmt.Println(topicConfigProcessor.TopicConfigSerializeWrapper.TopicConfigTable)
@@ -16,6 +17,7 @@ func TestTopicLoad(t *testing.T) {
 
 func TestCreateTopicInSendMessageMethod(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.Load()
 	topicConfigProcessor.CreateTopicInSendMessageMethod("TestTopic_222", stgcommon.DEFAULT_TOPIC, "", 4, 0)
@@ -24,6 +26,7 @@ func TestCreateTopicInSendMessageMethod(t *testing.T) {
 
 func TestSelectTopicConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.Load()
 	topic := topicConfigProcessor.SelectTopicConfig("TestTopic_SEND")
@@ -32,6 +35,7 @@ func TestSelectTopicConfig(t *testing.T) {
 
 func TestCreateTopicInSendMessageBackMethod(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.CreateTopicInSendMessageBackMethod("TestTopic_110", 5, 4, 0)
 	fmt.Println(topicConfigProcessor.TopicConfigSerializeWrapper.TopicConfigTable.Get("TestTopic_110").ReadQueueNums)
@@ -39,6 +43,7 @@ func TestCreateTopicInSendMessageBackMethod(t *testing.T) {
 
 func TestUpdateTopicConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfig := stgcommon.NewTopicConfig("TestTopic_789")
 	topicConfig.ReadQueueNums = 3
@@ -50,6 +55,7 @@ func TestUpdateTopicConfig(t *testing.T) {
 
 func TestIsOrderTopic(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.Load()
 	fmt.Println(topicConfigProcessor.IsOrderTopic("TestTopic_111"))
@@ -58,6 +64,7 @@ func TestIsOrderTopic(t *testing.T) {
 
 func TestIsDeleteTopicConfig(t *testing.T) {
 	brokerController := stgbroker.CreateBrokerController()
+	brokerController.Initialize()
 	topicConfigProcessor := stgbroker.NewTopicConfigManager(brokerController)
 	topicConfigProcessor.Load()
 	topicConfigProcessor.DeleteTopicConfig("TestTopic_111")

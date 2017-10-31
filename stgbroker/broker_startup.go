@@ -26,6 +26,9 @@ func Start(stopChan chan bool, smartgoBrokerFilePath string) *BrokerController {
 	// 注册ShutdownHook钩子
 	controller.registerShutdownHook(stopChan)
 
+	// 初始化broker必要的资源
+	controller.Initialize()
+
 	// 启动BrokerController
 	controller.Start()
 
@@ -78,15 +81,6 @@ func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
 	controller := NewBrokerController(brokerConfig, messageStoreConfig, remotingClient)
 	controller.ConfigFile = brokerConfig.StorePathRootDir
 
-	// 初始化controller
-	initResult := controller.Initialize()
-	if !initResult {
-		fmt.Println("the broker controller initialize failed")
-		controller.Shutdown()
-		logger.Flush()
-		os.Exit(0)
-	}
-
 	logger.Info("create broker controller successful")
 	return controller
 }
@@ -116,7 +110,7 @@ func parseSmartgoBrokerConfig(cfgName, cfgPath string) (*stgcommon.SmartgoBroker
 	}
 
 	if strings.TrimSpace(cfg.StorePathRootDir) == "" {
-		cfg.StorePathRootDir = stgcommon.GetUserHomeDir() + separator + "store"
+		cfg.StorePathRootDir = stgcommon.GetUserHomeDir() + separator + static.BROKER_DATA_ROOT_DIR
 	}
 	return &cfg, true
 }
@@ -188,8 +182,7 @@ func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *st
 func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
 	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
 	messageStoreConfig.StorePathRootDir = brokerConfig.StorePathRootDir
-	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir + "/commitlog"
-	messageStoreConfig.TranRedoLogStorePath = brokerConfig.StorePathRootDir + "/transaction"
+	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir + separator + static.STORE_COMMIT_LOG_ROOT_DIR
 
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
 	if messageStoreConfig.BrokerRole == config.SLAVE {
