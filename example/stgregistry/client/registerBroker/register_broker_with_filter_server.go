@@ -3,6 +3,7 @@ package main
 import (
 	"git.oschina.net/cloudzone/smartgo/example/stgregistry/client"
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	namesrvBody "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
@@ -10,6 +11,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"os"
 )
 
 var (
@@ -17,6 +19,7 @@ var (
 )
 
 func initClient() {
+	os.Setenv(stgcommon.NAMESRV_ADDR_ENV, client.DEFAULT_NAMESRV)
 	cmd = remoting.NewDefalutRemotingClient()
 	cmd.UpdateNameServerAddressList([]string{client.DEFAULT_NAMESRV})
 }

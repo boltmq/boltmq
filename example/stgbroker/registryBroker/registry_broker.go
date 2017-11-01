@@ -2,14 +2,17 @@ package main
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgregistry/logger"
+	"os"
 )
 
 func main() {
-	namesrvAddr := "0.0.0.0:9876"
+	namesrvAddr := "127.0.0.1:9876"
 	oneway := false
 	filter := []string{}
+	os.Setenv(stgcommon.NAMESRV_ADDR_ENV, namesrvAddr)
 
 	brokerController := stgbroker.CreateBrokerController()
 	brokerController.Initialize()
