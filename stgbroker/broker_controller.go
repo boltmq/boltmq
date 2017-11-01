@@ -104,13 +104,14 @@ func (self *BrokerController) Initialize() bool {
 
 	result := true
 	result = result && self.TopicConfigManager.Load()
-	result = result && self.SubscriptionGroupManager.Load()
 	result = result && self.ConsumerOffsetManager.Load()
+	result = result && self.SubscriptionGroupManager.Load()
 
 	brokerPort := static.BROKER_PORT
 	if self.BrokerConfig.BrokerPort > 0 {
 		brokerPort = self.BrokerConfig.BrokerPort
 	}
+
 	self.RemotingServer = remoting.NewDefalutRemotingServer(static.BROKER_IP, brokerPort)
 	self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port() + 1 // broker监听Slave请求端口，默认为Master服务端口+1
 	self.StoreHost = self.GetStoreHost()
@@ -118,7 +119,6 @@ func (self *BrokerController) Initialize() bool {
 	if result {
 		self.MessageStore = stgstorelog.NewDefaultMessageStore(self.MessageStoreConfig, self.brokerStatsManager)
 	}
-	self.brokerStats = storeStats.NewBrokerStats(self.MessageStore)
 
 	result = result && self.MessageStore.Load()
 	if !result {
@@ -128,7 +128,7 @@ func (self *BrokerController) Initialize() bool {
 		os.Exit(0)
 		return result
 	}
-
+	self.brokerStats = storeStats.NewBrokerStats(self.MessageStore)
 	self.registerProcessor()                                   // 注册各类Processor()请求
 	self.brokerControllerTask.startBrokerStatsRecordTask()     // 定时统计broker各类信息
 	self.brokerControllerTask.startPersistConsumerOffsetTask() // 定时写入ConsumerOffset文件
@@ -391,12 +391,6 @@ func (self *BrokerController) registerProcessor() {
 	self.RemotingServer.RegisterProcessor(code.GET_CONSUMER_LIST_BY_GROUP, clientProcessor) // 获取Consumer列表
 	self.RemotingServer.RegisterProcessor(code.QUERY_CONSUMER_OFFSET, clientProcessor)      // 查询ConsumerOffset
 	self.RemotingServer.RegisterProcessor(code.UPDATE_CONSUMER_OFFSET, clientProcessor)     // 更新ConsumerOffset
-
-	// 管理Broker事件处理器 AdminBrokerProcessor
-	adminBrokerProcessor := NewAdminBrokerProcessor(self)
-	self.RemotingServer.RegisterProcessor(code.UPDATE_AND_CREATE_TOPIC, adminBrokerProcessor) // 更新创建topic
-	self.RemotingServer.RegisterProcessor(code.DELETE_TOPIC_IN_BROKER, adminBrokerProcessor)  // 删除topic
-	self.RemotingServer.RegisterProcessor(code.GET_MAX_OFFSET, adminBrokerProcessor)          // 获取最大offset
 
 	// 发送消息事件处理器 SendMessageProcessor
 	sendMessageProcessor := NewSendMessageProcessor(self)

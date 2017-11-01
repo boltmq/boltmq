@@ -27,8 +27,8 @@ func (lockTable *LockEntryTable) Put(key *message.MessageQueue, value *body.Lock
 }
 
 func (lockTable *LockEntryTable) Get(key *message.MessageQueue) *body.LockEntry {
-	lockTable.Lock()
-	defer lockTable.Unlock()
+	lockTable.RLock()
+	defer lockTable.RUnlock()
 
 	v, ok := lockTable.lockEntryTable[key]
 	if !ok {
