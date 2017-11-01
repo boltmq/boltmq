@@ -71,7 +71,6 @@ func (manager *RebalanceLockManager) TryLock(group string, mq *message.MessageQu
 		if nil == lockEntry {
 			lockEntry = body.NewLockEntry()
 			lockEntry.ClientId = clientId
-			lockEntry.LastUpdateTimestamp = timeutil.CurrentTimeMillis()
 			groupValue.Put(mq, lockEntry)
 			logger.Infof("tryLock, message queue not locked, I got it. Group: %s NewClientId: %s %s", group, clientId, mq.ToString())
 		}
@@ -98,11 +97,7 @@ func (manager *RebalanceLockManager) TryLock(group string, mq *message.MessageQu
 			group, oldClientId, clientId, mq.ToString())
 		return false
 
-	} else {
-		// 已经锁住，尝试更新时间
-		// isLocked 中已经更新了时间，这里不需要再更新
 	}
-
 	return true
 }
 
