@@ -9,19 +9,23 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"os"
 )
 
 var (
-	request   *protocol.RemotingCommand
-	response  *protocol.RemotingCommand
-	err       error
-	newTopic  = "TopicExampleSSD"
-	ctx       netm.Context
-	localPort = 10925
-	localIp   = "127.0.0.1"
+	request     *protocol.RemotingCommand
+	response    *protocol.RemotingCommand
+	err         error
+	newTopic    = "TopicExampleSSD"
+	ctx         netm.Context
+	localPort   = 10925
+	localIp     = "127.0.0.1"
+	namesrvAddr = "127.0.0.1:9876"
 )
 
 func main() {
+
+	os.Setenv(stgcommon.NAMESRV_ADDR_ENV, namesrvAddr)
 
 	requestHeader := initRequestHeader(newTopic)
 	request = protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_TOPIC, requestHeader)

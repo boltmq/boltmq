@@ -130,10 +130,13 @@ func localHostName() string {
 // Since: 2017/9/22
 func (self *BrokerConfig) CheckBrokerConfigAttr(smartgoBrokerFilePath ...string) bool {
 	// 如果没有使用-c指令， 也没有设置SmartGoHome环境变量，则启动失败
-	if smartgoBrokerFilePath == nil && strings.TrimSpace(smartgoBrokerFilePath[0]) == "" && self.SmartGoHome == "" {
-		format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
-		logger.Infof(format, SMARTGO_HOME_ENV)
-		return false
+	if smartgoBrokerFilePath == nil || len(smartgoBrokerFilePath) == 0 || strings.TrimSpace(smartgoBrokerFilePath[0]) == "" {
+		if self.SmartGoHome == "" {
+			// 没有使用-c指令，也没有配置“SMARTGO_HOME”环境变量
+			format := "please set the '%s' variable in your environment to match the location of the smartgo installation"
+			logger.Infof(format, SMARTGO_HOME_ENV)
+			return false
+		}
 	}
 
 	// 检测环境变量NAMESRV_ADDR
