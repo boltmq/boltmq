@@ -188,6 +188,7 @@ func (self *BrokerController) registerShutdownHook(stopChan chan bool) {
 
 		logger.Infof("receive signal code = %d", s)
 		self.Shutdown()
+		logger.Flush()
 
 		// 是否有必要close(stopSignalChan)??
 		close(stopSignalChan)
@@ -200,13 +201,13 @@ func (self *BrokerController) registerShutdownHook(stopChan chan bool) {
 // Author rongzhihong
 // Since 2017/9/12
 func (self *BrokerController) Shutdown() {
-	begineTime := stgcommon.GetCurrentTimeMillis()
+	beginTime := stgcommon.GetCurrentTimeMillis()
 
+	// 1.关闭Broker注册等定时任务
 	self.brokerControllerTask.Shutdown()
 
-	if self.brokerStatsManager != nil {
-		self.brokerStatsManager.Shutdown()
-	}
+	// 2.注销Broker依赖BrokerOuterAPI提供的服务，所以必须优先注销Broker再关闭BrokerOuterAPI
+	self.unRegisterBrokerAll()
 
 	if self.ClientHousekeepingService != nil {
 		self.ClientHousekeepingService.Shutdown()
@@ -221,24 +222,29 @@ func (self *BrokerController) Shutdown() {
 		logger.Info("RemotingServer shutdown successful")
 	}
 
+
 	if self.MessageStore != nil {
 		self.MessageStore.Shutdown()
 		logger.Info("MessageStore shutdown successful")
 	}
 
-	self.unRegisterBrokerAll()
-
-	if self.BrokerOuterAPI != nil {
-		self.BrokerOuterAPI.Shutdown()
-	}
-
 	self.ConsumerOffsetManager.configManagerExt.Persist()
+	self.TopicConfigManager.ConfigManagerExt.Persist()
+	self.SubscriptionGroupManager.ConfigManagerExt.Persist()
+
+	if self.brokerStatsManager != nil {
+		self.brokerStatsManager.Shutdown()
+	}
 
 	if self.FilterServerManager != nil {
 		self.FilterServerManager.Shutdown()
 	}
 
-	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - begineTime
+	if self.BrokerOuterAPI != nil {
+		self.BrokerOuterAPI.Shutdown()
+	}
+
+	consumingTimeTotal := stgcommon.GetCurrentTimeMillis() - beginTime
 	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
 }
 
