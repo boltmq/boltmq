@@ -30,6 +30,6 @@ func (self *QueryResult) ToString() string {
 			msgInfos = append(msgInfos, msg.ToString())
 		}
 	}
-	format := "QueryResult {IndexLastUpdateTimestamp=%d, MessageList=%s }"
+	format := "QueryResult {IndexLastUpdateTimestamp=%d, MessageList=[%s] }"
 	return fmt.Sprintf(format, self.IndexLastUpdateTimestamp, strings.Join(msgInfos, ","))
 }

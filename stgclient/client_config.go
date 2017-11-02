@@ -28,13 +28,16 @@ func NewClientConfig(namesrvAddr string) *ClientConfig {
 	if strings.EqualFold(instanceName, "") {
 		instanceName = "DEFAULT"
 	}
-	return &ClientConfig{NamesrvAddr: namesrvAddr,
+	clientConfig := &ClientConfig{
+		NamesrvAddr:                   namesrvAddr,
 		InstanceName:                  instanceName,
 		ClientIP:                      GetLocalAddress(),
 		ClientCallbackExecutorThreads: runtime.NumCPU(),
 		PollNameServerInterval:        1000 * 30,
 		HeartbeatBrokerInterval:       1000 * 30,
-		PersistConsumerOffsetInterval: 1000 * 5}
+		PersistConsumerOffsetInterval: 1000 * 5,
+	}
+	return clientConfig
 }
 
 func GetLocalAddress() string {
