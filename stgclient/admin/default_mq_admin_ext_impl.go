@@ -14,12 +14,16 @@ import (
 	set "github.com/deckarep/golang-set"
 )
 
+const (
+	timeoutMillis = int64(3 * 1000)
+)
+
 // DefaultMQAdminExtImpl 所有运维接口都在这里实现
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/2
 type DefaultMQAdminExtImpl struct {
 	ServiceState     stgcommon.ServiceState
-	MqClientInstance process.MQClientInstance
+	MqClientInstance *process.MQClientInstance
 	RpcHook          remoting.RPCHook
 	ClientConfig     *stgclient.ClientConfig
 	MQAdminExtInner
@@ -28,6 +32,7 @@ type DefaultMQAdminExtImpl struct {
 func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
 	defaultMQAdminExtImpl := &DefaultMQAdminExtImpl{}
 	defaultMQAdminExtImpl.ServiceState = stgcommon.ServiceState(stgcommon.CREATE_JUST)
+	defaultMQAdminExtImpl.ClientConfig = stgclient.NewClientConfig("")
 	return defaultMQAdminExtImpl
 }
 
@@ -80,7 +85,8 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 
 // 从Name Server获取所有Topic列表
 func (impl *DefaultMQAdminExtImpl) FetchAllTopicList() (*body.TopicList, error) {
-	return nil, nil
+	topicList, err := impl.MqClientInstance.MQClientAPIImpl.GetTopicListFromNameServer(timeoutMillis)
+	return topicList, err
 }
 
 // 获取Broker运行时数据
