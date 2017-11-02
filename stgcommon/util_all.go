@@ -116,6 +116,16 @@ func IsBlank(content string) bool {
 	return true
 }
 
+// IsEmpty 校验字符串是否为空
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/20
+func IsEmpty(content string) bool {
+	if len(content) == 0 || content == "" || strings.TrimSpace(content) == "" {
+		return true
+	}
+	return false
+}
+
 // IsNumber 是否是数字:true:是, false:否
 // Author: rongzhihong, <rongzhihong@gome.com.cn>
 // Since: 2017/9/19
