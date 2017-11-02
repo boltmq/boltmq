@@ -165,7 +165,7 @@ type MQAdminExtInner interface {
 	// maxNum 最大搜索条数
 	// begin  开始查询消息的时间戳
 	// end    结束查询消息的时间戳
-	QueryMessage(topic, key string, maxNum int, begin, end int64) (*stgclient.QueryResult, error)
+	QueryMessage(topic, key string, maxNum int, begin, end int64) (*admin.QueryResult, error)
 
 	// 查询较早的存储消息
 	EarliestMsgStoreTime(mq *message.MessageQueue) (int64, error)

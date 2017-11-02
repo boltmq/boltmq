@@ -287,7 +287,7 @@ func (impl *DefaultMQAdminExtImpl) ViewMessage(msgId string) (*message.MessageEx
 // maxNum 最大搜索条数
 // begin  开始查询消息的时间戳
 // end    结束查询消息的时间戳
-func (impl *DefaultMQAdminExtImpl) QueryMessage(topic, key string, maxNum int, begin, end int64) (*stgclient.QueryResult, error) {
+func (impl *DefaultMQAdminExtImpl) QueryMessage(topic, key string, maxNum int, begin, end int64) (*admin.QueryResult, error) {
 	return nil, nil
 }
 
