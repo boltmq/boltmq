@@ -13,7 +13,6 @@ import (
 // 发送状态枚举
 // Author: yintongqiang
 // Since:  2017/8/8
-
 type ClientConfig struct {
 	NamesrvAddr                   string
 	InstanceName                  string

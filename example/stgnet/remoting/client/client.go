@@ -85,7 +85,7 @@ func main() {
 }
 
 func sendHearBeat(addr string) {
-	request := protocol.CreateRequestCommand(code.HEART_BEAT, nil)
+	request := protocol.CreateRequestCommand(code.HEART_BEAT)
 	response, err := remotingClient.InvokeSync(addr, request, 3000)
 	if err != nil {
 		fmt.Printf("Send HeartBeat[Sync] failed: %s\n", err)
