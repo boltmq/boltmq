@@ -7,8 +7,8 @@ import (
 )
 
 // TopicConfigSerializeWrapper topic
-// @author gaoyanlei
-// @since 2017/8/11
+// Author gaoyanlei
+// Since 2017/8/11
 type TopicConfigSerializeWrapper struct {
 	TopicConfigTable *TopicConfigTable      `json:"topicConfigTable"`
 	DataVersion      *stgcommon.DataVersion `json:"dataVersion"`

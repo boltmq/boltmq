@@ -65,7 +65,7 @@ type MQAdminExtInner interface {
 	ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error)
 
 	// 查看Consumer网络连接、订阅关系
-	ExamineConsumerConnectionInfo(consumerGroup string) (header.ConsumerConnection, error)
+	ExamineConsumerConnectionInfo(consumerGroup string) (*header.ConsumerConnection, error)
 
 	// 查看Producer网络连接
 	ExamineProducerConnectionInfo(producerGroup, topic string) (*body.ProducerConnection, error)

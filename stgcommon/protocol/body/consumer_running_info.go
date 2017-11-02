@@ -15,12 +15,9 @@ const (
 	PROP_CONSUMER_START_TIMESTAMP = "PROP_CONSUMER_START_TIMESTAMP"
 )
 
-// ConsumerRunningInfo Consumer内部数据结构
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/1
 type ConsumerRunningInfo struct {
-}
 
+}
 //
 //// ConsumerRunningInfo Consumer内部数据结构
 //// Author: tianyuliang, <tianyuliang@gome.com.cn>
@@ -33,37 +30,37 @@ type ConsumerRunningInfo struct {
 //	Jstack          string                                     // jstack的结果
 //	*protocol.RemotingSerializable
 //}
-////
-////func NewConsumerRunningInfo() *ConsumerRunningInfo {
-////	consumerRunningInfo := new(ConsumerRunningInfo)
-////	consumerRunningInfo.Properties = make(map[string]interface{})
-////	consumerRunningInfo.SubscriptionSet = set.NewSet()
-////	consumerRunningInfo.MqTable = make(map[message.MessageQueue]*ProcessQueueInfo)
-////	consumerRunningInfo.StatusTable = make(map[string]*ConsumeStatus)
-////	consumerRunningInfo.RemotingSerializable = new(protocol.RemotingSerializable)
-////	return consumerRunningInfo
-////}
-////
-////func FormatString() string {
-////	// TODO
-////	return ""
-////}
-////
-////// AnalyzeSubscription 分析订阅关系是否相同
-////// 参数格式：   TreeMap<String/* clientId */, ConsumerRunningInfo> criTable
-////func AnalyzeSubscription(criTable map[string]*ConsumerRunningInfo) bool {
-////	// TODO
-////	return false
-////}
-////
-////// analyzeRebalance
-////// 参数格式：   TreeMap<String/* clientId */, ConsumerRunningInfo> criTable
-////func AnalyzeRebalance(criTable map[string]*ConsumerRunningInfo) bool {
-////	// TODO
-////	return false
-////}
-////
-////func AnalyzeProcessQueue(clientId string, info *ConsumerRunningInfo) bool {
-////	// TODO
-////	return false
-////}
+//
+//func NewConsumerRunningInfo() *ConsumerRunningInfo {
+//	consumerRunningInfo := new(ConsumerRunningInfo)
+//	consumerRunningInfo.Properties = make(map[string]interface{})
+//	consumerRunningInfo.SubscriptionSet = set.NewSet()
+//	consumerRunningInfo.MqTable = make(map[message.MessageQueue]*ProcessQueueInfo)
+//	consumerRunningInfo.StatusTable = make(map[string]*ConsumeStatus)
+//	consumerRunningInfo.RemotingSerializable = new(protocol.RemotingSerializable)
+//	return consumerRunningInfo
+//}
+//
+//func FormatString() string {
+//	// TODO
+//	return ""
+//}
+//
+//// AnalyzeSubscription 分析订阅关系是否相同
+//// 参数格式：   TreeMap<String/* clientId */, ConsumerRunningInfo> criTable
+//func AnalyzeSubscription(criTable map[string]*ConsumerRunningInfo) bool {
+//	// TODO
+//	return false
+//}
+//
+//// analyzeRebalance
+//// 参数格式：   TreeMap<String/* clientId */, ConsumerRunningInfo> criTable
+//func AnalyzeRebalance(criTable map[string]*ConsumerRunningInfo) bool {
+//	// TODO
+//	return false
+//}
+//
+//func AnalyzeProcessQueue(clientId string, info *ConsumerRunningInfo) bool {
+//	// TODO
+//	return false
+//}
