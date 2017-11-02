@@ -953,7 +953,7 @@ func (abp *AdminBrokerProcessor) callConsumer(requestCode int32, request *protoc
 		return response, nil
 	}
 
-	newRequest := protocol.CreateRequestCommand(requestCode, nil)
+	newRequest := protocol.CreateRequestCommand(requestCode)
 	newRequest.ExtFields = request.ExtFields
 	newRequest.Body = request.Body
 

@@ -69,12 +69,14 @@ func CreateResponseCommand(code int32, remark string) *RemotingCommand {
 }
 
 // CreateRequestCommand 创建客户端请求信息 2017/8/16 Add by yintongqiang
-func CreateRequestCommand(code int32, customHeader CommandCustomHeader) *RemotingCommand {
+func CreateRequestCommand(code int32, customHeader ...CommandCustomHeader) *RemotingCommand {
 	cmd := &RemotingCommand{
-		Code:         code,
-		CustomHeader: customHeader,
-		ExtFields:    make(map[string]string),
-		Language:     LanguageCode(GOLANG).ToString(),
+		Code:      code,
+		ExtFields: make(map[string]string),
+		Language:  LanguageCode(GOLANG).ToString(),
+	}
+	if customHeader != nil && len(customHeader) > 0 {
+		cmd.CustomHeader = customHeader[0]
 	}
 	cmd.Opaque = inrcOpaque() // 标识自增，请求唯一标识
 	cmd.setCMDVersion()       // 设置版本信息

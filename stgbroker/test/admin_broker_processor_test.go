@@ -111,7 +111,7 @@ func TestUpdateBrokerConfig(t *testing.T) {
 	allConfig.MessageStoreConfig.AccessMessageInMemoryMaxRatio = 50
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
-	request := protocol.CreateRequestCommand(code.UPDATE_BROKER_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.UPDATE_BROKER_CONFIG)
 	request.Body = stgcommon.Encode(allConfig)
 
 	_, err := adminProcessor.ProcessRequest(ctx, request)
@@ -138,7 +138,7 @@ func TestGetBrokerConfig(t *testing.T) {
 	ctx := common.CreateAdminCtx()
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
-	request := protocol.CreateRequestCommand(code.GET_BROKER_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_BROKER_CONFIG)
 
 	response, err := adminProcessor.ProcessRequest(ctx, request)
 	if err != nil || response.Body == nil {
@@ -266,7 +266,7 @@ func TestGetBrokerRuntimeInfo(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.GET_BROKER_RUNTIME_INFO, nil)
+	request := protocol.CreateRequestCommand(code.GET_BROKER_RUNTIME_INFO)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -290,7 +290,7 @@ func TestUpdateAndCreateSubscriptionGroup(t *testing.T) {
 
 	subscriptionGroupConfigOld := bc.SubscriptionGroupManager.SubscriptionGroupTable.Get(newSubscriptionGroup)
 
-	request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
+	request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP)
 	config := &subscription.SubscriptionGroupConfig{GroupName: newSubscriptionGroup, ConsumeEnable: true,
 		ConsumeFromMinEnable: true, ConsumeBroadcastEnable: true, RetryQueueNums: 1, RetryMaxTimes: 15,
 		BrokerId: 0, WhichBrokerWhenConsumeSlowly: 0}
@@ -322,7 +322,7 @@ func TestGetAllSubscriptionGroup(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -347,7 +347,7 @@ func TestDeleteSubscriptionGroup(t *testing.T) {
 
 	subscriptionGroupConfigOld := bc.SubscriptionGroupManager.SubscriptionGroupTable.Get(deleteSubscriptionGroup)
 	if subscriptionGroupConfigOld == nil {
-		request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP, nil)
+		request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_SUBSCRIPTIONGROUP)
 		config := &subscription.SubscriptionGroupConfig{GroupName: deleteSubscriptionGroup, ConsumeEnable: true,
 			ConsumeFromMinEnable: true, ConsumeBroadcastEnable: true, RetryQueueNums: 1, RetryMaxTimes: 15,
 			BrokerId: 0, WhichBrokerWhenConsumeSlowly: 0}
@@ -479,7 +479,7 @@ func TestGetAllConsumerOffset(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -500,7 +500,7 @@ func TestGetAllDelayOffset(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -636,7 +636,7 @@ func TestGetSystemTopicListFromBroker(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.GET_SYSTEM_TOPIC_LIST_FROM_BROKER, nil)
+	request := protocol.CreateRequestCommand(code.GET_SYSTEM_TOPIC_LIST_FROM_BROKER)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)
@@ -652,7 +652,7 @@ func TestCleanExpiredConsumeQueue(t *testing.T) {
 	bc := InitBrokerController()
 	ctx := common.CreateAdminCtx()
 
-	request := protocol.CreateRequestCommand(code.CLEAN_EXPIRED_CONSUMEQUEUE, nil)
+	request := protocol.CreateRequestCommand(code.CLEAN_EXPIRED_CONSUMEQUEUE)
 
 	adminProcessor := stgbroker.NewAdminBrokerProcessor(bc)
 	response, err := adminProcessor.ProcessRequest(ctx, request)

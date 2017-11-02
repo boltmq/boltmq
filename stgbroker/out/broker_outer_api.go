@@ -205,7 +205,7 @@ func (self *BrokerOuterAPI) UnRegisterBrokerAll(clusterName, brokerAddr, brokerN
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllTopicConfig(brokerAddr string) *body.TopicConfigSerializeWrapper {
-	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_CONFIG)
 	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("GetAllTopicConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
@@ -229,7 +229,7 @@ func (self *BrokerOuterAPI) GetAllTopicConfig(brokerAddr string) *body.TopicConf
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllConsumerOffset(brokerAddr string) *body.ConsumerOffsetSerializeWrapper {
-	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_CONSUMER_OFFSET)
 	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("GetAllConsumerOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
@@ -253,7 +253,7 @@ func (self *BrokerOuterAPI) GetAllConsumerOffset(brokerAddr string) *body.Consum
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllDelayOffset(brokerAddr string) string {
-	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_DELAY_OFFSET)
 	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("GetAllDelayOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())
@@ -270,7 +270,7 @@ func (self *BrokerOuterAPI) GetAllDelayOffset(brokerAddr string) string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (self *BrokerOuterAPI) GetAllSubscriptionGroupConfig(brokerAddr string) *body.SubscriptionGroupWrapper {
-	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG, nil)
+	request := protocol.CreateRequestCommand(code.GET_ALL_SUBSCRIPTIONGROUP_CONFIG)
 	response, err := self.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("GetAllSubscriptionGroupConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request.ToString())

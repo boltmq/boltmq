@@ -13,7 +13,6 @@ import (
 // MQAdminImpl: 运维方法
 // Author: yintongqiang
 // Since:  2017/8/13
-
 type MQAdminImpl struct {
 	mQClientFactory *MQClientInstance
 }
