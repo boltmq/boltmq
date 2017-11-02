@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -9,6 +10,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
@@ -16,6 +18,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	set "github.com/deckarep/golang-set"
 	"strings"
 )
 
@@ -473,36 +476,35 @@ func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMill
 	return "", nil
 }
 
-//
-//// GetTopicListFromNameServer 从Namesrv查询所有Topic列表
-//// Author: tianyuliang, <tianyuliang@gome.com.cn>
-//// Since: 2017/11/1
-//func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*body.TopicList, error) {
-//	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER)
-//	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMills)
-//	if err != nil || response == nil {
-//		return nil, err
-//	}
-//	if response.Code != code.SUCCESS {
-//		logger.Errorf("GetTopicListFromNameServer failed. %s", response.ToString())
-//		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
-//	}
-//	content := response.Body
-//	if content == nil || len(content) == 0 {
-//		return topicList, nil
-//	}
-//
-//	topicList := new(body.TopicList)
-//	err = topicList.CustomDecode(content, topicList)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicList != nil {
-//		newTopicSet := set.NewSet()
-//		for topic := range topicList.TopicList.Iterator().C {
-//			newTopicSet.Add(stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix))
-//		}
-//		topicList.TopicList = newTopicSet
-//	}
-//	return topicList, nil
-//}
+// GetTopicListFromNameServer 从Namesrv查询所有Topic列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*body.TopicList, error) {
+	topicList := new(body.TopicList)
+	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER)
+	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMills)
+	if err != nil || response == nil {
+		return nil, err
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("GetTopicListFromNameServer failed. %s", response.ToString())
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
+	}
+	content := response.Body
+	if content == nil || len(content) == 0 {
+		return topicList, nil
+	}
+
+	err = topicList.CustomDecode(content, topicList)
+	if err != nil {
+		return nil, err
+	}
+	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicList != nil {
+		newTopicSet := set.NewSet()
+		for topic := range topicList.TopicList.Iterator().C {
+			newTopicSet.Add(stgclient.ClearProjectGroup(topic.(string), impl.ProjectGroupPrefix))
+		}
+		topicList.TopicList = newTopicSet
+	}
+	return topicList, nil
+}

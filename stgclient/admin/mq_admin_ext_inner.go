@@ -155,4 +155,6 @@ type MQAdminExtInner interface {
 
 	// 服务器统计数据输出
 	ViewBrokerStatsData(brokerAddr, statsName, statsKey string) (*body.BrokerStatsData, error)
+
+
 }

@@ -20,14 +20,14 @@ type MQAdmin interface {
 	// queueNum 读写队列的数量
 	CreateCustomTopic(key, newTopic string, queueNum, topicSysFlag int) error
 
-	// Query messages
-	// topic  message topic
-	// key    message key index word
-	// maxNum max message number
-	// begin  from when
-	// end    to when
-	QueryMessage(topic, key string, maxNum int, begin, end int64) (*QueryResult, error)
-
+	//// Query messages
+	//// topic  message topic
+	//// key    message key index word
+	//// maxNum max message number
+	//// begin  from when
+	//// end    to when
+	//QueryMessage(topic, key string, maxNum int, begin, end int64) (*QueryResult, error)
+	//
 	//// Query message according tto message id
 	//// msgId the message id
 	//ViewMessage(msgId string) (*message.MessageExt, error)

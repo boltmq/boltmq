@@ -3,56 +3,35 @@ package message
 import (
 	"bytes"
 	"encoding/binary"
-
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sysflag"
 	"github.com/go-errors/errors"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"strconv"
 )
 
-// MessageExt 消息体
+// MessageExt 消息拓展结构体
 type MessageExt struct {
-	//// 消息主题
-	//Topic                     string
-	//// 消息标志，系统不做干预，完全由应用决定如何使用
-	//Flag                      int
-	//// 消息属性，都是系统属性，禁止应用设置
-	//Properties                map[string]string
-	//// 消息体
-	//Body                      []byte
-	Message
-	// 队列ID <PUT>
-	QueueId int32
-	// 存储记录大小
-	StoreSize int32
-	// 队列偏移量
-	QueueOffset int64
-	// 消息标志位 <PUT>
-	SysFlag int32
-	// 消息在客户端创建时间戳 <PUT>
-	BornTimestamp int64
-	// 消息来自哪里 <PUT>
-	BornHost string
-	// 消息在服务器存储时间戳
-	StoreTimestamp int64
-	// 消息存储在哪个服务器 <PUT>
-	StoreHost string
-	// 消息ID
-	MsgId string
-	// 消息对应的Commit Log Offset
-	CommitLogOffset int64
-	// 消息体CRC
-	BodyCRC int32
-	// 当前消息被某个订阅组重新消费了几次（订阅组之间独立计数）
-	ReconsumeTimes            int32
-	PreparedTransactionOffset int64
+	Message                          // 消息结构体
+	QueueId                   int32  // 队列ID<PUT>
+	StoreSize                 int32  // 存储记录大小
+	QueueOffset               int64  // 队列偏移量
+	SysFlag                   int32  // 消息标志位 <PUT>
+	BornTimestamp             int64  // 消息在客户端创建时间戳 <PUT>
+	BornHost                  string // 消息来自哪里 <PUT>
+	StoreTimestamp            int64  // 消息在服务器存储时间戳
+	StoreHost                 string // 消息存储在哪个服务器 <PUT>
+	MsgId                     string // 消息ID
+	CommitLogOffset           int64  // 消息对应的Commit Log Offset
+	BodyCRC                   int32  // 消息体CRC
+	ReconsumeTimes            int32  // 当前消息被某个订阅组重新消费了几次（订阅组之间独立计数）
+	PreparedTransactionOffset int64  // 事务预处理偏移量
 }
 
-func (msgExt *MessageExt) ToString() string {
-	return "MessageExt [topic=" + msgExt.Topic + ", storeHost=" + msgExt.StoreHost + ", bornHost=" + msgExt.BornHost +
-		", storeTimestamp=" + strconv.FormatInt(msgExt.StoreTimestamp, 10) + ", bornTimestamp=" + strconv.FormatInt(msgExt.BornTimestamp, 10) +
-		", queueId=" + strconv.Itoa(int(msgExt.QueueId)) +
-		", queueOffset=" + strconv.Itoa(int(msgExt.QueueOffset)) + ", msgId=" + msgExt.MsgId + ", msgBody=" + string(msgExt.Body) + "]"
+// ToString 打印消息Message的数据
+func (m *MessageExt) ToString() string {
+	format := "MessageExt {topic=%s, msgId=%s, storeHost=%s, bornHost=%s, storeTimestamp=%d, bornTimestamp=%d, queueId=%d, queueOffset=%d, msgBody=%s }"
+	msgInfo := fmt.Sprintf(format, m.Topic, m.MsgId, m.StoreHost, m.BornHost, m.StoreTimestamp, m.BornTimestamp, m.QueueId, m.QueueOffset, string(m.Body))
+	return msgInfo
 }
 
 // Encode 编码MessageExt
