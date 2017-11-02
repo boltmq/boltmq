@@ -156,5 +156,26 @@ type MQAdminExtInner interface {
 	// 服务器统计数据输出
 	ViewBrokerStatsData(brokerAddr, statsName, statsKey string) (*body.BrokerStatsData, error)
 
+	// 根据msgId查询消息消费结果
+	ViewMessage(msgId string) (*message.MessageExt, error)
 
+	// 搜索消息
+	// topic  topic名称
+	// key    消息key关键字[业务系统基于此字段唯一标识消息]
+	// maxNum 最大搜索条数
+	// begin  开始查询消息的时间戳
+	// end    结束查询消息的时间戳
+	QueryMessage(topic, key string, maxNum int, begin, end int64) (*stgclient.QueryResult, error)
+
+	// 查询较早的存储消息
+	EarliestMsgStoreTime(mq *message.MessageQueue) (int64, error)
+
+	// 根据时间戳搜索MessageQueue偏移量(注意:可能会出现大量IO开销)
+	SearchOffset(mq message.MessageQueue, timestamp int64) (int64, error)
+
+	// 查询MessageQueue最大偏移量
+	MaxOffset(mq *message.MessageQueue) (int64, error)
+
+	// 查询MessageQueue最小偏移量
+	MinOffset(mq *message.MessageQueue) (int64, error)
 }
