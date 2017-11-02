@@ -49,8 +49,11 @@ func (impl *DefaultMQAdminExtImpl) Start() error {
 
 // 关闭Admin
 func (impl *DefaultMQAdminExtImpl) Shutdown() error {
-	return nil
+	if impl == nil {
+		return nil
+	}
 
+	return nil
 }
 
 // 更新Broker配置

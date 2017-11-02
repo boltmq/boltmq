@@ -8,7 +8,8 @@ import (
 )
 
 type AbstractService struct {
-	ConfigureInitializer ConfigureInitializer
+	ConfigureInitializer *ConfigureInitializer
+	DefaultMQAdminExt    *admin.DefaultMQAdminExt
 }
 
 func NewAbstractService() *AbstractService {
@@ -17,25 +18,24 @@ func NewAbstractService() *AbstractService {
 	return baseService
 }
 
-func (service *AbstractService) GetDefaultMQAdminExt() *admin.DefaultMQAdminExt {
-	defaultMQAdminExt := admin.NewDefaultMQAdminExt()
-	defaultMQAdminExt.ClientConfig.InstanceName = strconv.FormatInt(timeutil.NowTimestamp(), 10)
-	return defaultMQAdminExt
+func (service *AbstractService) BuildDefaultMQAdminExt() *admin.DefaultMQAdminExt {
+	service.DefaultMQAdminExt = admin.NewDefaultMQAdminExt()
+	service.DefaultMQAdminExt.ClientConfig.InstanceName = strconv.FormatInt(timeutil.NowTimestamp(), 10)
+	return service.DefaultMQAdminExt
 }
 
-func (service *AbstractService) Start(defaultMQAdminExt *admin.DefaultMQAdminExt) {
-	if defaultMQAdminExt != nil {
-		err := defaultMQAdminExt.Start()
+func (service *AbstractService) Start() {
+	if service.DefaultMQAdminExt != nil {
+		err := service.DefaultMQAdminExt.Start()
 		if err != nil {
 			logger.Errorf("DefaultMQAdminExt Start err: %s", err.Error())
-			return
 		}
 	}
 }
 
-func (service *AbstractService) Shutdown(defaultMQAdminExt *admin.DefaultMQAdminExt) {
-	if defaultMQAdminExt != nil {
-		err := defaultMQAdminExt.Shutdown()
+func (service *AbstractService) Shutdown() {
+	if service.DefaultMQAdminExt != nil {
+		err := service.DefaultMQAdminExt.Shutdown()
 		if err != nil {
 			logger.Errorf("DefaultMQAdminExt Shutdown err: %s", err.Error())
 			return

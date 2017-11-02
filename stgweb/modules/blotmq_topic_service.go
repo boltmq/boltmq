@@ -2,9 +2,10 @@ package modules
 
 import (
 	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
+	"strings"
 )
 
 type BoltMQTopicService struct {
@@ -12,9 +13,9 @@ type BoltMQTopicService struct {
 }
 
 func (service *BoltMQTopicService) list() (topics []string, err error) {
-	defaultMQAdminExt := service.GetDefaultMQAdminExt()
-	defaultMQAdminExt.Start()
-	topicList, err := defaultMQAdminExt.FetchAllTopicList()
+	service.BuildDefaultMQAdminExt()
+	service.Start()
+	topicList, err := service.DefaultMQAdminExt.FetchAllTopicList()
 	if err != nil {
 		logger.Errorf("defaultMQAdminExt.FetchAllTopicList() err: %s", err.Error())
 		return []string{}, err
@@ -24,10 +25,10 @@ func (service *BoltMQTopicService) list() (topics []string, err error) {
 	}
 	topics = make([]string, 0, topicList.TopicList.Cardinality())
 	for topic := range topicList.TopicList.Iterator().C {
-		topics = append(topics, topic)
+		topics = append(topics, topic.(string))
 	}
 	logger.Infof("all topic size = %d", len(topics))
-	service.Shutdown(defaultMQAdminExt)
+	service.Shutdown()
 	return topics, nil
 }
 
@@ -40,13 +41,13 @@ func (service *BoltMQTopicService) getTopicList() (map[models.TopicType][]string
 	topics := []string{}
 	retryTopics := []string{}
 	dlqTopics := []string{}
-	for _, t := range topicList {
-		if(topic.startsWith("%RETRY%")){
-			retryTopics.add(topic);
-		} else if(topic.startsWith("%DLQ%")) {
-			dlqTopics.add(topic);
+	for _, topic := range topicList {
+		if strings.HasPrefix(topic, stgcommon.RETRY_GROUP_TOPIC_PREFIX) {
+			retryTopics = append(retryTopics, topic)
+		} else if strings.HasPrefix(topic, stgcommon.DLQ_GROUP_TOPIC_PREFIX) {
+			dlqTopics = append(dlqTopics, topic)
 		} else {
-			topics.add(topic);
+			topics = append(topics, topic)
 		}
 	}
 

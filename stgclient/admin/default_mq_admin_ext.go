@@ -14,8 +14,9 @@ type DefaultMQAdminExt struct {
 }
 
 func NewDefaultMQAdminExt() *DefaultMQAdminExt {
-	defaultMQAdminExt := &DefaultMQAdminExt{}
-	defaultMQAdminExt.AdminExtGroup = "admin_ext_group"
-	defaultMQAdminExt.CreateTopicKey = stgcommon.DEFAULT_TOPIC
+	defaultMQAdminExt := &DefaultMQAdminExt{
+		AdminExtGroup:  "admin_ext_group",
+		CreateTopicKey: stgcommon.DEFAULT_TOPIC,
+	}
 	return defaultMQAdminExt
 }
