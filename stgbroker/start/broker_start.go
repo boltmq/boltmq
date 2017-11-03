@@ -3,13 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"runtime/debug"
+
 	"git.oschina.net/cloudzone/smartgo/stgbroker"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"github.com/toolkits/file"
-	"os"
 )
 
 func main() {
+	debug.SetMaxThreads(100000)
 
 	c := flag.String("c", "configPath", "Broker config *.toml file")
 	h := flag.Bool("h", false, "help")
