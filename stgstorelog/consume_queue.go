@@ -21,13 +21,13 @@ const (
 type ConsumeQueue struct {
 	defaultMessageStore *DefaultMessageStore // 存储顶层对象
 	mapedFileQueue      *MapedFileQueue      // 存储消息索引的队列
-	topic               string
-	queueId             int32
-	byteBufferIndex     *MappedByteBuffer
-	storePath           string
-	mapedFileSize       int64
-	maxPhysicOffset     int64 // 最后一个消息对应的物理Offset
-	minLogicOffset      int64 // 逻辑队列的最小Offset，删除物理文件时，计算出来的最小Offset
+	topic               string               // topic
+	queueId             int32                // 队列ID
+	byteBufferIndex     *MappedByteBuffer    // 索引文件内存映射
+	storePath           string               // 存储路径
+	mapedFileSize       int64                // 映射文件大小
+	maxPhysicOffset     int64                // 最后一个消息对应的物理Offset
+	minLogicOffset      int64                // 逻辑队列的最小Offset，删除物理文件时，计算出来的最小Offset
 }
 
 func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSize int64, defaultMessageStore *DefaultMessageStore) *ConsumeQueue {
@@ -35,6 +35,7 @@ func NewConsumeQueue(topic string, queueId int32, storePath string, mapedFileSiz
 	consumeQueue.storePath = storePath
 	consumeQueue.mapedFileSize = mapedFileSize
 	consumeQueue.maxPhysicOffset = -1
+	consumeQueue.minLogicOffset = 0
 	consumeQueue.defaultMessageStore = defaultMessageStore
 	consumeQueue.topic = topic
 	consumeQueue.queueId = queueId
@@ -94,8 +95,8 @@ func (self *ConsumeQueue) correctMinOffset(phyMinOffset int64) {
 
 				if offsetPy >= phyMinOffset {
 					self.minLogicOffset = result.MapedFile.fileFromOffset + int64(i)
-					logger.Infof("compute logics min offset: %d, topic: %s, queueId: %d",
-						self.getMinOffsetInQueue(), self.topic, self.queueId)
+					//logger.Infof("compute logics min offset: %d, topic: %s, queueId: %d",
+					//	self.getMinOffsetInQueue(), self.topic, self.queueId)
 					break
 				}
 			}
@@ -404,7 +405,7 @@ func (self *ConsumeQueue) truncateDirtyLogicFiles(phyOffet int64) {
 						self.maxPhysicOffset = offset
 					}
 				} else {
-					if offset >= 0 && size >= 0 {
+					if offset >= 0 && size > 0 {
 						if offset >= phyOffet {
 							return
 						}

@@ -110,10 +110,10 @@ func (self *DispatchMessageService) doDispatch(dispatchRequest *DispatchRequest)
 			*/
 			break
 		}
+	}
 
-		if self.defaultMessageStore.MessageStoreConfig.MessageIndexEnable {
-			self.defaultMessageStore.IndexService.putRequest(dispatchRequest)
-		}
+	if self.defaultMessageStore.MessageStoreConfig.MessageIndexEnable {
+		self.defaultMessageStore.IndexService.putRequest(dispatchRequest)
 	}
 }
 

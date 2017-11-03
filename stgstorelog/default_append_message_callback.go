@@ -100,8 +100,10 @@ func (self *DefaultAppendMessageCallback) doAppend(fileFromOffset int64, mappedB
 		self.msgStoreItemMemory.WriteInt32(maxBlank)
 		blankMagicCode := BlankMagicCode
 		self.msgStoreItemMemory.WriteInt32(int32(blankMagicCode))
+		self.msgStoreItemMemory.Write(make([]byte, maxBlank-8))
 
-		mappedByteBuffer.Write(self.msgStoreItemMemory.Bytes())
+		data := self.msgStoreItemMemory.Bytes()
+		mappedByteBuffer.Write(data)
 
 		return &AppendMessageResult{
 			Status:         END_OF_FILE,

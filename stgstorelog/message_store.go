@@ -24,13 +24,13 @@ type MessageStore interface {
 	SelectOneMessageByOffsetAndSize(commitLogOffset int64, msgSize int32) *SelectMapedBufferResult // 通过物理队列Offset、size，查询消息。 如果发生错误，则返回null
 	GetRunningDataInfo() string
 	GetRuntimeInfo() map[string]string // 取运行时统计数据
-	GetMaxPhyOffset() int64
+	GetMaxPhyOffset() int64            //获取物理队列最大offset
 	GetMinPhyOffset() int64
 	GetEarliestMessageTime(topic string, queueId int32) int64 // 获取队列中最早的消息时间
 	GetMessageStoreTimeStamp(topic string, queueId int32, offset int64) int64
 	GetMessageTotalInQueue(topic string, queueId int32) int64
-	GetCommitLogData(offset int64) *SelectMapedBufferResult
-	AppendToCommitLog(startOffset int64, data []byte) bool
+	GetCommitLogData(offset int64) *SelectMapedBufferResult // 数据复制使用：获取CommitLog数据
+	AppendToCommitLog(startOffset int64, data []byte) bool  // 数据复制使用：向CommitLog追加数据，并分发至各个Consume Queue
 	ExcuteDeleteFilesManualy()
 	QueryMessage(topic string, key string, maxNum int32, begin int64, end int64) *QueryMessageResult
 	UpdateHaMasterAddress(newAddr string)
