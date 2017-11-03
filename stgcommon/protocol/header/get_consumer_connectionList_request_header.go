@@ -11,7 +11,7 @@ func (header *GetConsumerConnectionListRequestHeader) CheckFields() error {
 	return nil
 }
 
-// GetConsumerConnectionListRequestHeader 初始化
+// NewGetConsumerConnectionListRequestHeader 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1
 func NewGetConsumerConnectionListRequestHeader(consumerGroup string) *GetConsumerConnectionListRequestHeader {
