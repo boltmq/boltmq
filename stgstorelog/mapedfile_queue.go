@@ -414,34 +414,6 @@ func (self *MapedFileQueue) commit(flushLeastPages int32) bool {
 	return result
 }
 
-func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNotFound bool) *MapedFile {
-	self.rwLock.RLock()
-	defer self.rwLock.RUnlock()
-
-	mapedFile := self.getFirstMapedFile()
-	if mapedFile != nil {
-		index := (offset / self.mapedFileSize) - (mapedFile.fileFromOffset / self.mapedFileSize)
-		if index < 0 || index >= int64(self.mapedFiles.Len()) {
-			logger.Warnf("maped file queue find maped file by offset, offset not matched, request Offset: %d, index: %d, mapedFileSize: %d, mapedFiles count: %d",
-				offset, index, self.mapedFileSize, self.mapedFiles.Len())
-		}
-
-		i := 0
-		for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
-			if i == int(index) {
-				result := e.Value.(*MapedFile)
-				//logger.Info("maped file queue find maped file by offset: %#v", result)
-
-				return result
-			}
-			i++
-		}
-
-	}
-
-	return mapedFile
-}
-
 func (self *MapedFileQueue) getFirstMapedFile() *MapedFile {
 	if self.mapedFiles.Len() == 0 {
 		return nil
@@ -465,6 +437,36 @@ func (self *MapedFileQueue) getLastMapedFile2() *MapedFile {
 	}
 
 	return result
+}
+
+func (self *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNotFound bool) *MapedFile {
+	self.rwLock.RLock()
+	defer self.rwLock.RUnlock()
+
+	mapedFile := self.getFirstMapedFile()
+	if mapedFile != nil {
+		index := (offset / self.mapedFileSize) - (mapedFile.fileFromOffset / self.mapedFileSize)
+		if index < 0 || index >= int64(self.mapedFiles.Len()) {
+			logger.Warnf("maped file queue find maped file by offset, offset not matched, request Offset: %d, index: %d, mapedFileSize: %d, mapedFiles count: %d",
+				offset, index, self.mapedFileSize, self.mapedFiles.Len())
+		}
+
+		i := 0
+		for e := self.mapedFiles.Front(); e != nil; e = e.Next() {
+			if i == int(index) {
+				result := e.Value.(*MapedFile)
+				return result
+			}
+			i++
+		}
+
+		if returnFirstOnNotFound {
+			return mapedFile
+		}
+
+	}
+
+	return nil
 }
 
 func (self *MapedFileQueue) getLastAndLastMapedFile() *MapedFile {

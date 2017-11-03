@@ -90,7 +90,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 
 	switch ms.MessageStoreConfig.BrokerRole {
 	case config.SLAVE:
-		ms.ReputMessageService = new(ReputMessageService)
+		ms.ReputMessageService = NewReputMessageService(ms)
 		// reputMessageService依赖scheduleMessageService做定时消息的恢复，确保储备数据一致
 		ms.ScheduleMessageService = NewScheduleMessageService(ms)
 		break
@@ -280,9 +280,9 @@ func (self *DefaultMessageStore) Start() error {
 		self.ScheduleMessageService.Start()
 	}
 
-	// TODO reputMessageService
 	if self.ReputMessageService != nil {
-
+		self.ReputMessageService.setReputFromOffset(self.CommitLog.getMaxOffset())
+		go self.ReputMessageService.start()
 	}
 
 	// transactionStateService
@@ -363,7 +363,7 @@ func (self *DefaultMessageStore) Shutdown() {
 		}
 
 		if self.ReputMessageService != nil {
-			self.ReputMessageService.Shutdown()
+			self.ReputMessageService.shutdown()
 		}
 
 		self.StoreCheckpoint.flush()
@@ -445,8 +445,11 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 
 	// TODO
 	nextBeginOffset := offset
-	minOffset := int64(0)
-	maxOffset := int64(0)
+
+	var (
+		minOffset int64 = 0
+		maxOffset int64 = 0
+	)
 
 	getResult := new(GetMessageResult)
 
@@ -481,9 +484,9 @@ func (self *DefaultMessageStore) GetMessage(group string, topic string, queueId 
 				MaxFilterMessageCount := 16000
 
 				var (
-					i                   int
-					maxPhyOffsetPulling int64
-					diskFallRecorded    bool
+					i                         = 0
+					maxPhyOffsetPulling int64 = 0
+					diskFallRecorded          = false
 				)
 
 				for ; int32(i) < bufferConsumeQueue.Size && i < MaxFilterMessageCount; i += CQStoreUnitSize {
@@ -787,6 +790,18 @@ func (self *DefaultMessageStore) GetEarliestMessageTime(topic string, queueId in
 	return -1
 }
 
+// GetCommitLogData 数据复制使用：获取CommitLog数据
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/23
+func (self *DefaultMessageStore) GetCommitLogData(offset int64) *SelectMapedBufferResult {
+	if self.ShutdownFlag {
+		logger.Warn("message store has shutdown, so getPhyQueueData is forbidden")
+		return nil
+	}
+
+	return self.CommitLog.getData(offset)
+}
+
 // GetRuntimeInfo 获取运行时统计数据
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/9/21
@@ -944,6 +959,27 @@ func (self *DefaultMessageStore) GetMessageIds(topic string, queueId int32, minO
 	}
 
 	return messageIds
+}
+
+// GetMaxPhyOffset 获取物理队列最大offset
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/24
+func (self *DefaultMessageStore) GetMaxPhyOffset() int64 {
+	return self.CommitLog.getMaxOffset()
+}
+
+// AppendToCommitLog 向CommitLog追加数据，并分发至各个Consume Queue
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/24
+func (self *DefaultMessageStore) AppendToCommitLog(startOffset int64, data []byte) bool {
+	result := self.CommitLog.appendData(startOffset, data)
+	if result {
+		self.ReputMessageService.reputChan <- true
+	} else {
+		logger.Errorf("appendToPhyQueue failed %d %d", startOffset, len(data))
+	}
+
+	return result
 }
 
 func (self *DefaultMessageStore) Now() int64 {

@@ -63,8 +63,7 @@ func (self *CommitLog) Load() bool {
 
 func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
 	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
-	// TODO crc32算出冗余值后，recoverAbnormally修复数据有问题，会出现consumer_push死循环的发送消息
-	msg.BodyCRC = 0
+	msg.BodyCRC, _ = stgcommon.Crc32(msg.Body)
 
 	// TODO 事务消息处理
 	self.mutex.Lock()
@@ -142,6 +141,11 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 		// TODO
 	} else {
 		//self.FlushCommitLogService
+	}
+
+	// Synchronous write double
+	if config.SYNC_MASTER == self.DefaultMessageStore.MessageStoreConfig.BrokerRole {
+		// TODO
 	}
 
 	return putMessageResult
@@ -250,12 +254,20 @@ func (self *CommitLog) removeQueurFromTopicQueueTable(topic string, queueId int3
 }
 
 func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuffer, checkCRC bool, readBody bool) *DispatchRequest {
-	// byteBufferMessage := self.AppendMessageCallback.msgStoreItemMemory
-	totalSize := mappedByteBuffer.ReadInt32() // 1 TOTALSIZE
-	magicCode := mappedByteBuffer.ReadInt32() // 2 MAGICCODE
-
 	messageMagicCode := MessageMagicCode
 	blankMagicCode := BlankMagicCode
+
+	bufferLen := mappedByteBuffer.WritePos - mappedByteBuffer.ReadPos
+	if bufferLen < 4 {
+		return &DispatchRequest{msgSize: -1}
+	}
+
+	totalSize := mappedByteBuffer.ReadInt32() // 1 TOTALSIZE
+	if bufferLen < int(totalSize) {
+		return &DispatchRequest{msgSize: -1}
+	}
+
+	magicCode := mappedByteBuffer.ReadInt32() // 2 MAGICCODE
 
 	switch magicCode {
 	case int32(messageMagicCode):
@@ -263,7 +275,8 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 	case int32(blankMagicCode):
 		return &DispatchRequest{msgSize: 0}
 	default:
-		logger.Warn("found a illegal magic code ", magicCode)
+		logger.Warnf("found a illegal magic code MessageMagicCode:%d BlankMagicCode:%d ActualMagicCode:%d",
+			messageMagicCode, blankMagicCode, magicCode)
 		return &DispatchRequest{msgSize: -1}
 	}
 
@@ -297,17 +310,19 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 		}
 	}
 
+	var (
+		topic          = ""
+		keys           = ""
+		tagsCode int64 = 0
+	)
+
 	// 16 TOPIC
 	topicLen := mappedByteBuffer.ReadInt8()
-	topic := ""
 	if topicLen > 0 {
 		topicBytes := make([]byte, topicLen)
 		mappedByteBuffer.Read(topicBytes)
 		topic = string(topicBytes)
 	}
-
-	tagsCode := int64(0)
-	keys := ""
 
 	// 17 properties
 	propertiesLength := mappedByteBuffer.ReadInt16()
@@ -316,14 +331,14 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 		mappedByteBuffer.Read(propertiesBytes)
 		properties := string(propertiesBytes)
 		propertiesMap := message.String2messageProperties(properties)
-		keys = propertiesMap["PROPERTY_KEYS"]
-		tags := propertiesMap["PROPERTY_TAGS"]
+		keys = propertiesMap[message.PROPERTY_KEYS]
+		tags := propertiesMap[message.PROPERTY_TAGS]
 		if len(tags) > 0 {
 			tagsCode = TagsString2tagsCode(message.ParseTopicFilterType(sysFlag), tags)
 		}
 
 		// Timing message processing
-		delayLevelStr, ok := propertiesMap["PROPERTY_DELAY_TIME_LEVEL"]
+		delayLevelStr, ok := propertiesMap[message.PROPERTY_DELAY_TIME_LEVEL]
 		if SCHEDULE_TOPIC == topic && ok {
 			delayLevelTemp, _ := strconv.Atoi(delayLevelStr)
 			delayLevel := int32(delayLevelTemp)
@@ -469,6 +484,48 @@ func (self *CommitLog) deleteExpiredFile(expiredTime int64, deleteFilesInterval 
 
 func (self *CommitLog) retryDeleteFirstFile(intervalForcibly int64) bool {
 	return self.MapedFileQueue.retryDeleteFirstFile(intervalForcibly)
+}
+
+func (self *CommitLog) getData(offset int64) *SelectMapedBufferResult {
+	returnFirstOnNotFound := false
+	if offset == 0 {
+		returnFirstOnNotFound = true
+	}
+
+	mapedFile := self.MapedFileQueue.findMapedFileByOffset(offset, returnFirstOnNotFound)
+	if mapedFile != nil {
+		mapedFileSize := self.DefaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
+		pos := offset % int64(mapedFileSize)
+		result := mapedFile.selectMapedBuffer(pos)
+		return result
+	}
+
+	return nil
+}
+
+func (self *CommitLog) appendData(startOffset int64, data []byte) bool {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	mapedFile, err := self.MapedFileQueue.getLastMapedFile(startOffset)
+	if err != nil {
+		logger.Error("commit log append data get last maped file error:", err.Error())
+		return false
+	}
+
+	size := mapedFile.mappedByteBuffer.Limit - mapedFile.mappedByteBuffer.WritePos
+	if len(data) > size {
+		mapedFile.appendMessage(data[:size])
+		mapedFile, err = self.MapedFileQueue.getLastMapedFile(startOffset + int64(size))
+		if err != nil {
+			logger.Error("commit log append data get last maped file error:", err.Error())
+			return false
+		}
+
+		return mapedFile.appendMessage(data[size:])
+	}
+
+	return mapedFile.appendMessage(data)
 }
 
 func (self *CommitLog) destroy() {
