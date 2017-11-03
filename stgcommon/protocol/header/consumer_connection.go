@@ -3,6 +3,7 @@ package header
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
 )
 
@@ -11,10 +12,11 @@ import (
 // Since 2017/9/19
 type ConsumerConnection struct {
 	ConnectionSet     set.Set                    `json:"connectionSet"`     // type: Connection
-	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // key: String, val:SubscriptionData
+	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // topic<*SubscriptionData>
 	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
 	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
 	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
+	*protocol.RemotingSerializable
 }
 
 // NewConsumerConnection 初始化
@@ -24,6 +26,7 @@ func NewConsumerConnection() *ConsumerConnection {
 	connect := new(ConsumerConnection)
 	connect.ConnectionSet = set.NewSet()
 	connect.SubscriptionTable = sync.NewMap()
+	connect.RemotingSerializable = new(protocol.RemotingSerializable)
 	return connect
 }
 

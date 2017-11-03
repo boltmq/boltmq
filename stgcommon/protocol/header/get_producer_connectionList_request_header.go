@@ -10,3 +10,10 @@ type GetProducerConnectionListRequestHeader struct {
 func (header *GetProducerConnectionListRequestHeader) CheckFields() error {
 	return nil
 }
+
+func NewGetProducerConnectionListRequestHeader(producerGroup string) *GetProducerConnectionListRequestHeader {
+	producerConnectionListRequestHeader := &GetProducerConnectionListRequestHeader{
+		ProducerGroup: producerGroup,
+	}
+	return producerConnectionListRequestHeader
+}
