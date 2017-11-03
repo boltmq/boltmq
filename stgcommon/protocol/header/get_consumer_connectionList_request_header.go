@@ -10,3 +10,10 @@ type GetConsumerConnectionListRequestHeader struct {
 func (header *GetConsumerConnectionListRequestHeader) CheckFields() error {
 	return nil
 }
+
+func NewGetConsumerConnectionListRequestHeader(consumerGroup string) *GetConsumerConnectionListRequestHeader {
+	consumerConnectionListRequestHeader := &GetConsumerConnectionListRequestHeader{
+		ConsumerGroup: consumerGroup,
+	}
+	return consumerConnectionListRequestHeader
+}

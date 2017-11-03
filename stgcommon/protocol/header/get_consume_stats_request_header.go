@@ -11,3 +11,11 @@ type GetConsumeStatsRequestHeader struct {
 func (header *GetConsumeStatsRequestHeader) CheckFields() error {
 	return nil
 }
+
+func NewGetConsumeStatsRequestHeader(consumerGroup, topic string) *GetConsumeStatsRequestHeader {
+	consumeStatsRequestHeader := &GetConsumeStatsRequestHeader{
+		Topic:         topic,
+		ConsumerGroup: consumerGroup,
+	}
+	return consumeStatsRequestHeader
+}

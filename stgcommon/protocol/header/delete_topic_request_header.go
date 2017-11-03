@@ -4,7 +4,7 @@ package header
 // Author gaoyanlei
 // Since 2017/8/25
 type DeleteTopicRequestHeader struct {
-	Topic string
+	Topic string `json:"topic"`
 }
 
 func (header *DeleteTopicRequestHeader) CheckFields() error {

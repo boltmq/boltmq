@@ -10,3 +10,9 @@ type GetTopicStatsInfoRequestHeader struct {
 func (header *GetTopicStatsInfoRequestHeader) CheckFields() error {
 	return nil
 }
+func NewGetTopicStatsInfoRequestHeader(topic string) *GetTopicStatsInfoRequestHeader {
+	topicStatsInfoRequestHeader := &GetTopicStatsInfoRequestHeader{
+		Topic: topic,
+	}
+	return topicStatsInfoRequestHeader
+}
