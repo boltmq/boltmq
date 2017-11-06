@@ -221,9 +221,8 @@ func (cmp *ClientManageProcessor) getConsumerListByGroup(ctx netm.Context, reque
 		clientIds := consumerGroupInfo.GetAllClientId()
 
 		if clientIds != nil && len(clientIds) > 0 {
-			body := &header.GetConsumerListByGroupResponseBody{}
-			body.ConsumerIdList = clientIds
-			response.Body, _ = body.Encode()
+			consumerListBody := &header.GetConsumerListByGroupResponseBody{ConsumerIdList: clientIds}
+			response.Body = consumerListBody.CustomEncode(consumerListBody)
 			response.Code = code.SUCCESS
 			response.Remark = ""
 			return response, nil

@@ -13,8 +13,8 @@ const (
 // ToString 消转化为“费类型枚举”对应的字符串
 // Author: yintongqiang
 // Since:  2017/8/8
-func (cType ConsumeType) ToString() string {
-	switch cType {
+func (consumeType ConsumeType) ToString() string {
+	switch consumeType {
 	case CONSUME_ACTIVELY:
 		return "CONSUME_ACTIVELY"
 	case CONSUME_PASSIVELY:

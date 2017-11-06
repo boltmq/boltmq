@@ -11,6 +11,9 @@ func (header *GetProducerConnectionListRequestHeader) CheckFields() error {
 	return nil
 }
 
+// NewGetProducerConnectionListRequestHeader 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
 func NewGetProducerConnectionListRequestHeader(producerGroup string) *GetProducerConnectionListRequestHeader {
 	producerConnectionListRequestHeader := &GetProducerConnectionListRequestHeader{
 		ProducerGroup: producerGroup,

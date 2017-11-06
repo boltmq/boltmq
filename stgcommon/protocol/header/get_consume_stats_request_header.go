@@ -12,6 +12,9 @@ func (header *GetConsumeStatsRequestHeader) CheckFields() error {
 	return nil
 }
 
+// GetConsumeStatsRequestHeader 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
 func NewGetConsumeStatsRequestHeader(consumerGroup, topic string) *GetConsumeStatsRequestHeader {
 	consumeStatsRequestHeader := &GetConsumeStatsRequestHeader{
 		Topic:         topic,
