@@ -2,7 +2,6 @@ package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
-	//"git.oschina.net/cloudzone/smartgo/stgclient/admin"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
@@ -657,46 +656,3 @@ func (self *MQClientInstance) ConsumeMessageDirectly(msg *message.MessageExt, co
 	}
 	return nil
 }
-
-//
-//// RegisterAdminExt 注册Admin控制对象
-//// Author: tianyuliang, <tianyuliang@gome.com.cn>
-//// Since: 2017/11/6
-//func (mqClientInstance *MQClientInstance) RegisterAdminExt(groupId string, mqAdminExtInner admin.MQAdminExtInner) (bool, error) {
-//	if groupId == "" || mqAdminExtInner == nil {
-//		return false, nil
-//	}
-//	prev, err := mqClientInstance.AdminExtTable.PutIfAbsent(groupId, mqAdminExtInner)
-//	if err != nil {
-//		return false, err
-//	}
-//	if prev != nil {
-//		logger.Warnf("the admin groupId[%s] exist already.", groupId)
-//		return false, nil
-//	}
-//	return true, nil
-//}
-//
-//// UnRegisterAdminExt 卸载Admin控制对象
-//// Author: tianyuliang, <tianyuliang@gome.com.cn>
-//// Since: 2017/11/6
-//func (mqClientInstance *MQClientInstance) UnRegisterAdminExt(groupId string) (bool, error) {
-//	if groupId == "" || mqClientInstance == nil || mqClientInstance.AdminExtTable == nil {
-//		return false, nil
-//	}
-//
-//	prev, err := mqClientInstance.AdminExtTable.Remove(groupId)
-//	if err != nil {
-//		logger.Errorf("AdminExtTable Remove groupId[%s] err: %s", groupId, err.Error())
-//		return false, err
-//	}
-//	if prev != nil {
-//		if mqAdminExtInner, ok := prev.(admin.MQAdminExtInner); ok {
-//			return true, nil
-//		} else {
-//			logger.Warnf("AdminExtTable Remove groupId[%s] failed.", groupId)
-//			return false, nil
-//		}
-//	}
-//	return false, nil
-//}

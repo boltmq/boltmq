@@ -3,11 +3,8 @@ package admin
 import (
 	"bytes"
 	"fmt"
-	"git.oschina.net/cloudzone/smartgo/stgclient"
-	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/help"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	namesrvUtils "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
@@ -16,7 +13,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
-	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	set "github.com/deckarep/golang-set"
 	"strings"
 )
@@ -24,59 +20,6 @@ import (
 const (
 	timeoutMillis = int64(3 * 1000)
 )
-
-// DefaultMQAdminExtImpl 所有运维接口都在这里实现
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/2
-type DefaultMQAdminExtImpl struct {
-	ServiceState     stgcommon.ServiceState
-	MqClientInstance *process.MQClientInstance
-	RpcHook          remoting.RPCHook
-	ClientConfig     *stgclient.ClientConfig
-	MQAdminExtInner
-}
-
-func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
-	defaultMQAdminExtImpl := &DefaultMQAdminExtImpl{}
-	defaultMQAdminExtImpl.ServiceState = stgcommon.ServiceState(stgcommon.CREATE_JUST)
-	defaultMQAdminExtImpl.ClientConfig = stgclient.NewClientConfig("")
-	return defaultMQAdminExtImpl
-}
-
-func NewCustomMQAdminExtImpl(rpcHook remoting.RPCHook) *DefaultMQAdminExtImpl {
-	defaultMQAdminExtImpl := NewDefaultMQAdminExtImpl()
-	defaultMQAdminExtImpl.RpcHook = rpcHook
-	return defaultMQAdminExtImpl
-}
-
-// 启动Admin
-func (impl *DefaultMQAdminExtImpl) Start( ) error {
-	return nil
-}
-
-// 关闭Admin
-func (impl *DefaultMQAdminExtImpl) Shutdown(adminExtGroupId string) error {
-	if impl == nil || impl.MqClientInstance == nil {
-		return nil
-	}
-	switch impl.ServiceState {
-	case stgcommon.CREATE_JUST:
-	case stgcommon.RUNNING:
-		ok, err := impl.MqClientInstance.UnRegisterAdminExt(adminExtGroupId)
-		if err == nil && ok {
-			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt successful")
-		} else {
-			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt failed")
-		}
-
-		impl.MqClientInstance.Shutdown()
-		logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
-		impl.ServiceState = stgcommon.SHUTDOWN_ALREADY
-	case stgcommon.SHUTDOWN_ALREADY:
-	default:
-	}
-	return nil
-}
 
 // 更新Broker配置
 func (impl *DefaultMQAdminExtImpl) UpdateBrokerConfig(brokerAddr string, properties map[string]interface{}) error {
@@ -336,7 +279,7 @@ func (impl *DefaultMQAdminExtImpl) ResetOffsetByTimestampOld(consumerGroup, topi
 }
 
 // 按照时间回溯消费进度(客户端不需要重启)
-func (impl *DefaultMQAdminExtImpl) ResetOffsetByTimestamp(topic, group string, timestamp int64, force bool) (map[message.MessageQueue]int64, error) {
+func (impl *DefaultMQAdminExtImpl) ResetOffsetByTimestamp(topic, group string, timestamp int64, force bool) (map[*message.MessageQueue]int64, error) {
 	// TODO
 	return nil, nil
 }
