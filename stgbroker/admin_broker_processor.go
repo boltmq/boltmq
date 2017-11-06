@@ -535,7 +535,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 
 	consumerGroupInfo := abp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 	if consumerGroupInfo != nil {
-		bodydata := header.NewConsumerConnection()
+		bodydata := body.NewConsumerConnection()
 		bodydata.ConsumeFromWhere = consumerGroupInfo.ConsumeFromWhere
 		bodydata.ConsumeType = consumerGroupInfo.ConsumeType
 		bodydata.MessageModel = consumerGroupInfo.MessageModel
@@ -545,7 +545,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 		for iterator.HasNext() {
 			_, value, _ := iterator.Next()
 			if info, ok := value.(*client.ChannelInfo); ok {
-				connection := &header.Connection{}
+				connection := &body.Connection{}
 				connection.ClientId = info.ClientId
 				connection.Language = info.LanguageCode
 				connection.Version = info.Version
@@ -583,7 +583,7 @@ func (abp *AdminBrokerProcessor) getProducerConnectionList(ctx netm.Context, req
 	if channelInfoHashMap != nil {
 		bodydata := body.NewProducerConnection()
 		for _, info := range channelInfoHashMap {
-			connection := &header.Connection{}
+			connection := &body.Connection{}
 			connection.ClientId = info.ClientId
 			connection.Language = info.LanguageCode
 			connection.Version = info.Version

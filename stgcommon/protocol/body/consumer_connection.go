@@ -1,4 +1,4 @@
-package header
+package body
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"

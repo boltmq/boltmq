@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	set "github.com/deckarep/golang-set"
@@ -65,7 +64,7 @@ type MQAdminExtInner interface {
 	ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error)
 
 	// 查看Consumer网络连接、订阅关系
-	ExamineConsumerConnectionInfo(consumerGroup string) (*header.ConsumerConnection, error)
+	ExamineConsumerConnectionInfo(consumerGroup string) (*body.ConsumerConnection, error)
 
 	// 查看Producer网络连接
 	ExamineProducerConnectionInfo(producerGroup, topic string) (*body.ProducerConnection, error)
@@ -114,13 +113,13 @@ type MQAdminExtInner interface {
 	ResetOffsetByTimestampOld(consumerGroup, topic string, timestamp int64, force bool) ([]*admin.RollbackStats, error)
 
 	// 按照时间回溯消费进度(客户端不需要重启)
-	ResetOffsetByTimestamp(topic, group string, timestamp int64, force bool) (map[message.MessageQueue]int64, error)
+	ResetOffsetByTimestamp(topic, group string, timestamp int64, force bool) (map[*message.MessageQueue]int64, error)
 
 	// 重置消费进度，无论Consumer是否在线，都可以执行。不保证最终结果是否成功，需要调用方通过消费进度查询来再次确认
 	ResetOffsetNew(consumerGroup, topic string, timestamp int64) error
 
 	// 通过客户端查看消费者的消费情况
-	GetConsumeStatus(topic, consumerGroupId, clientAddr string) (map[string]map[message.MessageQueue]int64, error)
+	GetConsumeStatus(topic, consumerGroupId, clientAddr string) (map[string]map[*message.MessageQueue]int64, error)
 
 	// 创建或更新顺序消息的分区配置
 	CreateOrUpdateOrderConf(key, value string, isCluster bool) error

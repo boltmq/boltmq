@@ -12,7 +12,6 @@ import (
 	namesrvUtils "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
@@ -165,8 +164,8 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.T
 }
 
 // 查看Consumer网络连接、订阅关系
-func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup string) (*header.ConsumerConnection, error) {
-	result := header.NewConsumerConnection()
+func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup string) (*body.ConsumerConnection, error) {
+	result := body.NewConsumerConnection()
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {
