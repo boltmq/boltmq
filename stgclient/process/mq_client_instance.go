@@ -2,6 +2,7 @@ package process
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgclient"
+	//"git.oschina.net/cloudzone/smartgo/stgclient/admin"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
@@ -29,6 +30,7 @@ type MQClientInstance struct {
 	ClientId                string
 	ProducerTable           *sync.Map // group MQProducerInner
 	ConsumerTable           *sync.Map // group MQConsumerInner
+	AdminExtTable           *sync.Map // adminExt interface{}
 	MQClientAPIImpl         *MQClientAPIImpl
 	MQAdminImpl             *MQAdminImpl
 	TopicRouteTable         *sync.Map // topic TopicRouteData
@@ -43,6 +45,9 @@ type MQClientInstance struct {
 	TimerTask               set.Set
 }
 
+// NewMQClientInstance: 初始化
+// Author: yintongqiang
+// Since:  2017/8/10
 func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int32, clientId string) *MQClientInstance {
 	mqClientInstance := &MQClientInstance{
 		ClientConfig:    clientConfig,
@@ -50,6 +55,7 @@ func NewMQClientInstance(clientConfig *stgclient.ClientConfig, instanceIndex int
 		ClientId:        clientId,
 		ProducerTable:   sync.NewMap(),
 		ConsumerTable:   sync.NewMap(),
+		AdminExtTable:   sync.NewMap(),
 		TopicRouteTable: sync.NewMap(),
 		BrokerAddrTable: sync.NewMap(),
 		TimerTask:       set.NewSet(),
@@ -74,17 +80,12 @@ func (mqClientInstance *MQClientInstance) Start() {
 	switch mqClientInstance.ServiceState {
 	case stgcommon.CREATE_JUST:
 		mqClientInstance.ServiceState = stgcommon.START_FAILED
-		//Start request-response channel
-		mqClientInstance.MQClientAPIImpl.Start()
-		//Start various schedule tasks
-		mqClientInstance.StartScheduledTask()
-		//Start pull service
-		mqClientInstance.PullMessageService.Start()
-		//Start rebalance service
-		mqClientInstance.RebalanceService.Start()
-		//Start push service
-		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.StartFlag(false)
-		mqClientInstance.ServiceState = stgcommon.RUNNING
+		mqClientInstance.MQClientAPIImpl.Start()                                  // Start request-response channel
+		mqClientInstance.StartScheduledTask()                                     // Start various schedule tasks
+		mqClientInstance.PullMessageService.Start()                               // Start pull service
+		mqClientInstance.RebalanceService.Start()                                 // Start rebalance service
+		mqClientInstance.DefaultMQProducer.DefaultMQProducerImpl.StartFlag(false) // Start push service
+		mqClientInstance.ServiceState = stgcommon.RUNNING                         // Set mqClientInstance of ServiceState
 	case stgcommon.RUNNING:
 	case stgcommon.SHUTDOWN_ALREADY:
 	case stgcommon.START_FAILED:
@@ -656,3 +657,46 @@ func (self *MQClientInstance) ConsumeMessageDirectly(msg *message.MessageExt, co
 	}
 	return nil
 }
+
+//
+//// RegisterAdminExt 注册Admin控制对象
+//// Author: tianyuliang, <tianyuliang@gome.com.cn>
+//// Since: 2017/11/6
+//func (mqClientInstance *MQClientInstance) RegisterAdminExt(groupId string, mqAdminExtInner admin.MQAdminExtInner) (bool, error) {
+//	if groupId == "" || mqAdminExtInner == nil {
+//		return false, nil
+//	}
+//	prev, err := mqClientInstance.AdminExtTable.PutIfAbsent(groupId, mqAdminExtInner)
+//	if err != nil {
+//		return false, err
+//	}
+//	if prev != nil {
+//		logger.Warnf("the admin groupId[%s] exist already.", groupId)
+//		return false, nil
+//	}
+//	return true, nil
+//}
+//
+//// UnRegisterAdminExt 卸载Admin控制对象
+//// Author: tianyuliang, <tianyuliang@gome.com.cn>
+//// Since: 2017/11/6
+//func (mqClientInstance *MQClientInstance) UnRegisterAdminExt(groupId string) (bool, error) {
+//	if groupId == "" || mqClientInstance == nil || mqClientInstance.AdminExtTable == nil {
+//		return false, nil
+//	}
+//
+//	prev, err := mqClientInstance.AdminExtTable.Remove(groupId)
+//	if err != nil {
+//		logger.Errorf("AdminExtTable Remove groupId[%s] err: %s", groupId, err.Error())
+//		return false, err
+//	}
+//	if prev != nil {
+//		if mqAdminExtInner, ok := prev.(admin.MQAdminExtInner); ok {
+//			return true, nil
+//		} else {
+//			logger.Warnf("AdminExtTable Remove groupId[%s] failed.", groupId)
+//			return false, nil
+//		}
+//	}
+//	return false, nil
+//}
