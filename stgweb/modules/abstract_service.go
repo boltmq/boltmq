@@ -9,7 +9,7 @@ import (
 
 type AbstractService struct {
 	ConfigureInitializer *ConfigureInitializer
-	DefaultMQAdminExt    *admin.DefaultMQAdminExt
+	DefaultMQAdminExt    *admin.DefaultMQAdminExtImpl
 }
 
 func NewAbstractService() *AbstractService {
@@ -18,8 +18,8 @@ func NewAbstractService() *AbstractService {
 	return baseService
 }
 
-func (service *AbstractService) BuildDefaultMQAdminExt() *admin.DefaultMQAdminExt {
-	service.DefaultMQAdminExt = admin.NewDefaultMQAdminExt()
+func (service *AbstractService) BuildDefaultMQAdminExt() *admin.DefaultMQAdminExtImpl {
+	service.DefaultMQAdminExt = admin.NewDefaultMQAdminExtImpl()
 	service.DefaultMQAdminExt.ClientConfig.InstanceName = strconv.FormatInt(timeutil.NowTimestamp(), 10)
 	return service.DefaultMQAdminExt
 }

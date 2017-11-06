@@ -40,7 +40,7 @@ type MQAdminExtInner interface {
 	ExamineSubscriptionGroupConfig(addr, group string) (*subscription.SubscriptionGroupConfig, error)
 
 	// 查询指定Broker的Topic配置
-	ExamineTopicConfig(addr, topic string) (*subscription.SubscriptionGroupConfig, error)
+	ExamineTopicConfig(addr, topic string) (*stgcommon.TopicConfig, error)
 
 	// 查询Topic Offset信息
 	ExamineTopicStats(topic string) (*admin.TopicStatsTable, error)
@@ -138,7 +138,7 @@ type MQAdminExtInner interface {
 
 	// 触发指定的broker清理失效的消费队列
 	// return 清理是否成功
-	CleanExpiredConsumerQueueByAddr(addr string)
+	CleanExpiredConsumerQueueByAddr(addr string) (bool, error)
 
 	// 查询Consumer内存数据结构
 	GetConsumerRunningInfo(consumerGroupId, clientId string, jstack bool) (*body.ConsumerRunningInfo, error)
