@@ -62,7 +62,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			tst, err := impl.MqClientInstance.MQClientAPIImpl.GetTopicStatsInfo(brokerAddr, topic, timeoutMillis)
+			tst, err := impl.mqClientInstance.MQClientAPIImpl.GetTopicStatsInfo(brokerAddr, topic, timeoutMillis)
 			if err != nil {
 				logger.Errorf("ExamineTopicStats err: %s", err.Error())
 				continue
@@ -85,13 +85,13 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 
 // 从Name Server获取所有Topic列表
 func (impl *DefaultMQAdminExtImpl) FetchAllTopicList() (*body.TopicList, error) {
-	topicList, err := impl.MqClientInstance.MQClientAPIImpl.GetTopicListFromNameServer(timeoutMillis)
+	topicList, err := impl.mqClientInstance.MQClientAPIImpl.GetTopicListFromNameServer(timeoutMillis)
 	return topicList, err
 }
 
 // 获取Broker运行时数据
 func (impl *DefaultMQAdminExtImpl) FetchBrokerRuntimeStats(brokerAddr string) (*body.KVTable, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetBrokerRuntimeInfo(brokerAddr, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.GetBrokerRuntimeInfo(brokerAddr, timeoutMillis)
 }
 
 // 查询消费进度
@@ -114,7 +114,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
 			big_timeoutMillis := int64(15 * 1000) // 由于查询时间戳会产生IO操作，可能会耗时较长，所以超时时间设置为15s
-			consumeStats, err := impl.MqClientInstance.MQClientAPIImpl.GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic, big_timeoutMillis)
+			consumeStats, err := impl.mqClientInstance.MQClientAPIImpl.GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic, big_timeoutMillis)
 			if err != nil {
 				return result, err
 			}
@@ -138,12 +138,12 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 
 // 查看集群信息
 func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterInfo, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetBrokerClusterInfo(timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.GetBrokerClusterInfo(timeoutMillis)
 }
 
 // 查看Topic路由信息
 func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, timeoutMillis), nil
+	return impl.mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, timeoutMillis), nil
 }
 
 // 查看Consumer网络连接、订阅关系
@@ -160,7 +160,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup s
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			return impl.MqClientInstance.MQClientAPIImpl.GetConsumerConnectionList(brokerAddr, consumerGroup, timeoutMillis)
+			return impl.mqClientInstance.MQClientAPIImpl.GetConsumerConnectionList(brokerAddr, consumerGroup, timeoutMillis)
 		}
 	}
 
@@ -181,7 +181,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineProducerConnectionInfo(producerGroup, 
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			return impl.MqClientInstance.MQClientAPIImpl.GetProducerConnectionList(brokerAddr, producerGroup, timeoutMillis)
+			return impl.mqClientInstance.MQClientAPIImpl.GetProducerConnectionList(brokerAddr, producerGroup, timeoutMillis)
 		}
 	}
 
@@ -191,28 +191,28 @@ func (impl *DefaultMQAdminExtImpl) ExamineProducerConnectionInfo(producerGroup, 
 
 // 获取Name Server地址列表
 func (impl *DefaultMQAdminExtImpl) GetNameServerAddressList() ([]string, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetNameServerAddressList(), nil
+	return impl.mqClientInstance.MQClientAPIImpl.GetNameServerAddressList(), nil
 }
 
 // 清除某个Broker的写权限，针对所有Name Server
 // return 返回清除了多少个topic
 func (impl *DefaultMQAdminExtImpl) WipeWritePermOfBroker(namesrvAddr, brokerName string) (int, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.WipeWritePermOfBroker(namesrvAddr, brokerName, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.WipeWritePermOfBroker(namesrvAddr, brokerName, timeoutMillis)
 }
 
 // 向Name Server增加一个配置项
 func (impl *DefaultMQAdminExtImpl) PutKVConfig(namespace, key, value string) error {
-	return impl.MqClientInstance.MQClientAPIImpl.PutKVConfigValue(namespace, key, value, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.PutKVConfigValue(namespace, key, value, timeoutMillis)
 }
 
 // 从Name Server获取一个配置项
 func (impl *DefaultMQAdminExtImpl) GetKVConfig(namespace, key string) (string, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetKVConfigValue(namespace, key, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.GetKVConfigValue(namespace, key, timeoutMillis)
 }
 
 // 在 namespace 上添加或者更新 KV 配置
 func (impl *DefaultMQAdminExtImpl) CreateAndUpdateKvConfig(namespace, key, value string) error {
-	return impl.MqClientInstance.MQClientAPIImpl.PutKVConfigValue(namespace, key, value, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.PutKVConfigValue(namespace, key, value, timeoutMillis)
 }
 
 // 删除 namespace 上的 KV 配置
@@ -223,7 +223,7 @@ func (impl *DefaultMQAdminExtImpl) DeleteKvConfig(namespace, key string) error {
 
 // 获取指定Namespace下的所有kv
 func (impl *DefaultMQAdminExtImpl) GetKVListByNamespace(namespace string) (*body.KVTable, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.GetKVListByNamespace(namespace, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.GetKVListByNamespace(namespace, timeoutMillis)
 }
 
 // 删除 broker 上的 topic 信息
@@ -232,7 +232,7 @@ func (impl *DefaultMQAdminExtImpl) DeleteTopicInBroker(brokerAddrs set.Set, topi
 		brokerAddrs = set.NewSet()
 	}
 	for brokerAddr := range brokerAddrs.Iterator().C {
-		impl.MqClientInstance.MQClientAPIImpl.DeleteTopicInBroker(brokerAddr.(string), topic, timeoutMillis)
+		impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInBroker(brokerAddr.(string), topic, timeoutMillis)
 	}
 	return nil
 }
@@ -244,19 +244,19 @@ func (impl *DefaultMQAdminExtImpl) DeleteTopicInNameServer(namesrvs set.Set, top
 		//TODO, 发送请求，最终调用TopAddressing.fetchNSAddr()获取最新的namesrv地址
 	}
 	for namesrvAddr := range namesrvs.Iterator().C {
-		impl.MqClientInstance.MQClientAPIImpl.DeleteTopicInNameServer(namesrvAddr.(string), topic, timeoutMillis)
+		impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInNameServer(namesrvAddr.(string), topic, timeoutMillis)
 	}
 	return nil
 }
 
 // 删除 broker 上的 subscription group 信息
 func (impl *DefaultMQAdminExtImpl) DeleteSubscriptionGroup(brokerAddr, groupName string) error {
-	return impl.MqClientInstance.MQClientAPIImpl.DeleteSubscriptionGroup(brokerAddr, groupName, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.DeleteSubscriptionGroup(brokerAddr, groupName, timeoutMillis)
 }
 
 // 通过 server ip 获取 project 信息
 func (impl *DefaultMQAdminExtImpl) GetProjectGroupByIp(ip string) (string, error) {
-	projectGroup, err := impl.MqClientInstance.MQClientAPIImpl.GetProjectGroupByIp(ip, timeoutMillis)
+	projectGroup, err := impl.mqClientInstance.MQClientAPIImpl.GetProjectGroupByIp(ip, timeoutMillis)
 	return projectGroup, err
 }
 
@@ -304,7 +304,7 @@ func (impl *DefaultMQAdminExtImpl) GetConsumeStatus(topic, consumerGroupId, clie
 		// 每个 broker 上有所有的 consumer 连接，故只需要在一个 broker 执行即可
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			impl.MqClientInstance.MQClientAPIImpl.InvokeBrokerToGetConsumerStatus(brokerAddr, topic, consumerGroupId, clientAddr, 5000)
+			impl.mqClientInstance.MQClientAPIImpl.InvokeBrokerToGetConsumerStatus(brokerAddr, topic, consumerGroupId, clientAddr, 5000)
 		}
 	}
 	return result, nil
@@ -314,11 +314,11 @@ func (impl *DefaultMQAdminExtImpl) GetConsumeStatus(topic, consumerGroupId, clie
 // 创建或更新顺序消息的分区配置
 func (impl *DefaultMQAdminExtImpl) CreateOrUpdateOrderConf(key, value string, isCluster bool) error {
 	if isCluster {
-		impl.MqClientInstance.MQClientAPIImpl.PutKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, value, timeoutMillis)
+		impl.mqClientInstance.MQClientAPIImpl.PutKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, value, timeoutMillis)
 		return nil
 	}
 
-	oldOrderConfs, err := impl.MqClientInstance.MQClientAPIImpl.GetKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, timeoutMillis)
+	oldOrderConfs, err := impl.mqClientInstance.MQClientAPIImpl.GetKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, timeoutMillis)
 	if err != nil {
 		logger.Errorf("CreateOrUpdateOrderConf err: %s", err.Error())
 	}
@@ -343,7 +343,7 @@ func (impl *DefaultMQAdminExtImpl) CreateOrUpdateOrderConf(key, value string, is
 		splitor = ";"
 	}
 
-	return impl.MqClientInstance.MQClientAPIImpl.PutKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, newOrderConf.String(), timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.PutKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, newOrderConf.String(), timeoutMillis)
 }
 
 // 根据Topic查询被哪些订阅组消费
@@ -358,7 +358,7 @@ func (impl *DefaultMQAdminExtImpl) QueryTopicConsumeByWho(topic string) (*body.G
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			return impl.MqClientInstance.MQClientAPIImpl.QueryTopicConsumeByWho(brokerAddr, topic, timeoutMillis)
+			return impl.mqClientInstance.MQClientAPIImpl.QueryTopicConsumeByWho(brokerAddr, topic, timeoutMillis)
 		}
 		break
 	}
@@ -381,7 +381,7 @@ func (impl *DefaultMQAdminExtImpl) QueryConsumeTimeSpan(topic, consumerGroupId s
 		if brokerAddr == "" {
 			continue
 		}
-		qcts, err := impl.MqClientInstance.MQClientAPIImpl.QueryConsumeTimeSpan(brokerAddr, topic, consumerGroupId, timeoutMillis)
+		qcts, err := impl.mqClientInstance.MQClientAPIImpl.QueryConsumeTimeSpan(brokerAddr, topic, consumerGroupId, timeoutMillis)
 		if err != nil {
 			logger.Errorf("QueryConsumeTimeSpan err: %s", err.Error())
 			continue
@@ -430,7 +430,7 @@ func (impl *DefaultMQAdminExtImpl) cleanExpiredConsumerQueueByCluster(clusterInf
 // 触发指定的broker清理失效的消费队列
 // return 清理是否成功
 func (impl *DefaultMQAdminExtImpl) CleanExpiredConsumerQueueByAddr(brokerAddr string) (bool, error) {
-	result, err := impl.MqClientInstance.MQClientAPIImpl.CleanExpiredConsumeQueue(brokerAddr, timeoutMillis)
+	result, err := impl.mqClientInstance.MQClientAPIImpl.CleanExpiredConsumeQueue(brokerAddr, timeoutMillis)
 	if err != nil {
 		format := "clean expired ConsumeQueue on target broker[%s] err: %s"
 		logger.Infof(format, brokerAddr, err.Error())
@@ -456,7 +456,7 @@ func (impl *DefaultMQAdminExtImpl) GetConsumerRunningInfo(consumerGroupId, clien
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
 		if brokerAddr != "" {
-			return impl.MqClientInstance.MQClientAPIImpl.GetConsumerRunningInfo(brokerAddr, consumerGroupId, clientId, jstack, big_timeoutMills)
+			return impl.mqClientInstance.MQClientAPIImpl.GetConsumerRunningInfo(brokerAddr, consumerGroupId, clientId, jstack, big_timeoutMills)
 		}
 	}
 	return consumerRunningInfo, err
@@ -468,7 +468,7 @@ func (impl *DefaultMQAdminExtImpl) ConsumeMessageDirectly(consumerGroup, clientI
 	if err != nil {
 		return nil, err
 	}
-	return impl.MqClientInstance.MQClientAPIImpl.ConsumeMessageDirectly(msg.StoreHost, consumerGroup, clientId, msgId, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.ConsumeMessageDirectly(msg.StoreHost, consumerGroup, clientId, msgId, timeoutMillis)
 }
 
 //查询消息被谁消费了
@@ -601,14 +601,14 @@ func (impl *DefaultMQAdminExtImpl) CloneGroupOffset(srcGroup, destGroup, topic s
 		if brokerAddr == "" {
 			continue
 		}
-		impl.MqClientInstance.MQClientAPIImpl.CloneGroupOffset(brokerAddr, srcGroup, destGroup, topic, isOffline, timeoutMillis)
+		impl.mqClientInstance.MQClientAPIImpl.CloneGroupOffset(brokerAddr, srcGroup, destGroup, topic, isOffline, timeoutMillis)
 	}
 	return nil
 }
 
 // 服务器统计数据输出
 func (impl *DefaultMQAdminExtImpl) ViewBrokerStatsData(brokerAddr, statsName, statsKey string) (*body.BrokerStatsData, error) {
-	return impl.MqClientInstance.MQClientAPIImpl.ViewBrokerStatsData(brokerAddr, statsName, statsKey, timeoutMillis)
+	return impl.mqClientInstance.MQClientAPIImpl.ViewBrokerStatsData(brokerAddr, statsName, statsKey, timeoutMillis)
 }
 
 // 创建Topic

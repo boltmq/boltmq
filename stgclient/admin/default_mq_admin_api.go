@@ -7,7 +7,9 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/help"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
+	"strconv"
 )
 
 // DefaultMQAdminExtImpl 所有运维接口都在这里实现
@@ -16,10 +18,10 @@ import (
 type DefaultMQAdminExtImpl struct {
 	createTopicKey   string
 	adminExtGroup    string
-	ServiceState     stgcommon.ServiceState
-	MqClientInstance *process.MQClientInstance
-	RpcHook          remoting.RPCHook
-	ClientConfig     *stgclient.ClientConfig
+	serviceState     stgcommon.ServiceState
+	mqClientInstance *process.MQClientInstance
+	rpcHook          remoting.RPCHook
+	clientConfig     *stgclient.ClientConfig
 	MQAdminExtInner
 }
 
@@ -30,8 +32,9 @@ func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
 	defaultMQAdminExtImpl := &DefaultMQAdminExtImpl{}
 	defaultMQAdminExtImpl.adminExtGroup = "admin_ext_group"
 	defaultMQAdminExtImpl.createTopicKey = stgcommon.DEFAULT_TOPIC
-	defaultMQAdminExtImpl.ServiceState = stgcommon.CREATE_JUST
-	defaultMQAdminExtImpl.ClientConfig = stgclient.NewClientConfig("")
+	defaultMQAdminExtImpl.serviceState = stgcommon.CREATE_JUST
+	defaultMQAdminExtImpl.clientConfig = stgclient.NewClientConfig("")
+	defaultMQAdminExtImpl.clientConfig.InstanceName = strconv.FormatInt(timeutil.NowTimestamp(), 10)
 	return defaultMQAdminExtImpl
 }
 
@@ -40,7 +43,7 @@ func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
 // Since: 2017/11/1
 func NewCustomMQAdminExtImpl(rpcHook remoting.RPCHook) *DefaultMQAdminExtImpl {
 	defaultMQAdminExtImpl := NewDefaultMQAdminExtImpl()
-	defaultMQAdminExtImpl.RpcHook = rpcHook
+	defaultMQAdminExtImpl.rpcHook = rpcHook
 	return defaultMQAdminExtImpl
 }
 
@@ -62,28 +65,28 @@ func (impl *DefaultMQAdminExtImpl) GetAdminExtGroup() string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Start() error {
-	switch impl.ServiceState {
+	switch impl.serviceState {
 	case stgcommon.CREATE_JUST:
 
 		adminExtGroup := impl.GetAdminExtGroup()
-		impl.ServiceState = stgcommon.START_FAILED
-		impl.ClientConfig.ChangeInstanceNameToPID()
-		impl.MqClientInstance = process.GetInstance().GetAndCreateMQClientInstance(impl.ClientConfig)
+		impl.serviceState = stgcommon.START_FAILED
+		impl.clientConfig.ChangeInstanceNameToPID()
+		impl.mqClientInstance = process.GetInstance().GetAndCreateMQClientInstance(impl.clientConfig)
 
 		registerOK := impl.registerAdminExt(adminExtGroup, impl)
 		if !registerOK {
-			impl.ServiceState = stgcommon.CREATE_JUST
+			impl.serviceState = stgcommon.CREATE_JUST
 			format := "the adminExt group[%s] has created already, specifed another name please. %s"
 			return fmt.Errorf(format, adminExtGroup, help.SuggestTodo(help.GROUP_NAME_DUPLICATE_URL))
 		}
-		impl.MqClientInstance.Start()
+		impl.mqClientInstance.Start()
 		logger.Infof("the adminExt [%s] start OK", adminExtGroup)
-		impl.ServiceState = stgcommon.RUNNING
+		impl.serviceState = stgcommon.RUNNING
 	case stgcommon.RUNNING:
 	case stgcommon.START_FAILED:
 	case stgcommon.SHUTDOWN_ALREADY:
 		format := "the AdminExt service state not OK, maybe started once. serviceState=%d(%s), %s"
-		return fmt.Errorf(format, int(impl.ServiceState), impl.ServiceState.String(), help.SuggestTodo(help.CLIENT_SERVICE_NOT_OK))
+		return fmt.Errorf(format, int(impl.serviceState), impl.serviceState.String(), help.SuggestTodo(help.CLIENT_SERVICE_NOT_OK))
 	}
 	return nil
 }
@@ -92,10 +95,10 @@ func (impl *DefaultMQAdminExtImpl) Start() error {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Shutdown() error {
-	if impl == nil || impl.MqClientInstance == nil {
+	if impl == nil || impl.mqClientInstance == nil {
 		return nil
 	}
-	switch impl.ServiceState {
+	switch impl.serviceState {
 	case stgcommon.CREATE_JUST:
 	case stgcommon.RUNNING:
 		adminExtGroupId := impl.GetAdminExtGroup()
@@ -106,9 +109,9 @@ func (impl *DefaultMQAdminExtImpl) Shutdown() error {
 			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt failed")
 		}
 
-		impl.MqClientInstance.Shutdown()
+		impl.mqClientInstance.Shutdown()
 		logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
-		impl.ServiceState = stgcommon.SHUTDOWN_ALREADY
+		impl.serviceState = stgcommon.SHUTDOWN_ALREADY
 	case stgcommon.SHUTDOWN_ALREADY:
 	default:
 	}
@@ -122,7 +125,7 @@ func (impl *DefaultMQAdminExtImpl) registerAdminExt(groupId string, mqAdminExtIn
 	if groupId == "" || mqAdminExtInner == nil {
 		return false
 	}
-	prev, err := impl.MqClientInstance.AdminExtTable.PutIfAbsent(groupId, mqAdminExtInner)
+	prev, err := impl.mqClientInstance.AdminExtTable.PutIfAbsent(groupId, mqAdminExtInner)
 	if err != nil {
 		logger.Errorf("DefaultMQAdminExtImpl RegisterAdminExt err: %s, groupId: %s", err.Error(), groupId)
 		return false
@@ -138,11 +141,11 @@ func (impl *DefaultMQAdminExtImpl) registerAdminExt(groupId string, mqAdminExtIn
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) unRegisterAdminExt(groupId string) (bool, error) {
-	if groupId == "" || impl.MqClientInstance == nil || impl.MqClientInstance.AdminExtTable == nil {
+	if groupId == "" || impl.mqClientInstance == nil || impl.mqClientInstance.AdminExtTable == nil {
 		return false, nil
 	}
 
-	prev, err := impl.MqClientInstance.AdminExtTable.Remove(groupId)
+	prev, err := impl.mqClientInstance.AdminExtTable.Remove(groupId)
 	if err != nil {
 		logger.Errorf("AdminExtTable unRegisterAdminExt failed. groupId: %s, err: %s", groupId, err.Error())
 		return false, err
