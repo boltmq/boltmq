@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgclient/process"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/help"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	namesrvUtils "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
@@ -49,39 +50,49 @@ func NewCustomMQAdminExtImpl(rpcHook remoting.RPCHook) *DefaultMQAdminExtImpl {
 }
 
 // 启动Admin
-func (impl *DefaultMQAdminExtImpl) Start() error {
-	switch impl.ServiceState {
-	case stgcommon.CREATE_JUST:
-		impl.ServiceState = stgcommon.START_FAILED
-	case stgcommon.RUNNING:
-	case stgcommon.START_FAILED:
-	case stgcommon.SHUTDOWN_ALREADY:
-	}
-
+func (impl *DefaultMQAdminExtImpl) Start( ) error {
 	return nil
 }
 
 // 关闭Admin
-func (impl *DefaultMQAdminExtImpl) Shutdown() error {
-	if impl == nil {
+func (impl *DefaultMQAdminExtImpl) Shutdown(adminExtGroupId string) error {
+	if impl == nil || impl.MqClientInstance == nil {
 		return nil
 	}
+	switch impl.ServiceState {
+	case stgcommon.CREATE_JUST:
+	case stgcommon.RUNNING:
+		ok, err := impl.MqClientInstance.UnRegisterAdminExt(adminExtGroupId)
+		if err == nil && ok {
+			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt successful")
+		} else {
+			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt failed")
+		}
 
+		impl.MqClientInstance.Shutdown()
+		logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
+		impl.ServiceState = stgcommon.SHUTDOWN_ALREADY
+	case stgcommon.SHUTDOWN_ALREADY:
+	default:
+	}
 	return nil
 }
 
 // 更新Broker配置
 func (impl *DefaultMQAdminExtImpl) UpdateBrokerConfig(brokerAddr string, properties map[string]interface{}) error {
+	// TODO
 	return nil
 }
 
 // 向指定Broker创建或者更新Topic配置
 func (impl *DefaultMQAdminExtImpl) CreateAndUpdateTopicConfig(addr string, config *stgcommon.TopicConfig) error {
+	// TODO
 	return nil
 }
 
 // 向指定Broker创建或者更新订阅组配置
 func (impl *DefaultMQAdminExtImpl) CreateAndUpdateSubscriptionGroupConfig(addr string, config *subscription.SubscriptionGroupConfig) error {
+	// TODO
 	return nil
 }
 
@@ -91,13 +102,42 @@ func (impl *DefaultMQAdminExtImpl) ExamineSubscriptionGroupConfig(addr, group st
 }
 
 // 查询指定Broker的Topic配置
-func (impl *DefaultMQAdminExtImpl) ExamineTopicConfig(addr, topic string) (*subscription.SubscriptionGroupConfig, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineTopicConfig(addr, topic string) (*stgcommon.TopicConfig, error) {
 	return nil, nil
 }
 
 // 查询Topic Offset信息
 func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.TopicStatsTable, error) {
-	return nil, nil
+	result := admin.NewTopicStatsTable()
+	topicRouteData, err := impl.ExamineTopicRouteInfo(topic)
+	if err != nil {
+		return result, err
+	}
+	if topicRouteData == nil || topicRouteData.BrokerDatas == nil {
+		return result, nil
+	}
+	for _, bd := range topicRouteData.BrokerDatas {
+		brokerAddr := bd.SelectBrokerAddr()
+		if brokerAddr != "" {
+			tst, err := impl.MqClientInstance.MQClientAPIImpl.GetTopicStatsInfo(brokerAddr, topic, timeoutMillis)
+			if err != nil {
+				logger.Errorf("ExamineTopicStats err: %s", err.Error())
+				continue
+			}
+			if tst != nil && tst.OffsetTable != nil {
+				for mq, topicOffset := range tst.OffsetTable {
+					if mq != nil {
+						result.OffsetTable[mq] = topicOffset
+					}
+				}
+			}
+		}
+	}
+
+	if len(result.OffsetTable) == 0 {
+		return result, fmt.Errorf("not found the topic stats info")
+	}
+	return result, nil
 }
 
 // 从Name Server获取所有Topic列表

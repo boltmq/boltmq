@@ -6,10 +6,10 @@ package stgcommon
 type ServiceState int
 
 const (
-	CREATE_JUST ServiceState = iota
-	RUNNING
-	SHUTDOWN_ALREADY
-	START_FAILED
+	CREATE_JUST      ServiceState = iota // Service just created,not start
+	RUNNING                              // Service Running
+	SHUTDOWN_ALREADY                     // Service shutdown
+	START_FAILED                         // Service Start failure
 )
 
 func (state ServiceState) String() string {
