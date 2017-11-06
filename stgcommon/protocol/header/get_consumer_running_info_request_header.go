@@ -12,3 +12,12 @@ type GetConsumerRunningInfoRequestHeader struct {
 func (header *GetConsumerRunningInfoRequestHeader) CheckFields() error {
 	return nil
 }
+
+func NewGetConsumerRunningInfoRequestHeader(consumerGroup, clientId string, jstackEnable bool) *GetConsumerRunningInfoRequestHeader {
+	consumerRunningInfoRequestHeader := &GetConsumerRunningInfoRequestHeader{
+		ConsumerGroup: consumerGroup,
+		ClientId:      clientId,
+		JstackEnable:  jstackEnable,
+	}
+	return consumerRunningInfoRequestHeader
+}

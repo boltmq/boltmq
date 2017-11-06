@@ -2,7 +2,7 @@ package body
 
 import (
 	//"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	//"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	//set "github.com/deckarep/golang-set"
 )
 
@@ -16,8 +16,9 @@ const (
 )
 
 type ConsumerRunningInfo struct {
-
+	*protocol.RemotingSerializable
 }
+
 //
 //// ConsumerRunningInfo Consumer内部数据结构
 //// Author: tianyuliang, <tianyuliang@gome.com.cn>
