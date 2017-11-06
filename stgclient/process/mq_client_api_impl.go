@@ -733,7 +733,7 @@ func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.Cl
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
 func (impl *MQClientAPIImpl) WipeWritePermOfBroker(namesrvAddr, brokerName string, timeoutMillis int64) (int, error) {
-	requestHeader := namesrv.WipeWritePermOfBrokerRequestHeader{BrokerName: brokerName}
+	requestHeader := &namesrv.WipeWritePermOfBrokerRequestHeader{BrokerName: brokerName}
 	request := protocol.CreateRequestCommand(code.WIPE_WRITE_PERM_OF_BROKER, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(namesrvAddr, request, timeoutMillis)
 	if err != nil {
@@ -762,7 +762,7 @@ func (impl *MQClientAPIImpl) DeleteTopicInBroker(brokerAddr, topic string, timeo
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.DeleteTopicRequestHeader{Topic: topicWithProjectGroup}
+	requestHeader := &header.DeleteTopicRequestHeader{Topic: topicWithProjectGroup}
 	request := protocol.CreateRequestCommand(code.DELETE_TOPIC_IN_BROKER, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
@@ -810,7 +810,7 @@ func (impl *MQClientAPIImpl) DeleteSubscriptionGroup(brokerAddr, groupName strin
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		groupWithProjectGroup = stgclient.BuildWithProjectGroup(groupName, impl.ProjectGroupPrefix)
 	}
-	requestHeader := header.DeleteSubscriptionGroupRequestHeader{GroupName: groupWithProjectGroup}
+	requestHeader := &header.DeleteSubscriptionGroupRequestHeader{GroupName: groupWithProjectGroup}
 	request := protocol.CreateRequestCommand(code.DELETE_SUBSCRIPTIONGROUP, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
@@ -841,18 +841,24 @@ func (impl *MQClientAPIImpl) InvokeBrokerToGetConsumerStatus(brokerAddr, topic, 
 	}
 	if response.Code != code.SUCCESS {
 		logger.Errorf("InvokeBrokerToGetConsumerStatus failed. %s", response.ToString())
-		return fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	consumerStatusBody := &body.GetConsumerStatusBody{}
 	err = consumerStatusBody.CustomDecode(response.Body, consumerStatusBody)
-	return consumerStatusBody, err
+	if err != nil {
+		return nil, err
+	}
+	if consumerStatusBody == nil {
+		return make(map[string]map[*message.MessageQueue]int64), nil
+	}
+	return consumerStatusBody.ConsumerTable, nil
 }
 
 // QueryTopicConsumeByWho 查询topic被那些组消费
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
 func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, timeoutMillis int64) (*body.GroupList, error) {
-	requestHeader := header.QueryTopicConsumeByWhoRequestHeader{Topic: topic}
+	requestHeader := &header.QueryTopicConsumeByWhoRequestHeader{Topic: topic}
 	request := protocol.CreateRequestCommand(code.QUERY_TOPIC_CONSUME_BY_WHO, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
@@ -861,9 +867,9 @@ func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, ti
 	if response == nil {
 		return nil, fmt.Errorf("QueryTopicConsumeByWho response is nil")
 	}
-	if response != code.SUCCESS {
+	if response.Code != code.SUCCESS {
 		logger.Errorf("QueryTopicConsumeByWho failed. %s", response.ToString())
-		return fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	groupList := &body.GroupList{}
 	err = groupList.CustomDecode(response.Body, groupList)
@@ -874,7 +880,7 @@ func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, ti
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
 func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis int64) (*body.TopicList, error) {
-	requestHeader := header.GetTopicsByClusterRequestHeader{Cluster: cluster}
+	requestHeader := &header.GetTopicsByClusterRequestHeader{Cluster: cluster}
 	request := protocol.CreateRequestCommand(code.GET_TOPICS_BY_CLUSTER, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if err != nil {
@@ -883,9 +889,9 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis in
 	if response == nil {
 		return nil, fmt.Errorf("GetTopicsByCluster response is nil")
 	}
-	if response != code.SUCCESS {
+	if response.Code != code.SUCCESS {
 		logger.Errorf("GetTopicsByCluster failed. %s", response.ToString())
-		return fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	topicList := &body.TopicList{}
 	err = topicList.CustomDecode(response.Body, topicList)
@@ -908,9 +914,25 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis in
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
 func (impl *MQClientAPIImpl) GetConsumerRunningInfo(brokerAddr, consumerGroup, clientId string, jstack bool, timeoutMillis int64) (*body.ConsumerRunningInfo, error) {
-	//TODO：
-
-	return nil, nil
+	requestHeader := header.NewGetConsumerRunningInfoRequestHeader(consumerGroup, clientId, jstack)
+	request := protocol.CreateRequestCommand(code.GET_CONSUMER_RUNNING_INFO, requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
+	if err != nil {
+		return nil, err
+	}
+	if response == nil {
+		return nil, fmt.Errorf("GetConsumerRunningInfo response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("GetConsumerRunningInfo failed. %s", response.ToString())
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
+	}
+	consumerRunningInfo := &body.ConsumerRunningInfo{}
+	err = consumerRunningInfo.CustomDecode(response.Body, consumerRunningInfo)
+	if err != nil {
+		return nil, err
+	}
+	return consumerRunningInfo, nil
 }
 
 // ViewBrokerStatsData 查询broker节点自身的状态信息
@@ -926,14 +948,14 @@ func (impl *MQClientAPIImpl) ViewBrokerStatsData(brokerAddr, statsName, statsKey
 	if response == nil {
 		return nil, fmt.Errorf("GetTopicsByCluster response is nil")
 	}
-	if response != code.SUCCESS {
+	if response.Code != code.SUCCESS {
 		logger.Errorf("GetTopicsByCluster failed. %s", response.ToString())
-		return fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	brokerStatsData := &body.BrokerStatsData{}
 	err = brokerStatsData.CustomDecode(response.Body, brokerStatsData)
 	if err != nil {
 		return nil, err
 	}
-	return brokerStatsData, err
+	return brokerStatsData, nil
 }
