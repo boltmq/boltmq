@@ -41,4 +41,5 @@ func main() {
 
 	<-signalChan
 	defaultMQProducer.Shutdown()
+	close(signalChan)
 }

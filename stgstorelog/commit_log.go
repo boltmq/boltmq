@@ -175,7 +175,7 @@ func (self *CommitLog) rollNextFile(offset int64) int64 {
 }
 
 func (self *CommitLog) recoverNormally() {
-	// checkCRCOnRecover := self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover
+	checkCRCOnRecover := self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover
 	mapedFiles := self.MapedFileQueue.mapedFiles
 	if mapedFiles != nil && mapedFiles.Len() > 0 {
 		index := mapedFiles.Len() - 3
@@ -190,7 +190,7 @@ func (self *CommitLog) recoverNormally() {
 		mapedFileOffset := int64(0)
 		for {
 			dispatchRequest := self.checkMessageAndReturnSize(mappedByteBuffer,
-				self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover, true)
+				self.DefaultMessageStore.MessageStoreConfig.CheckCRCOnRecover, checkCRCOnRecover)
 			size := dispatchRequest.msgSize
 			if size > 0 {
 				mapedFileOffset += size
@@ -204,7 +204,8 @@ func (self *CommitLog) recoverNormally() {
 					break
 				} else {
 					mapedFile = getMapedFileByIndex(mapedFiles, index)
-					mappedByteBuffer = NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+					mappedByteBuffer = mapedFile.mappedByteBuffer
+					mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
 					processOffset = mapedFile.fileFromOffset
 					mapedFileOffset = 0
 				}
@@ -258,15 +259,7 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 	blankMagicCode := BlankMagicCode
 
 	bufferLen := mappedByteBuffer.WritePos - mappedByteBuffer.ReadPos
-	if bufferLen < 4 {
-		return &DispatchRequest{msgSize: -1}
-	}
-
 	totalSize := mappedByteBuffer.ReadInt32() // 1 TOTALSIZE
-	if bufferLen < int(totalSize) {
-		return &DispatchRequest{msgSize: -1}
-	}
-
 	magicCode := mappedByteBuffer.ReadInt32() // 2 MAGICCODE
 
 	switch magicCode {
@@ -277,6 +270,10 @@ func (self *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuf
 	default:
 		logger.Warnf("found a illegal magic code MessageMagicCode:%d BlankMagicCode:%d ActualMagicCode:%d",
 			messageMagicCode, blankMagicCode, magicCode)
+		return &DispatchRequest{msgSize: -1}
+	}
+
+	if totalSize > int32(bufferLen) {
 		return &DispatchRequest{msgSize: -1}
 	}
 
@@ -376,11 +373,20 @@ func (self *CommitLog) recoverAbnormally() {
 		// Looking beginning to recover from which file
 		var mapedFile *MapedFile
 		index := mapedFiles.Len() - 1
+
 		for element := mapedFiles.Back(); element != nil; element = element.Prev() {
 			index--
 			mapedFile = element.Value.(*MapedFile)
+
+			/*
+			// TODO 定时刷盘服务未实现，导致异常恢复数据丢失的问题
 			if self.isMapedFileMatchedRecover(mapedFile) {
 				logger.Info("recover from this maped file ", mapedFile.fileName)
+				break
+			}
+			*/
+
+			if mapedFile != nil {
 				break
 			}
 		}
@@ -413,6 +419,7 @@ func (self *CommitLog) recoverAbnormally() {
 							if i == index {
 								mapedFile = element.Value.(*MapedFile)
 								mappedByteBuffer = NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
+								mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
 								processOffset = mapedFile.fileFromOffset
 								mapedFileOffset = 0
 								logger.Info("recover next physics file,", mapedFile.fileName)

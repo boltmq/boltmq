@@ -102,6 +102,7 @@ func (self *HAClient) closeMaster() {
 }
 
 func (self *HAClient) reportSlaveMaxOffset(maxOffset int64) bool {
+	logger.Info("ha client report slave max offset: ", maxOffset)
 	binary.Write(self.reportOffset, binary.BigEndian, maxOffset)
 
 	for i := 0; i < 3 && self.reportOffset.Len() > 0; i++ {
@@ -166,7 +167,6 @@ func (self *HAClient) dispatchReadRequest() bool {
 				}
 			}
 
-			/*
 			slavePhyOffset := self.haService.defaultMessageStore.GetMaxPhyOffset()
 
 			// 发生重大错误
@@ -177,7 +177,6 @@ func (self *HAClient) dispatchReadRequest() bool {
 					return false
 				}
 			}
-			*/
 
 			if diff >= msgHeaderSize+int(bodySize) {
 				//self.byteBufferRead.Read(make([]byte, msgHeaderSize))
@@ -185,7 +184,7 @@ func (self *HAClient) dispatchReadRequest() bool {
 				self.byteBufferRead.Read(bodyData)
 
 				if len(bodyData) > 0 {
-					//logger.Infof("ha client append to commit log diff %d %d %s", diff, msgHeaderSize+int(bodySize), string(bodyData))
+					logger.Infof("ha client append to commit log offset:%d size:%d", masterPhyOffset, bodySize)
 					self.haService.defaultMessageStore.AppendToCommitLog(masterPhyOffset, bodyData)
 					self.dispatchPosition += int32(msgHeaderSize) + bodySize
 				}
@@ -268,7 +267,7 @@ func (self *HAClient) start() {
 			}
 
 		} else {
-			time.Sleep(time.Millisecond * 1000 * 30)
+			time.Sleep(time.Millisecond * 1000 * 5)
 		}
 	}
 
@@ -276,6 +275,7 @@ func (self *HAClient) start() {
 		close(self.responseChan)
 	}
 
+	self.closeMaster()
 	logger.Info("ha client service end")
 }
 

@@ -135,9 +135,9 @@ func (self *ConsumeQueue) recover() {
 		for {
 			for i := 0; i < int(self.mapedFileSize); i += CQStoreUnitSize {
 				var (
-					offset   int64
-					size     int32
-					tagsCode int64
+					offset   int64 = 0
+					size     int32 = 0
+					tagsCode int64 = 0
 				)
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &offset); err != nil {
@@ -341,10 +341,12 @@ func (self *ConsumeQueue) fillPreBlank(mapedFile *MapedFile, untilWhere int64) {
 	binary.Write(byteBuffer, binary.BigEndian, int64(0))
 	binary.Write(byteBuffer, binary.BigEndian, int32(0x7fffffff))
 	binary.Write(byteBuffer, binary.BigEndian, int64(0))
+	dataBuffer := make([]byte, CQStoreUnitSize)
+	byteBuffer.Read(dataBuffer)
 
 	until := int(untilWhere % self.mapedFileQueue.mapedFileSize)
-	for i := 0; i < until; i++ {
-		mapedFile.appendMessage(byteBuffer.Bytes())
+	for i := 0; i < until; i += CQStoreUnitSize {
+		mapedFile.appendMessage(dataBuffer)
 	}
 }
 
