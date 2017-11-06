@@ -2,6 +2,7 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgclient/consumer"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -9,6 +10,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	util "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
@@ -42,7 +44,7 @@ func (impl *MQClientAPIImpl) Start() {
 	defer utils.RecoveredFn()
 
 	impl.DefalutRemotingClient.Start()
-	value, err := impl.getProjectGroupByIp(stgclient.GetLocalAddress(), 3000)
+	value, err := impl.GetProjectGroupByIp(stgclient.GetLocalAddress(), 3000)
 	if err != nil && !strings.EqualFold(value, "") {
 		impl.ProjectGroupPrefix = value
 	}
@@ -453,26 +455,92 @@ func (impl *MQClientAPIImpl) CreateTopic(addr, defaultTopic string, topicConfig 
 }
 
 // 从namesrv查询客户端IP信息
-func (impl *MQClientAPIImpl) getProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
-	return impl.getKVConfigValue(util.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
+func (impl *MQClientAPIImpl) GetProjectGroupByIp(ip string, timeoutMillis int64) (string, error) {
+	return impl.GetKVConfigValue(util.NAMESPACE_PROJECT_CONFIG, ip, timeoutMillis)
 }
 
-// 获取配置信息
-func (impl *MQClientAPIImpl) getKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
+// GetKVConfigValue 获取配置信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func (impl *MQClientAPIImpl) GetKVConfigValue(namespace, key string, timeoutMillis int64) (string, error) {
 	requestHeader := &namesrv.GetKVConfigRequestHeader{Namespace: namespace, Key: key}
 	request := protocol.CreateRequestCommand(code.GET_KV_CONFIG, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
-	if response != nil && err == nil {
-		switch response.Code {
-		case code.SUCCESS:
-			responseHeader := &namesrv.GetKVConfigResponseHeader{}
-			response.DecodeCommandCustomHeader(responseHeader)
-			return responseHeader.Value, err
-		default:
-
-		}
-	} else {
-		return "", errors.New("invokesync error=" + err.Error())
+	if err != nil {
+		return "", fmt.Errorf("GetKVConfigValue err: %s, the request is %s", err.Error(), request.ToString())
 	}
-	return "", nil
+	if response == nil {
+		return "", fmt.Errorf("GetKVConfigValue response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		return "", fmt.Errorf("GetKVConfigValue failed. %s", response.ToString())
+	}
+
+	responseHeader := &namesrv.GetKVConfigResponseHeader{}
+	err = response.DecodeCommandCustomHeader(responseHeader)
+	if err != nil {
+		return "", fmt.Errorf("GetKVConfigResponseHeader Decode err: %s", err.Error())
+	}
+	return responseHeader.Value, nil
+}
+
+// putKVConfigValue 设置配置信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func (impl *MQClientAPIImpl) PutKVConfigValue(namespace, key, value string, timeoutMillis int64) error {
+	requestHeader := &namesrv.PutKVConfigRequestHeader{Namespace: namespace, Key: key, Value: value}
+	request := protocol.CreateRequestCommand(code.PUT_KV_CONFIG, requestHeader)
+	nameServerAddressList := impl.DefalutRemotingClient.GetNameServerAddressList()
+	if nameServerAddressList == nil || len(nameServerAddressList) == 0 {
+		return nil
+	}
+
+	var errResponse *protocol.RemotingCommand
+	for _, namesrvAddr := range nameServerAddressList {
+		response, err := impl.DefalutRemotingClient.InvokeSync(namesrvAddr, request, timeoutMillis)
+		if err != nil {
+			errResponse = response
+			logger.Errorf("putKVConfigValue err: %s", err.Error())
+			continue
+		}
+		if response == nil {
+			logger.Errorf("putKVConfigValue response is nil")
+			errResponse = response
+			continue
+		}
+		if response.Code != code.SUCCESS {
+			logger.Errorf("putKVConfigValue failed. %s", response.ToString())
+			errResponse = response
+		}
+	}
+
+	if errResponse != nil {
+		return fmt.Errorf("%d, %s", errResponse.Code, errResponse.Remark)
+	}
+	return nil
+}
+
+// GetKVConfigValue 获取配置信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func (impl *MQClientAPIImpl) GetKVListByNamespace(namespace string, timeoutMillis int64) (*body.KVTable, error) {
+	kvTable := new(body.KVTable)
+	requestHeader := &namesrv.GetKVListByNamespaceRequestHeader{Namespace: namespace}
+	request := protocol.CreateRequestCommand(code.GET_KVLIST_BY_NAMESPACE, requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
+	if err != nil {
+		return kvTable, fmt.Errorf("GetKVListByNamespace err: %s, the request is %s", err.Error(), request.ToString())
+	}
+	if response == nil {
+		return kvTable, fmt.Errorf("GetKVListByNamespace response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		return kvTable, fmt.Errorf("GetKVListByNamespace failed. %s", response.ToString())
+	}
+
+	err = kvTable.CustomDecode(response.Body, kvTable)
+	if err != nil {
+		return kvTable, fmt.Errorf("GetKVListByNamespace Decode err: %s, the param: %s", err.Error(), string(response.Body))
+	}
+	return kvTable, nil
 }

@@ -15,6 +15,14 @@ type ClusterInfo struct {
 	*protocol.RemotingSerializable
 }
 
+func NewClusterInfo() *ClusterInfo {
+	clusterInfo := &ClusterInfo{
+		BokerAddrTable:   make(map[string]*route.BrokerData, 0),
+		ClusterAddrTable: make(map[string]set.Set, 0),
+	}
+	return clusterInfo
+}
+
 func (self *ClusterInfo) RetrieveAllClusterNames() []string {
 	if self.ClusterAddrTable == nil || len(self.ClusterAddrTable) == 0 {
 		return []string{}

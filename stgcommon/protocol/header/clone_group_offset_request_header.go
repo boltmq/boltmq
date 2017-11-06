@@ -13,3 +13,16 @@ type CloneGroupOffsetRequestHeader struct {
 func (header *CloneGroupOffsetRequestHeader) CheckFields() error {
 	return nil
 }
+
+// NewCloneGroupOffsetRequestHeader 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func NewCloneGroupOffsetRequestHeader(srcGroup, destGroup, topic string, isOffline bool) *CloneGroupOffsetRequestHeader {
+	cloneGroupOffsetRequestHeader := &CloneGroupOffsetRequestHeader{
+		SrcGroup:  srcGroup,
+		DestGroup: destGroup,
+		Topic:     topic,
+		Offline:   isOffline,
+	}
+	return cloneGroupOffsetRequestHeader
+}

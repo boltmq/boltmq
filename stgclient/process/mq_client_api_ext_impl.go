@@ -270,7 +270,7 @@ func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.Cl
 		logger.Errorf("GetBrokerClusterInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	clusterInfo := new(body.ClusterInfo)
+	clusterInfo := body.NewClusterInfo()
 	err = clusterInfo.CustomDecode(response.Body, clusterInfo)
 	return clusterInfo, err
 }
@@ -456,6 +456,25 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis in
 	return topicList, nil
 }
 
+// CleanExpiredConsumeQueue 触发清理失效的消费队列
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *MQClientAPIImpl) CleanExpiredConsumeQueue(brokerAddr string, timeoutMillis int64) (bool, error) {
+	request := protocol.CreateRequestCommand(code.CLEAN_EXPIRED_CONSUMEQUEUE)
+	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
+	if err != nil {
+		return false, err
+	}
+	if response == nil {
+		return false, fmt.Errorf("CleanExpiredConsumeQueue response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("CleanExpiredConsumeQueue failed. %s", response.ToString())
+		return false, fmt.Errorf("%d, %s", response.Code, response.Remark)
+	}
+	return true, nil
+}
+
 // GetConsumerRunningInfo 获得consumer运行时状态信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
@@ -504,4 +523,47 @@ func (impl *MQClientAPIImpl) ViewBrokerStatsData(brokerAddr, statsName, statsKey
 		return nil, err
 	}
 	return brokerStatsData, nil
+}
+
+// CloneGroupOffset 克隆消费组的偏移量
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *MQClientAPIImpl) CloneGroupOffset(brokerAddr, srcGroup, destGroup, topic string, isOffline bool, timeoutMillis int64) error {
+	requestHeader := header.NewCloneGroupOffsetRequestHeader(srcGroup, destGroup, topic, isOffline)
+	request := protocol.CreateRequestCommand(code.CLONE_GROUP_OFFSET, requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
+	if err != nil {
+		return err
+	}
+	if response == nil {
+		return fmt.Errorf("CloneGroupOffset response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("CloneGroupOffset failed. %s", response.ToString())
+		return fmt.Errorf("%d, %s", response.Code, response.Remark)
+	}
+	return nil
+}
+
+// ConsumeMessageDirectly
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *MQClientAPIImpl) ConsumeMessageDirectly(brokerAddr, consumerGroup, clientId, msgId string, timeoutMills int64) (*body.ConsumeMessageDirectlyResult, error) {
+	//TODO:
+	return nil, nil
+}
+
+// QueryConsumeTimeSpan
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *MQClientAPIImpl) QueryConsumeTimeSpan(brokerAddr, topic, consumerGroup string, timeoutMills int64) (set.Set, error) {
+	//TODO:
+	return set.NewSet(), nil
+}
+
+// GetNameServerAddressList 获取最新namesrv地址列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *MQClientAPIImpl) GetNameServerAddressList() []string {
+	return impl.DefalutRemotingClient.GetNameServerAddressList()
 }
