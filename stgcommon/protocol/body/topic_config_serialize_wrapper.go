@@ -15,6 +15,9 @@ type TopicConfigSerializeWrapper struct {
 	*protocol.RemotingSerializable
 }
 
+// NewTopicConfigSerializeWrapper 格式化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/21
 func NewTopicConfigSerializeWrapper(dataVersion ...*stgcommon.DataVersion) *TopicConfigSerializeWrapper {
 	topicConfigSerializeWrapper := &TopicConfigSerializeWrapper{
 		TopicConfigTable:     NewTopicConfigTable(),
@@ -28,6 +31,9 @@ func NewTopicConfigSerializeWrapper(dataVersion ...*stgcommon.DataVersion) *Topi
 	return topicConfigSerializeWrapper
 }
 
+// ToString 格式化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/10/21
 func (self *TopicConfigSerializeWrapper) ToString() string {
 	format := "TopicConfigSerializeWrapper [%s, %s]"
 	return fmt.Sprintf(format, self.DataVersion.ToString(), self.TopicConfigTable.ToString())

@@ -28,6 +28,9 @@ type SubscriptionDataPlus struct {
 	SubVersion      int      `json:"subVersion"`
 }
 
+// ToString 格式化订阅信息结构体的内容
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
 func (self *SubscriptionData) ToString() string {
 	if self == nil {
 		return "SubscriptionData is nil"

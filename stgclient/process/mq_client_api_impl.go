@@ -254,9 +254,13 @@ func (impl *MQClientAPIImpl) GetConsumerIdListByGroup(addr string, consumerGroup
 		switch response.Code {
 		case code.SUCCESS:
 			if len(response.Body) > 0 {
-				responseBody := &header.GetConsumerListByGroupResponseBody{}
-				responseBody.Decode(response.Body)
-				return responseBody.ConsumerIdList
+				consumerListBody := &header.GetConsumerListByGroupResponseBody{}
+				err := consumerListBody.CustomDecode(response.Body, consumerListBody)
+				if err != nil {
+					logger.Errorf("GetConsumerListByGroupResponseBody CustomDecode err: %s", err.Error())
+					return []string{}
+				}
+				return consumerListBody.ConsumerIdList
 			}
 		}
 	}
