@@ -184,7 +184,7 @@ func (impl *MQClientAPIImpl) GetProducerConnectionList(brokerAddr, producerGroup
 // GetConsumerConnectionList 查询在线消费进程列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*header.ConsumerConnection, error) {
+func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*body.ConsumerConnection, error) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
@@ -203,7 +203,7 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
-	consumerConnection := new(header.ConsumerConnection)
+	consumerConnection := new(body.ConsumerConnection)
 	content := response.Body
 	if content == nil || len(content) == 0 {
 		return consumerConnection, nil
