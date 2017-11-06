@@ -52,10 +52,10 @@ func (self *WriteSocketService) updateNextTransferOffset() {
 				masterOffset = self.haConnection.haService.defaultMessageStore.CommitLog.getMinOffset()
 			case config.SYNCHRONIZATION_LAST:
 				masterOffset = self.haConnection.haService.defaultMessageStore.CommitLog.getMaxOffset()
+				commitLogFileSize := self.haConnection.haService.defaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
+				masterOffset = masterOffset - (masterOffset % int64(commitLogFileSize))
 			}
 
-			commitLogFileSize := self.haConnection.haService.defaultMessageStore.MessageStoreConfig.MapedFileSizeCommitLog
-			masterOffset = masterOffset - (masterOffset % int64(commitLogFileSize))
 			if masterOffset < 0 {
 				masterOffset = 0
 			}
@@ -71,30 +71,26 @@ func (self *WriteSocketService) updateNextTransferOffset() {
 }
 
 func (self *WriteSocketService) buildData() {
-	self.mutex.Lock()
-	defer self.mutex.Unlock()
-
-	// 传输数据
 	thisOffset := self.nextTransferFromWhere
 	var size int32 = 0
 
-	selectResult := self.haConnection.haService.defaultMessageStore.GetCommitLogData(self.nextTransferFromWhere)
+	self.selectMapedBufferResult = self.haConnection.haService.defaultMessageStore.GetCommitLogData(thisOffset)
 	var resultBuffer []byte
-	if selectResult != nil {
-		size = selectResult.Size
+	if self.selectMapedBufferResult != nil {
+		size = self.selectMapedBufferResult.Size
 		haTransferBatchSize := self.haConnection.haService.defaultMessageStore.MessageStoreConfig.HaTransferBatchSize
 		if size > haTransferBatchSize {
 			size = haTransferBatchSize
 		}
 
 		self.nextTransferFromWhere += int64(size)
-		beginIndex := thisOffset - thisOffset/int64(selectResult.MappedByteBuffer.Limit)*int64(selectResult.MappedByteBuffer.Limit)
+		beginIndex := thisOffset - thisOffset/int64(self.selectMapedBufferResult.MappedByteBuffer.Limit)*int64(self.selectMapedBufferResult.MappedByteBuffer.Limit)
 		endIndex := beginIndex + int64(size)
-		if endIndex > int64(selectResult.MappedByteBuffer.Limit) {
-			endIndex = int64(selectResult.MappedByteBuffer.Limit)
+		if endIndex > int64(self.selectMapedBufferResult.MappedByteBuffer.Limit) {
+			endIndex = int64(self.selectMapedBufferResult.MappedByteBuffer.Limit)
 		}
 
-		resultBuffer = selectResult.MappedByteBuffer.MMapBuf[beginIndex:endIndex]
+		resultBuffer = self.selectMapedBufferResult.MappedByteBuffer.MMapBuf[beginIndex:endIndex]
 	} else {
 		// TODO self.haConnection.haService.waitNotifyObject.allWaitForRunning(100)
 	}
@@ -103,7 +99,8 @@ func (self *WriteSocketService) buildData() {
 	binary.Write(self.byteBufferHeader, binary.BigEndian, thisOffset)
 	binary.Write(self.byteBufferHeader, binary.BigEndian, size)
 
-	if selectResult != nil && resultBuffer != nil && len(resultBuffer) > 0 {
+	if self.selectMapedBufferResult != nil && resultBuffer != nil && len(resultBuffer) > 0 {
+		logger.Infof("master writer socket service send offset: %d size: %d", thisOffset, size)
 		self.byteBufferHeader.Write(resultBuffer)
 	}
 
@@ -120,6 +117,11 @@ func (self *WriteSocketService) start() {
 
 		select {
 		case response := <-self.responseChan:
+			if self.selectMapedBufferResult != nil {
+				self.selectMapedBufferResult.Release()
+				self.selectMapedBufferResult = nil
+			}
+
 			_, err := self.connection.Write(response)
 			if err != nil {
 				logger.Error("writer socket service write data error,", err.Error())
@@ -128,8 +130,10 @@ func (self *WriteSocketService) start() {
 			}
 		default:
 			time.Sleep(1000 * time.Millisecond)
-			self.updateNextTransferOffset()
-			self.buildData()
+			if self.selectMapedBufferResult == nil {
+				self.updateNextTransferOffset()
+				self.buildData()
+			}
 		}
 	}
 

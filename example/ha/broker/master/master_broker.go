@@ -41,4 +41,5 @@ func main() {
 
 	<-signalChan
 	master.Shutdown()
+	close(signalChan)
 }

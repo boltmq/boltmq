@@ -43,4 +43,5 @@ func main() {
 
 	<-signalChan
 	slave.Shutdown()
+	close(signalChan)
 }

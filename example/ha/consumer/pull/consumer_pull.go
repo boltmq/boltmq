@@ -54,4 +54,5 @@ func main() {
 
 	<-signalChan
 	defaultMQPullConsumer.Shutdown()
+	close(signalChan)
 }
