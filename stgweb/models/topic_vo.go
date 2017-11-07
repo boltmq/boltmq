@@ -54,10 +54,9 @@ func ParseTopicType(topic string) TopicType {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 type TopicStats struct {
+	TopicClusterCommon
 	TopicType      TopicType `json:"topicType"`      // topic类型
-	Topic          string    `json:"topic"`          // topic名称
 	BrokerName     string    `json:"brokerName"`     // broker名称
-	ClusterName    string    `json:"clusterName"`    // 集群名称
 	QueueID        int       `json:"queueId"`        // 队列ID
 	MinOffset      int64     `json:"minOffset"`      // 最小偏移量
 	MaxOffset      int64     `json:"maxOffset"`      // 最大偏移量
@@ -69,12 +68,10 @@ type TopicStats struct {
 // Since: 2017/11/6
 func ToTopicStats(mq *message.MessageQueue, topicOffset *admin.TopicOffset, topic, clusterName string) *TopicStats {
 	topicStats := &TopicStats{
-		Topic:       topic,
-		ClusterName: clusterName,
-		BrokerName:  mq.BrokerName,
-		QueueID:     mq.QueueId,
-		MinOffset:   topicOffset.MinOffset,
-		MaxOffset:   topicOffset.MaxOffset,
+		BrokerName: mq.BrokerName,
+		QueueID:    mq.QueueId,
+		MinOffset:  topicOffset.MinOffset,
+		MaxOffset:  topicOffset.MaxOffset,
 	}
 
 	humanTimestamp := ""
@@ -82,7 +79,10 @@ func ToTopicStats(mq *message.MessageQueue, topicOffset *admin.TopicOffset, topi
 		humanTimestamp = stgcommon.FormatTimestamp(topicOffset.LastUpdateTimestamp)
 	}
 	topicStats.LastUpdateTime = humanTimestamp
+
 	topicStats.TopicType = ParseTopicType(topic)
+	topicStats.Topic = topic
+	topicStats.ClusterName = clusterName
 
 	return topicStats
 }
@@ -106,4 +106,54 @@ func IsDLQTopic(topic string) bool {
 // Since: 2017/11/6
 func IsNormalTopic(topic string) bool {
 	return !IsRetryTopic(topic) && !IsDLQTopic(topic)
+}
+
+// DeleteTopic 删除Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type DeleteTopic struct {
+	TopicClusterCommon
+}
+
+// UpdateTopic 删除Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type UpdateTopic struct {
+	TopicCommon
+	TopicClusterCommon
+}
+
+// CreateTopic 创建Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type CreateTopic struct {
+	TopicClusterCommon
+}
+
+type TopicListVo struct {
+	TopicCommon TopicCommon `json:"topicConfig"`
+	TopicClusterCommon
+}
+
+// CreateTopic 创建Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type TopicCommon struct {
+	BrokerAddr      string                    `json:"brokerAddr"`      // broker地址
+	WriteQueueNums  int                       `json:"writeQueueNums"`  // 写队列数
+	Unit            bool                      `json:"unit"`            // 是否为单元topic
+	ReadQueueNums   int                       `json:"readQueueNums"`   // 读队列数
+	Order           bool                      `json:"order"`           // 是否为顺序topic
+	Perm            int                       `json:"perm"`            // 对应的broker读写权限
+	TopicFilterType stgcommon.TopicFilterType `json:"topicFilterType"` // topic过滤类型
+	TopicSysFlag    int                       `json:"topicSysFlag"`    // 是否为系统topic标记
+}
+
+// TopicClusterCommon topic与cluster公共配置
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type TopicClusterCommon struct {
+	ClusterName string    `json:"clusterName"` // 集群名称
+	Topic       string    `json:"topic"`       // topic名称
+	TopicType   TopicType `json:"topicType"`   // topic类型
 }

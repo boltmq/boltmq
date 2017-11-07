@@ -16,10 +16,4 @@ type MQAdmin interface {
 	// newTopic 需新建的topic
 	// queueNum 读写队列的数量
 	CreateTopic(key, newTopic string, queueNum int) error
-
-	// 创建Topic
-	// key 消息队列已存在的topic
-	// newTopic 需新建的topic
-	// queueNum 读写队列的数量
-	CreateCustomTopic(key, newTopic string, queueNum, topicSysFlag int) error
 }
