@@ -29,6 +29,7 @@ const (
 	NAMESRV_ADDR_PROPERTY           = "cloudmq.namesrv.addr"    // 默认namesrv_addr地址
 	SMARTGO_DATA_PATH_ENV           = "SMARTGO_DATA_PATH"       // broker、store等模块，存取数据的目录
 	SMARTGO_REGISTRY_CONFIG_ENV     = "SMARTGO_REGISTRY_CONFIG" // registry模块的日志配置文件路径
+	BLOTMQ_WEB_CONFIG_ENV           = "BLOTMQ_WEB_CONFIG"       // console控制台web界面的配置文件
 	MESSAGE_COMPRESS_LEVEL          = "cloudmq.message.compressLevel"
 	WS_DOMAIN_NAME                  = "jmenv.tbsite.net"
 	WS_DOMAIN_SUBGROUP              = "nsaddr"

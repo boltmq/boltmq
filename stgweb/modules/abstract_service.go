@@ -17,7 +17,8 @@ func NewAbstractService() *AbstractService {
 }
 
 func (service *AbstractService) InitMQAdmin() *admin.DefaultMQAdminExtImpl {
-	return admin.NewDefaultMQAdminExtImpl()
+	service.DefaultMQAdminExtImpl = admin.NewDefaultMQAdminExtImpl()
+	return service.DefaultMQAdminExtImpl
 }
 
 func (service *AbstractService) Start() {

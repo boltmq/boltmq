@@ -41,11 +41,13 @@ func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*bo
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	content := response.Body
+	logger.Infof("content ---> %s", string(content))
 	if content == nil || len(content) == 0 {
 		return topicList, nil
 	}
 
-	err = topicList.CustomDecode(content, topicList)
+	err = stgcommon.Decode(content, topicList)
+	//err = topicList.CustomDecode(content, topicList)
 	if err != nil {
 		return nil, err
 	}

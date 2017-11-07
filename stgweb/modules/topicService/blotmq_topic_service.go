@@ -1,7 +1,6 @@
 package topicService
 
 import (
-	"errors"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
@@ -62,7 +61,7 @@ func (service *BoltMQTopicService) GetAllList() (topics []string, err error) {
 		return []string{}, err
 	}
 	if topicList == nil || topicList.TopicList == nil || topicList.TopicList.Cardinality() == 0 {
-		return []string{}, errors.New("DefaultMQAdminExtImpl FetchAllTopicList() is blank")
+		return []string{}, fmt.Errorf("DefaultMQAdminExtImpl FetchAllTopicList() is blank")
 	}
 	topics = make([]string, 0, topicList.TopicList.Cardinality())
 	for topic := range topicList.TopicList.Iterator().C {
@@ -96,6 +95,9 @@ func (service *BoltMQTopicService) GetTopicList() (map[models.TopicType][]string
 		}
 	}
 
+	params[models.NORMAL_TOPIC] = topics
+	params[models.RETRY_TOPIC] = retryTopics
+	params[models.DLQ_TOPIC] = dlqTopics
 	return params, nil
 }
 
