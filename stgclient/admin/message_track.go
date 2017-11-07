@@ -48,12 +48,12 @@ func (track *MessageTrack) ToString() string {
 		return "MessageTrack is nil"
 	}
 
-	trackDesc := fmt.Sprintf("%d(%s)", track.TrackType, convertTrackDesc(track.TrackType))
+	trackDesc := fmt.Sprintf("%d(%s)", track.TrackType, ParseTrackDesc(track.TrackType))
 	format := "MessageTrack {consumerGroupId=%s, code=%d, %s, exceptionDesc=%s }"
 	return fmt.Sprintf(format, track.ConsumerGroupId, track.Code, trackDesc, track.ExceptionDesc)
 }
 
-func convertTrackDesc(trackType int) string {
+func ParseTrackDesc(trackType int) string {
 	if desc, ok := patternTrackTypes[trackType]; ok {
 		return desc
 	}

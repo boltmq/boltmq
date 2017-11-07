@@ -1,17 +1,50 @@
-package modules
+package topicService
 
 import (
 	"errors"
+	"fmt"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
+	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"sort"
+	"sync"
 )
 
+var (
+	topicService *BoltMQTopicService
+	sOnce        sync.Once
+)
+
+// BoltMQTopicService topic管理器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
 type BoltMQTopicService struct {
-	AbstractService
+	*modules.AbstractService
+}
+
+// Default 返回默认唯一的用户处理对象
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func Default() *BoltMQTopicService {
+	sOnce.Do(func() {
+		topicService = NewBoltMQTopicService()
+	})
+	return topicService
+}
+
+// NewBoltMQTopicService 初始化Topic查询服务
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func NewBoltMQTopicService() *BoltMQTopicService {
+	boltMQTopicService := &BoltMQTopicService{
+		AbstractService: modules.NewAbstractService(),
+	}
+	return boltMQTopicService
 }
 
 // List 查询所有Topic列表(不区分topic类型)
@@ -119,10 +152,33 @@ func (service *BoltMQTopicService) DeleteTopic(topic, clusterName string) error 
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error {
+	defer utils.RecoveredFn()
+	service.InitMQAdmin()
+	service.Start()
+	defer service.Shutdown()
+
+	masterSet, err := service.DefaultMQAdminExtImpl.FetchMasterAddrByClusterName(clusterName)
+	if err != nil {
+		return err
+	}
+	if masterSet == nil || masterSet.Cardinality() == 0 {
+		return fmt.Errorf("masterSet is empty, create topic failed. topic=%s, clusterName=%s", topic, clusterName)
+	}
+
+	queueNum := int32(8)
+	perm := constant.PERM_READ | constant.PERM_WRITE
+	for brokerAddr := range masterSet.Iterator().C {
+		topicConfig := stgcommon.NewDefaultTopicConfig(topic, queueNum, queueNum, perm, stgcommon.SINGLE_TAG)
+		err = service.DefaultMQAdminExtImpl.CreateCustomTopic(brokerAddr.(string), topicConfig)
+		if err != nil {
+			return fmt.Errorf("create topic err: %s, topic=%s", err.Error(), topic)
+		}
+	}
+
 	return nil
 }
 
-// CreateTopic 创建Topic
+// QueryTopicRoute 查询topic路由信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (service *BoltMQTopicService) QueryTopicRoute(topic, clusterName string) (*route.TopicRouteData, error) {

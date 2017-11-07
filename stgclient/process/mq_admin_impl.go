@@ -47,16 +47,16 @@ func (admin *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFl
 		var brokers route.BrokerDatas = brokerDataList
 		sort.Sort(brokers)
 		for _, brokerData := range brokerDataList {
-			addr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
-			if !strings.EqualFold(addr, "") {
-				topicConfig := stgcommon.TopicConfig{
+			brokerAddr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
+			if !strings.EqualFold(brokerAddr, "") {
+				topicConfig := &stgcommon.TopicConfig{
 					TopicName:      newTopic,
 					ReadQueueNums:  int32(queueNum),
 					WriteQueueNums: int32(queueNum),
 					Perm:           constant.PERM_READ | constant.PERM_WRITE,
 					TopicSysFlag:   topicSysFlag,
 				}
-				admin.mQClientFactory.MQClientAPIImpl.CreateTopic(addr, key, topicConfig, 1000*3)
+				admin.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
 			}
 		}
 	}

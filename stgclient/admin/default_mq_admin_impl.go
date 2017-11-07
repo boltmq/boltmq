@@ -616,6 +616,7 @@ func (impl *DefaultMQAdminExtImpl) ViewBrokerStatsData(brokerAddr, statsName, st
 // newTopic 需新建的topic
 // queueNum 读写队列的数量
 func (impl *DefaultMQAdminExtImpl) CreateTopic(key, newTopic string, queueNum int) error {
+	impl.mqClientInstance.MQAdminImpl.CreateTopic(key, newTopic, queueNum, 0)
 	return nil
 }
 
@@ -623,7 +624,8 @@ func (impl *DefaultMQAdminExtImpl) CreateTopic(key, newTopic string, queueNum in
 // key 消息队列已存在的topic
 // newTopic 需新建的topic
 // queueNum 读写队列的数量
-func (impl *DefaultMQAdminExtImpl) CreateCustomTopic(key, newTopic string, queueNum, topicSysFlag int) error {
+func (impl *DefaultMQAdminExtImpl) CreateCustomTopic(brokerAddr string, topicConfig *stgcommon.TopicConfig) error {
+	impl.mqClientInstance.MQClientAPIImpl.CreateTopic(brokerAddr, stgcommon.DEFAULT_TOPIC, topicConfig, int(timeoutMillis))
 	return nil
 }
 
@@ -660,4 +662,86 @@ func (impl *DefaultMQAdminExtImpl) MaxOffset(mq *message.MessageQueue) (int64, e
 // 查询MessageQueue最小偏移量
 func (impl *DefaultMQAdminExtImpl) MinOffset(mq *message.MessageQueue) (int64, error) {
 	return 0, nil
+}
+
+// FetchMasterAddrByClusterName 拉取所有角色是“master”的broker地址列表
+//
+// 返回值: set.Set保存所有角色是master的 brokerAddr地址,即set<brokerAddr>
+//
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func (impl *DefaultMQAdminExtImpl) FetchMasterAddrByClusterName(clusterName string) (set.Set, error) {
+	masterSet := set.NewSet()
+	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	if err != nil {
+		return masterSet, err
+	}
+	if clusterInfoWrapper == nil || clusterInfoWrapper.ClusterAddrTable == nil {
+		return masterSet, nil
+	}
+
+	brokerNameSet, ok := clusterInfoWrapper.ClusterAddrTable[clusterName]
+	if !ok || brokerNameSet == nil || brokerNameSet.Cardinality() == 0 {
+		logger.Error("[error] Make sure the specified clusterName exists or the nameserver which connected is correct.")
+		return masterSet, nil
+	}
+	for brokerName := range brokerNameSet.Iterator().C {
+		brokerData, ok := clusterInfoWrapper.BokerAddrTable[brokerName.(string)]
+		if ok && brokerData != nil && brokerData.BrokerAddrs != nil {
+			brokerAddr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
+			if brokerAddr != "" {
+				masterSet.Add(brokerAddr)
+			}
+		}
+	}
+	return masterSet, nil
+}
+
+// FetchBrokerNameByClusterName 根据Cluster集群名称，拉取所有broker名称
+//
+// 返回值: set<brokerName>
+//
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByClusterName(clusterName string) (set.Set, error) {
+	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	if err != nil {
+		return nil, err
+	}
+	if clusterInfoWrapper != nil && clusterInfoWrapper.ClusterAddrTable != nil {
+		brokerNameSet, ok := clusterInfoWrapper.ClusterAddrTable[clusterName]
+		if ok && brokerNameSet.Cardinality() > 0 {
+			return brokerNameSet, nil
+		}
+	}
+
+	format := "Make sure the specified clusterName exists or the nameserver which connected is correct."
+	return nil, fmt.Errorf(format)
+}
+
+// FetchBrokerNameByAddr 根据broker地址查询对应的broker名称
+//
+// 返回值: set<brokerName>
+//
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (string, error) {
+	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	if err != nil {
+		return "", err
+	}
+	if clusterInfoWrapper != nil && clusterInfoWrapper.BokerAddrTable != nil {
+		for brokerName, brokerData := range clusterInfoWrapper.BokerAddrTable {
+			if brokerData != nil && brokerData.BrokerAddrs != nil {
+				for _, addr := range brokerData.BrokerAddrs {
+					if strings.Contains(addr, brokerAddr) {
+						return brokerName, nil
+					}
+				}
+			}
+		}
+	}
+
+	format := "Make sure the specified broker addr exists or the nameserver which connected is correct."
+	return "", fmt.Errorf(format)
 }

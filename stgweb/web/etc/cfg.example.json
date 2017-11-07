@@ -1,0 +1,49 @@
+{
+  "web": {
+    "debug": false,
+    "desc": "blotmq api v1",
+    "serve": {
+      "procotol": "http",
+      "listen": "0.0.0.0:9900",
+      "cross": {
+        "allow_origins": ["*"],
+        "allow_methods": ["OPTIONS", "HEAD", "GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Origin", "X-Requested-With", "Accept", "Authorization"],
+        "allow_credentials": true,
+        "max_age": 3600
+      },
+      "session": {
+        "name": "czseesion",
+        "expires": 3600,
+        "secure": {
+          "enabled": false,
+          "hash": "cloudzonehashkey",
+          "block": "cloudzoneblockey"
+        },
+        "db": {
+          "enabled": false,
+          "addr": "127.0.0.1:6379",
+          "password": "",
+          "database": "0",
+          "max_idle": 0,
+          "max_active": 0,
+          "timeout": 300,
+          "max_age": 0,
+          "prefix": ""
+        }
+      }
+    }
+  },
+  "log": {
+    "engine": {
+      "adapter": "file",
+      "config": {
+        "filename": "./logs/cloudzone.log"
+      }
+    },
+    "path": "",
+    "cache_size": 10000,
+    "enable_func_call_depth": false,
+    "func_call_depth": 3
+  }
+}

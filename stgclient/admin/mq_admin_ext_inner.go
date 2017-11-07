@@ -155,6 +155,9 @@ type MQAdminExtInner interface {
 	// 服务器统计数据输出
 	ViewBrokerStatsData(brokerAddr, statsName, statsKey string) (*body.BrokerStatsData, error)
 
+	// 创建指定Topic
+	CreateCustomTopic(brokerAddr string, topicConfig *stgcommon.TopicConfig) error
+
 	// 根据msgId查询消息消费结果
 	ViewMessage(msgId string) (*message.MessageExt, error)
 

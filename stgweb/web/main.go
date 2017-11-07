@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"git.oschina.net/cloudzone/cloudcommon-go/web"
+	"git.oschina.net/cloudzone/smartgo/stgweb/web/g"
+	"git.oschina.net/cloudzone/smartgo/stgweb/web/route"
 	"os"
 )
 
@@ -25,7 +28,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	select {
-
-	}
+	g.Init()
+	web.New(_version).Config(&g.GetConfig().Web).Call(func(ctx *web.Context) {
+		ctx.Super().Action = route.Route
+	}).End().Run()
 }
