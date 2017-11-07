@@ -1,9 +1,12 @@
 package models
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"github.com/gunsluo/govalidator"
 	"strings"
 )
 
@@ -127,7 +130,38 @@ type UpdateTopic struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type CreateTopic struct {
-	TopicClusterCommon
+	ClusterName string `json:"clusterName" valid:"required"` // 集群名称
+	Topic       string `json:"topic" valid:"required"`       // topic名称
+}
+
+// Validate 参数验证
+func (createTopic *CreateTopic) Validate() error {
+	if err := utils.ValidateStruct(createTopic); err != nil {
+		return createTopic.customizeValidationErr(err)
+	}
+	return nil
+}
+
+// 自定义错误提示
+func (createTopic *CreateTopic) customizeValidationErr(err error) error {
+	if _, ok := err.(*govalidator.UnsupportedTypeError); ok {
+		return nil
+	}
+
+	for _, ve := range err.(govalidator.Errors) {
+		e, ok := ve.(govalidator.Error)
+		if !ok {
+			continue
+		}
+		switch e.Name {
+		case "clusterName":
+			return fmt.Errorf("集群名称'%s'字段无效", e.Name)
+		case "topic":
+			return fmt.Errorf("topic名称'%s'字段无效", e.Name)
+		}
+	}
+
+	return err
 }
 
 type TopicListVo struct {

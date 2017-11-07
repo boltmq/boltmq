@@ -26,6 +26,7 @@ func Route(ctx *web.Context) error {
 	// topic管理
 	{
 		api.Post("/topic", topic.CreateTopic)
+		api.Get("/topic", topic.TopicList)
 	}
 
 	// 消费进度
