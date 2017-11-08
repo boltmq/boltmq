@@ -160,10 +160,10 @@ func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error 
 	defer service.Shutdown()
 
 	queueNum := 8
-	err := service.DefaultMQAdminExtImpl.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, queueNum)
-	if err == nil {
-		return nil
-	}
+	//err := service.DefaultMQAdminExtImpl.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, queueNum)
+	//if err == nil {
+	//	return nil
+	//}
 
 	masterSet, err := service.DefaultMQAdminExtImpl.FetchMasterAddrByClusterName(clusterName)
 	if err != nil {

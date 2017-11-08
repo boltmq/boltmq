@@ -1,8 +1,8 @@
 package models
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgclient/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 )
 
 // MessageBodyVo 单独查询Body消息内容
@@ -73,6 +73,6 @@ type MessageTrackBase struct {
 // Since: 2017/11/7
 type BlotMessage struct {
 	Base     *message.Message      `json:"base"`     // 消息基础属性
-	Track    []*admin.MessageTrack `json:"track"`    // 消息消费结果
+	Track    []*track.MessageTrack `json:"track"`    // 消息消费结果
 	BodyPath string                `json:"bodyPath"` // 消息body内容存储在web服务器的路径
 }

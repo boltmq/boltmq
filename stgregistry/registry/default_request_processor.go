@@ -192,7 +192,6 @@ func (self *DefaultRequestProcessor) deleteTopicInNamesrv(ctx netm.Context, requ
 func (self *DefaultRequestProcessor) getAllTopicListFromNamesrv(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 	body := self.NamesrvController.RouteInfoManager.getAllTopicList()
-	logger.Info("getAllTopicListFromNamesrv.body --> %s", string(body))
 	response.Body = body
 	response.Code = code.SUCCESS
 	response.Remark = ""

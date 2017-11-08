@@ -27,7 +27,7 @@ func (impl *MQClientAPIImpl) CreateCustomTopic(addr, defaultTopic string, topicC
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1
 func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*body.TopicList, error) {
-	topicList := new(body.TopicList)
+	topicList := body.NewTopicList()
 	request := protocol.CreateRequestCommand(code.GET_ALL_TOPIC_LIST_FROM_NAMESERVER)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMills)
 	if err != nil {
@@ -41,13 +41,11 @@ func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*bo
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 	content := response.Body
-	logger.Infof("content ---> %s", string(content))
 	if content == nil || len(content) == 0 {
 		return topicList, nil
 	}
 
-	err = stgcommon.Decode(content, topicList)
-	//err = topicList.CustomDecode(content, topicList)
+	err = topicList.CustomDecode(content, topicList)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +56,7 @@ func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*bo
 		}
 		topicList.TopicList = newTopicSet
 	}
+
 	return topicList, nil
 }
 

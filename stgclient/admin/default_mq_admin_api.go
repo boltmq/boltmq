@@ -101,9 +101,10 @@ func (impl *DefaultMQAdminExtImpl) Start() error {
 		}
 
 		// 启动admin实例
-		impl.mqClientInstance.Start()
-		logger.Infof("the adminExt [%s] start OK", adminExtGroup)
+		impl.mqClientInstance.ServiceState = stgcommon.START_FAILED
+		impl.mqClientInstance.MQClientAPIImpl.Start()
 		impl.serviceState = stgcommon.RUNNING
+		logger.Infof("the adminExt [%s] start OK", adminExtGroup)
 	case stgcommon.RUNNING:
 	case stgcommon.START_FAILED:
 	case stgcommon.SHUTDOWN_ALREADY:
@@ -124,14 +125,10 @@ func (impl *DefaultMQAdminExtImpl) Shutdown() error {
 	case stgcommon.CREATE_JUST:
 	case stgcommon.RUNNING:
 		adminExtGroupId := impl.GetAdminExtGroup()
-		ok, err := impl.unRegisterAdminExt(adminExtGroupId)
-		if err == nil && ok {
-			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt successful")
-		} else {
-			logger.Infof("DefaultMQAdminExtImpl UnRegisterAdminExt failed")
-		}
-
-		impl.mqClientInstance.Shutdown()
+		impl.unRegisterAdminExt(adminExtGroupId)
+		impl.mqClientInstance.MQClientAPIImpl.Shutdwon()
+		process.GetInstance().RemoveClientFactory(impl.mqClientInstance.ClientId)
+		impl.mqClientInstance.ServiceState = stgcommon.SHUTDOWN_ALREADY
 		logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
 		impl.serviceState = stgcommon.SHUTDOWN_ALREADY
 	case stgcommon.SHUTDOWN_ALREADY:
