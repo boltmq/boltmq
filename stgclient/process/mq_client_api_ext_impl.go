@@ -271,9 +271,15 @@ func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.Cl
 		logger.Errorf("GetBrokerClusterInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	clusterInfo := body.NewClusterInfo()
-	err = clusterInfo.CustomDecode(response.Body, clusterInfo)
-	return clusterInfo, err
+	clusterPlusInfo := body.NewClusterPlusInfo()
+	err = clusterPlusInfo.CustomDecode(response.Body, clusterPlusInfo)
+	if err != nil {
+		logger.Errorf("clusterPlusInfo.CustomDecode() err: %s, %s", err.Error(), response.Body)
+		return nil, err
+	}
+
+	clusterInfo := clusterPlusInfo.ToClusterInfo()
+	return clusterInfo, nil
 }
 
 // WipeWritePermOfBroker 关闭broker写权限

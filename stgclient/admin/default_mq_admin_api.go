@@ -104,7 +104,7 @@ func (impl *DefaultMQAdminExtImpl) Start() error {
 		impl.mqClientInstance.ServiceState = stgcommon.START_FAILED
 		impl.mqClientInstance.MQClientAPIImpl.Start()
 		impl.serviceState = stgcommon.RUNNING
-		logger.Infof("the adminExt [%s] start OK", adminExtGroup)
+		//logger.Infof("the adminExt [%s] start OK", adminExtGroup)
 	case stgcommon.RUNNING:
 	case stgcommon.START_FAILED:
 	case stgcommon.SHUTDOWN_ALREADY:
@@ -129,7 +129,7 @@ func (impl *DefaultMQAdminExtImpl) Shutdown() error {
 		impl.mqClientInstance.MQClientAPIImpl.Shutdwon()
 		process.GetInstance().RemoveClientFactory(impl.mqClientInstance.ClientId)
 		impl.mqClientInstance.ServiceState = stgcommon.SHUTDOWN_ALREADY
-		logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
+		//logger.Infof("the adminExt [%s] shutdown OK", adminExtGroupId)
 		impl.serviceState = stgcommon.SHUTDOWN_ALREADY
 	case stgcommon.SHUTDOWN_ALREADY:
 	default:
