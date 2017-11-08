@@ -177,7 +177,7 @@ func (impl *MQClientAPIImpl) GetProducerConnectionList(brokerAddr, producerGroup
 		logger.Errorf("GetProducerConnectionList failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	producerConnection := &body.ProducerConnection{}
+	producerConnection := body.NewProducerConnection()
 	err = producerConnection.CustomDecode(response.Body, producerConnection)
 	return producerConnection, err
 }
@@ -299,7 +299,7 @@ func (impl *MQClientAPIImpl) WipeWritePermOfBroker(namesrvAddr, brokerName strin
 		logger.Errorf("WipeWritePermOfBroker failed. %s", response.ToString())
 		return 0, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	responseHeader := &namesrv.WipeWritePermOfBrokerResponseHeader{}
+	responseHeader := new(namesrv.WipeWritePermOfBrokerResponseHeader)
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
 		return 0, err
@@ -396,7 +396,7 @@ func (impl *MQClientAPIImpl) InvokeBrokerToGetConsumerStatus(brokerAddr, topic, 
 		logger.Errorf("InvokeBrokerToGetConsumerStatus failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	consumerStatusBody := &body.GetConsumerStatusBody{}
+	consumerStatusBody := body.NewGetConsumerStatusBody()
 	err = consumerStatusBody.CustomDecode(response.Body, consumerStatusBody)
 	if err != nil {
 		return nil, err
@@ -424,7 +424,7 @@ func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, ti
 		logger.Errorf("QueryTopicConsumeByWho failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	groupList := &body.GroupList{}
+	groupList := body.NewGroupList()
 	err = groupList.CustomDecode(response.Body, groupList)
 	return groupList, err
 }
@@ -432,8 +432,8 @@ func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, ti
 // GetTopicsByCluster 查询集群信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis int64) (*body.TopicList, error) {
-	requestHeader := &header.GetTopicsByClusterRequestHeader{Cluster: cluster}
+func (impl *MQClientAPIImpl) GetTopicsByCluster(clusterName string, timeoutMillis int64) (*body.TopicPlusList, error) {
+	requestHeader := &header.GetTopicsByClusterRequestHeader{Cluster: clusterName}
 	request := protocol.CreateRequestCommand(code.GET_TOPICS_BY_CLUSTER, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if err != nil {
@@ -446,20 +446,29 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(cluster string, timeoutMillis in
 		logger.Errorf("GetTopicsByCluster failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	topicList := &body.TopicList{}
+
+	topicList := body.NewTopicPlusList()
 	err = topicList.CustomDecode(response.Body, topicList)
 	if err != nil {
 		return nil, err
 	}
+
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicList != nil {
 		newTopicSet := set.NewSet()
-		for itor := range topicList.TopicList.Iterator().C {
-			if topic, ok := itor.(string); ok {
-				newTopicSet.Add(stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix))
-			}
+		for _, topic := range topicList.TopicList {
+			newTopicSet.Add(stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix))
 		}
-		topicList.TopicList = newTopicSet
+		//TODO
+		topicList.TopicList = []string{}
 	}
+
+	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicQueueTable != nil && len(topicList.TopicQueueTable) > 0 {
+		for key, value := range topicList.TopicQueueTable {
+			topic := stgclient.ClearProjectGroup(key, impl.ProjectGroupPrefix)
+			topicList.TopicQueueTable[topic] = value
+		}
+	}
+
 	return topicList, nil
 }
 
@@ -499,12 +508,9 @@ func (impl *MQClientAPIImpl) GetConsumerRunningInfo(brokerAddr, consumerGroup, c
 		logger.Errorf("GetConsumerRunningInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	consumerRunningInfo := &body.ConsumerRunningInfo{}
+	consumerRunningInfo := body.NewConsumerRunningInfo()
 	err = consumerRunningInfo.CustomDecode(response.Body, consumerRunningInfo)
-	if err != nil {
-		return nil, err
-	}
-	return consumerRunningInfo, nil
+	return consumerRunningInfo, err
 }
 
 // ViewBrokerStatsData 查询broker节点自身的状态信息
@@ -524,7 +530,7 @@ func (impl *MQClientAPIImpl) ViewBrokerStatsData(brokerAddr, statsName, statsKey
 		logger.Errorf("GetTopicsByCluster failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	brokerStatsData := &body.BrokerStatsData{}
+	brokerStatsData := body.NewBrokerStatsData()
 	err = brokerStatsData.CustomDecode(response.Body, brokerStatsData)
 	if err != nil {
 		return nil, err

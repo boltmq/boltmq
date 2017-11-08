@@ -10,7 +10,7 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
 type ClusterInfo struct {
-	BokerAddrTable   map[string]*route.BrokerData `json:"brokerAddrTable"`  // brokerName[BrokerData]
+	BrokerAddrTable  map[string]*route.BrokerData `json:"brokerAddrTable"`  // brokerName[BrokerData]
 	ClusterAddrTable map[string]set.Set           `json:"clusterAddrTable"` // clusterName[set<brokerName>]
 	*protocol.RemotingSerializable
 }
@@ -32,7 +32,7 @@ type ClusterPlusInfo struct {
 // Since: 2017/9/4
 func NewClusterInfo() *ClusterInfo {
 	clusterInfo := &ClusterInfo{
-		BokerAddrTable:   make(map[string]*route.BrokerData),
+		BrokerAddrTable:  make(map[string]*route.BrokerData),
 		ClusterAddrTable: make(map[string]set.Set),
 	}
 	return clusterInfo
@@ -57,7 +57,7 @@ func (plus *ClusterPlusInfo) ToClusterInfo() *ClusterInfo {
 		return nil
 	}
 	clusterInfo := NewClusterInfo()
-	clusterInfo.BokerAddrTable = plus.BokerAddrTable
+	clusterInfo.BrokerAddrTable = plus.BokerAddrTable
 	if plus.ClusterAddrTable != nil {
 		for clusterName, brokerNames := range plus.ClusterAddrTable {
 			brokerNameSet := set.NewSet()
@@ -104,7 +104,7 @@ func (self *ClusterInfo) RetrieveAllAddrByCluster(clusterName string) []string {
 	if v, ok := self.ClusterAddrTable[clusterName]; ok {
 		for itor := range v.Iterator().C {
 			if brokerName, ok := itor.(string); ok {
-				if brokerData, ok := self.BokerAddrTable[brokerName]; ok {
+				if brokerData, ok := self.BrokerAddrTable[brokerName]; ok {
 					if brokerData != nil && brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
 						for _, val := range brokerData.BrokerAddrs {
 							brokerAddrs = append(brokerAddrs, val)

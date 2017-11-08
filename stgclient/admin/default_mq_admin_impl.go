@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 	namesrvUtils "git.oschina.net/cloudzone/smartgo/stgcommon/namesrv"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
@@ -15,7 +16,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	set "github.com/deckarep/golang-set"
 	"strings"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 )
 
 const (
@@ -88,6 +88,37 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 func (impl *DefaultMQAdminExtImpl) FetchAllTopicList() (*body.TopicList, error) {
 	topicList, err := impl.mqClientInstance.MQClientAPIImpl.GetTopicListFromNameServer(timeoutMillis)
 	return topicList, err
+}
+
+// GetTopicsByCluster 根据ClusterName，查询该集群管理的所有Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/8
+func (impl *DefaultMQAdminExtImpl) GetTopicsByCluster(clusterName string) ([]*body.TopicBrokerClusterWapper, error) {
+	topicBrokerClusterList := make([]*body.TopicBrokerClusterWapper, 0)
+
+	topicList, err := impl.mqClientInstance.MQClientAPIImpl.GetTopicsByCluster(clusterName, timeoutMillis)
+	if err != nil {
+		return topicBrokerClusterList, err
+	}
+	if topicList == nil || len(topicList.TopicList) == 0 {
+		return topicBrokerClusterList, fmt.Errorf("TopicPlusList.topics is empty. clusterName = %s", clusterName)
+	}
+
+	for _, tc := range topicList.TopicList {
+		if topicList.TopicQueueTable != nil {
+			for to, queueDatas := range topicList.TopicQueueTable {
+				if queueDatas != nil {
+					for _, queueData := range queueDatas {
+						if queueData != nil && tc == to {
+							topicBrokerCluster := body.NewTopicBrokerClusterWapper(clusterName, tc, queueData)
+							topicBrokerClusterList = append(topicBrokerClusterList, topicBrokerCluster)
+						}
+					}
+				}
+			}
+		}
+	}
+	return topicBrokerClusterList, nil
 }
 
 // 获取Broker运行时数据
@@ -557,7 +588,7 @@ func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGro
 	if err != nil {
 		return false, err
 	}
-	if ci.BokerAddrTable == nil || len(ci.BokerAddrTable) == 0 {
+	if ci.BrokerAddrTable == nil || len(ci.BrokerAddrTable) == 0 {
 		return false, nil
 	}
 
@@ -571,7 +602,7 @@ func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGro
 
 	for mq, offsetwapper := range cstats.OffsetTable {
 		if mq != nil && mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId {
-			if brokerData, ok := ci.BokerAddrTable[mq.BrokerName]; ok && brokerData != nil {
+			if brokerData, ok := ci.BrokerAddrTable[mq.BrokerName]; ok && brokerData != nil {
 				if brokerAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]; ok && brokerAddr != "" {
 					format := "brokerAddr=%s, msg.StoreHost=%s, offsetwapper.ConsumerOffset=%d, msg.QueueOffset=%d"
 					logger.Infof(format, brokerAddr, msg.StoreHost, offsetwapper.ConsumerOffset, msg.QueueOffset)
@@ -687,7 +718,7 @@ func (impl *DefaultMQAdminExtImpl) FetchMasterAddrByClusterName(clusterName stri
 		return masterSet, nil
 	}
 	for brokerName := range brokerNameSet.Iterator().C {
-		brokerData, ok := clusterInfoWrapper.BokerAddrTable[brokerName.(string)]
+		brokerData, ok := clusterInfoWrapper.BrokerAddrTable[brokerName.(string)]
 		if ok && brokerData != nil && brokerData.BrokerAddrs != nil {
 			brokerAddr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 			if brokerAddr != "" {
@@ -731,8 +762,8 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (str
 	if err != nil {
 		return "", err
 	}
-	if clusterInfoWrapper != nil && clusterInfoWrapper.BokerAddrTable != nil {
-		for brokerName, brokerData := range clusterInfoWrapper.BokerAddrTable {
+	if clusterInfoWrapper != nil && clusterInfoWrapper.BrokerAddrTable != nil {
+		for brokerName, brokerData := range clusterInfoWrapper.BrokerAddrTable {
 			if brokerData != nil && brokerData.BrokerAddrs != nil {
 				for _, addr := range brokerData.BrokerAddrs {
 					if strings.Contains(addr, brokerAddr) {
@@ -745,4 +776,75 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (str
 
 	format := "Make sure the specified broker addr exists or the nameserver which connected is correct."
 	return "", fmt.Errorf(format)
+}
+
+// GetClusterList 获取集群名称
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func (impl *DefaultMQAdminExtImpl) GetAllClusterNames() ([]string, map[string]*route.BrokerData, error) {
+	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	if err != nil {
+		return []string{}, nil, err
+	}
+	if clusterInfoWrapper == nil || clusterInfoWrapper.ClusterAddrTable == nil || len(clusterInfoWrapper.ClusterAddrTable) == 0 {
+		return []string{}, nil, fmt.Errorf("clusterInfoWrapper is nil, or clusterInfoWrapper.ClusterAddrTable is empty")
+	}
+
+	clusterNames := make([]string, len(clusterInfoWrapper.ClusterAddrTable))
+	brokerAddrTable := clusterInfoWrapper.BrokerAddrTable
+	if brokerAddrTable == nil {
+		brokerAddrTable = make(map[string]*route.BrokerData)
+	}
+
+	for clusterName, _ := range clusterInfoWrapper.ClusterAddrTable {
+		clusterNames = append(clusterNames, clusterName)
+	}
+	return clusterNames, brokerAddrTable, nil
+}
+
+// GetClusterList 获取集群名称
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func (impl *DefaultMQAdminExtImpl) GetClusterTopicWappers() ([]*body.TopicBrokerClusterWapper, error) {
+	result := make([]*body.TopicBrokerClusterWapper, 0)
+	clusterNames, brokerAddrTable, err := impl.GetAllClusterNames()
+	if err != nil {
+		return result, err
+	}
+	for _, clusterName := range clusterNames {
+		topicBrokerClusterList, err := impl.GetTopicsByCluster(clusterName)
+		if err != nil {
+			return result, err
+		}
+
+		for _, topicBrokerCluster := range topicBrokerClusterList {
+			brokerName := topicBrokerCluster.TopicUpdateConfigWapper.BrokerName
+			topicBrokerCluster.TopicUpdateConfigWapper.BrokerAddr = impl.getBrokerAddrByName(brokerAddrTable, brokerName)
+			result = append(result, topicBrokerCluster)
+		}
+	}
+	return result
+}
+
+// getBrokerByName 查询brokerAddr地址
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/8
+func (impl *DefaultMQAdminExtImpl) getBrokerAddrByName(brokerAddrTable map[string]*route.BrokerData, brokerName string) (string, error) {
+	if brokerAddrTable == nil || len(brokerAddrTable) == 0 {
+		return ""
+	}
+	for name, brokerData := range brokerAddrTable {
+		if brokerData != nil {
+			for _, brokerAddrs := range brokerData.BrokerAddrs {
+				if brokerAddrs != nil && len(brokerAddrs) > 0 {
+					for _, addr := range brokerAddrs {
+						if name == brokerName {
+							return addr
+						}
+					}
+				}
+			}
+		}
+	}
+	return ""
 }

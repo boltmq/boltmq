@@ -6,10 +6,13 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
+	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
+	"golang.org/x/net/html/atom"
 	"sort"
 	"strings"
 	"sync"
@@ -25,6 +28,7 @@ var (
 // Since: 2017/11/7
 type BoltMQTopicService struct {
 	*modules.AbstractService
+	clusterServiceImpl *clusterService.BoltMQClusterService
 }
 
 // Default 返回默认唯一的用户处理对象
@@ -33,6 +37,7 @@ type BoltMQTopicService struct {
 func Default() *BoltMQTopicService {
 	sOnce.Do(func() {
 		topicService = NewBoltMQTopicService()
+		topicService.clusterServiceImpl = clusterService.NewBoltMQClusterService()
 	})
 	return topicService
 }
@@ -50,27 +55,27 @@ func NewBoltMQTopicService() *BoltMQTopicService {
 // List 查询所有Topic列表(不区分topic类型)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetAllList() (topics []string, err error) {
+func (service *BoltMQTopicService) GetAllList() (topicBrokerClusterWappers []*body.TopicBrokerClusterWapper, err error) {
 	defer utils.RecoveredFn()
 	service.InitMQAdmin()
 	service.Start()
 	defer service.Shutdown()
 
-	topicList, err := service.DefaultMQAdminExtImpl.FetchAllTopicList()
+	clusterTopicWappers, err = service.DefaultMQAdminExtImpl.GetClusterTopicWappers()
 	if err != nil {
-		logger.Errorf("DefaultMQAdminExtImpl.FetchAllTopicList() err: %s", err.Error())
-		return []string{}, err
+		return nil, err
 	}
-	if topicList == nil || topicList.TopicList == nil || topicList.TopicList.Cardinality() == 0 {
-		return []string{}, fmt.Errorf("DefaultMQAdminExtImpl FetchAllTopicList() is blank")
+	if clusterTopicWappers == nil || len(clusterTopicWappers) == 0 {
+		return nil, fmt.Errorf("DefaultMQAdminExtImpl GetClusterTopicWappers() is blank")
 	}
-	topics = make([]string, 0, topicList.TopicList.Cardinality())
-	for t := range topicList.TopicList.Iterator().C {
-		topics = append(topics, t.(string))
-	}
-	logger.Infof("all topic size = %d", len(topics))
+	//TODO
+	//topicBrokerClusterWappers = make([]string, 0, topicList.TopicList.Cardinality())
+	//for t := range topicList.TopicList.Iterator().C {
+	//	topicBrokerClusterWappers = append(topicBrokerClusterWappers, t.(string))
+	//}
+	logger.Infof("all topic size = %d", len(topicBrokerClusterWappers))
 
-	return topics, nil
+	return topicBrokerClusterWappers, nil
 }
 
 // GetTopicList 根据Topic类型，获取所有Topic
