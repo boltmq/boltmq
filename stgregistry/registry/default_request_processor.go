@@ -480,7 +480,7 @@ func (self *DefaultRequestProcessor) getTopicsByCluster(ctx netm.Context, reques
 	requestHeader := &header.GetTopicsByClusterRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error("error: %s\n", err.Error())
+		logger.Error("getTopicsByCluster.DecodeCommandCustomHeader() error: %s\n", err.Error())
 		return response, err
 	}
 

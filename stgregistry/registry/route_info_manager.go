@@ -54,7 +54,7 @@ func NewRouteInfoManager() *RouteInfoManager {
 // Since: 2017/9/6
 func (self *RouteInfoManager) getAllClusterInfo() []byte {
 	clusterInfo := &body.ClusterInfo{
-		BokerAddrTable:   self.BrokerAddrTable,
+		BrokerAddrTable:  self.BrokerAddrTable,
 		ClusterAddrTable: self.ClusterAddrTable,
 	}
 	return clusterInfo.CustomEncode(clusterInfo)
@@ -76,16 +76,28 @@ func (self *RouteInfoManager) deleteTopic(topic string) {
 // Since: 2017/9/6
 func (self *RouteInfoManager) getAllTopicList() []byte {
 	defer utils.RecoveredFn()
-	topicList := body.NewTopicList()
+	topicPlusList := body.NewTopicPlusList()
 	self.ReadWriteLock.RLock()
 	if self.TopicQueueTable != nil && len(self.TopicQueueTable) > 0 {
 		for topic, queueDatas := range self.TopicQueueTable {
-			topicList.TopicList.Add(topic)
-			topicList.TopicQueueTable[topic] = queueDatas
+			//topicPlusList.TopicList.Add(topic)
+			topicPlusList.TopicList = append(topicPlusList.TopicList, topic)
+			topicPlusList.TopicQueueTable[topic] = queueDatas
+		}
+	}
+	if self.ClusterAddrTable != nil && len(self.ClusterAddrTable) > 0 {
+		for clusterName, values := range self.ClusterAddrTable {
+			if values != nil {
+				brokerNames := make([]string, 0, values.Cardinality())
+				for brokerName := range values.Iterator().C {
+					brokerNames = append(brokerNames, brokerName.(string))
+				}
+				topicPlusList.ClusterAddrTable[clusterName] = brokerNames
+			}
 		}
 	}
 	self.ReadWriteLock.RUnlock()
-	return topicList.CustomEncode(topicList)
+	return topicPlusList.CustomEncode(topicPlusList)
 }
 
 // registerBroker 注册Broker
@@ -732,7 +744,7 @@ func (self *RouteInfoManager) printBrokerAddrTable() {
 	logger.Info("") // 额外打印换行符
 }
 
-// getSystemTopicList 获取指定集群下的所有topic列表
+// getSystemTopicList 获取系统topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *RouteInfoManager) getSystemTopicList() []byte {
@@ -770,18 +782,21 @@ func (self *RouteInfoManager) getSystemTopicList() []byte {
 // getTopicsByCluster 获取指定集群下的所有topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
-func (self *RouteInfoManager) getTopicsByCluster(cluster string) []byte {
+func (self *RouteInfoManager) getTopicsByCluster(clusterName string) []byte {
 	defer utils.RecoveredFn()
-	topicList := body.NewTopicList()
 	self.ReadWriteLock.RLock()
-	if brokerNameSet, ok := self.ClusterAddrTable[cluster]; ok && brokerNameSet != nil {
+	defer self.ReadWriteLock.RUnlock()
+
+	topicList := body.NewTopicPlusList()
+	topics := make([]string, 0)
+	if brokerNameSet, ok := self.ClusterAddrTable[clusterName]; ok && brokerNameSet != nil {
 		for itor := range brokerNameSet.Iterator().C {
 			if brokerName, ok := itor.(string); ok {
 				for topic, queueDatas := range self.TopicQueueTable {
 					if queueDatas != nil && len(queueDatas) > 0 {
 						for _, queueData := range queueDatas {
 							if queueData != nil && queueData.BrokerName == brokerName {
-								topicList.TopicList.Add(topic)
+								topics = append(topics, topic)
 								break
 							}
 						}
@@ -790,7 +805,11 @@ func (self *RouteInfoManager) getTopicsByCluster(cluster string) []byte {
 			}
 		}
 	}
-	self.ReadWriteLock.RUnlock()
+
+	topicList.TopicList = topics
+	topicList.TopicQueueTable = self.TopicQueueTable
+	topicList.ClusterAddrTable = self.ClusterAddrTable
+
 	return topicList.CustomEncode(topicList)
 }
 
