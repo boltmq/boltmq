@@ -57,6 +57,7 @@ type TopicUpdateConfigWapper struct {
 	WriteQueueNums int    `json:"writeQueueNums"`
 	ReadQueueNums  int    `json:"readQueueNums"`
 	BrokerAddr     string `json:"brokerAddr"`
+	BrokerId       int    `json:"brokerId"`
 	BrokerName     string `json:"brokerName"`
 	Unit           bool   `json:"unit"`
 	Perm           int    `json:"perm"`

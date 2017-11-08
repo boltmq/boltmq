@@ -6,13 +6,11 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
-	"golang.org/x/net/html/atom"
 	"sort"
 	"strings"
 	"sync"
@@ -55,33 +53,33 @@ func NewBoltMQTopicService() *BoltMQTopicService {
 // List 查询所有Topic列表(不区分topic类型)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetAllList() (topicBrokerClusterWappers []*body.TopicBrokerClusterWapper, err error) {
+func (service *BoltMQTopicService) GetAllList() (topicVos []*models.TopicVo, err error) {
 	defer utils.RecoveredFn()
 	service.InitMQAdmin()
 	service.Start()
 	defer service.Shutdown()
 
-	clusterTopicWappers, err = service.DefaultMQAdminExtImpl.GetClusterTopicWappers()
+	topicVos = make([]*models.TopicVo, 0)
+	clusterTopicWappers, err := service.DefaultMQAdminExtImpl.GetClusterTopicWappers()
 	if err != nil {
-		return nil, err
+		return topicVos, err
 	}
 	if clusterTopicWappers == nil || len(clusterTopicWappers) == 0 {
-		return nil, fmt.Errorf("DefaultMQAdminExtImpl GetClusterTopicWappers() is blank")
+		return topicVos, fmt.Errorf("DefaultMQAdminExtImpl GetClusterTopicWappers() is blank")
 	}
-	//TODO
-	//topicBrokerClusterWappers = make([]string, 0, topicList.TopicList.Cardinality())
-	//for t := range topicList.TopicList.Iterator().C {
-	//	topicBrokerClusterWappers = append(topicBrokerClusterWappers, t.(string))
-	//}
-	logger.Infof("all topic size = %d", len(topicBrokerClusterWappers))
 
-	return topicBrokerClusterWappers, nil
+	for _, wapper := range clusterTopicWappers {
+		topicVo := models.ToTopicVo(wapper)
+		topicVos = append(topicVos, topicVo)
+	}
+	logger.Infof("all topic size = %d", len(topicVos))
+	return topicVos, nil
 }
 
 // GetTopicList 根据Topic类型，获取所有Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetTopicList(clusterName, topic string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, error) {
+func (service *BoltMQTopicService) GetTopicList(clusterName, topicPrefix string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, error) {
 	defer utils.RecoveredFn()
 
 	srcTopics, err := service.GetAllList()
@@ -90,9 +88,9 @@ func (service *BoltMQTopicService) GetTopicList(clusterName, topic string, extra
 	}
 
 	topicVos := make([]*models.TopicVo, 0)
-	destTopics := GetTopicByParam(topicType, topic, srcTopics)
+	destTopics := GetTopicByParam(topicType, topicPrefix, srcTopics)
 	for _, t := range destTopics {
-		topicVo := models.NewTopicVo(clusterName, t)
+		topicVo := models.NewTopicVo(clusterName, t.Topic)
 		topicVos = append(topicVos, topicVo)
 	}
 
@@ -103,16 +101,15 @@ func (service *BoltMQTopicService) GetTopicList(clusterName, topic string, extra
 // GetTopicByType 查询指定类型的topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/8
-func GetTopicByParam(topicType int, topic string, srcTopics []string) (destTopics []string) {
+func GetTopicByParam(topicType int, prefix string, srcTopics []*models.TopicVo) (destTopics []*models.TopicVo) {
 	// 查询所有Topic，不过滤
-	destTopics = make([]string, 0)
+	destTopics = make([]*models.TopicVo, 0)
 	if srcTopics == nil {
 		return destTopics
 	}
-
 	if topicType == int(models.ALL_TOPIC) {
 		for _, t := range srcTopics {
-			if strings.EqualFold(topic, "") || strings.HasPrefix(t, topic) {
+			if strings.EqualFold(prefix, "") || strings.HasPrefix(t.Topic, prefix) {
 				destTopics = append(destTopics, t)
 			}
 		}
@@ -120,8 +117,8 @@ func GetTopicByParam(topicType int, topic string, srcTopics []string) (destTopic
 	}
 
 	for _, t := range srcTopics {
-		tType := models.ParseTopicType(t)
-		if (strings.EqualFold(topic, "") || strings.HasPrefix(t, topic)) && topicType == int(tType) {
+		tType := models.ParseTopicType(t.Topic)
+		if (strings.EqualFold(prefix, "") || strings.HasPrefix(t.Topic, prefix)) && topicType == int(tType) {
 			// 过滤指定类型的topic
 			destTopics = append(destTopics, t)
 		}

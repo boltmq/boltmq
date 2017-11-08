@@ -818,33 +818,31 @@ func (impl *DefaultMQAdminExtImpl) GetClusterTopicWappers() ([]*body.TopicBroker
 		}
 
 		for _, topicBrokerCluster := range topicBrokerClusterList {
-			brokerName := topicBrokerCluster.TopicUpdateConfigWapper.BrokerName
-			topicBrokerCluster.TopicUpdateConfigWapper.BrokerAddr = impl.getBrokerAddrByName(brokerAddrTable, brokerName)
+			brokerId, brokerAddr := impl.getBrokerAddrByName(brokerAddrTable, topicBrokerCluster.TopicUpdateConfigWapper.BrokerName)
+			topicBrokerCluster.TopicUpdateConfigWapper.BrokerAddr = brokerAddr
+			topicBrokerCluster.TopicUpdateConfigWapper.BrokerId = brokerId
+
 			result = append(result, topicBrokerCluster)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // getBrokerByName 查询brokerAddr地址
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/8
-func (impl *DefaultMQAdminExtImpl) getBrokerAddrByName(brokerAddrTable map[string]*route.BrokerData, brokerName string) (string, error) {
+func (impl *DefaultMQAdminExtImpl) getBrokerAddrByName(brokerAddrTable map[string]*route.BrokerData, brokerName string) (int, string) {
 	if brokerAddrTable == nil || len(brokerAddrTable) == 0 {
-		return ""
+		return 0, ""
 	}
-	for name, brokerData := range brokerAddrTable {
-		if brokerData != nil {
-			for _, brokerAddrs := range brokerData.BrokerAddrs {
-				if brokerAddrs != nil && len(brokerAddrs) > 0 {
-					for _, addr := range brokerAddrs {
-						if name == brokerName {
-							return addr
-						}
-					}
+	for _, brokerData := range brokerAddrTable {
+		if brokerData != nil && brokerData.BrokerAddrs != nil {
+			for brokerId, brokerAddr := range brokerData.BrokerAddrs {
+				if brokerId == stgcommon.MASTER_ID && brokerData.BrokerName == brokerName {
+					return brokerId, brokerAddr
 				}
 			}
 		}
 	}
-	return ""
+	return 0, ""
 }
