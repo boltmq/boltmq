@@ -11,6 +11,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -64,8 +65,8 @@ func (service *BoltMQTopicService) GetAllList() (topics []string, err error) {
 		return []string{}, fmt.Errorf("DefaultMQAdminExtImpl FetchAllTopicList() is blank")
 	}
 	topics = make([]string, 0, topicList.TopicList.Cardinality())
-	for topic := range topicList.TopicList.Iterator().C {
-		topics = append(topics, topic.(string))
+	for t := range topicList.TopicList.Iterator().C {
+		topics = append(topics, t.(string))
 	}
 	logger.Infof("all topic size = %d", len(topics))
 
@@ -75,30 +76,76 @@ func (service *BoltMQTopicService) GetAllList() (topics []string, err error) {
 // GetTopicList 根据Topic类型，获取所有Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetTopicList() (map[models.TopicType][]string, error) {
+func (service *BoltMQTopicService) GetTopicList(clusterName, topic string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, error) {
 	defer utils.RecoveredFn()
-	params := make(map[models.TopicType][]string)
-	topicList, err := service.GetAllList()
+
+	srcTopics, err := service.GetAllList()
 	if err != nil {
-		return params, nil
-	}
-	topics := []string{}
-	retryTopics := []string{}
-	dlqTopics := []string{}
-	for _, topic := range topicList {
-		if models.IsRetryTopic(topic) {
-			retryTopics = append(retryTopics, topic)
-		} else if models.IsRetryTopic(topic) {
-			dlqTopics = append(dlqTopics, topic)
-		} else {
-			topics = append(topics, topic)
-		}
+		return []*models.TopicVo{}, nil
 	}
 
-	params[models.NORMAL_TOPIC] = topics
-	params[models.RETRY_TOPIC] = retryTopics
-	params[models.DLQ_TOPIC] = dlqTopics
-	return params, nil
+	topicVos := make([]*models.TopicVo, 0)
+	destTopics := GetTopicByParam(topicType, topic, srcTopics)
+	for _, t := range destTopics {
+		topicVo := models.NewTopicVo(clusterName, t)
+		topicVos = append(topicVos, topicVo)
+	}
+
+	topicVoList := getTopicVoListByPaging(len(topicVos), limit, offset, topicVos)
+	return topicVoList, nil
+}
+
+// GetTopicByType 查询指定类型的topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/8
+func GetTopicByParam(topicType int, topic string, srcTopics []string) (destTopics []string) {
+	// 查询所有Topic，不过滤
+	destTopics = make([]string, 0)
+	if srcTopics == nil {
+		return destTopics
+	}
+
+	if topicType == int(models.ALL_TOPIC) {
+		for _, t := range srcTopics {
+			if strings.EqualFold(topic, "") || strings.HasPrefix(t, topic) {
+				destTopics = append(destTopics, t)
+			}
+		}
+		return destTopics
+	}
+
+	for _, t := range srcTopics {
+		tType := models.ParseTopicType(t)
+		if (strings.EqualFold(topic, "") || strings.HasPrefix(t, topic)) && topicType == int(tType) {
+			// 过滤指定类型的topic
+			destTopics = append(destTopics, t)
+		}
+	}
+	return destTopics
+}
+
+// getTopicVoListByPaging 分页获取TopicVo列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/7/14
+func getTopicVoListByPaging(total, limit, offset int, topicVoList []*models.TopicVo) (dataList []*models.TopicVo) {
+	if total <= limit {
+		// 数据条数 <= 前端每页显示的总条数，则直接返回，不做分页处理
+		return topicVoList
+	}
+
+	// 处理分页
+	dataList = make([]*models.TopicVo, 0)
+	end := offset + limit - 1
+	for i, t := range topicVoList {
+		if i < offset {
+			continue
+		}
+		dataList = append(dataList, t)
+		if i >= end {
+			break
+		}
+	}
+	return dataList
 }
 
 // Stats 分页查询Topic状态
