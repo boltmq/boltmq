@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
@@ -19,7 +18,9 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1
 type MQAdminExtInner interface {
-	stgclient.MQAdmin
+
+	// 创建Topic
+	CreateTopic(key, newTopic string, queueNum int) error
 
 	// 启动Admin
 	Start() error

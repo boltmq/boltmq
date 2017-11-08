@@ -27,12 +27,12 @@ type MQClientInstance struct {
 	ClientConfig            *stgclient.ClientConfig
 	InstanceIndex           int32
 	ClientId                string
-	ProducerTable           *sync.Map // group MQProducerInner
-	ConsumerTable           *sync.Map // group MQConsumerInner
-	AdminExtTable           *sync.Map // adminExt interface{}
+	ProducerTable           *sync.Map // groupId<MQProducerInner>
+	ConsumerTable           *sync.Map // groupId<MQConsumerInner>
+	AdminExtTable           *sync.Map // groupId<MQAdminExtInner>
 	MQClientAPIImpl         *MQClientAPIImpl
 	MQAdminImpl             *MQAdminImpl
-	TopicRouteTable         *sync.Map // topic TopicRouteData
+	TopicRouteTable         *sync.Map // topic<*TopicRouteData>
 	LockNamesrv             lock.RWMutex
 	LockHeartbeat           lock.RWMutex
 	BrokerAddrTable         *sync.Map // broker name  map[int(brokerId)] string(address)
