@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	NORMAL_TOPIC TopicType = iota // 正常队列的Topic
+	ALL_TOPIC    TopicType = iota // 查询所有Topic
+	NORMAL_TOPIC                  // 正常队列的Topic
 	RETRY_TOPIC                   // 重试队列Topic
 	DLQ_TOPIC                     // 死信队列Topic
 )
@@ -164,8 +165,8 @@ func (createTopic *CreateTopic) customizeValidationErr(err error) error {
 	return err
 }
 
-type TopicListVo struct {
-	TopicCommon TopicCommon `json:"topicConfig"`
+type TopicVo struct {
+	TopicCommon *TopicCommon `json:"topicConfig"`
 	TopicClusterCommon
 }
 
@@ -190,4 +191,15 @@ type TopicClusterCommon struct {
 	ClusterName string    `json:"clusterName"` // 集群名称
 	Topic       string    `json:"topic"`       // topic名称
 	TopicType   TopicType `json:"topicType"`   // topic类型
+}
+
+// NewTopicVo 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/8
+func NewTopicVo(cluserName, topic string) *TopicVo {
+	topicVo := &TopicVo{}
+	topicVo.TopicType = ParseTopicType(topic)
+	topicVo.Topic = topic
+	topicVo.ClusterName = cluserName
+	return topicVo
 }
