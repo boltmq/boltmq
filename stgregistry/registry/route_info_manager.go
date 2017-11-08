@@ -790,8 +790,10 @@ func (self *RouteInfoManager) getTopicsByCluster(clusterName string) []byte {
 	topicList := body.NewTopicPlusList()
 	topics := make([]string, 0)
 	if brokerNameSet, ok := self.ClusterAddrTable[clusterName]; ok && brokerNameSet != nil {
+		brokerNames := make([]string, 0, brokerNameSet.Cardinality())
 		for itor := range brokerNameSet.Iterator().C {
 			if brokerName, ok := itor.(string); ok {
+				brokerNames = append(brokerNames, brokerName)
 				for topic, queueDatas := range self.TopicQueueTable {
 					if queueDatas != nil && len(queueDatas) > 0 {
 						for _, queueData := range queueDatas {
@@ -804,11 +806,11 @@ func (self *RouteInfoManager) getTopicsByCluster(clusterName string) []byte {
 				}
 			}
 		}
+		topicList.ClusterAddrTable[clusterName] = brokerNames
 	}
 
 	topicList.TopicList = topics
 	topicList.TopicQueueTable = self.TopicQueueTable
-	topicList.ClusterAddrTable = self.ClusterAddrTable
 
 	return topicList.CustomEncode(topicList)
 }

@@ -52,5 +52,5 @@ func (service *BoltMQClusterService) GetCluserNames() ([]string, error) {
 		return []string{}, err
 	}
 
-	return clusterNames
+	return clusterNames, nil
 }

@@ -5,6 +5,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"github.com/gunsluo/govalidator"
 	"strings"
@@ -174,14 +175,12 @@ type TopicVo struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type TopicCommon struct {
-	BrokerAddr      string                    `json:"brokerAddr"`      // broker地址
-	WriteQueueNums  int                       `json:"writeQueueNums"`  // 写队列数
-	Unit            bool                      `json:"unit"`            // 是否为单元topic
-	ReadQueueNums   int                       `json:"readQueueNums"`   // 读队列数
-	Order           bool                      `json:"order"`           // 是否为顺序topic
-	Perm            int                       `json:"perm"`            // 对应的broker读写权限
-	TopicFilterType stgcommon.TopicFilterType `json:"topicFilterType"` // topic过滤类型
-	TopicSysFlag    int                       `json:"topicSysFlag"`    // 是否为系统topic标记
+	BrokerAddr     string `json:"brokerAddr"`     // broker地址
+	WriteQueueNums int    `json:"writeQueueNums"` // 写队列数
+	Unit           bool   `json:"unit"`           // 是否为单元topic
+	ReadQueueNums  int    `json:"readQueueNums"`  // 读队列数
+	Order          bool   `json:"order"`          // 是否为顺序topic
+	Perm           int    `json:"perm"`           // 对应的broker读写权限
 }
 
 // TopicClusterCommon topic与cluster公共配置
@@ -201,5 +200,19 @@ func NewTopicVo(cluserName, topic string) *TopicVo {
 	topicVo.TopicType = ParseTopicType(topic)
 	topicVo.Topic = topic
 	topicVo.ClusterName = cluserName
+	return topicVo
+}
+
+// ToTopicVo 转化为TopicVo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func ToTopicVo(wapper *body.TopicBrokerClusterWapper) *TopicVo {
+	topicVo := NewTopicVo(wapper.ClusterName, wapper.TopicName)
+	topicVo.TopicCommon.Perm = wapper.TopicUpdateConfigWapper.Perm
+	topicVo.TopicCommon.BrokerAddr = wapper.TopicUpdateConfigWapper.BrokerAddr
+	topicVo.TopicCommon.WriteQueueNums = wapper.TopicUpdateConfigWapper.WriteQueueNums
+	topicVo.TopicCommon.ReadQueueNums = wapper.TopicUpdateConfigWapper.ReadQueueNums
+	topicVo.TopicCommon.Unit = wapper.TopicUpdateConfigWapper.Unit
+	topicVo.TopicCommon.Order = wapper.TopicUpdateConfigWapper.Order
 	return topicVo
 }
