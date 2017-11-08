@@ -79,8 +79,9 @@ func (self *RouteInfoManager) getAllTopicList() []byte {
 	topicList := body.NewTopicList()
 	self.ReadWriteLock.RLock()
 	if self.TopicQueueTable != nil && len(self.TopicQueueTable) > 0 {
-		for topic, _ := range self.TopicQueueTable {
+		for topic, queueDatas := range self.TopicQueueTable {
 			topicList.TopicList.Add(topic)
+			topicList.TopicQueueTable[topic] = queueDatas
 		}
 	}
 	self.ReadWriteLock.RUnlock()

@@ -4,6 +4,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
@@ -148,7 +149,7 @@ type MQAdminExtInner interface {
 	ConsumeMessageDirectly(consumerGroup, clientId, msgId string) (*body.ConsumeMessageDirectlyResult, error)
 
 	//查询消息被谁消费了
-	MessageTrackDetail(msg *message.MessageExt) ([]*MessageTrack, error)
+	MessageTrackDetail(msg *message.MessageExt) ([]*track.MessageTrack, error)
 
 	// 克隆某一个组的消费进度到新的组
 	CloneGroupOffset(srcGroup, destGroup, topic string, isOffline bool) error

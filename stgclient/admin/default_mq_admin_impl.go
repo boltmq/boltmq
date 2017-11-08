@@ -15,6 +15,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
 	set "github.com/deckarep/golang-set"
 	"strings"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 )
 
 const (
@@ -472,8 +473,8 @@ func (impl *DefaultMQAdminExtImpl) ConsumeMessageDirectly(consumerGroup, clientI
 }
 
 //查询消息被谁消费了
-func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) ([]*MessageTrack, error) {
-	result := make([]*MessageTrack, 0)
+func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) ([]*track.MessageTrack, error) {
+	result := make([]*track.MessageTrack, 0)
 	groupList, err := impl.QueryTopicConsumeByWho(msg.Topic)
 	if err != nil {
 		logger.Errorf("DefaultMQAdminExtImpl.QueryTopicConsumeByWho() err: %s, topic: %s", err.Error(), msg.Topic)
@@ -482,39 +483,39 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 	if groupList == nil || groupList.GroupList == nil || groupList.GroupList.Cardinality() == 0 {
 		return result, nil
 	}
-	var tracks []*MessageTrack
+	var tracks []*track.MessageTrack
 	for itor := range groupList.GroupList.Iterator().C {
 		if consumerGroupId, ok := itor.(string); ok {
-			track := NewMessageTrack(consumerGroupId)
+			messageTrack := track.NewMessageTrack(consumerGroupId)
 			consumerConnection, err := impl.ExamineConsumerConnectionInfo(consumerGroupId)
 			if err != nil {
-				track.Code = code.SYSTEM_ERROR
-				track.ExceptionDesc = err.Error()
-				tracks = append(tracks, track)
+				messageTrack.Code = code.SYSTEM_ERROR
+				messageTrack.ExceptionDesc = err.Error()
+				tracks = append(tracks, messageTrack)
 				continue
 			}
 			if consumerConnection == nil || consumerConnection.ConnectionSet.Cardinality() == 0 {
-				track.Code = code.CONSUMER_NOT_ONLINE
-				track.ExceptionDesc = fmt.Sprintf("the consumer group[%s] not online.", consumerGroupId)
-				tracks = append(tracks, track)
+				messageTrack.Code = code.CONSUMER_NOT_ONLINE
+				messageTrack.ExceptionDesc = fmt.Sprintf("the consumer group[%s] not online.", consumerGroupId)
+				tracks = append(tracks, messageTrack)
 				continue
 			}
 
 			switch consumerConnection.ConsumeType {
 			case heartbeat.CONSUME_ACTIVELY:
-				track.TrackType = TrackTypes.SubscribedButPull
-				track.Code = code.SUCCESS
+				messageTrack.TrackType = track.SubscribedButPull
+				messageTrack.Code = code.SUCCESS
 			case heartbeat.CONSUME_PASSIVELY:
 				flag, err := impl.Consumed(msg, consumerGroupId)
 				if err != nil {
-					track.Code = code.SYSTEM_ERROR
-					track.ExceptionDesc = err.Error()
+					messageTrack.Code = code.SYSTEM_ERROR
+					messageTrack.ExceptionDesc = err.Error()
 					break
 				}
 
 				if flag {
-					track.TrackType = TrackTypes.SubscribedAndConsumed
-					track.Code = code.SUCCESS
+					messageTrack.TrackType = track.SubscribedAndConsumed
+					messageTrack.Code = code.SUCCESS
 					// 查看订阅关系是否匹配
 					for itor := consumerConnection.SubscriptionTable.Iterator(); itor.HasNext(); {
 						key, value, _ := itor.Next()
@@ -526,19 +527,19 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 						if ok && subscriptionData != nil && subscriptionData.TagsSet != nil {
 							for itor := range subscriptionData.TagsSet.Iterator().C {
 								if msgTag, ok := itor.(string); ok && msgTag != msg.GetTags() && msgTag != "*" {
-									track.TrackType = TrackTypes.SubscribedButFilterd
-									track.Code = code.SUCCESS
+									messageTrack.TrackType = track.SubscribedButFilterd
+									messageTrack.Code = code.SUCCESS
 								}
 							}
 						}
 					}
 				} else {
-					track.TrackType = TrackTypes.SubscribedAndNotConsumeYet
-					track.Code = code.SUCCESS
+					messageTrack.TrackType = track.SubscribedAndNotConsumeYet
+					messageTrack.Code = code.SUCCESS
 				}
 			default:
 			}
-			tracks = append(tracks, track)
+			tracks = append(tracks, messageTrack)
 		}
 	}
 
