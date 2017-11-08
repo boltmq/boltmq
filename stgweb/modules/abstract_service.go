@@ -1,8 +1,11 @@
 package modules
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient/admin"
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"strings"
 )
 
 type AbstractService struct {
@@ -17,7 +20,11 @@ func NewAbstractService() *AbstractService {
 }
 
 func (service *AbstractService) InitMQAdmin() *admin.DefaultMQAdminExtImpl {
-	service.DefaultMQAdminExtImpl = admin.NewDefaultMQAdminExtImpl()
+	namesrvAddr := service.ConfigureInitializer.GetNamesrvAddr()
+	if strings.TrimSpace(namesrvAddr) == "" {
+		panic(fmt.Errorf("please set '%s' environment to blotmq web console", stgcommon.NAMESRV_ADDR_ENV))
+	}
+	service.DefaultMQAdminExtImpl = admin.NewDefaultMQAdminExtImpl(namesrvAddr)
 	return service.DefaultMQAdminExtImpl
 }
 
@@ -26,6 +33,7 @@ func (service *AbstractService) Start() {
 		err := service.DefaultMQAdminExtImpl.Start()
 		if err != nil {
 			logger.Errorf("DefaultMQAdminExtImpl Start err: %s", err.Error())
+			panic(err)
 		}
 	}
 }

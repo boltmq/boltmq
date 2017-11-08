@@ -6,11 +6,15 @@ import (
 )
 
 type ConfigureInitializer struct {
-	NamesrvAddr string `toml:"namesrvAddr"`
+	namesrvAddr string `toml:"namesrvAddr" json:"namesrvAddr"`
 }
 
 func NewConfigureInitializer() *ConfigureInitializer {
 	configureInitializer := new(ConfigureInitializer)
-	configureInitializer.NamesrvAddr = os.Getenv(stgcommon.NAMESRV_ADDR_ENV)
+	configureInitializer.namesrvAddr = os.Getenv(stgcommon.NAMESRV_ADDR_ENV)
 	return configureInitializer
+}
+
+func (configureInitializer *ConfigureInitializer) GetNamesrvAddr() string {
+	return configureInitializer.namesrvAddr
 }

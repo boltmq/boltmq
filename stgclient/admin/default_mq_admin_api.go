@@ -10,6 +10,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"strconv"
+	"strings"
 )
 
 // DefaultMQAdminExtImpl 所有运维接口都在这里实现
@@ -28,12 +29,12 @@ type DefaultMQAdminExtImpl struct {
 // NewDefaultMQAdminExtImpl 初始化admin控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1
-func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
+func NewDefaultMQAdminExtImpl(namesrvAddr string) *DefaultMQAdminExtImpl {
 	defaultMQAdminExtImpl := &DefaultMQAdminExtImpl{}
 	defaultMQAdminExtImpl.adminExtGroup = "admin_ext_group"
 	defaultMQAdminExtImpl.createTopicKey = stgcommon.DEFAULT_TOPIC
 	defaultMQAdminExtImpl.serviceState = stgcommon.CREATE_JUST
-	defaultMQAdminExtImpl.clientConfig = stgclient.NewClientConfig("")
+	defaultMQAdminExtImpl.clientConfig = stgclient.NewClientConfig(namesrvAddr)
 	defaultMQAdminExtImpl.clientConfig.InstanceName = strconv.FormatInt(timeutil.NowTimestamp(), 10)
 	return defaultMQAdminExtImpl
 }
@@ -41,8 +42,8 @@ func NewDefaultMQAdminExtImpl() *DefaultMQAdminExtImpl {
 // NewCustomMQAdminExtImpl 初始化admin控制器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1
-func NewCustomMQAdminExtImpl(rpcHook remoting.RPCHook) *DefaultMQAdminExtImpl {
-	defaultMQAdminExtImpl := NewDefaultMQAdminExtImpl()
+func NewCustomMQAdminExtImpl(rpcHook remoting.RPCHook, namesrvAddr string) *DefaultMQAdminExtImpl {
+	defaultMQAdminExtImpl := NewDefaultMQAdminExtImpl(namesrvAddr)
 	defaultMQAdminExtImpl.rpcHook = rpcHook
 	return defaultMQAdminExtImpl
 }
@@ -61,24 +62,45 @@ func (impl *DefaultMQAdminExtImpl) GetAdminExtGroup() string {
 	return impl.adminExtGroup
 }
 
+// 检查配置文件
+func (impl *DefaultMQAdminExtImpl) checkConfig() {
+	adminExtGroup := impl.GetAdminExtGroup()
+	err := process.CheckGroup(adminExtGroup)
+	if err != nil {
+		panic(err)
+	}
+	if strings.EqualFold(adminExtGroup, stgcommon.DEFAULT_PRODUCER_GROUP) {
+		format := "producerGroup can not equal %s, please specify another one."
+		panic(fmt.Sprintf(format, stgcommon.DEFAULT_PRODUCER_GROUP))
+	}
+}
+
 // Start 启动Admin
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Start() error {
 	switch impl.serviceState {
 	case stgcommon.CREATE_JUST:
-
+		// 检查配置
 		adminExtGroup := impl.GetAdminExtGroup()
 		impl.serviceState = stgcommon.START_FAILED
-		impl.clientConfig.ChangeInstanceNameToPID()
+		impl.checkConfig()
+		if !strings.EqualFold(adminExtGroup, stgcommon.CLIENT_INNER_PRODUCER_GROUP) {
+			impl.clientConfig.ChangeInstanceNameToPID()
+		}
+
+		// 初始化MQClientInstance
 		impl.mqClientInstance = process.GetInstance().GetAndCreateMQClientInstance(impl.clientConfig)
 
+		// 注册admin管理控制器
 		registerOK := impl.registerAdminExt(adminExtGroup, impl)
 		if !registerOK {
 			impl.serviceState = stgcommon.CREATE_JUST
 			format := "the adminExt group[%s] has created already, specifed another name please. %s"
 			return fmt.Errorf(format, adminExtGroup, help.SuggestTodo(help.GROUP_NAME_DUPLICATE_URL))
 		}
+
+		// 启动admin实例
 		impl.mqClientInstance.Start()
 		logger.Infof("the adminExt [%s] start OK", adminExtGroup)
 		impl.serviceState = stgcommon.RUNNING

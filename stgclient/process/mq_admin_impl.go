@@ -17,26 +17,26 @@ type MQAdminImpl struct {
 	mQClientFactory *MQClientInstance
 }
 
-func NewMQAdminImpl(mQClientFactory *MQClientInstance) *MQAdminImpl {
-	return &MQAdminImpl{mQClientFactory: mQClientFactory}
+func NewMQAdminImpl(clientFactory *MQClientInstance) *MQAdminImpl {
+	return &MQAdminImpl{mQClientFactory: clientFactory}
 }
 
-func (admin *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
-	brokerAddr := admin.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
+func (impl *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
+	brokerAddr := impl.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	if strings.EqualFold(brokerAddr, "") {
-		admin.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
-		brokerAddr = admin.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
+		impl.mQClientFactory.UpdateTopicRouteInfoFromNameServerByTopic(mq.Topic)
+		brokerAddr = impl.mQClientFactory.FindBrokerAddressInPublish(mq.BrokerName)
 	}
 	if !strings.EqualFold(brokerAddr, "") {
-		return admin.mQClientFactory.MQClientAPIImpl.GetMaxOffset(brokerAddr, mq.Topic, mq.QueueId, 1000*3)
+		return impl.mQClientFactory.MQClientAPIImpl.GetMaxOffset(brokerAddr, mq.Topic, mq.QueueId, 1000*3)
 	} else {
 		panic("The broker[" + mq.BrokerName + "] not exist")
 	}
 	return -1
 }
 
-func (admin *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
-	topicRouteData := admin.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
+func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
+	topicRouteData := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
 	if topicRouteData == nil {
 		format := "topicRouteData is nil, create topic failed. key=%s, newTopic=%s"
 		panic(fmt.Sprintf(format, key, newTopic))
@@ -56,17 +56,17 @@ func (admin *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFl
 					Perm:           constant.PERM_READ | constant.PERM_WRITE,
 					TopicSysFlag:   topicSysFlag,
 				}
-				admin.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
+				impl.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
 			}
 		}
 	}
 }
 
-func (admin *MQAdminImpl) FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
+func (impl *MQAdminImpl) FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	mqList := []*message.MessageQueue{}
-	routeData := admin.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
+	routeData := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
 	if routeData != nil {
-		mqSet := admin.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic, routeData)
+		mqSet := impl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic, routeData)
 		if mqSet != nil {
 			for mq := range mqSet.Iterator().C {
 				mqList = append(mqList, mq.(*message.MessageQueue))

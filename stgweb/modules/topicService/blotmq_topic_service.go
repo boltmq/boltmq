@@ -159,6 +159,12 @@ func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error 
 	service.Start()
 	defer service.Shutdown()
 
+	queueNum := 8
+	err := service.DefaultMQAdminExtImpl.CreateTopic(stgcommon.DEFAULT_TOPIC, topic, queueNum)
+	if err == nil {
+		return nil
+	}
+
 	masterSet, err := service.DefaultMQAdminExtImpl.FetchMasterAddrByClusterName(clusterName)
 	if err != nil {
 		return err
@@ -167,10 +173,9 @@ func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error 
 		return fmt.Errorf("masterSet is empty, create topic failed. topic=%s, clusterName=%s", topic, clusterName)
 	}
 
-	queueNum := int32(8)
 	perm := constant.PERM_READ | constant.PERM_WRITE
 	for brokerAddr := range masterSet.Iterator().C {
-		topicConfig := stgcommon.NewDefaultTopicConfig(topic, queueNum, queueNum, perm, stgcommon.SINGLE_TAG)
+		topicConfig := stgcommon.NewDefaultTopicConfig(topic, int32(queueNum), int32(queueNum), perm, stgcommon.SINGLE_TAG)
 		err = service.DefaultMQAdminExtImpl.CreateCustomTopic(brokerAddr.(string), topicConfig)
 		if err != nil {
 			return fmt.Errorf("create topic err: %s, topic=%s", err.Error(), topic)

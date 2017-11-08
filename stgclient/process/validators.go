@@ -1,17 +1,17 @@
 package process
 
 import (
-	"strings"
 	"errors"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
-	"regexp"
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"regexp"
+	"strings"
 )
 
 const (
 	CHARACTER_MAX_LENGTH = 255
-	VALID_PATTERN_STR = "^[%|a-zA-Z0-9_-]+$"
+	VALID_PATTERN_STR    = "^[%|a-zA-Z0-9_-]+$"
 )
 
 func CheckGroup(group string) error {
@@ -19,7 +19,7 @@ func CheckGroup(group string) error {
 		return errors.New("the specified group is blank")
 	}
 	if len(group) > CHARACTER_MAX_LENGTH {
-		return errors.New("the specified group is longer than group max length 255.")
+		return errors.New("the specified group is longer than group max length 255")
 	}
 	return nil
 }
@@ -30,7 +30,8 @@ func CheckMessage(msg *message.Message, defaultMQProducer DefaultMQProducer) {
 	}
 	CheckTopic(msg.Topic)
 	if len(msg.Body) > defaultMQProducer.MaxMessageSize {
-		panic(fmt.Sprintf("the message body size over max value, MAX: %v ", defaultMQProducer.MaxMessageSize))
+		format := "the message body size over max value, MAX: %v"
+		panic(fmt.Sprintf(format, defaultMQProducer.MaxMessageSize))
 	}
 }
 
@@ -40,9 +41,8 @@ func CheckTopic(topic string) {
 	}
 	ok, _ := regexp.MatchString(VALID_PATTERN_STR, topic)
 	if !ok {
-		panic(fmt.Sprintf(
-			"the specified topic[%s] contains illegal characters, allowing only %s", topic,
-			VALID_PATTERN_STR))
+		format := "the specified topic[%s] contains illegal characters, allowing only %s"
+		panic(fmt.Sprintf(format, topic, VALID_PATTERN_STR))
 	}
 	if len([]rune(topic)) > CHARACTER_MAX_LENGTH {
 		panic("the specified topic is longer than topic max length 255.")

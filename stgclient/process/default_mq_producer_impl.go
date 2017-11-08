@@ -218,9 +218,9 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) sendKernelImpl(msg *message.
 		msg.Body = prevBody
 		return sendResult, err
 	} else {
-		panic(fmt.Errorf("The broker[%s] not exist", mq.BrokerName))
+		panic(fmt.Errorf("The broker[%s] not exist ", mq.BrokerName))
 	}
-	return nil, fmt.Errorf("The broker[%s] not exist", mq.BrokerName)
+	return nil, fmt.Errorf("The broker[%s] not exist ", mq.BrokerName)
 }
 
 // 检查配置文件
@@ -233,7 +233,6 @@ func (defaultMQProducerImpl *DefaultMQProducerImpl) checkConfig() {
 		format := "producerGroup can not equal %s, please specify another one."
 		panic(fmt.Sprintf(format, stgcommon.DEFAULT_PRODUCER_GROUP))
 	}
-
 }
 
 // 获取topic发布集合
