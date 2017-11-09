@@ -45,7 +45,6 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 		for _, consumeQueue := range value.consumeQueues {
 			result := false
 			for i := 0; i < times && !result; i++ {
-				logger.Infof("consumeQueue %#v \r\n", consumeQueue)
 				result = consumeQueue.commit(flushConsumeQueueLeastPages)
 			}
 		}
@@ -62,7 +61,7 @@ func (self *FlushConsumeQueueService) doFlush(retryTimes int32) {
 }
 
 func (self *FlushConsumeQueueService) Start() {
-	logger.Info("flush consume queue service service started")
+	logger.Info("flush consume queue service started")
 
 	for {
 		if self.stop {
@@ -73,11 +72,12 @@ func (self *FlushConsumeQueueService) Start() {
 		time.Sleep(time.Millisecond * time.Duration(interval))
 		self.doFlush(1)
 	}
-
-	// 正常shutdown时，要保证全部刷盘才退出
-	self.doFlush(int32(RetryTimesOver))
 }
 
 func (self *FlushConsumeQueueService) Shutdown() {
-	// TODO
+	self.stop = true
+
+	// 正常shutdown时，要保证全部刷盘才退出
+	self.doFlush(int32(RetryTimesOver))
+	logger.Info("flush consume queue service end")
 }

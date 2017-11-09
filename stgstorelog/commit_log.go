@@ -23,7 +23,8 @@ const (
 type CommitLog struct {
 	MapedFileQueue        *MapedFileQueue
 	DefaultMessageStore   *DefaultMessageStore
-	FlushCommitLogService FlushCommitLogService
+	GroupCommitService    *GroupCommitService
+	FlushRealTimeService  *FlushRealTimeService
 	AppendMessageCallback *DefaultAppendMessageCallback
 	TopicQueueTable       map[string]int64
 	mutex                 *sync.Mutex
@@ -38,9 +39,9 @@ func NewCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
 	commitLog.mutex = new(sync.Mutex)
 
 	if config.SYNC_FLUSH == defaultMessageStore.MessageStoreConfig.FlushDiskType {
-		commitLog.FlushCommitLogService = new(GroupCommitService)
+		commitLog.GroupCommitService = NewGroupCommitService(commitLog)
 	} else {
-		commitLog.FlushCommitLogService = NewFlushRealTimeService(commitLog)
+		commitLog.FlushRealTimeService = NewFlushRealTimeService(commitLog)
 	}
 
 	commitLog.TopicQueueTable = make(map[string]int64, 1024)
@@ -138,9 +139,20 @@ func (self *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 
 	// Synchronization flush
 	if config.SYNC_FLUSH == self.DefaultMessageStore.MessageStoreConfig.FlushDiskType {
-		// TODO
+		if msg.isWaitStoreMsgOK() {
+			request := NewGroupCommitRequest(result.WroteOffset + result.WroteBytes)
+			self.GroupCommitService.putRequest(request)
+			flushOk := request.waitForFlush(int64(self.DefaultMessageStore.MessageStoreConfig.SyncFlushTimeout))
+			if flushOk == false {
+				logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s",
+					msg.Topic, msg.GetTags(), msg.BornHost)
+				putMessageResult.PutMessageStatus = FLUSH_DISK_TIMEOUT
+			}
+		}
 	} else {
-		//self.FlushCommitLogService
+		if self.FlushRealTimeService != nil {
+			self.FlushRealTimeService.wakeup()
+		}
 	}
 
 	// Synchronous write double
@@ -377,16 +389,8 @@ func (self *CommitLog) recoverAbnormally() {
 		for element := mapedFiles.Back(); element != nil; element = element.Prev() {
 			index--
 			mapedFile = element.Value.(*MapedFile)
-
-			/*
-			// TODO 定时刷盘服务未实现，导致异常恢复数据丢失的问题
 			if self.isMapedFileMatchedRecover(mapedFile) {
 				logger.Info("recover from this maped file ", mapedFile.fileName)
-				break
-			}
-			*/
-
-			if mapedFile != nil {
 				break
 			}
 		}
@@ -542,9 +546,25 @@ func (self *CommitLog) destroy() {
 }
 
 func (self *CommitLog) Start() {
-	// TODO self.FlushCommitLogService.start()
+	if config.SYNC_FLUSH == self.DefaultMessageStore.MessageStoreConfig.FlushDiskType {
+		if self.GroupCommitService != nil {
+			go self.GroupCommitService.start()
+		}
+	} else {
+		if self.FlushRealTimeService != nil {
+			go self.FlushRealTimeService.start()
+		}
+	}
 }
 
 func (self *CommitLog) Shutdown() {
-	// TODO self.FlushCommitLogService.shutdown()
+	if config.SYNC_FLUSH == self.DefaultMessageStore.MessageStoreConfig.FlushDiskType {
+		if self.GroupCommitService != nil {
+			self.GroupCommitService.shutdown()
+		}
+	} else {
+		if self.FlushRealTimeService != nil {
+			self.FlushRealTimeService.shutdown()
+		}
+	}
 }
