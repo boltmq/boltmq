@@ -41,13 +41,13 @@ func TopicList(ctx context.Context) {
 		return
 	}
 
-	topicListVo, err := topicService.Default().GetTopicList(clusterName, topic, extra, topicType, limit, offset)
+	topicListVo, total, err := topicService.Default().GetTopicList(clusterName, topic, extra, topicType, limit, offset)
 	if err != nil {
 		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
-	ctx.JSON(resp.NewSuccessPageResponse(int64(len(topicListVo)), topicListVo))
+	ctx.JSON(resp.NewSuccessPageResponse(total, topicListVo))
 }
 
 // CreateTopic 创建Topic
@@ -123,14 +123,23 @@ func TopicStats(ctx context.Context) {
 		return
 	}
 
-	topicState, err := topicService.Default().GetTopicStats(topic)
+	pageRequest, err := req.ToPageRequest(ctx)
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		return
+	}
+	limit := pageRequest.Limit
+	offset := pageRequest.Offset
+
+	topicState, total, err := topicService.Default().GetTopicStats(topic, limit, offset)
 	if err != nil {
 		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
 
-	ctx.JSON(resp.NewSuccessPageResponse(int64(len(topicState)), topicState))
+	ctx.JSON(resp.NewSuccessPageResponse(total, topicState))
 }
 
 // TopicRoute 查询Topic路由信息

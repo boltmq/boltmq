@@ -12,8 +12,11 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
+	"strconv"
+	"strings"
 )
 
 // ViewMessage
@@ -101,6 +104,8 @@ func (impl *MQClientAPIImpl) GetTopicListFromNameServer(timeoutMills int64) (*bo
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
 func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeoutMillis int64) (*admin.TopicStatsTable, error) {
+	defer utils.RecoveredFn()
+
 	topicWithProjectGroup := topic
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
@@ -118,26 +123,45 @@ func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeout
 		logger.Errorf("GetTopicStatsInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	topicStatsTable := new(admin.TopicStatsTable)
+
+	topicStatsTablePlus := admin.NewTopicStatsTablePlus()
 	content := response.Body
 	if content == nil || len(content) == 0 {
-		return topicStatsTable, nil
+		return nil, fmt.Errorf("GetTopicStatsInfo response.body is empty")
 	}
 
-	err = topicStatsTable.CustomDecode(content, topicStatsTable)
+	err = topicStatsTablePlus.CustomDecode(content, topicStatsTablePlus)
 	if err != nil {
 		return nil, err
 	}
-	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicStatsTable.OffsetTable != nil {
-		newTopicOffsetMap := make(map[*message.MessageQueue]*admin.TopicOffset, 256)
-		for key, value := range topicStatsTable.OffsetTable {
-			if key != nil {
-				key.Topic = stgclient.ClearProjectGroup(key.Topic, impl.ProjectGroupPrefix)
-				newTopicOffsetMap[key] = value
+
+	newTopicOffsetMap := make(map[*message.MessageQueue]*admin.TopicOffset)
+	if topicStatsTablePlus.OffsetTable != nil {
+		for key, topicOffset := range topicStatsTablePlus.OffsetTable {
+			mqPlus := strings.Split(key, "@")
+			if len(mqPlus) != 3 {
+				return nil, fmt.Errorf("handle TopicStatsTable.OffsetTable.key[%s] failed", key)
 			}
+
+			topic = mqPlus[0]
+			if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
+				topic = stgclient.ClearProjectGroup(mqPlus[0], impl.ProjectGroupPrefix)
+			}
+
+			brokerName := mqPlus[1]
+			queueId, err := strconv.Atoi(mqPlus[2])
+			if err != nil {
+				logger.Errorf("convert queueId err: %s, source: %s", err.Error(), key)
+				return nil, err
+			}
+
+			mqOld := message.NewDefaultMessageQueue(topic, brokerName, queueId)
+			newTopicOffsetMap[mqOld] = topicOffset
 		}
-		topicStatsTable.OffsetTable = newTopicOffsetMap
 	}
+
+	topicStatsTable := new(admin.TopicStatsTable)
+	topicStatsTable.OffsetTable = newTopicOffsetMap
 	return topicStatsTable, nil
 }
 
@@ -504,7 +528,6 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(clusterName string, timeoutMilli
 			topicList.TopicQueueTable[topic] = value
 		}
 	}
-
 
 	return topicList, nil
 }

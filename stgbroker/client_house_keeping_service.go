@@ -68,14 +68,14 @@ func (self *ClientHouseKeepingService) scanExceptionChannel() {
 // Author rongzhihong
 // Since 2017/9/8
 func (self *ClientHouseKeepingService) OnContextConnect(ctx netm.Context) {
-	logger.Info("ClientHouseKeepingService监听到通道连接...")
+	logger.Infof("ClientHouseKeepingService 监听到通道连接. %s", ctx.ToString())
 }
 
 // OnContextClose 监听通道关闭
 // Author rongzhihong
 // Since 2017/9/8
 func (self *ClientHouseKeepingService) OnContextClose(ctx netm.Context) {
-	logger.Info("ClientHouseKeepingService监听到通道关闭...")
+	logger.Infof("ClientHouseKeepingService 监听到通道关闭. %s", ctx.ToString())
 	self.brokerController.ProducerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.ConsumerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.FilterServerManager.doChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
@@ -85,7 +85,7 @@ func (self *ClientHouseKeepingService) OnContextClose(ctx netm.Context) {
 // Author rongzhihong
 // Since 2017/9/8
 func (self *ClientHouseKeepingService) OnContextError(ctx netm.Context) {
-	logger.Info("ClientHouseKeepingService监听到通道异常...")
+	logger.Infof("ClientHouseKeepingService 监听到通道异常. %s", ctx.ToString())
 	self.brokerController.ProducerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.ConsumerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.FilterServerManager.doChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
@@ -95,7 +95,7 @@ func (self *ClientHouseKeepingService) OnContextError(ctx netm.Context) {
 // Author rongzhihong
 // Since 2017/9/8
 func (self *ClientHouseKeepingService) OnContextIdle(ctx netm.Context) {
-	logger.Info("ClientHouseKeepingService监听到通道闲置...")
+	logger.Infof("ClientHouseKeepingService 监听到通道闲置. %s", ctx.ToString())
 	self.brokerController.ProducerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.ConsumerManager.DoChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
 	self.brokerController.FilterServerManager.doChannelCloseEvent(ctx.RemoteAddr().String(), ctx)
