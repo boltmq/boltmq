@@ -30,17 +30,19 @@ func (impl *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
 	if !strings.EqualFold(brokerAddr, "") {
 		return impl.mQClientFactory.MQClientAPIImpl.GetMaxOffset(brokerAddr, mq.Topic, mq.QueueId, 1000*3)
 	} else {
-		panic("The broker[" + mq.BrokerName + "] not exist")
+		format := fmt.Sprintf("The broker[%s] not exist", mq.BrokerName)
+		panic(format)
 	}
 	return -1
 }
 
-func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) {
+func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) error {
 	topicRouteData := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
 	if topicRouteData == nil {
 		format := "topicRouteData is nil, create topic failed. key=%s, newTopic=%s"
-		panic(fmt.Sprintf(format, key, newTopic))
-		return
+		errMsg := fmt.Errorf(format, key, newTopic)
+		panic(errMsg)
+		return errMsg
 	}
 	brokerDataList := topicRouteData.BrokerDatas
 	if brokerDataList != nil && len(brokerDataList) > 0 {
@@ -56,10 +58,15 @@ func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFla
 					Perm:           constant.PERM_READ | constant.PERM_WRITE,
 					TopicSysFlag:   topicSysFlag,
 				}
-				impl.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
+				err := impl.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
+				if err != nil {
+					fmt.Printf("%s\n", err.Error())
+				}
+				return nil
 			}
 		}
 	}
+	return fmt.Errorf("create topic failed, unknown reason")
 }
 
 func (impl *MQAdminImpl) FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {

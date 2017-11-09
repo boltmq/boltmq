@@ -320,7 +320,7 @@ func (tcm *TopicConfigManager) IsOrderTopic(topic string) bool {
 func (tcm *TopicConfigManager) DeleteTopicConfig(topic string) {
 	value := tcm.TopicConfigSerializeWrapper.TopicConfigTable.Remove(topic)
 	if value != nil {
-		logger.Infof("delete topic config OK，TopicConfig：%#v", value)
+		logger.Infof("delete topic config OK,  %s", value.ToString())
 		tcm.TopicConfigSerializeWrapper.DataVersion.NextVersion()
 		tcm.ConfigManagerExt.Persist()
 	} else {

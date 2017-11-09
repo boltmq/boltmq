@@ -443,7 +443,7 @@ func (impl *MQClientAPIImpl) processPullResponse(response *protocol.RemotingComm
 }
 
 // 创建topic
-func (impl *MQClientAPIImpl) CreateTopic(brokerAddr, defaultTopic string, topicConfig *stgcommon.TopicConfig, timeoutMillis int) {
+func (impl *MQClientAPIImpl) CreateTopic(brokerAddr, defaultTopic string, topicConfig *stgcommon.TopicConfig, timeoutMillis int) error {
 	topicWithProjectGroup := topicConfig.TopicName
 	if !strings.EqualFold("", impl.ProjectGroupPrefix) {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topicConfig.TopicName, impl.ProjectGroupPrefix)
@@ -453,15 +453,16 @@ func (impl *MQClientAPIImpl) CreateTopic(brokerAddr, defaultTopic string, topicC
 	requestHeader := header.NewCreateTopicRequestHeader(topicWithProjectGroup, defaultTopic, topicConfig)
 	request := protocol.CreateRequestCommand(code.UPDATE_AND_CREATE_TOPIC, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, int64(timeoutMillis))
-	if response != nil && err == nil {
-		switch response.Code {
-		case code.SUCCESS:
-		default:
-		}
-	} else {
-		logger.Errorf("createTopic error", err.Error())
+	if err != nil {
+		return fmt.Errorf("CreateTopic[%s] err: %s", topicConfig.TopicName, err.Error())
 	}
-
+	if response == nil {
+		return fmt.Errorf("CreateTopic[%s] response is nil", topicConfig.TopicName)
+	}
+	if response.Code != code.SUCCESS {
+		return fmt.Errorf("CreateTopic[%s] failed. %s", topicConfig.TopicName, response.ToString())
+	}
+	return nil
 }
 
 // 从namesrv查询客户端IP信息

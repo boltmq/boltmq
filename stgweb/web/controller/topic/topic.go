@@ -50,67 +50,6 @@ func TopicList(ctx context.Context) {
 	ctx.JSON(resp.NewSuccessPageResponse(total, topicListVo))
 }
 
-// CreateTopic 创建Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/7
-func CreateTopic(ctx context.Context) {
-	topicVo := new(models.CreateTopic)
-	if err := ctx.ReadJSON(topicVo); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
-		return
-	}
-	if err := topicVo.Validate(); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
-		return
-	}
-
-	err := topicService.Default().CreateTopic(strings.TrimSpace(topicVo.Topic), strings.TrimSpace(topicVo.ClusterName))
-	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
-		return
-	}
-
-	responseBody := &models.ResultVo{Result: true}
-	ctx.JSON(resp.NewSuccessResponse(responseBody))
-}
-
-// UpdateTopic 更新Topic配置信息
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/9
-func UpdateTopic(ctx context.Context) {
-
-}
-
-// DeleteTopic 删除Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/9
-func DeleteTopic(ctx context.Context) {
-	topicVo := new(models.DeleteTopic)
-	if err := ctx.ReadJSON(topicVo); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
-		return
-	}
-	if err := topicVo.Validate(); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
-		return
-	}
-
-	err := topicService.Default().CreateTopic(strings.TrimSpace(topicVo.Topic), strings.TrimSpace(topicVo.ClusterName))
-	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
-		return
-	}
-
-	responseBody := &models.ResultVo{Result: true}
-	ctx.JSON(resp.NewSuccessResponse(responseBody))
-}
-
 // TopicStats 查询Topic存储状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
@@ -140,6 +79,94 @@ func TopicStats(ctx context.Context) {
 	}
 
 	ctx.JSON(resp.NewSuccessPageResponse(total, topicState))
+}
+
+// CreateTopic 创建Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+func CreateTopic(ctx context.Context) {
+	topicVo := new(models.CreateTopic)
+	if err := ctx.ReadJSON(topicVo); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+	if err := topicVo.Validate(); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		return
+	}
+
+	topicVo.Topic = strings.TrimSpace(topicVo.Topic)
+	topicVo.ClusterName = strings.TrimSpace(topicVo.ClusterName)
+
+	err := topicService.Default().CreateTopic(topicVo)
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	responseBody := &models.ResultVo{Result: true}
+	ctx.JSON(resp.NewSuccessResponse(responseBody))
+}
+
+// UpdateTopic 更新Topic配置信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func UpdateTopic(ctx context.Context) {
+	topicVo := new(models.UpdateTopic)
+	if err := ctx.ReadJSON(topicVo); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+	if err := topicVo.Validate(); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		return
+	}
+
+	topicVo.Topic = strings.TrimSpace(topicVo.Topic)
+	topicVo.ClusterName = strings.TrimSpace(topicVo.ClusterName)
+	topicVo.BrokerAddr = strings.TrimSpace(topicVo.BrokerAddr)
+
+	err := topicService.Default().UpdateTopicConfig(topicVo)
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	responseBody := &models.ResultVo{Result: true}
+	ctx.JSON(resp.NewSuccessResponse(responseBody))
+}
+
+// DeleteTopic 删除Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func DeleteTopic(ctx context.Context) {
+	topicVo := new(models.DeleteTopic)
+	if err := ctx.ReadJSON(topicVo); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+	if err := topicVo.Validate(); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		return
+	}
+
+	err := topicService.Default().DeleteTopic(strings.TrimSpace(topicVo.Topic), strings.TrimSpace(topicVo.ClusterName))
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	responseBody := &models.ResultVo{Result: true}
+	ctx.JSON(resp.NewSuccessResponse(responseBody))
 }
 
 // TopicRoute 查询Topic路由信息

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"strings"
@@ -124,8 +125,13 @@ type DeleteTopic struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type UpdateTopic struct {
-	ClusterName string `json:"clusterName" valid:"required"` // 集群名称
-	Topic       string `json:"topic" valid:"required"`       // topic名称
+	ClusterName    string `json:"clusterName" valid:"required"` // 集群名称
+	Topic          string `json:"topic" valid:"required"`       // topic名称
+	BrokerAddr     string `json:"brokerAddr" valid:"required"`  // broker地址
+	WriteQueueNums int    `json:"writeQueueNums" valid:"min=8"` // 写队列数
+	ReadQueueNums  int    `json:"readQueueNums" valid:"min=8"`  // 读队列数
+	Unit           bool   `json:"unit"`                         // 是否为单元topic
+	Order          bool   `json:"order"`                        // 是否为顺序topic
 }
 
 // CreateTopic 创建Topic
@@ -179,6 +185,25 @@ func ToTopicVo(wapper *body.TopicBrokerClusterWapper) *TopicVo {
 	topicVo.TopicConfigVo.BrokerName = wapper.TopicUpdateConfigWapper.BrokerName
 	topicVo.TopicConfigVo.BrokerId = wapper.TopicUpdateConfigWapper.BrokerId
 	return topicVo
+}
+
+// ToTopicConfig 转化为stgcommon.TopicConfig
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (t *CreateTopic) ToTopicConfig() *stgcommon.TopicConfig {
+	perm := constant.PERM_READ | constant.PERM_WRITE
+	queueNum := int32(8)
+	topicConfig := stgcommon.NewDefaultTopicConfig(t.Topic, queueNum, queueNum, perm, stgcommon.SINGLE_TAG)
+	return topicConfig
+}
+
+// ToTopicConfig 转化为stgcommon.TopicConfig
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (t *UpdateTopic) ToTopicConfig() *stgcommon.TopicConfig {
+	perm := constant.PERM_READ | constant.PERM_WRITE
+	topicConfig := stgcommon.NewDefaultTopicConfig(t.Topic, int32(t.ReadQueueNums), int32(t.WriteQueueNums), perm, stgcommon.SINGLE_TAG)
+	return topicConfig
 }
 
 // ToString 打印TopicVo结构体内容
