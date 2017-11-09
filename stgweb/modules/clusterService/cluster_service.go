@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	clusterService *ClusterService
-	sOnce          sync.Once
+	clusterServ *ClusterService
+	sOnce       sync.Once
 )
 
 // ClusterService 集群Cluster管理器
@@ -23,19 +23,18 @@ type ClusterService struct {
 // Since: 2017/11/7
 func Default() *ClusterService {
 	sOnce.Do(func() {
-		clusterService = NewClusterService()
+		clusterServ = NewClusterService()
 	})
-	return clusterService
+	return clusterServ
 }
 
-// NewClusterService 初始化Topic查询服务
+// NewClusterService 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func NewClusterService() *ClusterService {
-	boltMQClusterService := &ClusterService{
+	return &ClusterService{
 		AbstractService: modules.Default(),
 	}
-	return boltMQClusterService
 }
 
 // GetCluserNames 查询所有集群名称
@@ -53,4 +52,20 @@ func (service *ClusterService) GetCluserNames() ([]string, error) {
 	}
 
 	return clusterNames, nil
+}
+
+// GetNamesrvNodes 获取namesrv节点列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (service *ClusterService) GetNamesrvNodes() ([]string, error) {
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	namesrvList, err := defaultMQAdminExt.GetNameServerAddressList()
+	if err != nil {
+		return []string{}, err
+	}
+	return namesrvList, nil
 }

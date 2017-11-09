@@ -7,14 +7,13 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
-	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
 	"github.com/toolkits/file"
 	"sync"
 )
 
 var (
-	messageService *MessageService
-	sOnce          sync.Once
+	messageServ *MessageService
+	sOnce       sync.Once
 )
 
 const ()
@@ -24,7 +23,6 @@ const ()
 // Since: 2017/11/7
 type MessageService struct {
 	*modules.AbstractService
-	clusterService *clusterService.ClusterService
 }
 
 // Default 返回默认唯一对象
@@ -32,20 +30,18 @@ type MessageService struct {
 // Since: 2017/11/7
 func Default() *MessageService {
 	sOnce.Do(func() {
-		messageService = NewMessageService()
-		messageService.clusterService = clusterService.NewClusterService()
+		messageServ = NewMessageService()
 	})
-	return messageService
+	return messageServ
 }
 
-// NewMessageService 初始化Message管理器
+// NewMessageService 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func NewMessageService() *MessageService {
-	blotmqMessageService := &MessageService{
+	return &MessageService{
 		AbstractService: modules.Default(),
 	}
-	return blotmqMessageService
 }
 
 // QueryMsgBody 查询消息Body内容
