@@ -484,7 +484,6 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(clusterName string, timeoutMilli
 		logger.Errorf("GetTopicsByCluster failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-
 	topicList := body.NewTopicPlusList()
 	err = topicList.CustomDecode(response.Body, topicList)
 	if err != nil {
@@ -492,12 +491,11 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(clusterName string, timeoutMilli
 	}
 
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicList != nil {
-		newTopicSet := set.NewSet()
+		var topics []string
 		for _, topic := range topicList.TopicList {
-			newTopicSet.Add(stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix))
+			topics = append(topics, stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix))
 		}
-		//TODO
-		topicList.TopicList = []string{}
+		topicList.TopicList = topics
 	}
 
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && topicList.TopicQueueTable != nil && len(topicList.TopicQueueTable) > 0 {
@@ -506,6 +504,7 @@ func (impl *MQClientAPIImpl) GetTopicsByCluster(clusterName string, timeoutMilli
 			topicList.TopicQueueTable[topic] = value
 		}
 	}
+
 
 	return topicList, nil
 }
