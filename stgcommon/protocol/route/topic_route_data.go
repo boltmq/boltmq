@@ -46,6 +46,15 @@ type BrokerData struct {
 	BrokerAddrsLock sync.RWMutex   `json:"-"`
 }
 
+func NewTopicRouteData() *TopicRouteData {
+	topicRouteData := &TopicRouteData{
+		QueueDatas:        make([]*QueueData, 0),
+		BrokerDatas:       make([]*BrokerData, 0),
+		FilterServerTable: make(map[string][]string, 0),
+	}
+	return topicRouteData
+}
+
 func NewQueueData(brokerName string, topicConfig *stgcommon.TopicConfig) *QueueData {
 	queueData := &QueueData{
 		BrokerName:     brokerName,

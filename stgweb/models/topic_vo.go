@@ -22,38 +22,6 @@ const (
 // Since: 2017/11/6
 type TopicType int
 
-// ToString 转化为字符串
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func (topicType TopicType) ToString() string {
-	switch topicType {
-	case NORMAL_TOPIC:
-		return "NORMAL_TOPIC"
-	case RETRY_TOPIC:
-		return "RETRY_TOPIC"
-	case DLQ_TOPIC:
-		return "DLQ_TOPIC"
-	default:
-		return "Unknown"
-	}
-}
-
-// ParseTopicType 转化为topic类型
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func ParseTopicType(topic string) TopicType {
-	if IsNormalTopic(topic) {
-		return NORMAL_TOPIC
-	}
-	if IsRetryTopic(topic) {
-		return RETRY_TOPIC
-	}
-	if IsDLQTopic(topic) {
-		return DLQ_TOPIC
-	}
-	return NORMAL_TOPIC
-}
-
 // TopicStats topic数据的存储状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
@@ -66,51 +34,6 @@ type TopicStats struct {
 	MinOffset      int64     `json:"minOffset"`      // 最小偏移量
 	MaxOffset      int64     `json:"maxOffset"`      // 最大偏移量
 	LastUpdateTime string    `json:"lastUpdateTime"` // 最近更新时间
-}
-
-// ToTopicStats 转化为topic状态
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func ToTopicStats(mq *message.MessageQueue, topicOffset *admin.TopicOffset, topic, clusterName string) *TopicStats {
-	topicStats := &TopicStats{
-		BrokerName: mq.BrokerName,
-		QueueID:    mq.QueueId,
-		MinOffset:  topicOffset.MinOffset,
-		MaxOffset:  topicOffset.MaxOffset,
-	}
-
-	humanTimestamp := ""
-	if topicOffset.LastUpdateTimestamp > 0 {
-		humanTimestamp = stgcommon.FormatTimestamp(topicOffset.LastUpdateTimestamp)
-	}
-	topicStats.LastUpdateTime = humanTimestamp
-
-	topicStats.TopicType = ParseTopicType(topic)
-	topicStats.Topic = topic
-	topicStats.ClusterName = clusterName
-
-	return topicStats
-}
-
-// IsRetryTopic 是否为重试队列的Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func IsRetryTopic(topic string) bool {
-	return strings.HasPrefix(strings.TrimSpace(topic), stgcommon.RETRY_GROUP_TOPIC_PREFIX)
-}
-
-// IsDLQTopic 是否为死信队列的Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func IsDLQTopic(topic string) bool {
-	return strings.HasPrefix(strings.TrimSpace(topic), stgcommon.DLQ_GROUP_TOPIC_PREFIX)
-}
-
-// IsNormalTopic 是否正常的Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func IsNormalTopic(topic string) bool {
-	return !IsRetryTopic(topic) && !IsDLQTopic(topic)
 }
 
 // DeleteTopic 删除Topic
@@ -166,6 +89,19 @@ type TopicConfigVo struct {
 	Perm           int    `json:"perm"`           // 对应的broker读写权限
 }
 
+// ToString 打印TopicVo结构体内容
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (t *TopicVo) ToString() string {
+	if t == nil {
+		return fmt.Sprintf("TopicVo is nil")
+	}
+
+	format := "TopicVo {topic=%s, clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d, readQueueNums=%d, writeQueueNums=%d}"
+	return fmt.Sprintf(format, t.Topic, t.ClusterName, t.TopicConfigVo.BrokerName, t.TopicConfigVo.BrokerAddr, t.TopicConfigVo.BrokerId,
+		t.TopicConfigVo.ReadQueueNums, t.TopicConfigVo.WriteQueueNums)
+}
+
 // ToTopicVo 转化为TopicVo
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
@@ -206,15 +142,81 @@ func (t *UpdateTopic) ToTopicConfig() *stgcommon.TopicConfig {
 	return topicConfig
 }
 
-// ToString 打印TopicVo结构体内容
+// ToString 转化为字符串
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/9
-func (t *TopicVo) ToString() string {
-	if t == nil {
-		return fmt.Sprintf("TopicVo is nil")
+// Since: 2017/11/6
+func (topicType TopicType) ToString() string {
+	switch topicType {
+	case NORMAL_TOPIC:
+		return "NORMAL_TOPIC"
+	case RETRY_TOPIC:
+		return "RETRY_TOPIC"
+	case DLQ_TOPIC:
+		return "DLQ_TOPIC"
+	default:
+		return "Unknown"
+	}
+}
+
+// ParseTopicType 转化为topic类型
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func ParseTopicType(topic string) TopicType {
+	if IsNormalTopic(topic) {
+		return NORMAL_TOPIC
+	}
+	if IsRetryTopic(topic) {
+		return RETRY_TOPIC
+	}
+	if IsDLQTopic(topic) {
+		return DLQ_TOPIC
+	}
+	return NORMAL_TOPIC
+}
+
+// ToTopicStats 转化为topic状态
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func ToTopicStats(mq *message.MessageQueue, topicOffset *admin.TopicOffset, topic, clusterName string) *TopicStats {
+	topicStats := &TopicStats{
+		BrokerName: mq.BrokerName,
+		QueueID:    mq.QueueId,
+		MinOffset:  topicOffset.MinOffset,
+		MaxOffset:  topicOffset.MaxOffset,
 	}
 
-	format := "TopicVo {topic=%s, clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d, readQueueNums=%d, writeQueueNums=%d}"
-	return fmt.Sprintf(format, t.Topic, t.ClusterName, t.TopicConfigVo.BrokerName, t.TopicConfigVo.BrokerAddr, t.TopicConfigVo.BrokerId,
-		t.TopicConfigVo.ReadQueueNums, t.TopicConfigVo.WriteQueueNums)
+	humanTimestamp := ""
+	if topicOffset.LastUpdateTimestamp > 0 {
+		humanTimestamp = stgcommon.FormatTimestamp(topicOffset.LastUpdateTimestamp)
+	}
+	topicStats.LastUpdateTime = humanTimestamp
+
+	topicStats.TopicType = ParseTopicType(topic)
+	topicStats.Topic = topic
+	topicStats.ClusterName = clusterName
+
+	return topicStats
+}
+
+
+
+// IsRetryTopic 是否为重试队列的Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func IsRetryTopic(topic string) bool {
+	return strings.HasPrefix(strings.TrimSpace(topic), stgcommon.RETRY_GROUP_TOPIC_PREFIX)
+}
+
+// IsDLQTopic 是否为死信队列的Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func IsDLQTopic(topic string) bool {
+	return strings.HasPrefix(strings.TrimSpace(topic), stgcommon.DLQ_GROUP_TOPIC_PREFIX)
+}
+
+// IsNormalTopic 是否正常的Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func IsNormalTopic(topic string) bool {
+	return !IsRetryTopic(topic) && !IsDLQTopic(topic)
 }

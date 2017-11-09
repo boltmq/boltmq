@@ -15,8 +15,8 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func TopicList(ctx context.Context) {
-	clusterName := ctx.URLParam("clusterName")
-	topic := ctx.URLParam("topic")
+	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
+	topic := strings.TrimSpace(ctx.URLParam("topic"))
 
 	pageRequest, err := req.ToPageRequest(ctx)
 	if err != nil {
@@ -173,5 +173,22 @@ func DeleteTopic(ctx context.Context) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func TopicRoute(ctx context.Context) {
+	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
+	topic := strings.TrimSpace(ctx.URLParam("topic"))
+	if topic == "" {
+		errMsg := "topic字段不能为空"
+		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
+		return
+	}
+
+	data, err := topicService.Default().QueryTopicRoute(topic, clusterName)
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	ctx.JSON(resp.NewSuccessResponse(data))
 
 }
