@@ -1,34 +1,34 @@
-package group
+package broker
 
 import (
 	"git.oschina.net/cloudzone/cloudcommon-go/web/resp"
 	"github.com/kataras/iris/context"
 )
 
-// ConsumeProgress 查询消费进度
+// WipeWritePermBroker 优雅关闭Broker写权限
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func ConsumeProgress(ctx context.Context) {
+func WipeWritePermBroker(ctx context.Context) {
 	ctx.JSON(resp.NewSuccessResponse(""))
 }
 
-// GroupList 查询消费组列表
+// SyncTopic4BrokerNode 同步业务Topic到 新集群的broker节点(常用于broker扩容场景)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func GroupList(ctx context.Context) {
+func SyncTopicToBroker(ctx context.Context) {
 	ctx.JSON(resp.NewSuccessResponse(""))
 }
 
-// ConnectionOnline 查询在线消费进程、在线生产进程列表
+// UpdateSubGroup 更新consumer消费组参数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func ConnectionOnline(ctx context.Context) {
+func UpdateSubGroup(ctx context.Context) {
 	ctx.JSON(resp.NewSuccessResponse(""))
 }
 
-// ConnectionDetail 查询在线消费进程、在线生产进程的详情
+// DeleteSubGroup 删除consumer消费组参数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func ConnectionDetail(ctx context.Context) {
+func DeleteSubGroup(ctx context.Context) {
 	ctx.JSON(resp.NewSuccessResponse(""))
 }
