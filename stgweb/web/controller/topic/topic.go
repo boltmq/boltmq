@@ -190,5 +190,4 @@ func TopicRoute(ctx context.Context) {
 	}
 
 	ctx.JSON(resp.NewSuccessResponse(data))
-
 }

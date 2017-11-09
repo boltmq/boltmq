@@ -8,15 +8,14 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
-	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
 	set "github.com/deckarep/golang-set"
 	"strings"
 	"sync"
 )
 
 var (
-	topicService *TopicService
-	sOnce        sync.Once
+	topicServ *TopicService
+	sOnce     sync.Once
 )
 
 // TopicService topic管理器
@@ -24,27 +23,25 @@ var (
 // Since: 2017/11/7
 type TopicService struct {
 	*modules.AbstractService
-	clusterService *clusterService.ClusterService
 }
 
-// Default 返回默认唯一的用户处理对象
+// Default 返回默认唯一处理对象
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func Default() *TopicService {
 	sOnce.Do(func() {
-		topicService = NewTopicService()
-		topicService.clusterService = clusterService.NewClusterService()
+		topicServ = NewTopicService()
 	})
-	return topicService
+	return topicServ
 }
 
-// NewTopicService 初始化Topic查询服务
+// NewTopicService 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func NewTopicService() *TopicService {
-	topicServ := &TopicService{}
-	topicServ.AbstractService = modules.Default()
-	return topicServ
+	return &TopicService{
+		AbstractService: modules.Default(),
+	}
 }
 
 // List 查询所有Topic列表(不区分topic类型)
