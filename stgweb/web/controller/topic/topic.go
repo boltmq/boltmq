@@ -88,7 +88,27 @@ func UpdateTopic(ctx context.Context) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func DeleteTopic(ctx context.Context) {
+	topicVo := new(models.DeleteTopic)
+	if err := ctx.ReadJSON(topicVo); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+	if err := topicVo.Validate(); err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		return
+	}
 
+	err := topicService.Default().CreateTopic(strings.TrimSpace(topicVo.Topic), strings.TrimSpace(topicVo.ClusterName))
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	responseBody := &models.ResultVo{Result: true}
+	ctx.JSON(resp.NewSuccessResponse(responseBody))
 }
 
 // TopicStats 查询Topic存储状态
