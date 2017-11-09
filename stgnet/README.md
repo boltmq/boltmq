@@ -17,7 +17,8 @@ stgnet是smartgo中对网络层通讯的封装，包括协议封装、解包，�
 * 粘包后的数据采用多Goroutine处理，提高并发能力。
 * 使用对象池降低GC压力。
 
-![Alt text](https://static.oschina.net/uploads/space/2017/1109/170753_f0T7_3724856.jpg, "netm")
+![Alt text](https://static.oschina.net/uploads/space/2017/1109/170753_f0T7_3724856.jpg "报文处理流程")
+
 
 ### 参考
 * io模型(epoll)
