@@ -164,7 +164,16 @@ func (service *TopicService) CreateTopic(t *models.CreateTopic) error {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (service *TopicService) QueryTopicRoute(topic, clusterName string) (*route.TopicRouteData, error) {
-	return nil, nil
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	topicRouteData, err := defaultMQAdminExt.ExamineTopicRouteInfo(topic)
+	if err != nil || topicRouteData == nil {
+		return route.NewTopicRouteData(), err
+	}
+	return topicRouteData, nil
 }
 
 // FindClusterByTopic 查询Topic归属的集群名称
