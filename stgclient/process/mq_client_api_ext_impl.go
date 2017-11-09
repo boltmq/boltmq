@@ -16,6 +16,43 @@ import (
 	set "github.com/deckarep/golang-set"
 )
 
+// ViewMessage
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (impl MQClientAPIImpl) ViewMessage(storeHost string, physicOffset, timeoutMills int64) (*message.MessageExt, error) {
+	requestHeader := &header.ViewMessageRequestHeader{Offset: physicOffset}
+	request := protocol.CreateRequestCommand(code.VIEW_MESSAGE_BY_ID, requestHeader)
+	response, err := impl.DefalutRemotingClient.InvokeSync(storeHost, request, timeoutMills)
+	if err != nil {
+		return nil, err
+	}
+	if response == nil {
+		return nil, fmt.Errorf("ViewMessage response is nil")
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("ViewMessage failed. %s", response.ToString())
+		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
+	}
+
+	content := response.Body
+	if content == nil || len(content) == 0 {
+		return nil, fmt.Errorf("ViewMessage response.body is empty. %s", response.ToString())
+	}
+
+	messageExt, err := message.DecodeMessageExt(content, true, false)
+	if err != nil {
+		return nil, err
+	}
+	if messageExt == nil {
+		return nil, fmt.Errorf("decode messageExt failed, messageExt is nil. %s, %d, %s", storeHost, physicOffset, response.ToString())
+	}
+	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
+		messageExt.Topic = stgclient.ClearProjectGroup(messageExt.Topic, impl.ProjectGroupPrefix)
+	}
+
+	return messageExt, nil
+}
+
 // CreateCustomTopic 创建指定Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/1

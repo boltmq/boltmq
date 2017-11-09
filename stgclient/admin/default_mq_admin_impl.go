@@ -663,7 +663,14 @@ func (impl *DefaultMQAdminExtImpl) CreateCustomTopic(brokerAddr string, topicCon
 
 // 根据msgId查询消息消费结果
 func (impl *DefaultMQAdminExtImpl) ViewMessage(msgId string) (*message.MessageExt, error) {
-	return nil, nil
+	messageId, err := message.DecodeMessageId(msgId)
+	if err != nil {
+		return nil, err
+	}
+
+	storeHost := messageId.Address      // 消息存储的实际broker地址
+	commitLogOffset := messageId.Offset // 消息存储的物理偏移量
+	return impl.mqClientInstance.MQClientAPIImpl.ViewMessage(storeHost, commitLogOffset, timeoutMillis)
 }
 
 // 搜索消息

@@ -76,3 +76,14 @@ type BlotMessage struct {
 	Track    []*track.MessageTrack `json:"track"`    // 消息消费结果
 	BodyPath string                `json:"bodyPath"` // 消息body内容存储在web服务器的路径
 }
+
+// NewMessageBodyVo 初始化MessageBodyVo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func NewMessageBodyVo(msgId, msgBody string) *MessageBodyVo {
+	messageBodyVo := &MessageBodyVo{
+		MsgId:   msgId,
+		MsgBody: msgBody,
+	}
+	return messageBodyVo
+}
