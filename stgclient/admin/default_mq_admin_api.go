@@ -79,6 +79,18 @@ func (impl *DefaultMQAdminExtImpl) checkConfig() {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Start() error {
+	err := impl.start()
+	if err != nil {
+		logger.Errorf("DefaultMQAdminExtImpl Start err: %s", err.Error())
+		panic(err)
+	}
+	return nil
+}
+
+// Start 启动Admin
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *DefaultMQAdminExtImpl) start() error {
 	switch impl.serviceState {
 	case stgcommon.CREATE_JUST:
 		// 检查配置
@@ -118,8 +130,20 @@ func (impl *DefaultMQAdminExtImpl) Start() error {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Shutdown() error {
+	err := impl.shutdown()
+	if err != nil {
+		logger.Errorf("DefaultMQAdminExtImpl Shutdown err: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
+// Shutdown 关闭Admin
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (impl *DefaultMQAdminExtImpl) shutdown() error {
 	if impl == nil || impl.mqClientInstance == nil {
-		return nil
+		return fmt.Errorf("DefaultMQAdminExtImpl or DefaultMQAdminExtImpl.mqClientInstance is nil")
 	}
 	switch impl.serviceState {
 	case stgcommon.CREATE_JUST:

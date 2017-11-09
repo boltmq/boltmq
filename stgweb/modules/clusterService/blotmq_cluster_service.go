@@ -7,33 +7,33 @@ import (
 )
 
 var (
-	clusterService *BoltMQClusterService
+	clusterService *ClusterService
 	sOnce          sync.Once
 )
 
-// BoltMQClusterService 集群Cluster管理器
+// ClusterService 集群Cluster管理器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-type BoltMQClusterService struct {
+type ClusterService struct {
 	*modules.AbstractService
 }
 
-// Default 返回默认唯一的用户处理对象
+// Default 返回默认唯一处理对象
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-func Default() *BoltMQClusterService {
+func Default() *ClusterService {
 	sOnce.Do(func() {
-		clusterService = NewBoltMQClusterService()
+		clusterService = NewClusterService()
 	})
 	return clusterService
 }
 
-// NewBoltMQTopicService 初始化Topic查询服务
+// NewClusterService 初始化Topic查询服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-func NewBoltMQClusterService() *BoltMQClusterService {
-	boltMQClusterService := &BoltMQClusterService{
-		AbstractService: modules.NewAbstractService(),
+func NewClusterService() *ClusterService {
+	boltMQClusterService := &ClusterService{
+		AbstractService: modules.Default(),
 	}
 	return boltMQClusterService
 }
@@ -41,13 +41,13 @@ func NewBoltMQClusterService() *BoltMQClusterService {
 // GetCluserNames 查询所有集群名称
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/8
-func (service *BoltMQClusterService) GetCluserNames() ([]string, error) {
+func (service *ClusterService) GetCluserNames() ([]string, error) {
 	defer utils.RecoveredFn()
-	service.InitMQAdmin()
-	service.Start()
-	defer service.Shutdown()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
 
-	clusterNames, _, err := service.DefaultMQAdminExtImpl.GetAllClusterNames()
+	clusterNames, _, err := defaultMQAdminExt.GetAllClusterNames()
 	if err != nil {
 		return []string{}, err
 	}

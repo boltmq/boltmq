@@ -26,7 +26,7 @@ var (
 // Since: 2017/11/7
 type BoltMQTopicService struct {
 	*modules.AbstractService
-	clusterServiceImpl *clusterService.BoltMQClusterService
+	clusterService *clusterService.ClusterService
 }
 
 // Default 返回默认唯一的用户处理对象
@@ -34,8 +34,8 @@ type BoltMQTopicService struct {
 // Since: 2017/11/7
 func Default() *BoltMQTopicService {
 	sOnce.Do(func() {
-		topicService = NewBoltMQTopicService()
-		topicService.clusterServiceImpl = clusterService.NewBoltMQClusterService()
+		topicService = NewTopicService()
+		topicService.clusterService = clusterService.NewClusterService()
 	})
 	return topicService
 }
@@ -43,9 +43,9 @@ func Default() *BoltMQTopicService {
 // NewBoltMQTopicService 初始化Topic查询服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-func NewBoltMQTopicService() *BoltMQTopicService {
+func NewTopicService() *BoltMQTopicService {
 	boltMQTopicService := &BoltMQTopicService{
-		AbstractService: modules.NewAbstractService(),
+		AbstractService: modules.Default(),
 	}
 	return boltMQTopicService
 }
@@ -55,12 +55,12 @@ func NewBoltMQTopicService() *BoltMQTopicService {
 // Since: 2017/11/6
 func (service *BoltMQTopicService) GetAllList() (topicVos []*models.TopicVo, err error) {
 	defer utils.RecoveredFn()
-	service.InitMQAdmin()
-	service.Start()
-	defer service.Shutdown()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
 
 	topicVos = make([]*models.TopicVo, 0)
-	clusterTopicWappers, err := service.DefaultMQAdminExtImpl.GetClusterTopicWappers()
+	clusterTopicWappers, err := defaultMQAdminExt.GetClusterTopicWappers()
 	if err != nil {
 		return topicVos, err
 	}
@@ -155,13 +155,12 @@ func getTopicVoListByPaging(total, limit, offset int, topicVoList []*models.Topi
 // Since: 2017/11/6
 func (service *BoltMQTopicService) GetTopicStats(topic string) ([]*models.TopicStats, error) {
 	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
 	topicStatsList := make([]*models.TopicStats, 0)
-
-	service.InitMQAdmin()
-	service.Start()
-	defer service.Shutdown()
-
-	topicStatsTable, err := service.DefaultMQAdminExtImpl.ExamineTopicStats(topic)
+	topicStatsTable, err := defaultMQAdminExt.ExamineTopicStats(topic)
 	if err != nil {
 		return topicStatsList, err
 	}
@@ -204,11 +203,11 @@ func (service *BoltMQTopicService) DeleteTopic(topic, clusterName string) error 
 // Since: 2017/11/6
 func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error {
 	defer utils.RecoveredFn()
-	service.InitMQAdmin()
-	service.Start()
-	defer service.Shutdown()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
 
-	masterSet, err := service.DefaultMQAdminExtImpl.FetchMasterAddrByClusterName(clusterName)
+	masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(clusterName)
 	if err != nil {
 		return err
 	}
@@ -220,7 +219,7 @@ func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error 
 	perm := constant.PERM_READ | constant.PERM_WRITE
 	for brokerAddr := range masterSet.Iterator().C {
 		topicConfig := stgcommon.NewDefaultTopicConfig(topic, queueNum, queueNum, perm, stgcommon.SINGLE_TAG)
-		err = service.DefaultMQAdminExtImpl.CreateCustomTopic(brokerAddr.(string), topicConfig)
+		err = defaultMQAdminExt.CreateCustomTopic(brokerAddr.(string), topicConfig)
 		if err != nil {
 			return fmt.Errorf("create topic err: %s, topic=%s", err.Error(), topic)
 		}

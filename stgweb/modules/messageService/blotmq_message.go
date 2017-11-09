@@ -24,7 +24,7 @@ const ()
 // Since: 2017/11/7
 type MessageService struct {
 	*modules.AbstractService
-	clusterServiceImpl *clusterService.BoltMQClusterService
+	clusterService *clusterService.ClusterService
 }
 
 // Default 返回默认唯一对象
@@ -33,7 +33,7 @@ type MessageService struct {
 func Default() *MessageService {
 	sOnce.Do(func() {
 		messageService = NewMessageService()
-		messageService.clusterServiceImpl = clusterService.NewBoltMQClusterService()
+		messageService.clusterService = clusterService.NewClusterService()
 	})
 	return messageService
 }
@@ -43,7 +43,7 @@ func Default() *MessageService {
 // Since: 2017/11/7
 func NewMessageService() *MessageService {
 	blotmqMessageService := &MessageService{
-		AbstractService: modules.NewAbstractService(),
+		AbstractService: modules.Default(),
 	}
 	return blotmqMessageService
 }
@@ -92,12 +92,11 @@ func (service *MessageService) readMsgBody(msgBodyPath string) (string, error) {
 // Since: 2017/11/9
 func (service *MessageService) QueryMsg(msgId string) (*message.MessageExt, error) {
 	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
 
-	service.InitMQAdmin()
-	service.Start()
-	defer service.Shutdown()
-
-	messageExt, err := service.DefaultMQAdminExtImpl.ViewMessage(msgId)
+	messageExt, err := defaultMQAdminExt.ViewMessage(msgId)
 	if err != nil {
 		return nil, err
 	}
