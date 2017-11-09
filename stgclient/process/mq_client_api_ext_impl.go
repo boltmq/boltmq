@@ -19,7 +19,7 @@ import (
 // ViewMessage
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func (impl MQClientAPIImpl) ViewMessage(storeHost string, physicOffset, timeoutMills int64) (*message.MessageExt, error) {
+func (impl MQClientAPIImpl) ViewMessage(storeHost string, physicOffset uint64, timeoutMills int64) (*message.MessageExt, error) {
 	requestHeader := &header.ViewMessageRequestHeader{Offset: physicOffset}
 	request := protocol.CreateRequestCommand(code.VIEW_MESSAGE_BY_ID, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(storeHost, request, timeoutMills)

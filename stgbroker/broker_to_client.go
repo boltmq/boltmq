@@ -72,7 +72,7 @@ func (b2c *Broker2Client) CallClient(ctx netm.Context, request *protocol.Remotin
 // Author rongzhihong
 // Since 2017/9/18
 func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isForce bool) *protocol.RemotingCommand {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	topicConfig := b2c.BrokerController.TopicConfigManager.SelectTopicConfig(topic)
 	if topicConfig == nil {
 		logger.Errorf("[reset-offset] reset offset failed, no topic in this broker. topic=%s", topic)
@@ -167,7 +167,7 @@ func (b2c *Broker2Client) ResetOffset(topic, group string, timeStamp int64, isFo
 // Author rongzhihong
 // Since 2017/9/18
 func (b2c *Broker2Client) GetConsumeStatus(topic, group, originClientId string) *protocol.RemotingCommand {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 
 	requestHeader := &header.GetConsumerStatusRequestHeader{}
 	requestHeader.Topic = topic

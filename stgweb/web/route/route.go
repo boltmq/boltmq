@@ -2,7 +2,6 @@ package route
 
 import (
 	"git.oschina.net/cloudzone/cloudcommon-go/web"
-	"git.oschina.net/cloudzone/smartgo/stgregistry/other"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/broker"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/cluster"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/general"

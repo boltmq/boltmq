@@ -35,7 +35,7 @@ func Default() *MessageService {
 		messageService = NewMessageService()
 		messageService.clusterServiceImpl = clusterService.NewBoltMQClusterService()
 	})
-	return topicService
+	return messageService
 }
 
 // NewMessageService 初始化Message管理器
@@ -65,6 +65,7 @@ func (service *MessageService) QueryMsgBody(msgId string) (*models.MessageBodyVo
 	}
 
 	// 查询消息、得到body内容、写入文件
+	return nil, nil
 }
 
 // writeMsgBody 将消息body内容写入指定的目录
