@@ -52,6 +52,7 @@ const (
 	DLQ_GROUP_TOPIC_PREFIX          = "%DLQ%"   // 为每个ConsumerGroup建立一个默认的Topic，前缀+GroupName，用来保存重试多次都失败，接下来不再重试的消息
 	BROKER_REBLANCE_LOCKMAXLIVETIME = "smartgo.broker.rebalance.lockMaxLiveTime"
 	SMARTGO_CONF_DIR                = "/git.oschina.net/cloudzone/smartgo/conf/"
+	MSG_BODY_DIR                    = "/tmp/blotmq/msgbodys/" // 消息body内容存储在stgweb站点所在服务器路径
 )
 
 func GetRetryTopic(consumerGroup string) string {
