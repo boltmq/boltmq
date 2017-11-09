@@ -71,9 +71,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 			}
 			if tst != nil && tst.OffsetTable != nil {
 				for mq, topicOffset := range tst.OffsetTable {
-					if mq != nil {
-						result.OffsetTable[mq] = topicOffset
-					}
+					result.OffsetTable[mq] = topicOffset
 				}
 			}
 		}

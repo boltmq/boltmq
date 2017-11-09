@@ -126,11 +126,18 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if response != nil {
 		switch response.Code {
+		case code.TOPIC_NOT_EXIST:
+			logger.Errorf("get Topic [%s] RouteInfoFromNameServer is not exist value. %s", topic, response.ToString())
+			return nil
 		case code.SUCCESS:
-			body := response.Body
-			if len(body) > 0 {
+			content := response.Body
+			if len(content) > 0 {
 				topicRouteData := &route.TopicRouteData{}
-				topicRouteData.Decode(body)
+				err := topicRouteData.Decode(content)
+				if err != nil {
+					logger.Errorf("topicRouteData.Decode err: %s, body: %s", err.Error(), string(content))
+					return nil
+				}
 				return topicRouteData
 			}
 		default:

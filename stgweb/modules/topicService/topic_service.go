@@ -153,6 +153,11 @@ func (service *TopicService) GetTopicStats(topic string) ([]*models.TopicStats, 
 	defer defaultMQAdminExt.Shutdown()
 
 	topicStatsList := make([]*models.TopicStats, 0)
+	clusterName, err := service.FindClusterByTopic(topic)
+	if err != nil {
+		return topicStatsList, err
+	}
+
 	topicStatsTable, err := defaultMQAdminExt.ExamineTopicStats(topic)
 	if err != nil {
 		return topicStatsList, err
@@ -161,7 +166,7 @@ func (service *TopicService) GetTopicStats(topic string) ([]*models.TopicStats, 
 		return topicStatsList, nil
 	}
 
-	mqList := make(message.MessageQueues, 0, len(topicStatsTable.OffsetTable))
+	var mqList message.MessageQueues
 	for mq, _ := range topicStatsTable.OffsetTable {
 		mqList = append(mqList, mq)
 	}
@@ -169,7 +174,7 @@ func (service *TopicService) GetTopicStats(topic string) ([]*models.TopicStats, 
 
 	for _, mq := range mqList {
 		if topicOffset, ok := topicStatsTable.OffsetTable[mq]; ok {
-			topicStats := models.ToTopicStats(mq, topicOffset, mq.Topic, "")
+			topicStats := models.ToTopicStats(mq, topicOffset, mq.Topic, clusterName)
 			topicStatsList = append(topicStatsList, topicStats)
 		}
 	}
@@ -226,4 +231,25 @@ func (service *TopicService) CreateTopic(topic, clusterName string) error {
 // Since: 2017/11/6
 func (service *TopicService) QueryTopicRoute(topic, clusterName string) (*route.TopicRouteData, error) {
 	return nil, nil
+}
+
+// FindClusterByTopic 查询Topic归属的集群名称
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (service *TopicService) FindClusterByTopic(topic string) (string, error) {
+	srcTopics, err := service.GetAllList()
+	if err != nil {
+		return "", err
+	}
+	if srcTopics == nil || len(srcTopics) == 0 {
+		return "", fmt.Errorf("current topic[%s] do't has cluster", topic)
+	}
+
+	for _, t := range srcTopics {
+		if t.Topic == topic {
+			return t.ClusterName, nil
+		}
+	}
+
+	return "", fmt.Errorf("find topic[%s] of clusterName failed", topic)
 }
