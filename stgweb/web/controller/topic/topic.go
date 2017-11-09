@@ -95,7 +95,22 @@ func DeleteTopic(ctx context.Context) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func TopicStats(ctx context.Context) {
+	topic := strings.TrimSpace(ctx.URLParam("topic"))
+	if topic == "" {
+		errMsg := "topic字段不能为空"
+		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
+		return
+	}
 
+	topicState, err := topicService.Default().GetTopicStats(topic)
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	ctx.JSON(resp.NewSuccessPageResponse(int64(len(topicState)), topicState))
 }
 
 // TopicRoute 查询Topic路由信息

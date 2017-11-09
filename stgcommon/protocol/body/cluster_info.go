@@ -5,7 +5,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
-	"strings"
 )
 
 // ClusterInfo 协议中传输对象，内容为集群信息
@@ -56,25 +55,25 @@ func (plus *ClusterPlusInfo) ToString() {
 		logger.Infof("ClusterPlusInfo is nil")
 	}
 
-	if plus.BrokerAddrTable != nil {
-		for brokerName, bd := range plus.BrokerAddrTable {
-			if bd != nil {
-				logger.Infof("-->  brokerName=%s, %s", brokerName, bd.ToString())
-			} else {
-				logger.Infof("-->  brokerName=%s, BrokerData is nil", brokerName)
-			}
-		}
-	}
-
-	if plus.ClusterAddrTable != nil {
-		for clusterName, brokerNames := range plus.ClusterAddrTable {
-			val := ""
-			if brokerNames != nil {
-				val = strings.Join(brokerNames, ",")
-			}
-			logger.Infof("-->  clusterName=%s, brokerNames=[%s]", clusterName, val)
-		}
-	}
+	//if plus.BrokerAddrTable != nil {
+	//	for brokerName, bd := range plus.BrokerAddrTable {
+	//		if bd != nil {
+	//			//logger.Infof("-->  brokerName=%s, %s", brokerName, bd.ToString())
+	//		} else {
+	//			//logger.Infof("-->  brokerName=%s, BrokerData is nil", brokerName)
+	//		}
+	//	}
+	//}
+	//
+	//if plus.ClusterAddrTable != nil {
+	//	for clusterName, brokerNames := range plus.ClusterAddrTable {
+	//		val := ""
+	//		if brokerNames != nil {
+	//			val = strings.Join(brokerNames, ",")
+	//		}
+	//		//logger.Infof("-->  clusterName=%s, brokerNames=[%s]", clusterName, val)
+	//	}
+	//}
 
 }
 

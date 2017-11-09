@@ -363,7 +363,7 @@ func (self *TopicRouteData) ToString() string {
 	}
 	filterServerTable := strings.Join(vals, ",")
 
-	format := "TopicRouteData {orderTopicConf=%s, queueDatas=%s, brokerDatas=%s, filterServerTable=%s}"
+	format := "TopicRouteData {orderTopicConf=%s, %s, %s, %s}"
 	info := fmt.Sprintf(format, self.OrderTopicConf, data1, data2, filterServerTable)
 	return info
 }
