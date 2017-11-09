@@ -17,14 +17,14 @@ import (
 )
 
 var (
-	topicService *BoltMQTopicService
+	topicService *TopicService
 	sOnce        sync.Once
 )
 
-// BoltMQTopicService topic管理器
+// TopicService topic管理器
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-type BoltMQTopicService struct {
+type TopicService struct {
 	*modules.AbstractService
 	clusterService *clusterService.ClusterService
 }
@@ -32,7 +32,7 @@ type BoltMQTopicService struct {
 // Default 返回默认唯一的用户处理对象
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-func Default() *BoltMQTopicService {
+func Default() *TopicService {
 	sOnce.Do(func() {
 		topicService = NewTopicService()
 		topicService.clusterService = clusterService.NewClusterService()
@@ -40,20 +40,19 @@ func Default() *BoltMQTopicService {
 	return topicService
 }
 
-// NewBoltMQTopicService 初始化Topic查询服务
+// NewTopicService 初始化Topic查询服务
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-func NewTopicService() *BoltMQTopicService {
-	boltMQTopicService := &BoltMQTopicService{
-		AbstractService: modules.Default(),
-	}
-	return boltMQTopicService
+func NewTopicService() *TopicService {
+	topicServ := &TopicService{}
+	topicServ.AbstractService = modules.Default()
+	return topicServ
 }
 
 // List 查询所有Topic列表(不区分topic类型)
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetAllList() (topicVos []*models.TopicVo, err error) {
+func (service *TopicService) GetAllList() (topicVos []*models.TopicVo, err error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
@@ -79,7 +78,7 @@ func (service *BoltMQTopicService) GetAllList() (topicVos []*models.TopicVo, err
 // GetTopicList 根据Topic类型，获取所有Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetTopicList(clusterName, topicPrefix string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, error) {
+func (service *TopicService) GetTopicList(clusterName, topicPrefix string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, error) {
 	defer utils.RecoveredFn()
 
 	srcTopics, err := service.GetAllList()
@@ -87,21 +86,15 @@ func (service *BoltMQTopicService) GetTopicList(clusterName, topicPrefix string,
 		return []*models.TopicVo{}, nil
 	}
 
-	topicVos := make([]*models.TopicVo, 0)
-	destTopics := GetTopicByParam(topicType, topicPrefix, srcTopics)
-	for _, t := range destTopics {
-		topicVo := models.NewTopicVo(clusterName, t.Topic)
-		topicVos = append(topicVos, topicVo)
-	}
-
-	topicVoList := getTopicVoListByPaging(len(topicVos), limit, offset, topicVos)
-	return topicVoList, nil
+	destTopics := service.GetTopicByParam(topicType, topicPrefix, srcTopics)
+	topicVos := service.getTopicVoListByPaging(len(destTopics), limit, offset, destTopics)
+	return topicVos, nil
 }
 
 // GetTopicByType 查询指定类型的topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/8
-func GetTopicByParam(topicType int, prefix string, srcTopics []*models.TopicVo) (destTopics []*models.TopicVo) {
+func (service *TopicService) GetTopicByParam(topicType int, prefix string, srcTopics []*models.TopicVo) (destTopics []*models.TopicVo) {
 	// 查询所有Topic，不过滤
 	destTopics = make([]*models.TopicVo, 0)
 	if srcTopics == nil {
@@ -129,14 +122,14 @@ func GetTopicByParam(topicType int, prefix string, srcTopics []*models.TopicVo) 
 // getTopicVoListByPaging 分页获取TopicVo列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/7/14
-func getTopicVoListByPaging(total, limit, offset int, topicVoList []*models.TopicVo) (dataList []*models.TopicVo) {
+func (service *TopicService) getTopicVoListByPaging(total, limit, offset int, topicVoList []*models.TopicVo) []*models.TopicVo {
 	if total <= limit {
 		// 数据条数 <= 前端每页显示的总条数，则直接返回，不做分页处理
 		return topicVoList
 	}
 
 	// 处理分页
-	dataList = make([]*models.TopicVo, 0)
+	var dataList []*models.TopicVo
 	end := offset + limit - 1
 	for i, t := range topicVoList {
 		if i < offset {
@@ -153,7 +146,7 @@ func getTopicVoListByPaging(total, limit, offset int, topicVoList []*models.Topi
 // Stats 分页查询Topic状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) GetTopicStats(topic string) ([]*models.TopicStats, error) {
+func (service *TopicService) GetTopicStats(topic string) ([]*models.TopicStats, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
@@ -187,21 +180,21 @@ func (service *BoltMQTopicService) GetTopicStats(topic string) ([]*models.TopicS
 // UpdateTopicConfig 更新Topic配置信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) UpdateTopicConfig() error {
+func (service *TopicService) UpdateTopicConfig() error {
 	return nil
 }
 
 // DeleteTopicFromCluster 删除指定集群对应broker所属的topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) DeleteTopic(topic, clusterName string) error {
+func (service *TopicService) DeleteTopic(topic, clusterName string) error {
 	return nil
 }
 
 // CreateTopic 创建Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error {
+func (service *TopicService) CreateTopic(topic, clusterName string) error {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
@@ -231,6 +224,6 @@ func (service *BoltMQTopicService) CreateTopic(topic, clusterName string) error 
 // QueryTopicRoute 查询topic路由信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *BoltMQTopicService) QueryTopicRoute(topic, clusterName string) (*route.TopicRouteData, error) {
+func (service *TopicService) QueryTopicRoute(topic, clusterName string) (*route.TopicRouteData, error) {
 	return nil, nil
 }

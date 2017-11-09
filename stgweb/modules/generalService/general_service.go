@@ -2,6 +2,6 @@ package generalService
 
 import "git.oschina.net/cloudzone/smartgo/stgweb/modules"
 
-type BoltMQGeneralService struct {
+type GeneralService struct {
 	*modules.AbstractService
 }

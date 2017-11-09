@@ -295,7 +295,7 @@ func (impl *MQClientAPIImpl) GetBrokerRuntimeInfo(brokerAddr string, timeoutMill
 // GetBrokerClusterInfo 查询Cluster集群信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.ClusterInfo, error) {
+func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.ClusterPlusInfo, error) {
 	request := protocol.CreateRequestCommand(code.GET_BROKER_CLUSTER_INFO)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if err != nil {
@@ -308,6 +308,7 @@ func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.Cl
 		logger.Errorf("GetBrokerClusterInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
+
 	clusterPlusInfo := body.NewClusterPlusInfo()
 	err = clusterPlusInfo.CustomDecode(response.Body, clusterPlusInfo)
 	if err != nil {
@@ -315,8 +316,8 @@ func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.Cl
 		return nil, err
 	}
 
-	clusterInfo := clusterPlusInfo.ToClusterInfo()
-	return clusterInfo, nil
+	clusterPlusInfo.ToString()
+	return clusterPlusInfo, nil
 }
 
 // WipeWritePermOfBroker 关闭broker写权限
