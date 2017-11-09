@@ -3,6 +3,8 @@ package stgstorelog
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"time"
+	stgsync "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"sync"
 )
 
 const (
@@ -10,55 +12,65 @@ const (
 )
 
 type FlushRealTimeService struct {
-	lastFlushTimestamp int32
-	printTimes         int32
+	lastFlushTimestamp int64
+	printTimes         int64
 	commitLog          *CommitLog
-	stopChan           chan bool
+	notify             *stgsync.Notify
+	hasNotified        bool
+	stoped             bool
+	mutex              *sync.Mutex
 }
 
 func NewFlushRealTimeService(commitLog *CommitLog) *FlushRealTimeService {
 	fts := new(FlushRealTimeService)
+	fts.lastFlushTimestamp = 0
+	fts.printTimes = 0
 	fts.commitLog = commitLog
-	fts.stopChan = make(chan bool, 1)
+	fts.notify = stgsync.NewNotify()
+	fts.hasNotified = false
+	fts.stoped = false
+	fts.mutex = new(sync.Mutex)
 	return fts
 }
 
 func (self *FlushRealTimeService) start() {
 	logger.Info("flush real time service started")
 
-	interval := self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushIntervalCommitLog
-	intervalDuration := time.Millisecond * time.Duration(interval)
-	ticker := time.NewTicker(intervalDuration)
-
 	for {
-		select {
-		case <-ticker.C:
-			flushPhysicQueueLeastPages := self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushCommitLogLeastPages
-			flushPhysicQueueThoroughInterval := self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushCommitLogThoroughInterval
-			printFlushProgress := false
+		if self.stoped {
+			break
+		}
 
-			// Print flush progress
-			currentTimeMillis := time.Now().UnixNano() / 1000000
-			if currentTimeMillis >= int64(self.lastFlushTimestamp+flushPhysicQueueThoroughInterval) {
-				self.lastFlushTimestamp = int32(currentTimeMillis)
-				flushPhysicQueueLeastPages = 0
-				self.printTimes += 1
-				printFlushProgress = (self.printTimes % 10) == 0
-			}
+		var (
+			flushCommitLogTimed              = self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushCommitLogTimed
+			interval                         = self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushIntervalCommitLog
+			flushPhysicQueueLeastPages       = self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushCommitLogLeastPages
+			flushPhysicQueueThoroughInterval = self.commitLog.DefaultMessageStore.MessageStoreConfig.FlushCommitLogThoroughInterval
+			printFlushProgress               = false
+			currentTimeMillis                = time.Now().UnixNano() / 1000000
+		)
 
-			if printFlushProgress {
-				self.printFlushProgress()
-			}
+		if currentTimeMillis >= self.lastFlushTimestamp+int64(flushPhysicQueueThoroughInterval) {
+			self.lastFlushTimestamp = currentTimeMillis
+			flushPhysicQueueLeastPages = 0
+			self.printTimes++
+			printFlushProgress = self.printTimes%10 == 0
+		}
 
-			self.commitLog.MapedFileQueue.commit(flushPhysicQueueLeastPages)
-			storeTimestamp := self.commitLog.MapedFileQueue.storeTimestamp
-			if storeTimestamp > 0 {
-				self.commitLog.DefaultMessageStore.StoreCheckpoint.physicMsgTimestamp = storeTimestamp
-			}
-		case <-self.stopChan:
-			ticker.Stop()
-			self.destroy()
-			return
+		if flushCommitLogTimed {
+			time.Sleep(time.Duration(interval) * time.Millisecond)
+		} else {
+			self.waitForRunning(int64(interval))
+		}
+
+		if printFlushProgress {
+			self.printFlushProgress()
+		}
+
+		self.commitLog.MapedFileQueue.commit(flushPhysicQueueLeastPages)
+		storeTimestamp := self.commitLog.MapedFileQueue.storeTimestamp
+		if storeTimestamp > 0 {
+			self.commitLog.DefaultMessageStore.StoreCheckpoint.physicMsgTimestamp = storeTimestamp
 		}
 	}
 }
@@ -67,24 +79,44 @@ func (self *FlushRealTimeService) printFlushProgress() {
 	logger.Info("how much disk fall behind memory, ", self.commitLog.MapedFileQueue.howMuchFallBehind())
 }
 
-func (self *FlushRealTimeService) shutdown() {
-	self.stopChan <- true
+func (self *FlushRealTimeService) waitForRunning(interval int64) {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
+	if self.hasNotified {
+		self.hasNotified = false
+		return
+	}
+
+	self.notify.WaitTimeout(time.Duration(interval) * time.Millisecond)
+	self.hasNotified = false
+}
+
+func (self *FlushRealTimeService) wakeup() {
+	if !self.hasNotified {
+		self.hasNotified = true
+		self.notify.Signal()
+	}
 }
 
 func (self *FlushRealTimeService) destroy() {
 	// Normal shutdown, to ensure that all the flush before exit
-	close(self.stopChan)
-
 	result := false
 	for i := 0; i < FlushRetryTimesOver && !result; i++ {
 		result = self.commitLog.MapedFileQueue.commit(0)
 		if result {
-			logger.Info("flush real time service shutdown, retry %d times ok", i+1)
+			logger.Infof("flush real time service shutdown, retry %d times OK", i+1)
 		} else {
-			logger.Info("flush real time service shutdown, retry %d times not ok", i+1)
+			logger.Infof("flush real time service shutdown, retry %d times Not OK", i+1)
 		}
+
 	}
 
 	self.printFlushProgress()
 	logger.Info("flush real time service end")
+}
+
+func (self *FlushRealTimeService) shutdown() {
+	self.stoped = true
+	self.destroy()
 }

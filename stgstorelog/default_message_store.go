@@ -62,6 +62,7 @@ type DefaultMessageStore struct {
 	StoreCheckpoint          *StoreCheckpoint
 	BrokerStatsManager       *stats.BrokerStatsManager
 	storeTicker              *timeutil.Ticker
+	printTimes               int64
 }
 
 func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsManager *stats.BrokerStatsManager) *DefaultMessageStore {
@@ -72,6 +73,7 @@ func NewDefaultMessageStore(messageStoreConfig *MessageStoreConfig, brokerStatsM
 	ms.SystemClock = new(stgcommon.SystemClock)
 	ms.ShutdownFlag = true
 	ms.consumeQueueTableMu = new(sync.RWMutex)
+	ms.printTimes = 0
 
 	ms.MessageStoreConfig = messageStoreConfig
 	ms.BrokerStatsManager = brokerStatsManager
@@ -271,7 +273,10 @@ func (self *DefaultMessageStore) isTempFileExist() bool {
 }
 
 func (self *DefaultMessageStore) Start() error {
-	// go self.FlushConsumeQueueService.Start()
+	if self.FlushConsumeQueueService != nil {
+		go self.FlushConsumeQueueService.Start()
+	}
+
 	go self.CommitLog.Start()
 	go self.StoreStatsService.Start()
 
@@ -355,7 +360,11 @@ func (self *DefaultMessageStore) Shutdown() {
 		self.StoreStatsService.Shutdown()
 		self.DispatchMessageService.Shutdown()
 		self.IndexService.Shutdown()
-		self.FlushConsumeQueueService.Shutdown()
+
+		if self.FlushConsumeQueueService != nil {
+			self.FlushConsumeQueueService.Shutdown()
+		}
+
 		self.CommitLog.Shutdown()
 
 		if self.AllocateMapedFileService != nil {
@@ -387,21 +396,41 @@ func (self *DefaultMessageStore) PutMessage(msg *MessageExtBrokerInner) *PutMess
 	}
 
 	if config.SLAVE == self.MessageStoreConfig.BrokerRole {
-		// TODO
+		atomic.AddInt64(&self.printTimes, 1)
+		if self.printTimes%50000 == 0 {
+			logger.Warn("message store is slave mode, so putMessage is forbidden")
+		}
+
+		return &PutMessageResult{PutMessageStatus: SERVICE_NOT_AVAILABLE}
 	}
 
-	// TODO runningFlags.isWriteable
+	if !self.RunningFlags.isWriteable() {
+		atomic.AddInt64(&self.printTimes, 1)
+		if self.printTimes%50000 == 0 {
+			logger.Warn("message store is not writeable, so putMessage is forbidden ", self.RunningFlags.flagBits)
+		}
 
-	// TODO 校验msg信息
+		return &PutMessageResult{PutMessageStatus: SERVICE_NOT_AVAILABLE}
+	} else {
+		atomic.StoreInt64(&self.printTimes, 0)
+	}
+
+	// message topic长度校验
 	if len(msg.Topic) > 127 {
-		logger.Info("putMessage message topic length too long %d", len(msg.Topic))
+		logger.Warn("putMessage message topic length too long %d", len(msg.Topic))
+		return &PutMessageResult{PutMessageStatus: MESSAGE_ILLEGAL}
+	}
+
+	// message properties长度校验
+	if len(msg.PropertiesString) > 32767 {
+		logger.Warn("putMessage message properties length too long ", len(msg.PropertiesString))
 		return &PutMessageResult{PutMessageStatus: MESSAGE_ILLEGAL}
 	}
 
 	beginTime := time.Now().UnixNano() / 1000000
 	result := self.CommitLog.putMessage(msg)
 
-	// TODO 性能数据统计以及更新存在服务状态
+	// 性能数据统计以及更新存在服务状态
 	eclipseTime := time.Now().UnixNano()/1000000 - beginTime
 	if eclipseTime > 1000 {
 		logger.Warn("putMessage not in lock eclipse time(ms) ", eclipseTime)

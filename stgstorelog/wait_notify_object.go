@@ -1,22 +1,26 @@
 package stgstorelog
 
-import "sync"
+import (
+	stgsync "git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"sync"
+	"time"
+)
 
 // WaitNotifyObject 用来做线程之间异步通知
 // Author zhoufei
 // Since 2017/10/23
 type WaitNotifyObject struct {
-	waitingThreadTable map[int64]bool
+	waitingThreadTable map[int64]*stgsync.Notify
 	hasNotified        bool
-	notifyChan         chan bool
+	notify             *stgsync.Notify
 	mutex              *sync.Mutex
 }
 
 func NewWaitNotifyObject() *WaitNotifyObject {
 	return &WaitNotifyObject{
-		waitingThreadTable: make(map[int64]bool),
+		waitingThreadTable: make(map[int64]*stgsync.Notify),
 		hasNotified:        false,
-		notifyChan:         make(chan bool),
+		notify:             stgsync.NewNotify(),
 		mutex:              new(sync.Mutex),
 	}
 }
@@ -27,7 +31,6 @@ func (self *WaitNotifyObject) wakeup(interval int64) {
 
 	if !self.hasNotified {
 		self.hasNotified = true
-		self.notifyChan <- true
 	}
 }
 
@@ -40,5 +43,6 @@ func (self *WaitNotifyObject) waitForRunning(interval int64) {
 		return
 	}
 
-
+	self.notify.WaitTimeout(time.Duration(interval) * time.Millisecond)
+	self.hasNotified = false
 }

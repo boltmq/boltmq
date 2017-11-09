@@ -9,6 +9,7 @@ import (
 	"math"
 	"strconv"
 	"io/ioutil"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
 
 var (
@@ -16,48 +17,6 @@ var (
 	StoreHost   string
 	BornHost    string
 )
-
-func Test_write_read(t *testing.T) {
-	totalMessages := 100
-	QUEUE_TOTAL = 1
-
-	storeMessage := "Once, there was a chance for me!"
-	messageBody := []byte(storeMessage)
-
-	messageStoreConfig := buildMessageStoreConfig()
-	master := NewDefaultMessageStore(messageStoreConfig, nil)
-
-	master.Load()
-
-	err := master.Start()
-	if err != nil {
-		t.Errorf("start message store failed:%s", err.Error())
-	}
-
-	time.Sleep(time.Duration(1000 * time.Millisecond))
-
-	queueId := int32(0)
-
-	for i := 0; i < totalMessages; i++ {
-		result := master.PutMessage(buildMessage(messageBody, &queueId))
-		fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
-	}
-
-	for i := 0; i < totalMessages; i++ {
-		time.Sleep(time.Duration(100 * time.Millisecond))
-		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
-		if result == nil {
-			fmt.Printf("result == nil %d \r\n", i)
-		}
-
-		fmt.Printf("read %d ok %d \r\n", i, result.Status)
-		result.Release()
-	}
-
-	master.Shutdown()
-	master.Destroy()
-
-}
 
 func buildMessageStoreConfig() *MessageStoreConfig {
 	messageStoreConfig := NewMessageStoreConfig()
@@ -112,6 +71,134 @@ func buildMessageStore() *DefaultMessageStore {
 	time.Sleep(time.Duration(1000 * time.Millisecond))
 
 	return master
+}
+func Test_write_read(t *testing.T) {
+	totalMessages := 1000
+	QUEUE_TOTAL = 1
+
+	storeMessage := "Once, there was a chance for me!"
+	messageBody := []byte(storeMessage)
+
+	messageStoreConfig := buildMessageStoreConfig()
+	master := NewDefaultMessageStore(messageStoreConfig, nil)
+
+	master.Load()
+
+	err := master.Start()
+	if err != nil {
+		t.Errorf("start message store failed:%s", err.Error())
+	}
+
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	queueId := int32(0)
+
+	for i := 0; i < totalMessages; i++ {
+		result := master.PutMessage(buildMessage(messageBody, &queueId))
+		fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+	}
+
+	for i := 0; i < totalMessages; i++ {
+		time.Sleep(time.Duration(100 * time.Millisecond))
+		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
+		if result == nil {
+			fmt.Printf("result == nil %d \r\n", i)
+		}
+
+		fmt.Printf("read %d ok %d \r\n", i, result.Status)
+		result.Release()
+	}
+
+	master.Shutdown()
+	master.Destroy()
+
+}
+
+func Test_group_commit(t *testing.T) {
+	totalMessages := 1000
+	QUEUE_TOTAL = 1
+
+	storeMessage := "Once, there was a chance for me!"
+	messageBody := []byte(storeMessage)
+
+	messageStoreConfig := buildMessageStoreConfig()
+	messageStoreConfig.FlushDiskType = config.SYNC_FLUSH
+	master := NewDefaultMessageStore(messageStoreConfig, nil)
+
+	master.Load()
+
+	err := master.Start()
+	if err != nil {
+		t.Errorf("start message store failed:%s", err.Error())
+	}
+
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	queueId := int32(0)
+	for i := 0; i < totalMessages; i++ {
+		result := master.PutMessage(buildMessage(messageBody, &queueId))
+		fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+	}
+
+	for i := 0; i < totalMessages; i++ {
+		time.Sleep(time.Duration(100 * time.Millisecond))
+		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
+		if result == nil {
+			fmt.Printf("result == nil %d \r\n", i)
+		}
+
+		fmt.Printf("read %d ok %d \r\n", i, result.Status)
+		result.Release()
+	}
+
+	master.Shutdown()
+	master.Destroy()
+
+}
+
+func Test_non_flush_service(t *testing.T) {
+	totalMessages := 1000
+	QUEUE_TOTAL = 1
+
+	storeMessage := "Once, there was a chance for me!"
+	messageBody := []byte(storeMessage)
+
+	messageStoreConfig := buildMessageStoreConfig()
+	master := NewDefaultMessageStore(messageStoreConfig, nil)
+	master.FlushConsumeQueueService = nil
+	master.CommitLog.FlushRealTimeService = nil
+	master.CommitLog.GroupCommitService = nil
+
+	master.Load()
+
+	err := master.Start()
+	if err != nil {
+		t.Errorf("start message store failed:%s", err.Error())
+	}
+
+	time.Sleep(time.Duration(1000 * time.Millisecond))
+
+	queueId := int32(0)
+
+	for i := 0; i < totalMessages; i++ {
+		result := master.PutMessage(buildMessage(messageBody, &queueId))
+		fmt.Printf("%d\t%s \r\n", i, result.AppendMessageResult.MsgId)
+	}
+
+	for i := 0; i < totalMessages; i++ {
+		//time.Sleep(time.Duration(100 * time.Millisecond))
+		result := master.GetMessage("producer", "test", 0, int64(i), 1024*1024, nil)
+		if result == nil {
+			fmt.Printf("result == nil %d \r\n", i)
+		}
+
+		fmt.Printf("read %d ok %d \r\n", i, result.Status)
+		result.Release()
+	}
+
+	master.Shutdown()
+	master.Destroy()
+
 }
 
 func TestDefaultMessageStore_GetMaxOffsetInQueue(t *testing.T) {
