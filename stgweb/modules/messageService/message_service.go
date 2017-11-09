@@ -98,3 +98,20 @@ func (service *MessageService) QueryMsg(msgId string) (*message.MessageExt, erro
 	}
 	return messageExt, nil
 }
+
+
+// QueryMsg 查询消息结果
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (service *MessageService) MessageTrack(msgId string) (*message.MessageExt, error) {
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	messageExt, err := defaultMQAdminExt.ViewMessage(msgId)
+	if err != nil {
+		return nil, err
+	}
+	return messageExt, nil
+}
