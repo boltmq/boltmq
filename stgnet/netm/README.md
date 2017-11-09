@@ -2,35 +2,28 @@
 
 stgnet是smartgo中对网络层通讯的封装，包括协议封装、解包，对网络连接的管理和优化，提供高性能的网络基础组件。
 
-### 特性
-* 连接管理
-* 高连接数
-* 高并发
-* 长连接
-* 粘包
-* 协议封装、解包
-* 事件通知
+### 使用注意事项
 
-### 设计
-![Alt text](http://wx3.sinaimg.cn/mw690/0065glrAgy1flbwj7e0k4j31kw0rqgrc.jpg)
+#### 程序最大线程数
+程序最大线程数的设置，GO进程的默认最大线程数是10000，stgnet的每个长连接都使用了不同的线程接收数据（之后可能优化）。如果你的业务有成千上万个连接，请main中使用`debug.SetMaxThreads(100000)`配置最大线程数
 
-### 优化
-
-#### linux系统
-
-**系统最大连接数**
+#### 系统最大连接数
+配置服务宿主机系统的最大连接数，以centos 7为例。
+临时设置，使用命令
 ```bash
 ulimit -n 655350
 ```
-或者
 
-永久生效,`vi /etc/security/limits.conf`，文件末尾加入：
+永久生效，编辑`vi /etc/security/limits.conf`，文件末尾加入：
+
 ```bash
 * soft nofile 655350
 * hard nofile 655350
 ```
+* 表示属于用户，可以指定用户。
 
-**TCP参数优化**
+
+#### 系统TCP参数优化（参考，以机器配置和测试结果为准）
 编辑`/etc/sysctl.conf`
 
 ```bash
@@ -60,10 +53,9 @@ sysctl -p /etc/sysctl.conf
 sysctl -w net.ipv4.route.flush=1
 ```
 
-### 待优化
-1. 粘包算法，减少粘包开销。
-2. 提高消息的缓冲处理能力。
-3. 优化协议封装、解包。
-4. 短连接支持。
+### 遗留问题
+1. 逻辑粘包乱序问题没有处理（netty应该也没有处理，初步确定）
+2. 高并发情况下的缓冲处理能力。
+3. 长连接是否有方案使用复用线程的可能性。
 
 Read the [docs](http://git.oschina.net/cloudzone/smartgo)
