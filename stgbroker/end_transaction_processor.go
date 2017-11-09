@@ -34,7 +34,7 @@ func NewEndTransactionProcessor(brokerController *BrokerController) *PullMessage
 // Author rongzhihong
 // Since 2017/9/18
 func (etp *EndTransactionProcessor) ProcessRequest(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.EndTransactionRequestHeader{}
 
 	// 回查应答

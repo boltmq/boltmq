@@ -84,7 +84,7 @@ func (qmp *QueryMessageProcessor) QueryMessage(ctx netm.Context, request *protoc
 // Author rongzhihong
 // Since 2017/9/18
 func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	response := protocol.CreateDefaultResponseCommand(nil)
+	response := protocol.CreateDefaultResponseCommand()
 	requestHeader := &header.ViewMessageRequestHeader{}
 
 	err := request.DecodeCommandCustomHeader(requestHeader)
@@ -94,7 +94,7 @@ func (qmp *QueryMessageProcessor) ViewMessageById(ctx netm.Context, request *pro
 
 	response.Opaque = request.Opaque
 
-	selectMapedBufferResult := qmp.BrokerController.MessageStore.SelectOneMessageByOffset(requestHeader.Offset)
+	selectMapedBufferResult := qmp.BrokerController.MessageStore.SelectOneMessageByOffset(int64(requestHeader.Offset))
 	if selectMapedBufferResult != nil {
 		response.Code = code.SUCCESS
 		response.Remark = ""
