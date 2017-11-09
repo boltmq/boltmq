@@ -9,7 +9,7 @@ type ConfigureInitializer struct {
 	namesrvAddr string `toml:"namesrvAddr" json:"namesrvAddr"`
 }
 
-func NewConfigureInitializer() *ConfigureInitializer {
+func newConfigureInitializer() *ConfigureInitializer {
 	configureInitializer := new(ConfigureInitializer)
 	configureInitializer.namesrvAddr = os.Getenv(stgcommon.NAMESRV_ADDR_ENV)
 	return configureInitializer
