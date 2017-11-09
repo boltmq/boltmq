@@ -59,8 +59,8 @@ func (bootstrap *Bootstrap) Sync() {
 		bootstrap.Fatalf("Error listening on port: %s, %q", addr, e)
 		return
 	}
-	bootstrap.Noticef("Listening for connections on %s", net.JoinHostPort(opts.Host, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)))
-	bootstrap.Noticef("Bootstrap is ready")
+	bootstrap.Noticef("listening for connections on %s", net.JoinHostPort(opts.Host, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)))
+	bootstrap.Noticef("bootstrap is ready")
 
 	bootstrap.mu.Lock()
 	if opts.Port == 0 {
@@ -172,7 +172,7 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 
 	bootstrap.contextTable[addr] = nctx
 	bootstrap.contextTableLock.Unlock()
-	bootstrap.Noticef("Connect listening on port: %s", addr)
+	bootstrap.Noticef("connect listening on port: %s", addr)
 	bootstrap.Noticef("client connections on %s", nctx.LocalAddr().String())
 
 	bootstrap.startGoRoutine(func() {
@@ -325,7 +325,7 @@ func (bootstrap *Bootstrap) handleConn(ctx Context) {
 		}
 	}
 
-	bootstrap.Debugf("Connect[%s] Exiting..", ctx.Addr())
+	bootstrap.Debugf("connect[%s] Exiting..", ctx.Addr())
 }
 
 func (bootstrap *Bootstrap) startGoRoutine(fn func()) {

@@ -18,6 +18,15 @@ func NewMessageQueue() *MessageQueue {
 	return messageQueue
 }
 
+func NewDefaultMessageQueue(topic, brokerName string, queueId int) *MessageQueue {
+	messageQueue := &MessageQueue{
+		Topic:      topic,
+		BrokerName: brokerName,
+		QueueId:    queueId,
+	}
+	return messageQueue
+}
+
 func (mq MessageQueue) HashBytes() []byte {
 	return []byte(strconv.Itoa(mq.hashCode()))
 }
@@ -89,12 +98,12 @@ func (self MessageQueues) Len() int {
 }
 
 func (mq MessageQueue) ToString() string {
-	format := "MessageQueue [topic=%s, brokerName=%s, queueId=%d]"
+	format := "MessageQueue {topic=%s, brokerName=%s, queueId=%d}"
 	return fmt.Sprintf(format, mq.Topic, mq.BrokerName, mq.QueueId)
 }
 
 func (mq MessageQueue) Key() string {
-	return mq.Topic + "@" + mq.BrokerName + "@" + strconv.Itoa(mq.QueueId)
+	return fmt.Sprintf("%s@%s@%d", mq.Topic, mq.BrokerName, mq.QueueId)
 }
 
 func (mq MessageQueue) Equal(other MessageQueue) bool {

@@ -482,8 +482,7 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 	}
 
 	topicStatsTable := admin.NewTopicStatsTablePlus()
-
-	var writeQueueNums int = int(topicConfig.WriteQueueNums)
+	var writeQueueNums = int(topicConfig.WriteQueueNums)
 	for i := 0; i < writeQueueNums; i++ {
 		mq := message.NewMessageQueue()
 		mq.Topic = topic
@@ -509,11 +508,11 @@ func (abp *AdminBrokerProcessor) getTopicStatsInfo(ctx netm.Context, request *pr
 		topicOffset.MinOffset = min
 		topicOffset.MaxOffset = max
 		topicOffset.LastUpdateTimestamp = timestamp
-		mqKey := fmt.Sprintf("%s@%s@%d", mq.Topic, mq.BrokerName, mq.QueueId)
+		mqKey := mq.Key()
 		topicStatsTable.OffsetTable[mqKey] = topicOffset
 	}
 
-	content := stgcommon.Encode(topicStatsTable.OffsetTable)
+	content := topicStatsTable.CustomEncode(topicStatsTable)
 	response.Code = code.SUCCESS
 	response.Body = content
 	response.Remark = ""

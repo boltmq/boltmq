@@ -29,7 +29,7 @@ func NewBrokerHousekeepingService(controller *DefaultNamesrvController) netm.Con
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/6
 func (self *BrokerHousekeepingService) OnContextConnect(ctx netm.Context) {
-
+	logger.Info("BrokerHousekeepingService.OnContextConnect() handle request. %s", ctx.ToString())
 }
 
 // OnContextClose 关闭Channel,通知Topic路由管理器，清除无效Broker
