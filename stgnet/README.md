@@ -12,7 +12,14 @@ stgnet是smartgo中对网络层通讯的封装，包括协议封装、解包，�
 * 事件通知
 
 ### 设计
-![Alt text](http://wx3.sinaimg.cn/mw690/0065glrAgy1flbwj7e0k4j31kw0rqgrc.jpg)
+![Alt text](https://static.oschina.net/uploads/space/2017/1109/170119_u8FX_3724856.jpg)
+<img src="https://static.oschina.net/uploads/space/2017/1109/170119_u8FX_3724856.jpg" width="" height="" alt="SmartGo" align="center" />
+
+
+* 每个连接有单独的goroutine处理接收的报文。
+* 每个连接有单独的缓存队列和粘包处理，保证高可用的同时减少资源竞争。
+* 粘包后的数据采用多Goroutine处理，提高并发能力。
+* 使用对象池降低GC压力。
 
 ### 优化
 
