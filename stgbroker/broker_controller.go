@@ -225,7 +225,6 @@ func (self *BrokerController) Shutdown() {
 		logger.Info("RemotingServer shutdown successful")
 	}
 
-
 	if self.MessageStore != nil {
 		self.MessageStore.Shutdown()
 		logger.Info("MessageStore shutdown successful")
@@ -309,15 +308,13 @@ func (self *BrokerController) unRegisterBrokerAll() {
 // Since 2017/9/12
 func (self *BrokerController) RegisterBrokerAll(checkOrderConfig bool, oneway bool) {
 	//logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
-	topicConfigWrapper := self.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	if !self.BrokerConfig.HasWriteable() || !self.BrokerConfig.HasReadable() {
-		topicConfigTable := topicConfigWrapper.TopicConfigTable
 		self.TopicConfigManager.TopicConfigSerializeWrapper.TopicConfigTable.ForeachUpdate(func(topic string, topicConfig *stgcommon.TopicConfig) {
 			topicConfig.Perm = self.BrokerConfig.BrokerPermission
 		})
-		topicConfigWrapper.TopicConfigTable = topicConfigTable
 	}
 
+	topicConfigWrapper := self.TopicConfigManager.buildTopicConfigSerializeWrapper()
 	result := self.BrokerOuterAPI.RegisterBrokerAll(
 		self.BrokerConfig.BrokerClusterName,
 		self.GetBrokerAddr(),
