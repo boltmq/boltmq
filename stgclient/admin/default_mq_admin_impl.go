@@ -14,6 +14,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/subscription"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	set "github.com/deckarep/golang-set"
 	"strings"
 )
@@ -169,7 +170,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 }
 
 // 查看集群信息
-func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterInfo, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, error) {
 	return impl.mqClientInstance.MQClientAPIImpl.GetBrokerClusterInfo(timeoutMillis)
 }
 
@@ -427,19 +428,19 @@ func (impl *DefaultMQAdminExtImpl) QueryConsumeTimeSpan(topic, consumerGroupId s
 // cluster 如果参数cluster为空，则表示所有集群
 // return 清理是否成功
 func (impl *DefaultMQAdminExtImpl) CleanExpiredConsumerQueue(clusterName string) (result bool, err error) {
-	clusterInfo, err := impl.ExamineBrokerClusterInfo()
+	clusterPlusInfo, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return false, err
 	}
 	if clusterName == "" {
-		if clusterInfo == nil || clusterInfo.ClusterAddrTable == nil {
+		if clusterPlusInfo == nil || clusterPlusInfo.ClusterAddrTable == nil {
 			return false, nil
 		}
-		for targetCluster, _ := range clusterInfo.ClusterAddrTable {
-			result, err = impl.cleanExpiredConsumerQueueByCluster(clusterInfo, targetCluster)
+		for targetCluster, _ := range clusterPlusInfo.ClusterAddrTable {
+			result, err = impl.cleanExpiredConsumerQueueByCluster(clusterPlusInfo, targetCluster)
 		}
 	} else {
-		result, err = impl.cleanExpiredConsumerQueueByCluster(clusterInfo, clusterName)
+		result, err = impl.cleanExpiredConsumerQueueByCluster(clusterPlusInfo, clusterName)
 	}
 	return result, err
 }
@@ -447,7 +448,7 @@ func (impl *DefaultMQAdminExtImpl) CleanExpiredConsumerQueue(clusterName string)
 // cleanExpiredConsumerQueueByCluster 根据集群名称，清除过期的消费队列
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (impl *DefaultMQAdminExtImpl) cleanExpiredConsumerQueueByCluster(clusterInfo *body.ClusterInfo, clusterName string) (result bool, err error) {
+func (impl *DefaultMQAdminExtImpl) cleanExpiredConsumerQueueByCluster(clusterInfo *body.ClusterPlusInfo, clusterName string) (result bool, err error) {
 	if clusterInfo == nil {
 		return false, nil
 	}
@@ -720,12 +721,12 @@ func (impl *DefaultMQAdminExtImpl) FetchMasterAddrByClusterName(clusterName stri
 	}
 
 	brokerNameSet, ok := clusterInfoWrapper.ClusterAddrTable[clusterName]
-	if !ok || brokerNameSet == nil || brokerNameSet.Cardinality() == 0 {
+	if !ok || brokerNameSet == nil || len(brokerNameSet) == 0 {
 		logger.Error("[error] Make sure the specified clusterName exists or the nameserver which connected is correct.")
 		return masterSet, nil
 	}
-	for brokerName := range brokerNameSet.Iterator().C {
-		brokerData, ok := clusterInfoWrapper.BrokerAddrTable[brokerName.(string)]
+	for _, brokerName := range brokerNameSet {
+		brokerData, ok := clusterInfoWrapper.BrokerAddrTable[brokerName]
 		if ok && brokerData != nil && brokerData.BrokerAddrs != nil {
 			brokerAddr := brokerData.BrokerAddrs[stgcommon.MASTER_ID]
 			if brokerAddr != "" {
@@ -748,8 +749,12 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByClusterName(clusterName stri
 		return nil, err
 	}
 	if clusterInfoWrapper != nil && clusterInfoWrapper.ClusterAddrTable != nil {
-		brokerNameSet, ok := clusterInfoWrapper.ClusterAddrTable[clusterName]
-		if ok && brokerNameSet.Cardinality() > 0 {
+		brokerNames, ok := clusterInfoWrapper.ClusterAddrTable[clusterName]
+		if ok && len(brokerNames) > 0 {
+			brokerNameSet := set.NewSet()
+			for _, bn := range brokerNames {
+				brokerNameSet.Add(bn)
+			}
 			return brokerNameSet, nil
 		}
 	}
@@ -789,21 +794,21 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (str
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) GetAllClusterNames() ([]string, map[string]*route.BrokerData, error) {
-	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	clusterPlus, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return []string{}, nil, err
 	}
-	if clusterInfoWrapper == nil || clusterInfoWrapper.ClusterAddrTable == nil || len(clusterInfoWrapper.ClusterAddrTable) == 0 {
+	if clusterPlus == nil || clusterPlus.ClusterAddrTable == nil || len(clusterPlus.ClusterAddrTable) == 0 {
 		return []string{}, nil, fmt.Errorf("clusterInfoWrapper is nil, or clusterInfoWrapper.ClusterAddrTable is empty")
 	}
 
-	clusterNames := make([]string, len(clusterInfoWrapper.ClusterAddrTable))
-	brokerAddrTable := clusterInfoWrapper.BrokerAddrTable
+	clusterNames := make([]string, 0, len(clusterPlus.ClusterAddrTable))
+	brokerAddrTable := clusterPlus.BrokerAddrTable
 	if brokerAddrTable == nil {
 		brokerAddrTable = make(map[string]*route.BrokerData)
 	}
 
-	for clusterName, _ := range clusterInfoWrapper.ClusterAddrTable {
+	for clusterName, _ := range clusterPlus.ClusterAddrTable {
 		clusterNames = append(clusterNames, clusterName)
 	}
 	return clusterNames, brokerAddrTable, nil
@@ -813,6 +818,8 @@ func (impl *DefaultMQAdminExtImpl) GetAllClusterNames() ([]string, map[string]*r
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) GetClusterTopicWappers() ([]*body.TopicBrokerClusterWapper, error) {
+	defer utils.RecoveredFn()
+
 	result := make([]*body.TopicBrokerClusterWapper, 0)
 	clusterNames, brokerAddrTable, err := impl.GetAllClusterNames()
 	if err != nil {

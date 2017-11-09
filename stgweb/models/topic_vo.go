@@ -59,7 +59,8 @@ func ParseTopicType(topic string) TopicType {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 type TopicStats struct {
-	TopicClusterCommon
+	ClusterName    string    `json:"clusterName"`    // 集群名称
+	Topic          string    `json:"topic"`          // topic名称
 	TopicType      TopicType `json:"topicType"`      // topic类型
 	BrokerName     string    `json:"brokerName"`     // broker名称
 	QueueID        int       `json:"queueId"`        // 队列ID
@@ -117,15 +118,18 @@ func IsNormalTopic(topic string) bool {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type DeleteTopic struct {
-	TopicClusterCommon
+	ClusterName string    `json:"clusterName"` // 集群名称
+	Topic       string    `json:"topic"`       // topic名称
+	TopicType   TopicType `json:"topicType"`   // topic类型
 }
 
 // UpdateTopic 删除Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type UpdateTopic struct {
-	TopicCommon
-	TopicClusterCommon
+	ClusterName string    `json:"clusterName"` // 集群名称
+	Topic       string    `json:"topic"`       // topic名称
+	TopicType   TopicType `json:"topicType"`   // topic类型
 }
 
 // CreateTopic 创建Topic
@@ -166,16 +170,23 @@ func (createTopic *CreateTopic) customizeValidationErr(err error) error {
 	return err
 }
 
+// TopicVo 查询Topic列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
 type TopicVo struct {
-	TopicCommon *TopicCommon `json:"topicConfig"`
-	TopicClusterCommon
+	TopicConfigVo *TopicConfigVo `json:"topicConfig"`
+	ClusterName   string         `json:"clusterName"` // 集群名称
+	Topic         string         `json:"topic"`       // topic名称
+	TopicType     TopicType      `json:"topicType"`   // topic类型
 }
 
-// CreateTopic 创建Topic
+// TopicConfigVo topic配置项
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-type TopicCommon struct {
+type TopicConfigVo struct {
 	BrokerAddr     string `json:"brokerAddr"`     // broker地址
+	BrokerId       int    `json:"brokerId"`       // brokerid
+	BrokerName     string `json:"brokerName"`     // broker名称
 	WriteQueueNums int    `json:"writeQueueNums"` // 写队列数
 	Unit           bool   `json:"unit"`           // 是否为单元topic
 	ReadQueueNums  int    `json:"readQueueNums"`  // 读队列数
@@ -183,36 +194,36 @@ type TopicCommon struct {
 	Perm           int    `json:"perm"`           // 对应的broker读写权限
 }
 
-// TopicClusterCommon topic与cluster公共配置
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/7
-type TopicClusterCommon struct {
-	ClusterName string    `json:"clusterName"` // 集群名称
-	Topic       string    `json:"topic"`       // topic名称
-	TopicType   TopicType `json:"topicType"`   // topic类型
-}
-
-// NewTopicVo 初始化
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/8
-func NewTopicVo(cluserName, topic string) *TopicVo {
-	topicVo := &TopicVo{}
-	topicVo.TopicType = ParseTopicType(topic)
-	topicVo.Topic = topic
-	topicVo.ClusterName = cluserName
-	return topicVo
-}
-
 // ToTopicVo 转化为TopicVo
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func ToTopicVo(wapper *body.TopicBrokerClusterWapper) *TopicVo {
-	topicVo := NewTopicVo(wapper.ClusterName, wapper.TopicName)
-	topicVo.TopicCommon.Perm = wapper.TopicUpdateConfigWapper.Perm
-	topicVo.TopicCommon.BrokerAddr = wapper.TopicUpdateConfigWapper.BrokerAddr
-	topicVo.TopicCommon.WriteQueueNums = wapper.TopicUpdateConfigWapper.WriteQueueNums
-	topicVo.TopicCommon.ReadQueueNums = wapper.TopicUpdateConfigWapper.ReadQueueNums
-	topicVo.TopicCommon.Unit = wapper.TopicUpdateConfigWapper.Unit
-	topicVo.TopicCommon.Order = wapper.TopicUpdateConfigWapper.Order
+	topicVo := &TopicVo{}
+	topicVo.TopicType = ParseTopicType(wapper.TopicName)
+	topicVo.Topic = wapper.TopicName
+	topicVo.ClusterName =  wapper.ClusterName
+	topicVo.TopicConfigVo = new(TopicConfigVo)
+
+	topicVo.TopicConfigVo.Perm = wapper.TopicUpdateConfigWapper.Perm
+	topicVo.TopicConfigVo.BrokerAddr = wapper.TopicUpdateConfigWapper.BrokerAddr
+	topicVo.TopicConfigVo.WriteQueueNums = wapper.TopicUpdateConfigWapper.WriteQueueNums
+	topicVo.TopicConfigVo.ReadQueueNums = wapper.TopicUpdateConfigWapper.ReadQueueNums
+	topicVo.TopicConfigVo.Unit = wapper.TopicUpdateConfigWapper.Unit
+	topicVo.TopicConfigVo.Order = wapper.TopicUpdateConfigWapper.Order
+	topicVo.TopicConfigVo.BrokerName = wapper.TopicUpdateConfigWapper.BrokerName
+	topicVo.TopicConfigVo.BrokerId = wapper.TopicUpdateConfigWapper.BrokerId
 	return topicVo
+}
+
+// ToString 打印TopicVo结构体内容
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/9
+func (t *TopicVo) ToString() string {
+	if t == nil {
+		return fmt.Sprintf("TopicVo is nil")
+	}
+
+	format := "TopicVo {topic=%s, clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d, readQueueNums=%d, writeQueueNums=%d}"
+	return fmt.Sprintf(format, t.Topic, t.ClusterName, t.TopicConfigVo.BrokerName, t.TopicConfigVo.BrokerAddr, t.TopicConfigVo.BrokerId,
+		t.TopicConfigVo.ReadQueueNums, t.TopicConfigVo.WriteQueueNums)
 }

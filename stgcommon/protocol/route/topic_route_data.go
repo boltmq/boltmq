@@ -390,7 +390,7 @@ func (self *BrokerData) ToString() string {
 			brokerAddrs = append(brokerAddrs, brokerAddr)
 		}
 	}
-	format := "QueueData {brokerName:%s, brokerAddrs:%s}"
+	format := "BrokerData {brokerName:%s, brokerAddrs:%s}"
 	info := fmt.Sprintf(format, self.BrokerName, strings.Join(brokerAddrs, ","))
 	return info
 }
