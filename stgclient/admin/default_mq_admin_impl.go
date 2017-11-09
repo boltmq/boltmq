@@ -29,10 +29,9 @@ func (impl *DefaultMQAdminExtImpl) UpdateBrokerConfig(brokerAddr string, propert
 	return nil
 }
 
-// 向指定Broker创建或者更新Topic配置
-func (impl *DefaultMQAdminExtImpl) CreateAndUpdateTopicConfig(addr string, config *stgcommon.TopicConfig) error {
-	// TODO
-	return nil
+// 创建或更新Topic
+func (impl *DefaultMQAdminExtImpl) CreateAndUpdateTopicConfig(brokerAddr string, topicConfig *stgcommon.TopicConfig) error {
+	return impl.mqClientInstance.MQClientAPIImpl.CreateTopic(brokerAddr, stgcommon.DEFAULT_TOPIC, topicConfig, int(timeoutMillis))
 }
 
 // 向指定Broker创建或者更新订阅组配置
@@ -263,19 +262,29 @@ func (impl *DefaultMQAdminExtImpl) DeleteTopicInBroker(brokerAddrs set.Set, topi
 		brokerAddrs = set.NewSet()
 	}
 	for brokerAddr := range brokerAddrs.Iterator().C {
-		impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInBroker(brokerAddr.(string), topic, timeoutMillis)
+		err := impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInBroker(brokerAddr.(string), topic, timeoutMillis)
+		if err != nil {
+			logger.Errorf("delete topic from broker err: %s", err.Error())
+		} else {
+			logger.Warnf("delete topic from broker ok. brokerAddr: %s, topic: %s", brokerAddr.(string), topic)
+		}
 	}
 	return nil
 }
 
 // 删除 namesrv维护的topic信息
-func (impl *DefaultMQAdminExtImpl) DeleteTopicInNameServer(namesrvs set.Set, topic string) error {
-	if namesrvs == nil {
-		namesrvs = set.NewSet()
-		//TODO, 发送请求，最终调用TopAddressing.fetchNSAddr()获取最新的namesrv地址
+func (impl *DefaultMQAdminExtImpl) DeleteTopicInNameServer(namesrvSet set.Set, topic string) error {
+	if namesrvSet == nil {
+		namesrvSet = set.NewSet()
+		// TODO 发送HTTP请求，最终调用TopAddressing.fetchNSAddr()获取最新的namesrv地址
 	}
-	for namesrvAddr := range namesrvs.Iterator().C {
-		impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInNameServer(namesrvAddr.(string), topic, timeoutMillis)
+	for namesrvAddr := range namesrvSet.Iterator().C {
+		err := impl.mqClientInstance.MQClientAPIImpl.DeleteTopicInNameServer(namesrvAddr.(string), topic, timeoutMillis)
+		if err != nil {
+			logger.Errorf("delete topic from namesrv err: %s", err.Error())
+		} else {
+			logger.Warnf("delete topic from namesrv ok. namesrvAddr: %s, topic: %s", namesrvAddr.(string), topic)
+		}
 	}
 	return nil
 }
@@ -647,8 +656,7 @@ func (impl *DefaultMQAdminExtImpl) ViewBrokerStatsData(brokerAddr, statsName, st
 // newTopic 需新建的topic
 // queueNum 读写队列的数量
 func (impl *DefaultMQAdminExtImpl) CreateTopic(key, newTopic string, queueNum int) error {
-	impl.mqClientInstance.MQAdminImpl.CreateTopic(key, newTopic, queueNum, 0)
-	return nil
+	return impl.mqClientInstance.MQAdminImpl.CreateTopic(key, newTopic, queueNum, 0)
 }
 
 // 创建Topic
@@ -656,8 +664,7 @@ func (impl *DefaultMQAdminExtImpl) CreateTopic(key, newTopic string, queueNum in
 // newTopic 需新建的topic
 // queueNum 读写队列的数量
 func (impl *DefaultMQAdminExtImpl) CreateCustomTopic(brokerAddr string, topicConfig *stgcommon.TopicConfig) error {
-	impl.mqClientInstance.MQClientAPIImpl.CreateTopic(brokerAddr, stgcommon.DEFAULT_TOPIC, topicConfig, int(timeoutMillis))
-	return nil
+	return impl.mqClientInstance.MQClientAPIImpl.CreateTopic(brokerAddr, stgcommon.DEFAULT_TOPIC, topicConfig, int(timeoutMillis))
 }
 
 // 根据msgId查询消息消费结果

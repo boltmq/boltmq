@@ -3,13 +3,14 @@ package topicService
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
+	set "github.com/deckarep/golang-set"
+	"strings"
 	"sync"
 )
 
@@ -75,7 +76,27 @@ func (service *TopicService) GetAllList() (topicVos []*models.TopicVo, err error
 // UpdateTopicConfig 更新Topic配置信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
-func (service *TopicService) UpdateTopicConfig() error {
+func (service *TopicService) UpdateTopicConfig(topicVo *models.UpdateTopic) error {
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	custername, _, err := service.FindClusterByTopic(topicVo.Topic)
+	if err != nil || custername == "" {
+		return fmt.Errorf("Topic名称 %s 不存在 ", topicVo.Topic)
+	}
+
+	masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(topicVo.ClusterName)
+	if err != nil {
+		return err
+	}
+	if masterSet == nil || masterSet.Cardinality() == 0 {
+		return fmt.Errorf("masterSet is empty, update topic failed")
+	}
+	for brokerAddr := range masterSet.Iterator().C {
+		defaultMQAdminExt.CreateAndUpdateTopicConfig(brokerAddr.(string), topicVo.ToTopicConfig())
+	}
 	return nil
 }
 
@@ -83,17 +104,15 @@ func (service *TopicService) UpdateTopicConfig() error {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (service *TopicService) DeleteTopic(topic, clusterName string) error {
-	return nil
-}
-
-// CreateTopic 创建Topic
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/6
-func (service *TopicService) CreateTopic(topic, clusterName string) error {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
+
+	custername, _, err := service.FindClusterByTopic(topic)
+	if err != nil || custername == "" {
+		return fmt.Errorf("Topic名称 %s 不存在 ", topic)
+	}
 
 	masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(clusterName)
 	if err != nil {
@@ -102,17 +121,42 @@ func (service *TopicService) CreateTopic(topic, clusterName string) error {
 	if masterSet == nil || masterSet.Cardinality() == 0 {
 		return fmt.Errorf("masterSet is empty, create topic failed. topic=%s, clusterName=%s", topic, clusterName)
 	}
+	logger.Infof("delete topic from broker. topic=%s, clusterName=%s, masterSet=%s", topic, clusterName, masterSet.String())
+	defaultMQAdminExt.DeleteTopicInBroker(masterSet, topic)
 
-	queueNum := int32(8)
-	perm := constant.PERM_READ | constant.PERM_WRITE
-	for brokerAddr := range masterSet.Iterator().C {
-		topicConfig := stgcommon.NewDefaultTopicConfig(topic, queueNum, queueNum, perm, stgcommon.SINGLE_TAG)
-		err = defaultMQAdminExt.CreateCustomTopic(brokerAddr.(string), topicConfig)
-		if err != nil {
-			return fmt.Errorf("create topic[%s] err: %s", topic, err.Error())
+	if !stgcommon.IsEmpty(service.ConfigureInitializer.GetNamesrvAddr()) {
+		namesrvAddrs := strings.Split(service.ConfigureInitializer.GetNamesrvAddr(), ";")
+		if namesrvAddrs != nil && len(namesrvAddrs) > 0 {
+			nameServerSet := set.NewSet()
+			for _, namesrvAddr := range namesrvAddrs {
+				nameServerSet.Add(namesrvAddr)
+			}
+			logger.Infof("delete topic from namesrv. topic=%s, clusterName=%s, nameServerSet=%s", topic, clusterName, nameServerSet.String())
+			defaultMQAdminExt.DeleteTopicInNameServer(nameServerSet, topic)
 		}
 	}
+	return nil
+}
 
+// CreateTopic 创建Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func (service *TopicService) CreateTopic(t *models.CreateTopic) error {
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(t.ClusterName)
+	if err != nil {
+		return err
+	}
+	if masterSet == nil || masterSet.Cardinality() == 0 {
+		return fmt.Errorf("masterSet is empty, create topic failed. topic=%s, clusterName=%s", t.Topic, t.ClusterName)
+	}
+	for brokerAddr := range masterSet.Iterator().C {
+		defaultMQAdminExt.CreateCustomTopic(brokerAddr.(string), t.ToTopicConfig())
+	}
 	return nil
 }
 
