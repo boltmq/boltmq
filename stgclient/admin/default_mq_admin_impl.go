@@ -125,13 +125,13 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerRuntimeStats(brokerAddr string) (*
 }
 
 // 查询消费进度
-func (impl *DefaultMQAdminExtImpl) ExamineConsumeStats(consumerGroup string) (*admin.ConsumeTmpStats, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineConsumeStats(consumerGroup string) (*admin.ConsumeStats, error) {
 	return impl.ExamineConsumeStatsByTopic(consumerGroup, "")
 }
 
 // 基于Topic查询消费进度
-func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeTmpStats, error) {
-	result := admin.NewConsumeTmpStats()
+func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeStats, error) {
+	result := admin.NewConsumeStats()
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {

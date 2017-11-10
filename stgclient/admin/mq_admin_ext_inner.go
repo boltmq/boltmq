@@ -54,10 +54,10 @@ type MQAdminExtInner interface {
 	FetchBrokerRuntimeStats(brokerAddr string) (*body.KVTable, error)
 
 	// 查询消费进度
-	ExamineConsumeStats(consumerGroup string) (*admin.ConsumeTmpStats, error)
+	ExamineConsumeStats(consumerGroup string) (*admin.ConsumeStats, error)
 
 	// 基于Topic查询消费进度
-	ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeTmpStats, error)
+	ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeStats, error)
 
 	// 查看集群信息
 	ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, error)

@@ -1,6 +1,7 @@
 package groupGervice
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
@@ -138,13 +139,21 @@ func (service *GroupService) ConsumeProgress(topic, consumerGroupId string) (*mo
 	defer defaultMQAdminExt.Shutdown()
 
 	consumerProgress := new(models.ConsumerProgress)
-	consumeTmpStats, err := defaultMQAdminExt.ExamineConsumeStatsByTopic(consumerGroupId, topic)
+	consumeStats, err := defaultMQAdminExt.ExamineConsumeStats(consumerGroupId)
 	if err != nil {
 		return consumerProgress, err
 	}
-
-	if consumeTmpStats != nil {
-
+	if consumeStats == nil || consumeStats.OffsetTable == nil || len(consumeStats.OffsetTable) == 0 {
+		return consumerProgress, nil
 	}
+
+	var mqList []*message.MessageQueue
+	for mq, offsetWapper := range consumeStats.OffsetTable {
+		mqList = append(mqList, mq)
+		if offsetWapper == nil {
+
+		}
+	}
+
 	return consumerProgress, nil
 }

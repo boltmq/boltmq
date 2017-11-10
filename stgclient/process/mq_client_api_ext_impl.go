@@ -143,9 +143,9 @@ func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeout
 				return nil, fmt.Errorf("handle TopicStatsTable.OffsetTable.key[%s] failed", key)
 			}
 
-			topic = mqPlus[0]
+			topicPlus := mqPlus[0]
 			if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
-				topic = stgclient.ClearProjectGroup(mqPlus[0], impl.ProjectGroupPrefix)
+				topicPlus = stgclient.ClearProjectGroup(mqPlus[0], impl.ProjectGroupPrefix)
 			}
 
 			brokerName := mqPlus[1]
@@ -155,7 +155,7 @@ func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeout
 				return nil, err
 			}
 
-			mqOld := message.NewDefaultMessageQueue(topic, brokerName, queueId)
+			mqOld := message.NewDefaultMessageQueue(topicPlus, brokerName, queueId)
 			newTopicOffsetMap[mqOld] = topicOffset
 		}
 	}
@@ -168,7 +168,7 @@ func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeout
 // GetConsumeStats 查询消费者状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic string, timeoutMillis int64) (*admin.ConsumeTmpStats, error) {
+func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic string, timeoutMillis int64) (*admin.ConsumeStats, error) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
@@ -187,31 +187,53 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
-	consumeStats := admin.NewConsumeTmpStats()
+	consumeStats := admin.NewConsumeStats()
+	consumeStatsPlus := admin.NewConsumeStatsPlus()
+
 	content := response.Body
 	if content == nil || len(content) == 0 {
 		return consumeStats, nil
 	}
 
-	err = consumeStats.CustomDecode(content, consumeStats)
+	err = consumeStatsPlus.CustomDecode(content, consumeStatsPlus)
 	if err != nil {
-		return nil, err
+		return consumeStats, err
 	}
-	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumeStats.OffsetTable != nil {
-		newTopicOffsetMap := make(map[message.MessageQueue]admin.OffsetWrapper)
-		for key, value := range consumeStats.OffsetTable {
-			key.Topic = stgclient.ClearProjectGroup(key.Topic, impl.ProjectGroupPrefix)
-			newTopicOffsetMap[key] = value
+
+	consumeStatsMap := make(map[*message.MessageQueue]*admin.OffsetWrapper)
+	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumeStatsPlus.OffsetTable != nil {
+		for key, topicOffset := range consumeStatsPlus.OffsetTable {
+			mqPlus := strings.Split(key, "@")
+			if len(mqPlus) != 3 {
+				return nil, fmt.Errorf("handle ConsumeStatsPlus.OffsetTable.key[%s] failed", key)
+			}
+
+			topicPlus := mqPlus[0]
+			if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
+				topicPlus = stgclient.ClearProjectGroup(mqPlus[0], impl.ProjectGroupPrefix)
+			}
+
+			brokerName := mqPlus[1]
+			queueId, err := strconv.Atoi(mqPlus[2])
+			if err != nil {
+				logger.Errorf("convert queueId err: %s, source: %s", err.Error(), key)
+				return nil, err
+			}
+
+			mqOld := message.NewDefaultMessageQueue(topicPlus, brokerName, queueId)
+			consumeStatsMap[mqOld] = topicOffset
 		}
-		consumeStats.OffsetTable = newTopicOffsetMap
 	}
+
+	consumeStats.OffsetTable = consumeStatsMap
+	consumeStats.ConsumeTps = consumeStatsPlus.ConsumeTps
 	return consumeStats, nil
 }
 
 // GetConsumeStats 查询消费者状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumeStats(brokerAddr, consumerGroup string, timeoutMillis int64) (*admin.ConsumeTmpStats, error) {
+func (impl *MQClientAPIImpl) GetConsumeStats(brokerAddr, consumerGroup string, timeoutMillis int64) (*admin.ConsumeStats, error) {
 	return impl.GetConsumeStatsByTopic(brokerAddr, consumerGroup, "", timeoutMillis)
 }
 
