@@ -132,7 +132,11 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStats(consumerGroup string) (*a
 // 基于Topic查询消费进度
 func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeStats, error) {
 	result := admin.NewConsumeStats()
+
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
+	if topic != "" {
+		retryTopic = topic
+	}
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {
 		return result, err
@@ -170,7 +174,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterPlus
 
 // 查看Topic路由信息
 func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error) {
-	return impl.mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, timeoutMillis), nil
+	return impl.mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, timeoutMillis)
 }
 
 // 查看Consumer网络连接、订阅关系
@@ -606,15 +610,13 @@ func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGro
 	}
 
 	for mq, offsetwapper := range cstats.OffsetTable {
-		// mq != nil && mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId
-		if mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId {
+		if mq != nil && mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId {
 			if brokerData, ok := ci.BrokerAddrTable[mq.BrokerName]; ok && brokerData != nil {
 				if brokerAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]; ok && brokerAddr != "" {
 					format := "brokerAddr=%s, msg.StoreHost=%s, offsetwapper.ConsumerOffset=%d, msg.QueueOffset=%d"
 					logger.Infof(format, brokerAddr, msg.StoreHost, offsetwapper.ConsumerOffset, msg.QueueOffset)
 					if brokerAddr == msg.StoreHost {
-						//  offsetwapper != nil && offsetwapper.ConsumerOffset > msg.QueueOffset
-						if offsetwapper.ConsumerOffset > msg.QueueOffset {
+						if offsetwapper != nil && offsetwapper.ConsumerOffset > msg.QueueOffset {
 							return true, nil
 						}
 					}

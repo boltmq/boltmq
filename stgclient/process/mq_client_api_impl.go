@@ -95,7 +95,7 @@ func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string
 	if response != nil && err == nil {
 		switch response.Code {
 		case code.TOPIC_NOT_EXIST:
-			logger.Warnf("get Topic [%v] RouteInfoFromNameServer is not exist value", topic)
+			logger.Warnf("GetDefaultTopicRouteInfoFromNameServer topic [%v] is not exist value", topic)
 		case code.SUCCESS:
 			body := response.Body
 			if len(body) > 0 {
@@ -110,7 +110,6 @@ func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string
 		default:
 			logger.Errorf("response code=%v,remark=%v", response.Code, response.Remark)
 			panic(response.Remark)
-
 		}
 	} else {
 		logger.Errorf("GetDefaultTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
@@ -118,7 +117,7 @@ func (impl *MQClientAPIImpl) GetDefaultTopicRouteInfoFromNameServer(topic string
 	return nil
 }
 
-func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) *route.TopicRouteData {
+func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeoutMillis int64) (*route.TopicRouteData, error) {
 	topicWithProjectGroup := topic
 	if !strings.EqualFold(impl.ProjectGroupPrefix, "") {
 		topicWithProjectGroup = stgclient.BuildWithProjectGroup(topic, impl.ProjectGroupPrefix)
@@ -128,31 +127,34 @@ func (impl *MQClientAPIImpl) GetTopicRouteInfoFromNameServer(topic string, timeo
 	request := protocol.CreateRequestCommand(code.GET_ROUTEINTO_BY_TOPIC, requestHeader)
 
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
-	if response != nil {
-		switch response.Code {
-		case code.TOPIC_NOT_EXIST:
-			logger.Errorf("get Topic [%s] RouteInfoFromNameServer is not exist value. %s", topic, response.ToString())
-			return nil
-		case code.SUCCESS:
-			content := response.Body
-			if len(content) > 0 {
-				topicRouteData := &route.TopicRouteData{}
-				err := topicRouteData.Decode(content)
-				if err != nil {
-					logger.Errorf("topicRouteData.Decode err: %s, body: %s", err.Error(), string(content))
-					return nil
-				}
-				return topicRouteData
-			}
-		default:
-			logger.Errorf("%s", response.ToString())
-			//panic(response.Remark) // 新topic，client启动启动后第一次消费，获取不到重试队列topic的路由信息
-		}
-
-	} else {
-		logger.Errorf("GetTopicRouteInfoFromNameServer topic=%v error=%v", topic, err.Error())
+	if err != nil {
+		return nil, fmt.Errorf("GetTopicRouteInfoFromNameServer topic[%s] err: %s", topic, err.Error())
 	}
-	return nil
+	if response == nil {
+		return nil, fmt.Errorf("GetTopicRouteInfoFromNameServer topic[%s] failed. the response is empty", topic)
+	}
+	if response.Code == code.TOPIC_NOT_EXIST {
+		logger.Errorf("GetTopicRouteInfoFromNameServer not return success. %s", response.ToString())
+		return nil, fmt.Errorf("get Topic [%s] RouteInfoFromNameServer is not exist value", topic)
+	}
+	if response.Code != code.SUCCESS {
+		logger.Errorf("GetTopicRouteInfoFromNameServer other: %s", response.ToString())
+		//panic(response.Remark) // 新topic，client启动启动后第一次消费，获取不到重试队列topic的路由信息
+	}
+
+	content := response.Body
+	if content == nil || len(content) == 0 {
+		return nil, fmt.Errorf("GetTopicRouteInfoFromNameServer topic[%s] failed. response.body is empty", topic)
+	}
+
+	topicRouteData := route.NewTopicRouteData()
+	err = topicRouteData.Decode(content)
+	if err != nil {
+		logger.Errorf("topicRouteData.Decode err: %s, body: %s", err.Error(), string(content))
+		return nil, fmt.Errorf("topicRouteData.Decode err: %s", err.Error())
+	}
+
+	return topicRouteData, nil
 }
 
 func (impl *MQClientAPIImpl) SendMessage(addr string, brokerName string, msg *message.Message, requestHeader header.SendMessageRequestHeader,

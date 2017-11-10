@@ -6,6 +6,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/topicService"
+	"sort"
 	"sync"
 )
 
@@ -125,8 +126,41 @@ func (service *GroupService) QueryConsumerGroupId(topic string) ([]string, error
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
 func (service *GroupService) ConsumeProgressByPage(topic, clusterName, consumerGroupId string, limit, offset int) (*models.ConsumerProgress, error) {
+	progress, err := service.ConsumeProgress(topic, consumerGroupId)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	data := service.consumeProgressPaging(progress.Total, limit, offset, progress.Data)
+	progress.Data = data
+	return progress, nil
+}
+
+// connectionOnlineListPaging 分页获取
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/7/14
+func (service *GroupService) consumeProgressPaging(total int64, limit, offset int, list []*models.ConsumerGroup) []*models.ConsumerGroup {
+	if total <= int64(limit) {
+		// 数据条数 <= 前端每页显示的总条数，则直接返回，不做分页处理
+		return list
+	}
+
+	// 处理分页
+	var dataList []*models.ConsumerGroup
+	end := offset + limit - 1
+	for i, data := range list {
+		if i < offset {
+			continue
+		}
+
+		dataList = append(dataList, data)
+
+		if i >= end {
+			break
+		}
+	}
+
+	return dataList
 }
 
 // ConsumeProgress 查询消费进度
@@ -139,7 +173,7 @@ func (service *GroupService) ConsumeProgress(topic, consumerGroupId string) (*mo
 	defer defaultMQAdminExt.Shutdown()
 
 	consumerProgress := new(models.ConsumerProgress)
-	consumeStats, err := defaultMQAdminExt.ExamineConsumeStats(consumerGroupId)
+	consumeStats, err := defaultMQAdminExt.ExamineConsumeStatsByTopic(consumerGroupId, topic)
 	if err != nil {
 		return consumerProgress, err
 	}
@@ -147,13 +181,29 @@ func (service *GroupService) ConsumeProgress(topic, consumerGroupId string) (*mo
 		return consumerProgress, nil
 	}
 
-	var mqList []*message.MessageQueue
-	for mq, offsetWapper := range consumeStats.OffsetTable {
-		mqList = append(mqList, mq)
-		if offsetWapper == nil {
-
-		}
+	mqList := make(message.MessageQueues, len(consumeStats.OffsetTable))
+	index := 0
+	for mq, _ := range consumeStats.OffsetTable {
+		mqList[index] = mq
+		index++
 	}
+	sort.Sort(mqList)
 
+	var (
+		groupVoList []*models.ConsumerGroup
+		total       int64
+		diffTotal   int64
+		consumeTps  float64
+	)
+	for _, mq := range mqList {
+		wapper, _ := consumeStats.OffsetTable[mq]
+		groupVo, diff := models.ToConsumerGroup(mq, wapper)
+		diffTotal += diff
+		groupVoList = append(groupVoList, groupVo)
+	}
+	consumeTps = float64(consumeStats.ConsumeTps)
+	total = int64(len(groupVoList))
+
+	consumerProgress = models.NewConsumerProgress(groupVoList, total, diffTotal, consumerGroupId, consumeTps)
 	return consumerProgress, nil
 }

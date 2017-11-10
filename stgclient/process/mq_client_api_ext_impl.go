@@ -201,7 +201,7 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 	}
 
 	consumeStatsMap := make(map[*message.MessageQueue]*admin.OffsetWrapper)
-	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumeStatsPlus.OffsetTable != nil {
+	if consumeStatsPlus.OffsetTable != nil {
 		for key, topicOffset := range consumeStatsPlus.OffsetTable {
 			mqPlus := strings.Split(key, "@")
 			if len(mqPlus) != 3 {
