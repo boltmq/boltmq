@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"encoding/binary"
 	"sync/atomic"
+	"sync"
 )
 
 const (
@@ -23,6 +24,7 @@ type ReadSocketService struct {
 	processPosition   int32
 	lastReadTimestamp int64
 	stoped            bool
+	mutex             *sync.Mutex
 }
 
 func NewReadSocketService(connection *net.TCPConn, haConnection *HAConnection) *ReadSocketService {
@@ -33,6 +35,7 @@ func NewReadSocketService(connection *net.TCPConn, haConnection *HAConnection) *
 		processPosition:   0,
 		lastReadTimestamp: time.Now().UnixNano() / 1000000,
 		stoped:            false,
+		mutex:             new(sync.Mutex),
 	}
 }
 
@@ -78,6 +81,9 @@ func (self *ReadSocketService) destroy() {
 }
 
 func (self *ReadSocketService) processReadEvent() bool {
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+
 	readSizeZeroTimes := 0
 
 	if self.byteBufferRead.Len() == 0 {
