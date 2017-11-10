@@ -165,3 +165,10 @@ func (service *ConnectionService) connectionOnlineListPaging(total int64, limit,
 	}
 	return dataList
 }
+
+// ConnectionDetail 查询在线消费进程、在线生产进程的详情
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func (service *ConnectionService) ConnectionDetail(clusterName, searchTopic string, limit, offset int) (*models.ConnectionDetail, error) {
+	return &models.ConnectionDetail{}, nil
+}
