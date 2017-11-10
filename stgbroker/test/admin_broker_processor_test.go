@@ -467,7 +467,6 @@ func TestGetConsumeStats(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	// TODO json.Encode error:json: unsupported type: map[*message.MessageQueue]*admin.OffsetWrapper
 	if response.Body == nil || len(string(response.Body)) <= 0 {
 		t.Fail()
 		t.Error("获得消费者的统计信息失败")
