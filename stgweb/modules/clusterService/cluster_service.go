@@ -2,6 +2,7 @@ package clusterService
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
+	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"sync"
 )
@@ -40,18 +41,20 @@ func NewClusterService() *ClusterService {
 // GetCluserNames 查询所有集群名称
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/8
-func (service *ClusterService) GetCluserNames() ([]string, error) {
+func (service *ClusterService) GetCluserNames() (*models.ClusterList, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
+	clusterList := &models.ClusterList{}
 	clusterNames, _, err := defaultMQAdminExt.GetAllClusterNames()
 	if err != nil {
-		return []string{}, err
+		return &models.ClusterList{}, err
 	}
 
-	return clusterNames, nil
+	clusterList.ClusterNames = clusterNames
+	return clusterList, nil
 }
 
 // GetNamesrvNodes 获取namesrv节点列表

@@ -33,7 +33,7 @@ func (service *TopicService) GetTopicByParam(topicType int, prefix string, srcTo
 	}
 	if topicType == int(models.ALL_TOPIC) {
 		for _, t := range srcTopics {
-			if strings.EqualFold(prefix, "") || strings.HasPrefix(t.Topic, prefix) {
+			if prefix == "" || strings.Contains(t.Topic, prefix) {
 				destTopics = append(destTopics, t)
 			}
 		}
@@ -42,7 +42,7 @@ func (service *TopicService) GetTopicByParam(topicType int, prefix string, srcTo
 
 	for _, t := range srcTopics {
 		tType := models.ParseTopicType(t.Topic)
-		if (strings.EqualFold(prefix, "") || strings.HasPrefix(t.Topic, prefix)) && topicType == int(tType) {
+		if (prefix == "" || strings.Contains(t.Topic, prefix)) && topicType == int(tType) {
 			// 过滤指定类型的topic
 			destTopics = append(destTopics, t)
 		}

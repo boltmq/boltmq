@@ -30,7 +30,7 @@ type ClusterGeneralVo struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type ClusterList struct {
-	ClusterName string `json:"clusterName"`
+	ClusterNames []string `json:"clusterNames"`
 }
 
 type ResultVo struct {
