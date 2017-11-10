@@ -68,7 +68,7 @@ type ConsumerConnectionVo struct {
 	ClientAddr          string                 `json:"clientAddr"`          // 消费者客户端地址
 	Language            string                 `json:"language"`            // 客户端语言
 	Version             int                    `json:"version"`             // mq版本号
-	ConsumeTps          int64                  `json:"consumeTps"`          // 实时消费Tps
+	ConsumeTps          float64                `json:"consumeTps"`          // 实时消费Tps
 	ConsumeFromWhere    string                 `json:"consumeFromWhere"`    // 从哪里开始消费
 	ConsumeType         string                 `json:"consumeType"`         // 消费类型(主动、被动)
 	DiffTotal           int64                  `json:"diffTotal"`           // 消息堆积总数
@@ -85,10 +85,57 @@ type SubscribeTopicTable struct {
 	SubVersion      int64    `json:"subVersion"`
 }
 
-func ToSubscribeTopicTable(subscribeData *heartbeat.SubscriptionData) *SubscribeTopicTable {
+// ToSubscribeTopicTable 转化单个SubscriptionData
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func ToSubscribeTopicTable(data *heartbeat.SubscriptionData) *SubscribeTopicTable {
 	subscribeTopicTable := &SubscribeTopicTable{
-		Topic:     subscribeData.Topic,
-		SubString: subscribeData.SubString,
+		Topic:           data.Topic,
+		SubString:       data.SubString,
+		ClassFilterMode: data.ClassFilterMode,
+		SubVersion:      int64(data.SubVersion),
+		//TagsSet:         data.TagsSet,
+		//CodeSet:         data.CodeSet,
 	}
 	return subscribeTopicTable
+}
+
+// ToSubscribeTopicTables 消费者订阅Topic列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/7/14
+func ToSubscribeTopicTables(cc *body.ConsumerConnection) (subscribeTables []*SubscribeTopicTable) {
+	subscribeTables = make([]*SubscribeTopicTable, 0)
+	for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
+		_, value, _ := itor.Next()
+		if data, ok := value.(*heartbeat.SubscriptionData); ok && data != nil {
+			subscribeTable := &SubscribeTopicTable{
+				Topic:           data.Topic,
+				SubString:       data.SubString,
+				ClassFilterMode: data.ClassFilterMode,
+				SubVersion:      int64(data.SubVersion),
+				//TagsSet:         data.TagsSet,
+				//CodeSet:         data.CodeSet,
+			}
+			subscribeTables = append(subscribeTables, subscribeTable)
+		}
+	}
+	return subscribeTables
+}
+
+// ToConsumerConnectionVo 转化为消费进程对象
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/7/14
+func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnection, progress *ConsumerProgress, consumerGroupId string) *ConsumerConnectionVo {
+	consumerConnectionVo := &ConsumerConnectionVo{
+		ConsumerGroupId:     consumerGroupId,
+		ClientId:            c.ClientId,
+		ClientAddr:          c.ClientAddr,
+		ConsumeTps:          progress.Tps,
+		DiffTotal:           progress.DiffTotal,
+		ConsumeFromWhere:    cc.ConsumeFromWhere.ToString(),
+		ConsumeType:         cc.ConsumeType.ToString(),
+		MessageModel:        cc.MessageModel.ToString(),
+		SubscribeTopicTable: ToSubscribeTopicTables(cc), // 订阅Topic列表
+	}
+	return consumerConnectionVo
 }

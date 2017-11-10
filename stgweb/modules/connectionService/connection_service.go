@@ -2,9 +2,11 @@ package connectionService
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
+	"git.oschina.net/cloudzone/smartgo/stgweb/modules/groupGervice"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/topicService"
 	"strings"
 	"sync"
@@ -21,6 +23,7 @@ var (
 type ConnectionService struct {
 	*modules.AbstractService
 	TopicServ *topicService.TopicService
+	GroupServ *groupGervice.GroupService
 }
 
 // Default 返回默认唯一处理对象
@@ -40,6 +43,7 @@ func NewConnectionService() *ConnectionService {
 	return &ConnectionService{
 		AbstractService: modules.Default(),
 		TopicServ:       topicService.Default(),
+		GroupServ:       groupGervice.Default(),
 	}
 }
 
@@ -125,7 +129,7 @@ func (service *ConnectionService) sumOnlineConsumerNums(topic string) ([]string,
 
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
-			consumerConnection, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId)
+			consumerConnection, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 			if err != nil {
 				logger.Errorf("query consumerConnection err: %s.  consumerGroupId=%s", err.Error(), groupId)
 				// return consumerGroupIdList, consumerNums, err // ingore
@@ -170,5 +174,61 @@ func (service *ConnectionService) connectionOnlineListPaging(total int64, limit,
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
 func (service *ConnectionService) ConnectionDetail(clusterName, searchTopic string, limit, offset int) (*models.ConnectionDetail, error) {
-	return &models.ConnectionDetail{}, nil
+
+	connectionDetail := new(models.ConnectionDetail)
+	connectionDetail.ConsumerOnLine = new(models.ConsumerOnLine)
+	consumerConnectionVos, err := service.queryOnlineConsumer(clusterName, searchTopic)
+	if err != nil {
+		connectionDetail.ConsumerOnLine.Describe = err.Error()
+	}
+	connectionDetail.ConsumerOnLine.Connection = consumerConnectionVos
+	connectionDetail.ConsumerOnLine.Topic = searchTopic
+	connectionDetail.ConsumerOnLine.ClusterName = clusterName
+	return connectionDetail, nil
+}
+
+// queryOnlineConsumer 查询在线消费进程详情
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func (service *ConnectionService) queryOnlineConsumer(clusterName, topic string) ([]*models.ConsumerConnectionVo, error) {
+	defer utils.RecoveredFn()
+	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
+	defaultMQAdminExt.Start()
+	defer defaultMQAdminExt.Shutdown()
+
+	result := make([]*models.ConsumerConnectionVo, 0)
+
+	groupList, err := defaultMQAdminExt.QueryTopicConsumeByWho(topic)
+	if err != nil {
+		return result, err
+	}
+	if groupList == nil || groupList.GroupList == nil || groupList.GroupList.Cardinality() == 0 {
+		return result, nil
+	}
+
+	for itor := range groupList.GroupList.Iterator().C {
+		if groupId, ok := itor.(string); ok {
+			cc, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
+			if err != nil {
+				logger.Errorf("query consumerConnection err: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
+				return result, err
+			}
+
+			progress, err := service.GroupServ.ConsumeProgress(topic, groupId)
+			if err != nil {
+				logger.Errorf("query consumerProgress err: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
+				return result, err
+			}
+
+			if cc != nil && cc.ConnectionSet != nil {
+				for itor := range cc.ConnectionSet.Iterator().C {
+					if c, ok := itor.(*body.Connection); ok {
+						consumerConnectionVo := models.ToConsumerConnectionVo(c, cc, progress, groupId)
+						result = append(result, consumerConnectionVo)
+					}
+				}
+			}
+		}
+	}
+	return result, nil
 }

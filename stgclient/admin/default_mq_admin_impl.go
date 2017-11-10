@@ -178,9 +178,12 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.T
 }
 
 // 查看Consumer网络连接、订阅关系
-func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup string) (*body.ConsumerConnection, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnection, error) {
 	result := body.NewConsumerConnection()
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
+	if topic != "" {
+		retryTopic = topic
+	}
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {
 		return result, err
@@ -527,7 +530,7 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 	for itor := range groupList.GroupList.Iterator().C {
 		if consumerGroupId, ok := itor.(string); ok {
 			messageTrack := track.NewMessageTrack(consumerGroupId)
-			consumerConnection, err := impl.ExamineConsumerConnectionInfo(consumerGroupId)
+			consumerConnection, err := impl.ExamineConsumerConnectionInfo(consumerGroupId, msg.Topic)
 			if err != nil {
 				messageTrack.Code = code.SYSTEM_ERROR
 				messageTrack.ExceptionDesc = err.Error()

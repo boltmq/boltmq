@@ -13,10 +13,10 @@ type MessageBodyVo struct {
 	MsgId   string `json:"msgId"`   // 消息ID
 }
 
-// ConsumeConnectionVo 消费进程列表
+// ConnectionVo 消费进程列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-type ConsumeConnectionVo struct {
+type ConnectionVo struct {
 	IP  string `json:"ip"`  // 消费进程所在的服务器IP
 	PID int64  `json:"pid"` // 进程pid
 }
@@ -25,9 +25,9 @@ type ConsumeConnectionVo struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type ConsumeTrackVo struct {
-	Connection      []*ConsumeConnectionVo `json:"connection"`
-	ConsumerGroupId string                 `json:"consumerGroupId"` // 消费组ID
-	Code            int                    `json:"code"`            // 消息消费结果 0:消费成功, 1:失败
+	Connection      []*ConnectionVo `json:"connection"`
+	ConsumerGroupId string          `json:"consumerGroupId"` // 消费组ID
+	Code            int             `json:"code"`            // 消息消费结果 0:消费成功, 1:失败
 }
 
 // ProduceTrackVo 消费轨迹-生产节点
