@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type BrokerRole int
 
 const (
@@ -8,7 +10,13 @@ const (
 	SLAVE                          // Slave
 )
 
-func (brokerRole BrokerRole) BrokerRoleString() string {
+var patternBrokerRole = map[string]BrokerRole{
+	"ASYNC_MASTER": ASYNC_MASTER,
+	"SYNC_MASTER":  SYNC_MASTER,
+	"SLAVE":        SLAVE,
+}
+
+func (brokerRole BrokerRole) ToString() string {
 	switch brokerRole {
 	case ASYNC_MASTER:
 		return "ASYNC_MASTER"
@@ -19,4 +27,11 @@ func (brokerRole BrokerRole) BrokerRoleString() string {
 	default:
 		return "Unknow"
 	}
+}
+
+func ParseBrokerRole(desc string) (BrokerRole, error) {
+	if brokerRole, ok := patternBrokerRole[desc]; ok {
+		return brokerRole, nil
+	}
+	return -1, fmt.Errorf("ParseBrokerRole failed. unknown match '%s' to BrokerRole", desc)
 }
