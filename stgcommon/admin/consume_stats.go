@@ -32,3 +32,20 @@ func (stats *ConsumeStats) ComputeTotalDiff() int64 {
 	}
 	return diffTotal
 }
+
+// OffsetWrapper 消费者统计
+// Author rongzhihong
+// Since 2017/9/19
+type ConsumeStatsPlus struct {
+	ConsumeTps  int64                     `json:"consumeTps"`
+	OffsetTable map[string]*OffsetWrapper `json:"offsetTable"` // key: Topic@BrokerName@QueueId
+}
+
+// NewConsumeStats 初始化
+// Author rongzhihong
+// Since 2017/9/19
+func NewConsumeStatsPlus() *ConsumeStatsPlus {
+	consumeStats := new(ConsumeStatsPlus)
+	consumeStats.OffsetTable = make(map[string]*OffsetWrapper)
+	return consumeStats
+}

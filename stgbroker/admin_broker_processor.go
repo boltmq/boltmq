@@ -615,7 +615,7 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 		logger.Error(err)
 	}
 
-	consumeStats := admin.NewConsumeStats()
+	consumeStats := admin.NewConsumeStatsPlus()
 
 	topics := set.NewSet()
 	if stgcommon.IsBlank(requestHeader.Topic) {
@@ -676,7 +676,8 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 					}
 				}
 
-				consumeStats.OffsetTable[mq] = offsetWrapper
+				mqKey := fmt.Sprintf("%s@%s@%d", mq.Topic, mq.BrokerName, mq.QueueId)
+				consumeStats.OffsetTable[mqKey] = offsetWrapper
 			}
 
 			consumeTps := abp.BrokerController.brokerStatsManager.TpsGroupGetNums(requestHeader.ConsumerGroup, topic)
