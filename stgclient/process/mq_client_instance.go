@@ -322,7 +322,11 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 		}
 
 	} else {
-		topicRouteData = mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
+		var err error
+		topicRouteData, err = mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
+		if err != nil {
+			logger.Errorf(err.Error())
+		}
 	}
 	if topicRouteData != nil {
 		old, _ := mqClientInstance.TopicRouteTable.Get(topic)

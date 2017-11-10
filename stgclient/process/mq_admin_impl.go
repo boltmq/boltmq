@@ -37,7 +37,10 @@ func (impl *MQAdminImpl) MaxOffset(mq *message.MessageQueue) int64 {
 }
 
 func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFlag int) error {
-	topicRouteData := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
+	topicRouteData, err := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(key, 1000*3)
+	if err != nil {
+		return err
+	}
 	if topicRouteData == nil {
 		format := "topicRouteData is nil, create topic failed. key=%s, newTopic=%s"
 		errMsg := fmt.Errorf(format, key, newTopic)
@@ -58,7 +61,7 @@ func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFla
 					Perm:           constant.PERM_READ | constant.PERM_WRITE,
 					TopicSysFlag:   topicSysFlag,
 				}
-				err := impl.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
+				err = impl.mQClientFactory.MQClientAPIImpl.CreateTopic(brokerAddr, key, topicConfig, 1000*3)
 				if err != nil {
 					fmt.Printf("%s\n", err.Error())
 				}
@@ -71,7 +74,10 @@ func (impl *MQAdminImpl) CreateTopic(key, newTopic string, queueNum, topicSysFla
 
 func (impl *MQAdminImpl) FetchSubscribeMessageQueues(topic string) []*message.MessageQueue {
 	mqList := []*message.MessageQueue{}
-	routeData := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
+	routeData, err := impl.mQClientFactory.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
+	if err != nil {
+		fmt.Printf("FetchSubscribeMessageQueues err: %s, topic: %s\n", err.Error(), topic)
+	}
 	if routeData != nil {
 		mqSet := impl.mQClientFactory.topicRouteData2TopicSubscribeInfo(topic, routeData)
 		if mqSet != nil {

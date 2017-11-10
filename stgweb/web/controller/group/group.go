@@ -48,7 +48,7 @@ func ConsumeProgress(ctx context.Context) {
 
 	data, err := groupGervice.Default().ConsumeProgressByPage(topic, clusterName, consumerGroupId, limit, offset)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Warnf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}

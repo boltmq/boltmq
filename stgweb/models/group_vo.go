@@ -1,6 +1,7 @@
 package models
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 )
 
@@ -18,11 +19,52 @@ type ConsumerGroup struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type ConsumerProgress struct {
-	GroupId   string           `json:"consumeGroupId"`
-	Tps       int64            `json:"consumeTps"`
-	DiffTotal int64            `json:"diffTotal"`
-	List      []*ConsumerGroup `json:"data"`
-	Total     int64            `json:"total"`
+	ConsumeGroupId string           `json:"consumeGroupId"`
+	Tps            float64          `json:"consumeTps"` // 保留2位小数
+	DiffTotal      int64            `json:"diffTotal"`
+	Data           []*ConsumerGroup `json:"data"`
+	Total          int64            `json:"total"`
+}
+
+// NewConsumerGroup 初始化ConsumerGroup
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func NewConsumerGroup() *ConsumerGroup {
+	consumerGroup := &ConsumerGroup{}
+	consumerGroup.MessageQueue = new(message.MessageQueue)
+	return consumerGroup
+}
+
+// ToConsumerGroup 转化为ConsumerGroup
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func ToConsumerGroup(mq *message.MessageQueue, wapper *admin.OffsetWrapper) (consumerGroup *ConsumerGroup, diff int64) {
+	consumerGroup = NewConsumerGroup()
+	consumerGroup.Topic = mq.Topic
+	consumerGroup.BrokerName = mq.BrokerName
+	consumerGroup.QueueId = mq.QueueId
+
+	if wapper != nil {
+		consumerGroup.ConsumerOffset = wapper.ConsumerOffset
+		consumerGroup.BrokerOffset = wapper.BrokerOffset
+		diff = wapper.BrokerOffset - wapper.ConsumerOffset
+		consumerGroup.Diff = diff
+	}
+	return consumerGroup, diff
+}
+
+// NewConsumerProgress 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func NewConsumerProgress(data []*ConsumerGroup, total, diffTotal int64, consumeGroupId string, tps float64) *ConsumerProgress {
+	consumerProgress := &ConsumerProgress{
+		Data:           data,
+		Total:          total,
+		ConsumeGroupId: consumeGroupId,
+		DiffTotal:      diffTotal,
+		Tps:            tps,
+	}
+	return consumerProgress
 }
 
 // ConsumerGroupList 消费组列表
