@@ -3,13 +3,9 @@ package config
 type BrokerRole int
 
 const (
-
-	// 异步复制Master
-	ASYNC_MASTER BrokerRole = iota
-	// 同步双写Master
-	SYNC_MASTER
-	// Slave
-	SLAVE
+	ASYNC_MASTER BrokerRole = iota // 异步复制Master
+	SYNC_MASTER                    // 同步双写Master
+	SLAVE                          // Slave
 )
 
 func (brokerRole BrokerRole) BrokerRoleString() string {

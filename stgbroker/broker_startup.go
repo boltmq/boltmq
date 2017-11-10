@@ -169,9 +169,15 @@ func getSmartgoBrokerConfigPath(cfgName string) string {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
 func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *stgcommon.BrokerConfig) bool {
-	if mscfg.BrokerRole == config.SLAVE && bcfg.BrokerId <= 0 {
-		logger.Infof("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
-		return false
+	if mscfg.BrokerRole == config.SLAVE {
+		if bcfg.BrokerId <= 0 {
+			logger.Errorf("Slave's brokerId[%d] must be > 0", bcfg.BrokerId)
+			return false
+		}
+		if bcfg.HaMasterAddress == "" || !stgcommon.CheckIpAndPort(bcfg.HaMasterAddress) {
+			logger.Errorf("Slave's HaMasterAddress[%s] invalid", bcfg.HaMasterAddress)
+			return false
+		}
 	}
 	return true
 }
@@ -183,6 +189,10 @@ func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, b
 	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
 	messageStoreConfig.StorePathRootDir = brokerConfig.StorePathRootDir
 	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir + separator + static.STORE_COMMIT_LOG_ROOT_DIR
+	if brokerConfig.HaMasterAddress != "" {
+		messageStoreConfig.HaMasterAddress = brokerConfig.HaMasterAddress // HA功能配置此项
+
+	}
 
 	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
 	if messageStoreConfig.BrokerRole == config.SLAVE {
