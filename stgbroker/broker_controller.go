@@ -15,6 +15,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/remoting"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog"
+	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	storeStats "git.oschina.net/cloudzone/smartgo/stgstorelog/stats"
 	"os"
 	"os/signal"
