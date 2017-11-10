@@ -2,9 +2,9 @@ package stgstorelog
 
 import (
 	"sync/atomic"
-	"time"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
+	"time"
 )
 
 // GroupTransferService 同步进度监听服务，如果达到应用层的写入偏移量，则通知应用层该同步已经完成。
@@ -36,7 +36,7 @@ func (self *GroupTransferService) doWaitTransfer() {
 	case request := <-self.requestChan:
 		transferOK := atomic.LoadInt64(&self.haService.push2SlaveMaxOffset) >= request.nextOffset
 		for i := 0; !transferOK && i < 5; i++ {
-			time.Sleep(1000 * time.Millisecond)
+			self.notifyTransferObject.WaitTimeout(1000 * time.Millisecond)
 			transferOK = atomic.LoadInt64(&self.haService.push2SlaveMaxOffset) >= request.nextOffset
 		}
 
