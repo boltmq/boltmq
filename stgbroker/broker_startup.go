@@ -68,8 +68,16 @@ func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
 		os.Exit(0)
 	}
 
+	brorkerRole, err := config.ParseBrokerRole(cfg.BrokerRole)
+	if err != nil {
+		logger.Errorf(err.Error())
+		logger.Flush()
+		os.Exit(0)
+	}
+
 	// 初始化brokerConfig、messageStoreConfig
 	messageStoreConfig := stgstorelog.NewMessageStoreConfig()
+	messageStoreConfig.BrokerRole = brorkerRole
 	if !checkMessageStoreConfigAttr(messageStoreConfig, brokerConfig) {
 		logger.Flush()
 		os.Exit(0)
