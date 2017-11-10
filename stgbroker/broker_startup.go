@@ -82,7 +82,12 @@ func CreateBrokerController(smartgoBrokerFilePath ...string) *BrokerController {
 		logger.Flush()
 		os.Exit(0)
 	}
-	setMessageStoreConfig(messageStoreConfig, brokerConfig)
+	err = setMessageStoreConfig(messageStoreConfig, brokerConfig, cfg)
+	if err != nil {
+		logger.Errorf(err.Error())
+		logger.Flush()
+		os.Exit(0)
+	}
 
 	// 构建BrokerController结构体
 	remotingClient := remoting.NewDefalutRemotingClient()
@@ -193,7 +198,7 @@ func checkMessageStoreConfigAttr(mscfg *stgstorelog.MessageStoreConfig, bcfg *st
 // setMessageStoreConfig 设置messageStoreConfig配置
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/22
-func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig) {
+func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, brokerConfig *stgcommon.BrokerConfig, cfg *stgcommon.SmartgoBrokerConfig) error {
 	// 此处需要覆盖store模块的StorePathRootDir配置目录,用来处理一台服务器启动多个broker的场景
 	messageStoreConfig.StorePathRootDir = brokerConfig.StorePathRootDir
 	messageStoreConfig.StorePathCommitLog = brokerConfig.StorePathRootDir + separator + static.STORE_COMMIT_LOG_ROOT_DIR
@@ -208,15 +213,24 @@ func setMessageStoreConfig(messageStoreConfig *stgstorelog.MessageStoreConfig, b
 		messageStoreConfig.AccessMessageInMemoryMaxRatio = ratio
 	}
 
+	flushDiskType, err := config.ParseFlushDiskType(cfg.FlushDiskType)
+	if err != nil {
+		return err
+	}
+	messageStoreConfig.FlushDiskType = flushDiskType
+
 	// BrokerId的处理 switch-case语法：
 	// 只要匹配到一个case，则顺序往下执行，直到遇到break，因此若没有break则不管后续case匹配与否都会执行
 	switch messageStoreConfig.BrokerRole {
 	//如果是同步master也会执行下述case中brokerConfig.setBrokerId(MixAll.MASTER_ID);语句，直到遇到break
 	case config.ASYNC_MASTER:
+		fallthrough
 	case config.SYNC_MASTER:
 		brokerConfig.BrokerId = stgcommon.MASTER_ID
 	case config.SLAVE:
 	default:
 
 	}
+
+	return nil
 }
