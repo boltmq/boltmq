@@ -4,6 +4,7 @@ import (
 	"git.oschina.net/cloudzone/cloudcommon-go/web"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/broker"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/cluster"
+	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/connection"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/general"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/group"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/controller/message"
@@ -41,14 +42,14 @@ func Route(ctx *web.Context) error {
 
 	// 消费进度
 	{
-		api.Get("/group/progress", group.ConnectionDetail)
-		api.Get("/group/list", group.ConsumeProgress)
+		api.Get("/group/progress", group.ConsumeProgress)
+		api.Get("/group/list", group.GroupList)
 	}
 
 	// 消费进程
 	{
-		api.Get("/connection/online", group.ConnectionOnline)
-		api.Get("/connection/detail", group.ConnectionDetail)
+		api.Get("/connection/online", connection.ConnectionOnline)
+		api.Get("/connection/detail", connection.ConnectionDetail)
 	}
 
 	// 消息查询、消费轨迹

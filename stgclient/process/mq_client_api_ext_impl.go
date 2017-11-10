@@ -168,7 +168,7 @@ func (impl *MQClientAPIImpl) GetTopicStatsInfo(brokerAddr, topic string, timeout
 // GetConsumeStats 查询消费者状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic string, timeoutMillis int64) (*admin.ConsumeStats, error) {
+func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, topic string, timeoutMillis int64) (*admin.ConsumeTmpStats, error) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
@@ -187,7 +187,7 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
-	consumeStats := new(admin.ConsumeStats)
+	consumeStats := admin.NewConsumeTmpStats()
 	content := response.Body
 	if content == nil || len(content) == 0 {
 		return consumeStats, nil
@@ -198,12 +198,10 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 		return nil, err
 	}
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumeStats.OffsetTable != nil {
-		newTopicOffsetMap := make(map[*message.MessageQueue]*admin.OffsetWrapper, 256)
+		newTopicOffsetMap := make(map[message.MessageQueue]admin.OffsetWrapper)
 		for key, value := range consumeStats.OffsetTable {
-			if key != nil {
-				key.Topic = stgclient.ClearProjectGroup(key.Topic, impl.ProjectGroupPrefix)
-				newTopicOffsetMap[key] = value
-			}
+			key.Topic = stgclient.ClearProjectGroup(key.Topic, impl.ProjectGroupPrefix)
+			newTopicOffsetMap[key] = value
 		}
 		consumeStats.OffsetTable = newTopicOffsetMap
 	}
@@ -213,7 +211,7 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 // GetConsumeStats 查询消费者状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumeStats(brokerAddr, consumerGroup string, timeoutMillis int64) (*admin.ConsumeStats, error) {
+func (impl *MQClientAPIImpl) GetConsumeStats(brokerAddr, consumerGroup string, timeoutMillis int64) (*admin.ConsumeTmpStats, error) {
 	return impl.GetConsumeStatsByTopic(brokerAddr, consumerGroup, "", timeoutMillis)
 }
 

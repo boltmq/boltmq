@@ -125,13 +125,13 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerRuntimeStats(brokerAddr string) (*
 }
 
 // 查询消费进度
-func (impl *DefaultMQAdminExtImpl) ExamineConsumeStats(consumerGroup string) (*admin.ConsumeStats, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineConsumeStats(consumerGroup string) (*admin.ConsumeTmpStats, error) {
 	return impl.ExamineConsumeStatsByTopic(consumerGroup, "")
 }
 
 // 基于Topic查询消费进度
-func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeStats, error) {
-	result := admin.NewConsumeStats()
+func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeTmpStats, error) {
+	result := admin.NewConsumeTmpStats()
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {
@@ -150,9 +150,6 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 			}
 			if consumeStats != nil && consumeStats.OffsetTable != nil {
 				for key, value := range consumeStats.OffsetTable {
-					if key == nil {
-						continue
-					}
 					result.OffsetTable[key] = value
 				}
 			}
@@ -609,13 +606,15 @@ func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGro
 	}
 
 	for mq, offsetwapper := range cstats.OffsetTable {
-		if mq != nil && mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId {
+		// mq != nil && mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId
+		if mq.Topic == msg.Topic && int32(mq.QueueId) == msg.QueueId {
 			if brokerData, ok := ci.BrokerAddrTable[mq.BrokerName]; ok && brokerData != nil {
 				if brokerAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]; ok && brokerAddr != "" {
 					format := "brokerAddr=%s, msg.StoreHost=%s, offsetwapper.ConsumerOffset=%d, msg.QueueOffset=%d"
 					logger.Infof(format, brokerAddr, msg.StoreHost, offsetwapper.ConsumerOffset, msg.QueueOffset)
 					if brokerAddr == msg.StoreHost {
-						if offsetwapper != nil && offsetwapper.ConsumerOffset > msg.QueueOffset {
+						//  offsetwapper != nil && offsetwapper.ConsumerOffset > msg.QueueOffset
+						if offsetwapper.ConsumerOffset > msg.QueueOffset {
 							return true, nil
 						}
 					}

@@ -18,20 +18,34 @@ type ConsumerGroup struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type ConsumerProgress struct {
-	GroupId string           `json:"consumeGroupId"`
-	Tps     int64            `json:"consumeTps"`
-	Diff    int64            `json:"diffTotal"`
-	List    []*ConsumerGroup `json:"data"`
-	Total   int64            `json:"total"`
+	GroupId   string           `json:"consumeGroupId"`
+	Tps       int64            `json:"consumeTps"`
+	DiffTotal int64            `json:"diffTotal"`
+	List      []*ConsumerGroup `json:"data"`
+	Total     int64            `json:"total"`
 }
 
 // ConsumerGroupList 消费组列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
-type ConsumerGroupList struct {
-	ClusterName     string `json:"clusterName"`     // 集群名称
-	Topic           string `json:"topic"`           // 集群名称
-	ConsumerGroupId string `json:"consumerGroupId"` // 消费组ID
+type ConsumerGroupVo struct {
+	ClusterName     string    `json:"clusterName"`     // 集群名称
+	Topic           string    `json:"topic"`           // 集群名称
+	TopicType       TopicType `json:"topicType"`       // topic类型
+	ConsumerGroupId string    `json:"consumerGroupId"` // 消费组ID
+}
+
+// NewConsumerGroupVo 初始化ConsumerGroupVo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func NewConsumerGroupVo(clusterName, topic, consumerGroupId string) *ConsumerGroupVo {
+	consumerGroupVo := &ConsumerGroupVo{
+		ClusterName:     clusterName,
+		Topic:           topic,
+		TopicType:       ParseTopicType(topic),
+		ConsumerGroupId: consumerGroupId,
+	}
+	return consumerGroupVo
 }
 
 // BrokerRuntimeInfo broker运行状态
