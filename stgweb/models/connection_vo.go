@@ -9,11 +9,25 @@ import (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type ConnectionOnline struct {
-	ClusterName     string `json:"clusterName"`     // 集群名称
-	Topic           string `json:"topic"`           // 集群名称
-	ProduceNums     int    `json:"produceNums"`     // 生产进程总数
-	ConsumerGroupId string `json:"consumerGroupId"` // 消费组ID
-	ConsumeNums     int    `json:"consumeNums"`     // 消费进程总数
+	ClusterName      string   `json:"clusterName"`      // 集群名称
+	Topic            string   `json:"topic"`            // 集群名称
+	ProduceNums      int      `json:"produceNums"`      // 生产进程总数
+	ConsumerGroupIds []string `json:"consumerGroupIds"` // 消费组ID
+	ConsumeNums      int      `json:"consumeNums"`      // 消费进程总数
+}
+
+// NewConnectionOnline 初始化ConnectionOnline
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, consumeNums, produceNums int) *ConnectionOnline {
+	connectionOnline := &ConnectionOnline{
+		ClusterName:      clusterName,
+		Topic:            topic,
+		ConsumerGroupIds: consumerGroupIds,
+		ConsumeNums:      consumeNums,
+		ProduceNums:      produceNums,
+	}
+	return connectionOnline
 }
 
 // ConnectionDetail 在线进程详情
