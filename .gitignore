@@ -112,6 +112,8 @@ stgbroker/start/broker-bin-v3.2.6.tar.gz
 stgbroker/start/broker-v3.2.6.tar.gz
 stgbroker/start/conf
 
+stgweb/web/etc/cfg.json
+
 target/
 target/*
 target/*.*

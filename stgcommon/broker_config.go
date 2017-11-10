@@ -50,6 +50,7 @@ type BrokerConfig struct {
 	ShortPollingTimeMills              int    `json:"shortPollingTimeMills"`              // 如果是短轮询，服务器挂起时间
 	NotifyConsumerIdsChangedEnable     bool   `json:"notifyConsumerIdsChangedEnable"`     // notify consumerId changed 开关
 	OffsetCheckInSlave                 bool   `json:"offsetCheckInSlave"`                 // slave 是否需要纠正位点
+	HaMasterAddress                    string `json:"haMasterAddress"`                    // 适用场景：HA功能配置(将slave角色的 ha地址，指向master角色)
 }
 
 // NewDefaultBrokerConfig 初始化默认BrokerConfig（默认AutoCreateTopicEnable=true）
@@ -101,6 +102,7 @@ func NewCustomBrokerConfig(cfg *SmartgoBrokerConfig) *BrokerConfig {
 	brokerConfig.BrokerId = cfg.BrokerId
 	brokerConfig.StorePathRootDir = cfg.StorePathRootDir
 	brokerConfig.BrokerPort = cfg.BrokerPort
+	brokerConfig.HaMasterAddress = strings.TrimSpace(cfg.HaMasterAddress)
 	return brokerConfig
 }
 

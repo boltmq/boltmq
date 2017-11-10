@@ -19,6 +19,7 @@ type SmartgoBrokerConfig struct {
 	FlushDiskType         string // 刷盘方式
 	AutoCreateTopicEnable bool   // 是否允许客户端自动创建Topic
 	StorePathRootDir      string // broker、store等模块的数据存储目录
+	HaMasterAddress       string // 适用场景：HA功能配置(将slave角色的 ha地址，指向master角色)
 }
 
 // ToString 打印smartgoBroker配置项
@@ -30,9 +31,9 @@ func (self *SmartgoBrokerConfig) ToString() string {
 	}
 
 	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, BrokerPort=%d, DeleteWhen=%d, "
-	format += "FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, StorePathRootDir=%s ]"
+	format += "FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, StorePathRootDir=%s, HaMasterAddress=%s ]"
 	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.BrokerPort, self.DeleteWhen,
-		self.FileReservedTime, self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.StorePathRootDir)
+		self.FileReservedTime, self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.StorePathRootDir, self.HaMasterAddress)
 	return info
 }
 
