@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"runtime/debug"
 	"sync/atomic"
@@ -22,6 +23,8 @@ func main() {
 		connTotal  int
 		sendTotal  int
 		receTotal  int32
+		hbs        int
+		hbf        int
 		cStartTime time.Time
 		cEndTime   time.Time
 		cd         time.Duration
@@ -68,11 +71,49 @@ func main() {
 
 	go func() {
 		timer := time.NewTimer(1 * time.Second)
+		var i int
 		for {
 			<-timer.C
 			timer.Reset(10 * time.Second)
-			log.Printf("create connect success [%d], failed[%d], spend time %v| send msg success [%d], failed[%d], spend time %v| receive msg success [%d], failed[%d]\n",
-				connTotal, maxConnNum-connTotal, cd, sendTotal, connTotal-sendTotal, sd, receTotal, sendTotal-int(receTotal))
+			i++
+			fmt.Println("  num  |      create connect      |                 send msg                |                 receive msg             |          heartbeat       |")
+			fmt.Printf("  %-5d|   success   |   failed   |     time     |   success   |   failed   |     time     |   success   |   failed   |   success   |   failed   |\n", i)
+			fmt.Printf("       | %-11d | %-10d | %10dus | %-11d | %-10d | %10dus | %-11d | %-10d | %-11d | %-10d |\n\n",
+				connTotal, maxConnNum-connTotal, cd.Nanoseconds(), sendTotal, connTotal-sendTotal, sd.Nanoseconds(), receTotal, sendTotal-int(receTotal), hbs, hbf)
+		}
+	}()
+
+	// 心跳维持
+	go func() {
+		interval := 60
+		rest := 3
+		timer := time.NewTimer(time.Duration(interval) * time.Second)
+		for {
+			<-timer.C
+			// 发送心跳
+			interval = 60
+			for i := 0; i < len(ctxs); i++ {
+				if i%1000 == 0 && i != 0 {
+					time.Sleep(time.Duration(rest) * time.Second)
+					interval -= rest
+				}
+
+				ctx := ctxs[i]
+				_, err := ctx.Write([]byte("P"))
+				if err != nil {
+					hbf++
+					log.Printf("heartbeat faild: %s\n", err)
+					continue
+				}
+
+				hbs++
+			}
+
+			if interval <= 0 {
+				timer.Reset(10 * time.Millisecond)
+			} else {
+				timer.Reset(time.Duration(interval) * time.Second)
+			}
 		}
 	}()
 
