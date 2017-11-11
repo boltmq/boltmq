@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
+	"sync/atomic"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
@@ -11,6 +12,7 @@ import (
 
 func main() {
 	debug.SetMaxThreads(100000)
+	var heartbeat int64
 	b := netm.NewBootstrap()
 
 	go func() {
@@ -18,13 +20,18 @@ func main() {
 		for {
 			<-timer.C
 			timer.Reset(10 * time.Second)
-			fmt.Println("current connect num is:", b.Size())
+			fmt.Printf("current connect num is: %d, heartbeat num: %d.\n", b.Size(), heartbeat)
 		}
 	}()
 
 	b.Bind("0.0.0.0", 8000).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
-			log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
-			ctx.Write([]byte("hi, client"))
+			content := string(buffer)
+			if content != "P" {
+				log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
+				ctx.Write([]byte("hi, client"))
+			} else {
+				atomic.AddInt64(&heartbeat, 1)
+			}
 		}).Sync()
 }
