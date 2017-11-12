@@ -12,4 +12,5 @@ autoCreateTopicEnable=true
 
 storePathRootDir="/home/smartgo/store"
 #brokerPort=10911
+#brokerIp="10.122.1.210"
 #haMasterAddress="10.122.1.210:10912"
