@@ -3,6 +3,7 @@ package cluster
 import (
 	"git.oschina.net/cloudzone/cloudcommon-go/logger"
 	"git.oschina.net/cloudzone/cloudcommon-go/web/resp"
+	"git.oschina.net/cloudzone/smartgo/stgweb/modules/brokerService"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
 	"github.com/kataras/iris/context"
 )
@@ -25,5 +26,12 @@ func ClusterList(ctx context.Context) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func ClusterGeneral(ctx context.Context) {
-	ctx.JSON(resp.NewSuccessResponse(""))
+	data, err := brokerService.Default().GetBrokerRuntimeInfo()
+	if err != nil {
+		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
+		return
+	}
+
+	ctx.JSON(resp.NewSuccessResponse(data))
 }

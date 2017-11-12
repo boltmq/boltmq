@@ -38,7 +38,7 @@ type ProduceTrackVo struct {
 	BornTimestamp     string `json:"bornTimestamp"`     // 消息在客户端创建时间
 	Code              int    `json:"code"`              // 消息发送结果 0:消费成功, 1:失败
 	ProducerGroupId   string `json:"producerGroupId"`   // 生产组ID
-	SendTimeConsuming int    `json:"sendTimeConsuming"` // 发送消息耗时(毫秒)
+	SendTimeConsuming int64  `json:"sendTimeConsuming"` // 发送消息耗时(毫秒)
 }
 
 // TopicTrackVo 消费轨迹-topic节点
@@ -72,7 +72,7 @@ type MessageTrackBase struct {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type BlotMessage struct {
-	Base     *message.Message      `json:"base"`     // 消息基础属性
+	Base     *message.MessageExt   `json:"base"`     // 消息基础属性
 	Track    []*track.MessageTrack `json:"track"`    // 消息消费结果
 	BodyPath string                `json:"bodyPath"` // 消息body内容存储在web服务器的路径
 }
@@ -86,4 +86,16 @@ func NewMessageBodyVo(msgId, msgBody string) *MessageBodyVo {
 		MsgBody: msgBody,
 	}
 	return messageBodyVo
+}
+
+// NewBlotMessage 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func NewBlotMessage(base *message.MessageExt, messageTrack []*track.MessageTrack, msgBodyPath string) *BlotMessage {
+	blotMessage := &BlotMessage{
+		Base:     base,
+		Track:    messageTrack,
+		BodyPath: msgBodyPath,
+	}
+	return blotMessage
 }

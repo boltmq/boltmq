@@ -50,7 +50,7 @@ func (service *ClusterService) GetCluserNames() (*models.ClusterList, error) {
 	clusterList := &models.ClusterList{}
 	clusterNames, _, err := defaultMQAdminExt.GetAllClusterNames()
 	if err != nil {
-		return &models.ClusterList{}, err
+		return clusterList, err
 	}
 
 	clusterList.ClusterNames = clusterNames
