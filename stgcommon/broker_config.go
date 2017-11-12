@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"fmt"
 )
 
 const (
@@ -103,6 +104,16 @@ func NewCustomBrokerConfig(cfg *SmartgoBrokerConfig) *BrokerConfig {
 	brokerConfig.StorePathRootDir = cfg.StorePathRootDir
 	brokerConfig.BrokerPort = cfg.BrokerPort
 	brokerConfig.HaMasterAddress = strings.TrimSpace(cfg.HaMasterAddress)
+
+
+	if brokerConfig.BrokerIP1 == "" {
+		if cfg.BrokerIP == "" {
+			format := fmt.Sprintf("brokerIP is empty. please check network.")
+			panic(format)
+		} else {
+			brokerConfig.BrokerIP1 = cfg.BrokerIP
+		}
+	}
 	return brokerConfig
 }
 

@@ -111,9 +111,13 @@ func (self *BrokerController) Initialize() bool {
 	if self.BrokerConfig.BrokerPort > 0 {
 		brokerPort = self.BrokerConfig.BrokerPort
 	}
+	brokerIp := static.BROKER_IP
+	if self.BrokerConfig.BrokerIP1 != "" {
+		brokerIp = self.BrokerConfig.BrokerIP1
+	}
 
 	if self.RemotingServer == nil {
-		self.RemotingServer = remoting.NewDefalutRemotingServer(static.BROKER_IP, brokerPort)
+		self.RemotingServer = remoting.NewDefalutRemotingServer(brokerIp, brokerPort)
 	}
 
 	self.MessageStoreConfig.HaListenPort = self.RemotingServer.Port() + 1 // broker监听Slave请求端口，默认为Master服务端口+1

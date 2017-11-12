@@ -12,6 +12,7 @@ type SmartgoBrokerConfig struct {
 	BrokerClusterName     string // 集群名称
 	BrokerName            string // broker名称
 	BrokerId              int64  // broker id
+	BrokerIP              string // broker自身启动的IP地址
 	BrokerPort            int    // broker对应服务的端口
 	DeleteWhen            int    // 何时触发“删除无效Message”
 	FileReservedTime      int    // 消息保存时间
@@ -30,9 +31,9 @@ func (self *SmartgoBrokerConfig) ToString() string {
 		return "SmartgoBrokerConfig is nil"
 	}
 
-	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, BrokerPort=%d, DeleteWhen=%d, "
+	format := "SmartgoBrokerConfig [BrokerClusterName=%s, BrokerName=%s, BrokerId=%d, BrokerPort=%d, BrokerIP=%s, DeleteWhen=%d, "
 	format += "FileReservedTime=%d, BrokerRole=%s, FlushDiskType=%s, AutoCreateTopicEnable=%t, StorePathRootDir=%s, HaMasterAddress=%s ]"
-	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.BrokerPort, self.DeleteWhen,
+	info := fmt.Sprintf(format, self.BrokerClusterName, self.BrokerName, self.BrokerId, self.BrokerPort, self.BrokerIP, self.DeleteWhen,
 		self.FileReservedTime, self.BrokerRole, self.FlushDiskType, self.AutoCreateTopicEnable, self.StorePathRootDir, self.HaMasterAddress)
 	return info
 }
