@@ -331,3 +331,24 @@ func CheckIpAndPort(addr string) bool {
 	}
 	return true
 }
+
+// ParseClientAddr 转化客户端地址
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/27
+func ParseClientAddr(clientAddr string) (ip string, pid int) {
+	if clientAddr == "" {
+		return "", 0
+	}
+
+	val := strings.Split(clientAddr, ":")
+	if val == nil || len(val) != 2 {
+		return "", 0
+	}
+
+	ip = val[0]
+	pid, err := strconv.Atoi(val[1])
+	if err != nil {
+		return "", 0
+	}
+	return ip, pid
+}

@@ -1,8 +1,10 @@
 package models
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/admin"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
+	"strconv"
 )
 
 // ConsumerGroup 消费组
@@ -106,4 +108,30 @@ type BrokerRuntimeInfo struct {
 	MsgGetTotalTodayMorning     string  `json:"msgGetTotalTodayMorning"`
 	InTps                       float64 `json:"inTps"`
 	OutTps                      float64 `json:"outTps"`
+}
+
+// ToCluterGeneral 转化CluterGeneral
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func (self *BrokerRuntimeInfo) ToCluterGeneral(brokerAddr, brokerName string, brokerId int) *ClusterGeneral {
+	clusterGeneral := &ClusterGeneral{}
+	clusterGeneral.BrokerAddr = brokerAddr
+	clusterGeneral.BrokerId = brokerId
+	clusterGeneral.BrokerName = brokerName
+	clusterGeneral.Version = self.BrokerVersion
+	clusterGeneral.VersionDesc = self.BrokerVersionDesc
+	clusterGeneral.InTPS = JSONFloat(self.InTps)
+	clusterGeneral.OutTPS = JSONFloat(self.OutTps)
+
+	if brokerId == stgcommon.MASTER_ID {
+		clusterGeneral.BrokerRole = "master"
+	} else {
+		clusterGeneral.BrokerRole = "slave"
+	}
+	clusterGeneral.InTotalToday, _ = strconv.ParseInt(self.MsgGetTotalTodayMorning, 10, 64)
+	clusterGeneral.OutTotalYest, _ = strconv.ParseInt(self.MsgPutTotalYesterdayMorning, 10, 64)
+	clusterGeneral.InTotalYest, _ = strconv.ParseInt(self.MsgPutTotalYesterdayMorning, 10, 64)
+	clusterGeneral.OutTotalToday, _ = strconv.ParseInt(self.MsgPutTotalTodayMorning, 10, 64)
+
+	return clusterGeneral
 }

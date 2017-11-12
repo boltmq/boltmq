@@ -55,7 +55,7 @@ func Route(ctx *web.Context) error {
 	// 消息查询、消费轨迹
 	{
 		api.Get("/msg/body", message.MessageBody)
-		api.Get("/msg/track", message.MessageQuery)
+		api.Get("/msg/track", message.MessageTrack)
 		api.Get("/msg/query", message.MessageQuery)
 	}
 

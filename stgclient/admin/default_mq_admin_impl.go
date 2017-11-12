@@ -530,21 +530,21 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 	for itor := range groupList.GroupList.Iterator().C {
 		if consumerGroupId, ok := itor.(string); ok {
 			messageTrack := track.NewMessageTrack(consumerGroupId)
-			consumerConnection, err := impl.ExamineConsumerConnectionInfo(consumerGroupId, msg.Topic)
+			cc, err := impl.ExamineConsumerConnectionInfo(consumerGroupId, msg.Topic)
 			if err != nil {
 				messageTrack.Code = code.SYSTEM_ERROR
 				messageTrack.ExceptionDesc = err.Error()
 				tracks = append(tracks, messageTrack)
 				continue
 			}
-			if consumerConnection == nil || consumerConnection.ConnectionSet.Cardinality() == 0 {
+			if cc == nil || cc.ConnectionSet == nil || cc.ConnectionSet.Cardinality() == 0 {
 				messageTrack.Code = code.CONSUMER_NOT_ONLINE
 				messageTrack.ExceptionDesc = fmt.Sprintf("the consumer group[%s] not online.", consumerGroupId)
 				tracks = append(tracks, messageTrack)
 				continue
 			}
 
-			switch consumerConnection.ConsumeType {
+			switch cc.ConsumeType {
 			case heartbeat.CONSUME_ACTIVELY:
 				messageTrack.TrackType = track.SubscribedButPull
 				messageTrack.Code = code.SUCCESS
@@ -560,7 +560,7 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 					messageTrack.TrackType = track.SubscribedAndConsumed
 					messageTrack.Code = code.SUCCESS
 					// 查看订阅关系是否匹配
-					for itor := consumerConnection.SubscriptionTable.Iterator(); itor.HasNext(); {
+					for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
 						key, value, _ := itor.Next()
 						if topic, ok := key.(string); ok && topic != msg.Topic {
 							continue
