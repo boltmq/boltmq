@@ -69,17 +69,6 @@ type MessageTrackExtWapper struct {
 	OriginMsgId  string           `json:"originMsgId"`  // 源消息ID
 }
 
-// NewMessageTrackExtWapper 初始化MessageTrackExtWapper
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/13
-func NewMessageTrackExtWapper(currentMsgId string) *MessageTrackExtWapper {
-	messageTrackExtWapper := &MessageTrackExtWapper{
-		TrackWapper:  new(MessageTrackExt),
-		CurrentMsgId: currentMsgId,
-	}
-	return messageTrackExtWapper
-}
-
 // MessageTrackVo 消息轨迹节点
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
@@ -116,6 +105,17 @@ type BlotMessage struct {
 	Base     *MessageExtVo         `json:"base"`     // 消息基础属性
 	Track    []*track.MessageTrack `json:"track"`    // 消息消费结果
 	BodyPath string                `json:"bodyPath"` // 消息body内容存储在web服务器的路径
+}
+
+// NewMessageTrackExtWapper 初始化MessageTrackExtWapper
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func NewMessageTrackExtWapper(currentMsgId string) *MessageTrackExtWapper {
+	messageTrackExtWapper := &MessageTrackExtWapper{
+		TrackWapper:  new(MessageTrackExt),
+		CurrentMsgId: currentMsgId,
+	}
+	return messageTrackExtWapper
 }
 
 // NewMessageBodyVo 初始化MessageBodyVo

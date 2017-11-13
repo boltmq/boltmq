@@ -68,7 +68,7 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 
 	for _, t := range allTopic {
 		if searchTopic != "" && !strings.Contains(t.Topic, searchTopic) {
-			logger.Warnf("search topic [%s] is invalid", t.Topic)
+			// logger.Warnf("search topic [%s] is invalid", t.Topic)
 			continue
 		}
 		consumerGroupIds, consumerNums, err := service.SumOnlineConsumerNums(t.Topic)
