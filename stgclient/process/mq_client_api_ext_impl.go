@@ -286,7 +286,6 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		logger.Errorf("GetConsumerConnectionList failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	fmt.Printf("GetConsumerConnectionList.response >>>>>> %s\n", response.ToString())
 
 	consumerConnection := body.NewConsumerConnection()
 	consumerConnectionPlus := new(body.ConsumerConnectionPlus)
@@ -512,7 +511,6 @@ func (impl *MQClientAPIImpl) QueryTopicConsumeByWho(brokerAddr, topic string, ti
 		logger.Errorf("QueryTopicConsumeByWho failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	fmt.Printf("QueryTopicConsumeByWho.response >>>>>>>>>>> %s\n", response.ToString())
 
 	groupList := body.NewGroupList()
 	err = groupList.CustomDecode(response.Body, groupList)

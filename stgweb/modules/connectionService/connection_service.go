@@ -1,6 +1,7 @@
 package connectionService
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
@@ -85,6 +86,7 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 		connectionOnlines = append(connectionOnlines, connectionOnline)
 	}
 
+
 	total = int64(len(connectionOnlines))
 	pageConnections := service.connectionOnlineListPaging(total, limit, offset, connectionOnlines)
 	return pageConnections, total, nil
@@ -130,6 +132,7 @@ func (service *ConnectionService) sumOnlineConsumerNums(topic string) ([]string,
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
 			consumerConnection, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
+
 			if err != nil {
 				logger.Errorf("query consumerConnection err: %s.  consumerGroupId=%s", err.Error(), groupId)
 				// return consumerGroupIdList, consumerNums, err // ingore
@@ -141,6 +144,7 @@ func (service *ConnectionService) sumOnlineConsumerNums(topic string) ([]string,
 			}
 		}
 	}
+	logger.Infof("sumOnlineConsumerNums.consumerGroupIds = %v        --------------", consumerGroupIds)
 	return consumerGroupIds, consumerNums, nil
 }
 
