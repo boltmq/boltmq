@@ -61,6 +61,10 @@ func (service *GroupService) GroupList(topic, clusterName string, limit, offset 
 	}
 
 	for _, t := range allTopic {
+		if topic != "" && t.Topic != topic {
+			continue
+		}
+
 		consumerGroupIds, err := service.QueryConsumerGroupId(t.Topic)
 		if err != nil {
 			return consumerGroupVos, total, err
