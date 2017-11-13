@@ -20,10 +20,10 @@ type QueryMessageProcessor struct {
 // NewQueryMessageProcessor 初始化QueryMessageProcessor
 // Author rongzhihong
 // Since 2017/9/18
-func NewQueryMessageProcessor(brokerController *BrokerController) *PullMessageProcessor {
-	var pullMessageProcessor = new(PullMessageProcessor)
-	pullMessageProcessor.BrokerController = brokerController
-	return pullMessageProcessor
+func NewQueryMessageProcessor(brokerController *BrokerController) *QueryMessageProcessor {
+	var queryMessageProcessor = new(QueryMessageProcessor)
+	queryMessageProcessor.BrokerController = brokerController
+	return queryMessageProcessor
 }
 
 // ProcessRequest 请求
