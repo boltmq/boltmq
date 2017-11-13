@@ -1,6 +1,8 @@
 package message
 
-import "strconv"
+import (
+	"strconv"
+)
 
 // Message: 消息结构体
 // Author: yintongqiang
@@ -43,6 +45,10 @@ func (self *Message) SetTags(tags string) {
 
 func (self *Message) GetTags() string {
 	return self.GetProperty(PROPERTY_TAGS)
+}
+
+func (self *Message) GetOriginMessageID() string {
+	return self.GetProperty(PROPERTY_ORIGIN_MESSAGE_ID)
 }
 
 func (self *Message) SetWaitStoreMsgOK(waitStoreMsgOK bool) {

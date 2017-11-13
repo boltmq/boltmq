@@ -62,6 +62,26 @@ type MessageTrackExt struct {
 
 // MessageTrackVo 消息轨迹节点
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+type MessageTrackExtWapper struct {
+	TrackWapper  *MessageTrackExt `json:"track"`
+	CurrentMsgId string           `json:"currentMsgId"` // 当前消息ID
+	OriginMsgId  string           `json:"originMsgId"`  // 源消息ID
+}
+
+// NewMessageTrackExtWapper 初始化MessageTrackExtWapper
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func NewMessageTrackExtWapper(currentMsgId string) *MessageTrackExtWapper {
+	messageTrackExtWapper := &MessageTrackExtWapper{
+		TrackWapper:  new(MessageTrackExt),
+		CurrentMsgId: currentMsgId,
+	}
+	return messageTrackExtWapper
+}
+
+// MessageTrackVo 消息轨迹节点
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type MessageTrackBase struct {
 	MessageTrack []*MessageTrackExt `json:"track"`        // 消息消费轨迹
