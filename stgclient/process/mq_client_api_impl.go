@@ -422,7 +422,7 @@ func (impl *MQClientAPIImpl) processPullResponse(response *protocol.RemotingComm
 	reponseHeader := &header.PullMessageResponseHeader{}
 	response.DecodeCommandCustomHeader(reponseHeader)
 	return NewPullResultExt(pullStatus, reponseHeader.NextBeginOffset,
-		reponseHeader.MaxOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
+		reponseHeader.MinOffset, reponseHeader.MaxOffset, nil, reponseHeader.SuggestWhichBrokerId, response.Body)
 }
 
 // 创建topic
