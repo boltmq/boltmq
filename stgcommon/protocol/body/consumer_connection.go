@@ -19,6 +19,50 @@ type ConsumerConnection struct {
 	*protocol.RemotingSerializable
 }
 
+// ConsumerConnectionPlus 消费者连接信息(处理set集合无法反序列化问题)
+// Author rongzhihong
+// Since 2017/9/19
+type ConsumerConnectionPlus struct {
+	ConnectionSet     []*Connection              `json:"connectionSet"`     // type: Connection
+	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // topic<*SubscriptionData>
+	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
+	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
+	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
+	*protocol.RemotingSerializable
+}
+
+// NewConsumerConnection 初始化
+// Author rongzhihong
+// Since 2017/9/19
+func NewConsumerConnectionPlus() *ConsumerConnectionPlus {
+	connect := new(ConsumerConnectionPlus)
+	connect.ConnectionSet = make([]*Connection, 0)
+	connect.SubscriptionTable = sync.NewMap()
+	connect.RemotingSerializable = new(protocol.RemotingSerializable)
+	return connect
+}
+
+// ToConsumerConnection 转化为ConsumerConnection
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func (plus *ConsumerConnectionPlus) ToConsumerConnection() *ConsumerConnection {
+	consumerConnection := &ConsumerConnection{
+		SubscriptionTable:    plus.SubscriptionTable,
+		ConsumeType:          plus.ConsumeType,
+		MessageModel:         plus.MessageModel,
+		ConsumeFromWhere:     plus.ConsumeFromWhere,
+		RemotingSerializable: plus.RemotingSerializable,
+		ConnectionSet:        set.NewSet(),
+	}
+
+	if plus.ConnectionSet != nil && len(plus.ConnectionSet) > 0 {
+		for _, connect := range plus.ConnectionSet {
+			consumerConnection.ConnectionSet.Add(connect)
+		}
+	}
+	return consumerConnection
+}
+
 // NewConsumerConnection 初始化
 // Author rongzhihong
 // Since 2017/9/19

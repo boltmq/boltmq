@@ -36,19 +36,10 @@ func ConnectionOnline(ctx context.Context) {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
 func ConnectionDetail(ctx context.Context) {
-
 	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
-	pageRequest, err := req.ToPageRequest(ctx)
-	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
-		return
-	}
-	limit := pageRequest.Limit
-	offset := pageRequest.Offset
 
-	data, err := connectionService.Default().ConnectionDetail(clusterName, topic, limit, offset)
+	data, err := connectionService.Default().ConnectionDetail(clusterName, topic)
 	if err != nil {
 		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
