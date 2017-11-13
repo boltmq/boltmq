@@ -1,6 +1,7 @@
 package models
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 )
@@ -68,11 +69,31 @@ type MessageTrackBase struct {
 	OriginMsgId  string             `json:"originMsgId"`  // 源消息ID
 }
 
+type MessageExtVo struct {
+	Topic                     string            `json:"topic"`                     // 消息主题
+	Flag                      int32             `json:"flag"`                      // 消息标志，系统不做干预，完全由应用决定如何使用
+	Properties                map[string]string `json:"properties"`                // 消息属性，都是系统属性，禁止应用设置
+	Body                      string            `json:"body"`                      // 消息体
+	QueueId                   int32             `json:"queueId"`                   // 队列ID<PUT>
+	StoreSize                 int32             `json:"storeSize"`                 // 存储记录大小
+	QueueOffset               int64             `json:"queueOffset"`               // 队列偏移量
+	SysFlag                   int32             `json:"sysFlag"`                   // 消息标志位 <PUT>
+	BornTimestamp             string            `json:"bornTimestamp"`             // 消息在客户端创建时间戳 <PUT>
+	BornHost                  string            `json:"bornHost"`                  // 消息来自哪里 <PUT>
+	StoreTimestamp            string            `json:"storeTimestamp"`            // 消息在服务器存储时间戳
+	StoreHost                 string            `json:"storeHost"`                 // 消息存储在哪个服务器 <PUT>
+	MsgId                     string            `json:"msgId"`                     // 消息ID
+	CommitLogOffset           int64             `json:"commitLogOffset"`           // 消息对应的Commit Log Offset
+	BodyCRC                   int32             `json:"bodyCRC"`                   // 消息体CRC
+	ReconsumeTimes            int32             `json:"reconsumeTimes"`            // 当前消息被某个订阅组重新消费了几次（订阅组之间独立计数）
+	PreparedTransactionOffset int64             `json:"preparedTransactionOffset"` // 事务预处理偏移量
+}
+
 // BlotMessage 消息消费结果查询、消费轨迹
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 type BlotMessage struct {
-	Base     *message.MessageExt   `json:"base"`     // 消息基础属性
+	Base     *MessageExtVo         `json:"base"`     // 消息基础属性
 	Track    []*track.MessageTrack `json:"track"`    // 消息消费结果
 	BodyPath string                `json:"bodyPath"` // 消息body内容存储在web服务器的路径
 }
@@ -91,11 +112,37 @@ func NewMessageBodyVo(msgId, msgBody string) *MessageBodyVo {
 // NewBlotMessage 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/13
-func NewBlotMessage(base *message.MessageExt, messageTrack []*track.MessageTrack, msgBodyPath string) *BlotMessage {
+func NewBlotMessage(base *MessageExtVo, messageTrack []*track.MessageTrack, msgBodyPath string) *BlotMessage {
 	blotMessage := &BlotMessage{
 		Base:     base,
 		Track:    messageTrack,
 		BodyPath: msgBodyPath,
 	}
 	return blotMessage
+}
+
+// ToMessageExtVo 转化为MessageExtVo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+func ToMessageExtVo(msg *message.MessageExt) *MessageExtVo {
+	messageExtVo := &MessageExtVo{
+		Topic:                     msg.Topic,
+		Flag:                      msg.Flag,
+		Properties:                msg.Properties,
+		Body:                      string(msg.Body),
+		QueueId:                   msg.QueueId,
+		StoreSize:                 msg.StoreSize,
+		QueueOffset:               msg.QueueOffset,
+		SysFlag:                   msg.SysFlag,
+		BornTimestamp:             stgcommon.FormatTimestamp(msg.BornTimestamp),
+		BornHost:                  msg.BornHost,
+		StoreTimestamp:            stgcommon.FormatTimestamp(msg.StoreTimestamp),
+		StoreHost:                 msg.StoreHost,
+		MsgId:                     msg.MsgId,
+		CommitLogOffset:           msg.CommitLogOffset,
+		BodyCRC:                   msg.BodyCRC,
+		ReconsumeTimes:            msg.ReconsumeTimes,
+		PreparedTransactionOffset: msg.PreparedTransactionOffset,
+	}
+	return messageExtVo
 }

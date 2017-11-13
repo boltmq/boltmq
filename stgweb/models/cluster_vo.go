@@ -27,6 +27,13 @@ type ClusterGeneralVo struct {
 	ClusterName   string            `json:"clusterName"`   // 集群名称
 }
 
+// ClusterGeneralVoWapper Cluster集群列表包装器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+type ClusterGeneralVoWapper struct {
+	ClusterGeneralVo []*ClusterGeneralVo `json:"clusters"`
+}
+
 // ClusterList Cluster列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
