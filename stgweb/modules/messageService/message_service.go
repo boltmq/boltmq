@@ -137,17 +137,19 @@ func (service *MessageService) QueryMsg(msgId string) (*models.BlotMessage, erro
 // QueryMsg 查询消息结果
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackExt, error) {
+func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackExtWapper, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
-	result := &models.MessageTrackExt{}
+	result := models.NewMessageTrackExtWapper(msgId)
 	messageExt, err := defaultMQAdminExt.ViewMessage(msgId)
 	if err != nil {
 		return result, err
 	}
+
+	result.OriginMsgId = messageExt.GetOriginMessageID()
 
 	bronIp, _ := stgcommon.ParseClientAddr(messageExt.BornHost)
 	produceTrackVo := &models.ProduceTrackVo{
@@ -156,21 +158,21 @@ func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackE
 		ProducerGroupId:   "",
 		SendTimeConsuming: (messageExt.StoreTimestamp - messageExt.BornTimestamp),
 	}
-	result.ProduceExt = produceTrackVo
+	result.TrackWapper.ProduceExt = produceTrackVo
 
 	topicTrackVo := &models.TopicTrackVo{
 		Topic: messageExt.Topic,
 		Key:   messageExt.GetKeys(),
 		Tag:   messageExt.GetTags(),
 	}
-	result.TopicExt = topicTrackVo
+	result.TrackWapper.TopicExt = topicTrackVo
 
 	groupIds, err := service.GroupServ.QueryConsumerGroupId(messageExt.Topic)
 	if err != nil {
 		return result, err
 	}
 	if groupIds == nil || len(groupIds) == 0 {
-		result.ConsumeExt = make([]*models.ConsumeTrackVo, 0)
+		result.TrackWapper.ConsumeExt = make([]*models.ConsumeTrackVo, 0)
 		return result, nil
 	}
 
@@ -213,7 +215,7 @@ func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackE
 			consumeExts = append(consumeExts, consumeExt)
 		}
 	}
-	result.ConsumeExt = consumeExts
+	result.TrackWapper.ConsumeExt = consumeExts
 
 	return result, nil
 
