@@ -191,7 +191,7 @@ func (cm *ConsumerManager) QueryTopicConsumeByWho(topic string) set.Set {
 		group, value, _ := iterator.Next()
 		if info, ok := value.(*ConsumerGroupInfo); ok {
 			subscriptionTable := info.SubscriptionTable
-			if found, _ := subscriptionTable.ContainsKey(topic); found {
+			if found, _ := subscriptionTable.Get(topic); found != nil {
 				if k, ok := group.(string); ok {
 					groups.Add(k)
 				}
