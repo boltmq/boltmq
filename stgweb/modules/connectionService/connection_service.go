@@ -1,7 +1,6 @@
 package connectionService
 
 import (
-	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
@@ -85,7 +84,6 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 		connectionOnline := models.NewConnectionOnline(t.ClusterName, t.Topic, consumerGroupIds, consumerNums, producerNums)
 		connectionOnlines = append(connectionOnlines, connectionOnline)
 	}
-
 
 	total = int64(len(connectionOnlines))
 	pageConnections := service.connectionOnlineListPaging(total, limit, offset, connectionOnlines)
