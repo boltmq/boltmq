@@ -26,7 +26,7 @@ func ConnectionOnline(ctx context.Context) {
 	data, total, err := connectionService.Default().ConnectionOnline(topic, limit, offset)
 	if err != nil {
 		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
-		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
 	ctx.JSON(resp.NewSuccessPageResponse(total, data))
