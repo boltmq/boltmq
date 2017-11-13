@@ -117,7 +117,6 @@ func (service *MessageService) QueryMsg(msgId string) (*models.BlotMessage, erro
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("---->>>>>>>> %s\n", string(messageExt.Body))
 
 	msgBodyPath := stgcommon.MSG_BODY_DIR + msgId
 	_, err = service.writeMsgBody(msgBodyPath, messageExt.Body)

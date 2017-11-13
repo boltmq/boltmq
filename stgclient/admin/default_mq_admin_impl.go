@@ -560,18 +560,20 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 					messageTrack.TrackType = track.SubscribedAndConsumed
 					messageTrack.Code = code.SUCCESS
 					// 查看订阅关系是否匹配
-					for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
-						key, value, _ := itor.Next()
-						if topic, ok := key.(string); ok && topic != msg.Topic {
-							continue
-						}
+					if cc != nil && cc.SubscriptionTable != nil {
+						for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
+							key, value, _ := itor.Next()
+							if topic, ok := key.(string); ok && topic != msg.Topic {
+								continue
+							}
 
-						subscriptionData, ok := value.(*heartbeat.SubscriptionData)
-						if ok && subscriptionData != nil && subscriptionData.TagsSet != nil {
-							for itor := range subscriptionData.TagsSet.Iterator().C {
-								if msgTag, ok := itor.(string); ok && msgTag != msg.GetTags() && msgTag != "*" {
-									messageTrack.TrackType = track.SubscribedButFilterd
-									messageTrack.Code = code.SUCCESS
+							subscriptionData, ok := value.(*heartbeat.SubscriptionData)
+							if ok && subscriptionData != nil && subscriptionData.TagsSet != nil {
+								for itor := range subscriptionData.TagsSet.Iterator().C {
+									if msgTag, ok := itor.(string); ok && msgTag != msg.GetTags() && msgTag != "*" {
+										messageTrack.TrackType = track.SubscribedButFilterd
+										messageTrack.Code = code.SUCCESS
+									}
 								}
 							}
 						}
