@@ -1,13 +1,13 @@
 package stgcommon
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgclient"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/constant"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"os"
 	"runtime"
 	"strings"
-	"fmt"
 )
 
 const (
@@ -26,8 +26,8 @@ type BrokerConfig struct {
 	NamesrvAddr                        string `json:"namesrvAddr"`                        // namsrv地址
 	BrokerIP1                          string `json:"brokerIP1"`                          // 本机ip1地址
 	BrokerIP2                          string `json:"brokerIP2"`                          // 本机ip2地址
-	BrokerName                         string `json:"brokerName"`                         // 当前机器hostName
-	BrokerClusterName                  string `json:"brokerClusterName"`                  // 集群名称
+	BrokerName                         string `json:"brokerName"`                         // 当前机器hostName(通常来说被broker-a.toml配置项覆盖)
+	BrokerClusterName                  string `json:"brokerClusterName"`                  // 集群名称(通常来说被broker-a.toml配置项覆盖)
 	BrokerId                           int64  `json:"brokerId"`                           // 默认值MasterId
 	BrokerPort                         int    `json:"brokerPort"`                         // broker对外提供服务端口
 	BrokerPermission                   int    `json:"brokerPermission"`                   // Broker权限
@@ -104,7 +104,6 @@ func NewCustomBrokerConfig(cfg *SmartgoBrokerConfig) *BrokerConfig {
 	brokerConfig.StorePathRootDir = cfg.StorePathRootDir
 	brokerConfig.BrokerPort = cfg.BrokerPort
 	brokerConfig.HaMasterAddress = strings.TrimSpace(cfg.HaMasterAddress)
-
 
 	if brokerConfig.BrokerIP1 == "" {
 		if cfg.BrokerIP == "" {
@@ -190,4 +189,11 @@ func (self *BrokerConfig) HasReadable() bool {
 // Since: 2017/9/29
 func (self *BrokerConfig) HasWriteable() bool {
 	return constant.IsWriteable(self.BrokerPermission)
+}
+
+// GetDefaultBrokerName 获取默认broker名称
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/29
+func GetDefaultBrokerName() string {
+	return defaultBrokerClusterName
 }

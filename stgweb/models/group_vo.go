@@ -28,6 +28,34 @@ type ConsumerProgress struct {
 	Total          int64            `json:"total"`
 }
 
+// ConsumerGroupList 消费组列表
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type ConsumerGroupVo struct {
+	ClusterName     string    `json:"clusterName"`     // 集群名称
+	Topic           string    `json:"topic"`           // 集群名称
+	TopicType       TopicType `json:"topicType"`       // topic类型
+	ConsumerGroupId string    `json:"consumerGroupId"` // 消费组ID
+}
+
+// BrokerRuntimeInfo broker运行状态
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/7
+type BrokerRuntimeInfo struct {
+	BrokerVersionDesc           string  `json:"brokerVersionDesc"`
+	BrokerVersion               string  `json:"brokerVersion"`
+	MsgPutTotalYesterdayMorning string  `json:"msgPutTotalYesterdayMorning"`
+	MsgPutTotalTodayMorning     string  `json:"msgPutTotalTodayMorning"`
+	MsgPutTotalTodayNow         string  `json:"msgPutTotalTodayNow"`
+	MsgGetTotalYesterdayMorning string  `json:"msgGetTotalYesterdayMorning"`
+	MsgGetTotalTodayNow         string  `json:"msgGetTotalTodayNow"`
+	SendThreadPoolQueueSize     string  `json:"sendThreadPoolQueueSize"`
+	SendThreadPoolQueueCapacity string  `json:"sendThreadPoolQueueCapacity"`
+	MsgGetTotalTodayMorning     string  `json:"msgGetTotalTodayMorning"`
+	InTps                       float64 `json:"inTps"`
+	OutTps                      float64 `json:"outTps"`
+}
+
 // NewConsumerGroup 初始化ConsumerGroup
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
@@ -69,16 +97,6 @@ func NewConsumerProgress(data []*ConsumerGroup, total, diffTotal int64, consumeG
 	return consumerProgress
 }
 
-// ConsumerGroupList 消费组列表
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/7
-type ConsumerGroupVo struct {
-	ClusterName     string    `json:"clusterName"`     // 集群名称
-	Topic           string    `json:"topic"`           // 集群名称
-	TopicType       TopicType `json:"topicType"`       // topic类型
-	ConsumerGroupId string    `json:"consumerGroupId"` // 消费组ID
-}
-
 // NewConsumerGroupVo 初始化ConsumerGroupVo
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
@@ -90,24 +108,6 @@ func NewConsumerGroupVo(clusterName, topic, consumerGroupId string) *ConsumerGro
 		ConsumerGroupId: consumerGroupId,
 	}
 	return consumerGroupVo
-}
-
-// BrokerRuntimeInfo broker运行状态
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/7
-type BrokerRuntimeInfo struct {
-	BrokerVersionDesc           string  `json:"brokerVersionDesc"`
-	BrokerVersion               string  `json:"brokerVersion"`
-	MsgPutTotalYesterdayMorning string  `json:"msgPutTotalYesterdayMorning"`
-	MsgPutTotalTodayMorning     string  `json:"msgPutTotalTodayMorning"`
-	MsgPutTotalTodayNow         string  `json:"msgPutTotalTodayNow"`
-	MsgGetTotalYesterdayMorning string  `json:"msgGetTotalYesterdayMorning"`
-	MsgGetTotalTodayNow         string  `json:"msgGetTotalTodayNow"`
-	SendThreadPoolQueueSize     string  `json:"sendThreadPoolQueueSize"`
-	SendThreadPoolQueueCapacity string  `json:"sendThreadPoolQueueCapacity"`
-	MsgGetTotalTodayMorning     string  `json:"msgGetTotalTodayMorning"`
-	InTps                       float64 `json:"inTps"`
-	OutTps                      float64 `json:"outTps"`
 }
 
 // ToCluterGeneral 转化CluterGeneral

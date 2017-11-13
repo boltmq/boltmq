@@ -16,20 +16,6 @@ type ConnectionOnline struct {
 	ConsumeNums      int      `json:"consumeNums"`      // 消费进程总数
 }
 
-// NewConnectionOnline 初始化ConnectionOnline
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/10
-func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, consumeNums, produceNums int) *ConnectionOnline {
-	connectionOnline := &ConnectionOnline{
-		ClusterName:      clusterName,
-		Topic:            topic,
-		ConsumerGroupIds: consumerGroupIds,
-		ConsumeNums:      consumeNums,
-		ProduceNums:      produceNums,
-	}
-	return connectionOnline
-}
-
 // ConnectionDetail 在线进程详情
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
@@ -83,6 +69,20 @@ type SubscribeTopicTable struct {
 	TagsSet         []string `json:"tags"`
 	CodeSet         []int    `json:"codeSet"`
 	SubVersion      int64    `json:"subVersion"`
+}
+
+// NewConnectionOnline 初始化ConnectionOnline
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/10
+func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, consumeNums, produceNums int) *ConnectionOnline {
+	connectionOnline := &ConnectionOnline{
+		ClusterName:      clusterName,
+		Topic:            topic,
+		ConsumerGroupIds: consumerGroupIds,
+		ConsumeNums:      consumeNums,
+		ProduceNums:      produceNums,
+	}
+	return connectionOnline
 }
 
 // ToSubscribeTopicTable 转化单个SubscriptionData

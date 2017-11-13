@@ -22,6 +22,17 @@ const (
 // Since: 2017/11/6
 type TopicType int
 
+// SystemTopics 默认系统Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/13
+var SystemTopics = []string{
+	stgcommon.SELF_TEST_TOPIC,
+	stgcommon.DEFAULT_TOPIC,
+	stgcommon.BENCHMARK_TOPIC,
+	stgcommon.OFFSET_MOVED_EVENT,
+	stgcommon.GetDefaultBrokerName(),
+}
+
 // TopicStats topic数据的存储状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
@@ -70,9 +81,10 @@ type CreateTopic struct {
 // Since: 2017/11/9
 type TopicVo struct {
 	TopicConfigVo *TopicConfigVo `json:"topicConfig"`
-	ClusterName   string         `json:"clusterName"` // 集群名称
-	Topic         string         `json:"topic"`       // topic名称
-	TopicType     TopicType      `json:"topicType"`   // topic类型
+	ClusterName   string         `json:"clusterName"`   // 集群名称
+	Topic         string         `json:"topic"`         // topic名称
+	TopicType     TopicType      `json:"topicType"`     // topic类型
+	IsSystemTopic bool           `json:"isSystemTopic"` // 是否为系统Topic
 }
 
 // TopicConfigVo topic配置项
@@ -97,9 +109,9 @@ func (t *TopicVo) ToString() string {
 		return fmt.Sprintf("TopicVo is nil")
 	}
 
-	format := "TopicVo {topic=%s, clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d, readQueueNums=%d, writeQueueNums=%d}"
+	format := "TopicVo {topic=%s, clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d, readQueueNums=%d, writeQueueNums=%d, isSystemTopic=%t}"
 	return fmt.Sprintf(format, t.Topic, t.ClusterName, t.TopicConfigVo.BrokerName, t.TopicConfigVo.BrokerAddr, t.TopicConfigVo.BrokerId,
-		t.TopicConfigVo.ReadQueueNums, t.TopicConfigVo.WriteQueueNums)
+		t.TopicConfigVo.ReadQueueNums, t.TopicConfigVo.WriteQueueNums, IsSystemTopic(t.Topic))
 }
 
 // ToTopicVo 转化为TopicVo
@@ -110,6 +122,7 @@ func ToTopicVo(wapper *body.TopicBrokerClusterWapper) *TopicVo {
 	topicVo.TopicType = ParseTopicType(wapper.TopicName)
 	topicVo.Topic = wapper.TopicName
 	topicVo.ClusterName = wapper.ClusterName
+	topicVo.IsSystemTopic = IsSystemTopic(wapper.TopicName)
 	topicVo.TopicConfigVo = new(TopicConfigVo)
 
 	topicVo.TopicConfigVo.Perm = wapper.TopicUpdateConfigWapper.Perm
@@ -198,8 +211,6 @@ func ToTopicStats(mq *message.MessageQueue, topicOffset *admin.TopicOffset, topi
 	return topicStats
 }
 
-
-
 // IsRetryTopic 是否为重试队列的Topic
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
@@ -219,4 +230,16 @@ func IsDLQTopic(topic string) bool {
 // Since: 2017/11/6
 func IsNormalTopic(topic string) bool {
 	return !IsRetryTopic(topic) && !IsDLQTopic(topic)
+}
+
+// IsSystemTopic 是否为系统Topic
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/6
+func IsSystemTopic(topic string) bool {
+	for _, value := range SystemTopics {
+		if value == topic {
+			return true
+		}
+	}
+	return false
 }
