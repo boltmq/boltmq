@@ -4,7 +4,7 @@ package header
 // Author rongzhihong
 // Since 2017/9/19
 type QueryTopicConsumeByWhoRequestHeader struct {
-	Topic string `json:"topic"`
+	Topic string
 }
 
 func (header *QueryTopicConsumeByWhoRequestHeader) CheckFields() error {

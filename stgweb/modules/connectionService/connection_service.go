@@ -173,7 +173,7 @@ func (service *ConnectionService) connectionOnlineListPaging(total int64, limit,
 // ConnectionDetail 查询在线消费进程、在线生产进程的详情
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
-func (service *ConnectionService) ConnectionDetail(clusterName, searchTopic string, limit, offset int) (*models.ConnectionDetail, error) {
+func (service *ConnectionService) ConnectionDetail(clusterName, searchTopic string) (*models.ConnectionDetail, error) {
 
 	connectionDetail := new(models.ConnectionDetail)
 	connectionDetail.ConsumerOnLine = new(models.ConsumerOnLine)
@@ -210,7 +210,7 @@ func (service *ConnectionService) queryOnlineConsumer(clusterName, topic string)
 		if groupId, ok := itor.(string); ok {
 			cc, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 			if err != nil {
-				logger.Errorf("query consumerConnection err: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
+				logger.Errorf("query consumerConnection error: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
 				return result, err
 			}
 

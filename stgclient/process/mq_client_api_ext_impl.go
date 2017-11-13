@@ -175,6 +175,8 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 	}
 	requestHeader := header.NewGetConsumeStatsRequestHeader(consumerGroupWithProjectGroup, topic)
 	request := protocol.CreateRequestCommand(code.GET_CONSUME_STATS, requestHeader)
+	fmt.Printf("GetConsumeStatsByTopic.request >>>>>>>>>   %s \n", request.ToString())
+
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
 		return nil, err
@@ -194,7 +196,7 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 	if content == nil || len(content) == 0 {
 		return consumeStats, nil
 	}
-
+	fmt.Printf("GetConsumeStatsByTopic.response >>>>>>>>>   %s \n", response.ToString())
 	err = consumeStatsPlus.CustomDecode(content, consumeStatsPlus)
 	if err != nil {
 		return consumeStats, err
@@ -285,16 +287,19 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
-	consumerConnection := new(body.ConsumerConnection)
+	consumerConnection := body.NewConsumerConnection()
+	consumerConnectionPlus := new(body.ConsumerConnectionPlus)
 	content := response.Body
 	if content == nil || len(content) == 0 {
 		return consumerConnection, nil
 	}
 
-	err = consumerConnection.CustomDecode(content, consumerConnection)
+	err = consumerConnectionPlus.CustomDecode(content, consumerConnectionPlus)
 	if err != nil {
 		return nil, err
 	}
+	consumerConnection = consumerConnectionPlus.ToConsumerConnection()
+
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumerConnection != nil && consumerConnection.SubscriptionTable != nil {
 		subscriptionDataConcurrentHashMap := consumerConnection.SubscriptionTable
 		for subscriptionDataEntry := subscriptionDataConcurrentHashMap.Iterator(); subscriptionDataEntry.HasNext(); {
