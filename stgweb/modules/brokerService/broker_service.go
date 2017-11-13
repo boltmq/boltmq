@@ -75,16 +75,19 @@ func (service *BrokerService) DeleteSubGroup() {
 // GetBrokerRuntimeInfo 查询broker运行状态
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func (service *BrokerService) GetBrokerRuntimeInfo() ([]*models.ClusterGeneralVo, error) {
+func (service *BrokerService) GetBrokerRuntimeInfo() (*models.ClusterGeneralVoWapper, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
+	clusterWapper := &models.ClusterGeneralVoWapper{}
 	clusterGeneralVos := make([]*models.ClusterGeneralVo, 0)
+	clusterWapper.ClusterGeneralVo = clusterGeneralVos
+
 	clusterNames, brokerAddrTable, err := defaultMQAdminExt.GetAllClusterNames()
 	if err != nil {
-		return clusterGeneralVos, err
+		return clusterWapper, err
 	}
 	for _, clusterName := range clusterNames {
 		clusterGeneralVo := new(models.ClusterGeneralVo)
@@ -94,10 +97,10 @@ func (service *BrokerService) GetBrokerRuntimeInfo() ([]*models.ClusterGeneralVo
 
 		masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(clusterName)
 		if err != nil {
-			return clusterGeneralVos, err
+			return clusterWapper, err
 		}
 		if masterSet == nil || masterSet.Cardinality() == 0 {
-			return clusterGeneralVos, fmt.Errorf("the brokerAddr of master is empty")
+			return clusterWapper, fmt.Errorf("the brokerAddr of master is empty")
 		}
 
 		clusterGeneralList := make([]*models.ClusterGeneral, 0)
@@ -105,10 +108,10 @@ func (service *BrokerService) GetBrokerRuntimeInfo() ([]*models.ClusterGeneralVo
 			if brokerAddr, ok := itor.(string); ok {
 				table, err := defaultMQAdminExt.FetchBrokerRuntimeStats(brokerAddr)
 				if err != nil {
-					return clusterGeneralVos, err
+					return clusterWapper, err
 				}
 				if table == nil || table.Table == nil || len(table.Table) == 0 {
-					return clusterGeneralVos, nil
+					return clusterWapper, nil
 				}
 
 				brokerRuntimeInfo := parseKvTable(table)
@@ -121,7 +124,8 @@ func (service *BrokerService) GetBrokerRuntimeInfo() ([]*models.ClusterGeneralVo
 		clusterGeneralVos = append(clusterGeneralVos, clusterGeneralVo)
 	}
 
-	return clusterGeneralVos, nil
+	clusterWapper.ClusterGeneralVo = clusterGeneralVos
+	return clusterWapper, nil
 }
 
 func getBrokerNameByAddr(brokerAddrTable map[string]*route.BrokerData, addr string) (int, string) {

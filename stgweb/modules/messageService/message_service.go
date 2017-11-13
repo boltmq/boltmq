@@ -76,7 +76,7 @@ func (service *MessageService) QueryMsgBody(msgId string) (*models.MessageBodyVo
 	}
 
 	msgBody := string(messageExt.Body)
-	_, err = service.writeMsgBody(msgBodyPath, msgBody)
+	_, err = service.writeMsgBody(msgBodyPath, messageExt.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +88,9 @@ func (service *MessageService) QueryMsgBody(msgId string) (*models.MessageBodyVo
 // writeMsgBody 将消息body内容写入指定的目录
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/9
-func (service *MessageService) writeMsgBody(msgBodyPath, msgbody string) (int, error) {
+func (service *MessageService) writeMsgBody(msgBodyPath string, msgbody []byte) (int, error) {
 	defer utils.RecoveredFn()
-	return file.WriteString(msgBodyPath, msgbody)
+	return file.WriteBytes(msgBodyPath, msgbody)
 }
 
 // writeMsgBody 将消息body内容写入指定的目录
@@ -117,9 +117,10 @@ func (service *MessageService) QueryMsg(msgId string) (*models.BlotMessage, erro
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("---->>>>>>>> %s\n", string(messageExt.Body))
 
 	msgBodyPath := stgcommon.MSG_BODY_DIR + msgId
-	_, err = service.writeMsgBody(msgBodyPath, string(messageExt.Body))
+	_, err = service.writeMsgBody(msgBodyPath, messageExt.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +130,8 @@ func (service *MessageService) QueryMsg(msgId string) (*models.BlotMessage, erro
 		return nil, err
 	}
 
-	blotMessage := models.NewBlotMessage(messageExt, tracks, msgBodyPath)
+	messageExtVo := models.ToMessageExtVo(messageExt)
+	blotMessage := models.NewBlotMessage(messageExtVo, tracks, msgBodyPath)
 	return blotMessage, nil
 }
 

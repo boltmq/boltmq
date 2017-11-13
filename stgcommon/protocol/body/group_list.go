@@ -1,8 +1,10 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
+	"strings"
 )
 
 // GroupList 分组集合
@@ -21,4 +23,19 @@ func NewGroupList() *GroupList {
 	groupList.GroupList = set.NewSet()
 	groupList.RemotingSerializable = new(protocol.RemotingSerializable)
 	return groupList
+}
+
+// ToString 打印结构信息
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/1
+func (self *GroupList) ToString() string {
+	if self == nil || self.GroupList == nil {
+		return "GroupList is nil"
+	}
+
+	var values []string
+	for itor := range self.GroupList.Iterator().C {
+		values = append(values, itor.(string))
+	}
+	return fmt.Sprintf("GroupList [%s]", strings.Join(values, ","))
 }
