@@ -1,6 +1,7 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
@@ -47,12 +48,19 @@ func NewConsumerConnectionPlus() *ConsumerConnectionPlus {
 // Since: 2017/11/13
 func (plus *ConsumerConnectionPlus) ToConsumerConnection() *ConsumerConnection {
 	consumerConnection := &ConsumerConnection{
-		SubscriptionTable:    plus.SubscriptionTable,
+		SubscriptionTable:    sync.NewMap(),
 		ConsumeType:          plus.ConsumeType,
 		MessageModel:         plus.MessageModel,
 		ConsumeFromWhere:     plus.ConsumeFromWhere,
 		RemotingSerializable: plus.RemotingSerializable,
 		ConnectionSet:        set.NewSet(),
+	}
+
+	if plus.SubscriptionTable != nil {
+		for itor := plus.SubscriptionTable.Iterator(); itor.HasNext(); {
+			key, value, _ := itor.Next()
+			consumerConnection.SubscriptionTable.Put(key.(string), value.(*heartbeat.SubscriptionData))
+		}
 	}
 
 	if plus.ConnectionSet != nil && len(plus.ConnectionSet) > 0 {
