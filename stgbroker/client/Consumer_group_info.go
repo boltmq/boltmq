@@ -177,7 +177,7 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 	for _, sub := range subList {
 		old, _ := cg.SubscriptionTable.Get(sub.Topic)
 		if old == nil {
-			prev, _ := cg.SubscriptionTable.Put(sub.Topic, sub)
+			prev, _ := cg.SubscriptionTable.Put(sub.Topic, &sub)
 			if prev == nil {
 				updated = true
 				logger.Infof("subscription changed, add new topic, group: %s %#v", cg.GroupName, sub)
@@ -190,7 +190,7 @@ func (cg *ConsumerGroupInfo) UpdateSubscription(subList []heartbeat.Subscription
 				if cg.ConsumeType == heartbeat.CONSUME_PASSIVELY {
 					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.GroupName, oldSub, sub)
 				}
-				cg.SubscriptionTable.Put(sub.Topic, sub)
+				cg.SubscriptionTable.Put(sub.Topic, &sub)
 			}
 		}
 	}
