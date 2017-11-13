@@ -17,6 +17,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgnet/netm"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
+	strconv "strconv"
 	"strings"
 )
 
@@ -681,11 +682,13 @@ func (abp *AdminBrokerProcessor) getConsumeStats(ctx netm.Context, request *prot
 			}
 
 			consumeTps := abp.BrokerController.brokerStatsManager.TpsGroupGetNums(requestHeader.ConsumerGroup, topic)
-			var consumeTps2 int64 = int64(consumeTps)
-			consumeTps2 += consumeStats.ConsumeTps
-			consumeStats.ConsumeTps = consumeTps2
+			consumeStats.ConsumeTps += consumeTps
 		}
 	}
+
+	consumeTpsStr := fmt.Sprintf("%0.2f", consumeStats.ConsumeTps)
+	consumeTpsMath, _ := strconv.ParseFloat(consumeTpsStr, 64)
+	consumeStats.ConsumeTps = consumeTpsMath
 
 	content := stgcommon.Encode(consumeStats)
 	response.Body = content
