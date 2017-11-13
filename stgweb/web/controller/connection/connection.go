@@ -38,6 +38,13 @@ func ConnectionOnline(ctx context.Context) {
 func ConnectionDetail(ctx context.Context) {
 	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
+	if topic == "" {
+		errMsg := "topic字段值无效"
+		logger.Warnf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
+		return
+	}
+
 
 	data, err := connectionService.Default().ConnectionDetail(clusterName, topic)
 	if err != nil {
