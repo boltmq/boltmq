@@ -71,7 +71,7 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 			logger.Warnf("search topic [%s] is invalid", t.Topic)
 			continue
 		}
-		consumerGroupIds, consumerNums, err := service.sumOnlineConsumerNums(t.Topic)
+		consumerGroupIds, consumerNums, err := service.SumOnlineConsumerNums(t.Topic)
 		if err != nil {
 			return connectionOnlines, total, err
 		}
@@ -108,10 +108,10 @@ func (service *ConnectionService) sumOnlineProducerNums(topic string) ([]string,
 	return producerGroupIds, producerNums, nil
 }
 
-// sumOnlineConsumerNums 统计topic对应的在线生产进程数
+// SumOnlineConsumerNums 统计topic对应的在线生产进程数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
-func (service *ConnectionService) sumOnlineConsumerNums(topic string) ([]string, int, error) {
+func (service *ConnectionService) SumOnlineConsumerNums(topic string) ([]string, int, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
