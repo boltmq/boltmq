@@ -286,6 +286,7 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		logger.Errorf("GetConsumerConnectionList failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
+	logger.Infof("GetConsumerConnectionList ----> %s", response.ToString())
 
 	consumerConnection := body.NewConsumerConnection()
 	consumerConnectionPlus := new(body.ConsumerConnectionPlus)
