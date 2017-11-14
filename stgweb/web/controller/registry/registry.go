@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"git.oschina.net/cloudzone/cloudcommon-go/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/cloudcommon-go/web/resp"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
 	"github.com/kataras/iris/context"

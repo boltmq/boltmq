@@ -3,9 +3,9 @@ package other
 import (
 	"fmt"
 	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 	"log"
 	"time"
+	// "golang.org/x/net/context"
 )
 
 func startup() {
@@ -26,7 +26,8 @@ func startup() {
 	kapi := client.NewKeysAPI(c)
 	// set "/foo" key with "bar" value
 	log.Print("Setting '/foo' key with 'bar' value")
-	resp, err := kapi.Set(context.Background(), "/foo", "bar", nil)
+	// resp, err := kapi.Set(context.Background(), "/foo", "bar", nil)
+	resp, err := kapi.Set(nil, "/foo", "bar", nil)
 	if err != nil {
 		log.Fatal(err)
 	} else {
@@ -35,7 +36,8 @@ func startup() {
 	}
 	// get "/foo" key's value
 	log.Print("Getting '/foo' key value")
-	resp, err = kapi.Get(context.Background(), "/foo", nil)
+	// resp, err = kapi.Get(context.Background(), "/foo", nil)
+	resp, err = kapi.Get(nil, "/foo", nil)
 	if err != nil {
 		log.Fatal(err)
 	} else {
