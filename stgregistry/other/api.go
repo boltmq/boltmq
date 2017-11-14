@@ -3,11 +3,11 @@ package other
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/parseutil"
 	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+	// "golang.org/x/net/context"
 )
 
 type SmartgoConfig struct {
@@ -75,7 +75,8 @@ func (self *EtcdApi) RegisterBrokerResult(broker *Broker) {
 	val := ""
 	// 超过TTL 10秒钟没有心跳则目录自动被清除
 	setOptions := &client.SetOptions{TTL: 10 * time.Duration(time.Second), Dir: true}
-	result, err := self.KApi.Set(context.Background(), key, val, setOptions)
+	// result, err := self.KApi.Set(context.Background(), key, val, setOptions)
+	result, err := self.KApi.Set(nil, key, val, setOptions)
 	if err != nil {
 		log.Printf("[Etcd Kapi err]: %s\n", err)
 	}
@@ -86,7 +87,8 @@ func (self *EtcdApi) RegisterBrokerResult(broker *Broker) {
 func (self *EtcdApi) AllBroker() (brokerIdList []int64) {
 	key := "SmartGoBroker/"
 	getOptions := &client.GetOptions{Recursive: true}
-	Response, err := self.KApi.Get(context.Background(), key, getOptions)
+	// Response, err := self.KApi.Get(context.Background(), key, getOptions)
+	Response, err := self.KApi.Get(nil, key, getOptions)
 	if err != nil {
 		log.Printf("[Etcd Kapi err]: %s\n", err)
 	}
