@@ -91,12 +91,13 @@ func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, c
 // Since: 2017/7/14
 func ToSubscribeTopicTables(cc *body.ConsumerConnectionPlus) (subscribeTables []*SubscribeTopicTable) {
 	subscribeTables = make([]*SubscribeTopicTable, 0)
-	for _, data := range cc.SubscriptionTable {
+	for topic, data := range cc.SubscriptionTable {
 		if data == nil {
 			continue
 		}
+
 		subscribeTable := &SubscribeTopicTable{
-			Topic:           data.Topic,
+			Topic:           topic,
 			SubString:       data.SubString,
 			ClassFilterMode: data.ClassFilterMode,
 			SubVersion:      int64(data.SubVersion),

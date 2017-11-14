@@ -106,6 +106,7 @@ func (service *BrokerService) GetBrokerRuntimeInfo() (*models.ClusterGeneralVoWa
 		for itor := range masterSet.Iterator().C {
 			if brokerAddr, ok := itor.(string); ok {
 				table, err := defaultMQAdminExt.FetchBrokerRuntimeStats(brokerAddr)
+
 				if err != nil {
 					return clusterWapper, err
 				}
