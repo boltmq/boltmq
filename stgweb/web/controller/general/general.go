@@ -13,7 +13,7 @@ import (
 func GeneralStats(ctx context.Context) {
 	data, err := generalService.Default().GeneralStats()
 	if err != nil {
-		logger.Warnf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}

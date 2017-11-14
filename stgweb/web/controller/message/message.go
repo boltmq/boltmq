@@ -19,14 +19,14 @@ func MessageBody(ctx context.Context) {
 	msgId := strings.TrimSpace(ctx.URLParam("msgId"))
 	if msgId == "" || len(msgId) != message_id_length {
 		errMsg := "msgId字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
 
 	data, err := messageService.Default().QueryMsgBody(msgId)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -41,14 +41,14 @@ func MessageTrack(ctx context.Context) {
 	msgId := strings.TrimSpace(ctx.URLParam("msgId"))
 	if msgId == "" || len(msgId) != message_id_length {
 		errMsg := "msgId字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
 
 	data, err := messageService.Default().MessageTrack(msgId)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -63,14 +63,14 @@ func MessageQuery(ctx context.Context) {
 	msgId := strings.TrimSpace(ctx.URLParam("msgId"))
 	if msgId == "" || len(msgId) != message_id_length {
 		errMsg := "msgId字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
 
 	data, err := messageService.Default().QueryMsg(msgId)
 	if err != nil {
-		logger.Warnf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}

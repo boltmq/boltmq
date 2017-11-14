@@ -16,7 +16,7 @@ func ConnectionOnline(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	pageRequest, err := req.ToPageRequest(ctx)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -25,7 +25,7 @@ func ConnectionOnline(ctx context.Context) {
 
 	data, total, err := connectionService.Default().ConnectionOnline(topic, limit, offset)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -40,7 +40,7 @@ func ConnectionDetail(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	if topic == "" {
 		errMsg := "topic字段值无效"
-		logger.Warnf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
@@ -48,7 +48,7 @@ func ConnectionDetail(ctx context.Context) {
 
 	data, err := connectionService.Default().ConnectionDetail(clusterName, topic)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}

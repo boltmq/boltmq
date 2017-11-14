@@ -16,7 +16,7 @@ func ConsumeProgress(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	if topic == "" {
 		errMsg := "topic字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, errMsg))
 		return
 	}
@@ -24,7 +24,7 @@ func ConsumeProgress(ctx context.Context) {
 	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
 	if clusterName == "" {
 		errMsg := "clusterName字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, errMsg))
 		return
 	}
@@ -32,14 +32,14 @@ func ConsumeProgress(ctx context.Context) {
 	consumerGroupId := strings.TrimSpace(ctx.URLParam("consumerGroupId"))
 	if consumerGroupId == "" {
 		errMsg := "consumerGroupId字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, errMsg))
 		return
 	}
 
 	pageRequest, err := req.ToPageRequest(ctx)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -52,7 +52,7 @@ func ConsumeProgress(ctx context.Context) {
 	}
 	data, err := groupGervice.Default().ConsumeProgressByPage(topic, clusterName, consumerGroupId, limit, offset)
 	if err != nil {
-		logger.Warnf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -66,7 +66,7 @@ func GroupList(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	if topic == "" {
 		errMsg := "topic字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, errMsg))
 		return
 	}
@@ -74,7 +74,7 @@ func GroupList(ctx context.Context) {
 	clusterName := strings.TrimSpace(ctx.URLParam("clusterName"))
 	if clusterName == "" {
 		errMsg := "clusterName字段值无效"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, errMsg))
 		return
 	}
@@ -90,7 +90,7 @@ func GroupList(ctx context.Context) {
 
 	data, total, err := groupGervice.Default().GroupList(topic, clusterName, limit, offset)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}

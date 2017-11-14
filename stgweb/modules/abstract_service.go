@@ -33,7 +33,7 @@ func newAbstractService() *AbstractService {
 func (service *AbstractService) GetDefaultMQAdminExtImpl() *admin.DefaultMQAdminExtImpl {
 	namesrvAddr := service.ConfigureInitializer.GetNamesrvAddr()
 	if strings.TrimSpace(namesrvAddr) == "" {
-		panic(fmt.Errorf("please set '%s' environment to blotmq web console", stgcommon.NAMESRV_ADDR_ENV))
+		panic(fmt.Errorf("please set '%s' environment to blotmq console", stgcommon.NAMESRV_ADDR_ENV))
 	}
 	defaultMQAdminExt := admin.NewDefaultMQAdminExtImpl(namesrvAddr)
 	return defaultMQAdminExt

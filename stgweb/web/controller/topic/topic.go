@@ -1,7 +1,7 @@
 package topic
 
 import (
-	"git.oschina.net/cloudzone/cloudcommon-go/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/cloudcommon-go/web/req"
 	"git.oschina.net/cloudzone/cloudcommon-go/web/resp"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
@@ -20,7 +20,7 @@ func TopicList(ctx context.Context) {
 
 	pageRequest, err := req.ToPageRequest(ctx)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -29,21 +29,21 @@ func TopicList(ctx context.Context) {
 
 	extra, err := strconv.ParseBool(ctx.URLParam("extra"))
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
 
 	topicType, err := ctx.URLParamInt("topicType")
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
 
 	topicListVo, total, err := topicService.Default().GetTopicList(clusterName, topic, extra, topicType, limit, offset)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -57,14 +57,14 @@ func TopicStats(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	if topic == "" {
 		errMsg := "topic字段不能为空"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
 
 	pageRequest, err := req.ToPageRequest(ctx)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -73,7 +73,7 @@ func TopicStats(ctx context.Context) {
 
 	topicState, total, err := topicService.Default().GetTopicStats(topic, limit, offset)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -87,12 +87,12 @@ func TopicStats(ctx context.Context) {
 func CreateTopic(ctx context.Context) {
 	topicVo := new(models.CreateTopic)
 	if err := ctx.ReadJSON(topicVo); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
 	if err := topicVo.Validate(); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -102,7 +102,7 @@ func CreateTopic(ctx context.Context) {
 
 	err := topicService.Default().CreateTopic(topicVo)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -117,12 +117,12 @@ func CreateTopic(ctx context.Context) {
 func UpdateTopic(ctx context.Context) {
 	topicVo := new(models.UpdateTopic)
 	if err := ctx.ReadJSON(topicVo); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
 	if err := topicVo.Validate(); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ParamNotValid, err.Error()))
 		return
 	}
@@ -133,7 +133,7 @@ func UpdateTopic(ctx context.Context) {
 
 	err := topicService.Default().UpdateTopicConfig(topicVo)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -148,7 +148,7 @@ func UpdateTopic(ctx context.Context) {
 func DeleteTopic(ctx context.Context) {
 	topicVo := new(models.DeleteTopic)
 	if err := ctx.ReadJSON(topicVo); err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -160,7 +160,7 @@ func DeleteTopic(ctx context.Context) {
 
 	err := topicService.Default().DeleteTopic(strings.TrimSpace(topicVo.Topic), strings.TrimSpace(topicVo.ClusterName))
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -177,14 +177,14 @@ func TopicRoute(ctx context.Context) {
 	topic := strings.TrimSpace(ctx.URLParam("topic"))
 	if topic == "" {
 		errMsg := "topic字段不能为空"
-		logger.Warn("%s %s %s", errMsg, ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", errMsg, ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, errMsg))
 		return
 	}
 
 	data, err := topicService.Default().QueryTopicRoute(topic, clusterName)
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}

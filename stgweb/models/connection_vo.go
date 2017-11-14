@@ -1,6 +1,7 @@
 package models
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 )
 
@@ -52,6 +53,7 @@ type ConsumerConnectionVo struct {
 	ClientId            string                 `json:"clientId"`            // 消费者客户端实例
 	ClientAddr          string                 `json:"clientAddr"`          // 消费者客户端地址
 	Language            string                 `json:"language"`            // 客户端语言
+	VersionDesc         string                 `json:"versionDesc"`         // mq版本号描述
 	Version             int                    `json:"version"`             // mq版本号
 	ConsumeTps          float64                `json:"consumeTps"`          // 实时消费Tps
 	ConsumeFromWhere    string                 `json:"consumeFromWhere"`    // 从哪里开始消费
@@ -84,22 +86,6 @@ func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, c
 	return connectionOnline
 }
 
-//
-//// ToSubscribeTopicTable 转化单个SubscriptionData
-//// Author: tianyuliang, <tianyuliang@gome.com.cn>
-//// Since: 2017/11/10
-//func ToSubscribeTopicTable(data *heartbeat.SubscriptionData) *SubscribeTopicTable {
-//	subscribeTopicTable := &SubscribeTopicTable{
-//		Topic:           data.Topic,
-//		SubString:       data.SubString,
-//		ClassFilterMode: data.ClassFilterMode,
-//		SubVersion:      int64(data.SubVersion),
-//		TagsSet:         data.TagsSet,
-//		CodeSet:         data.CodeSet,
-//	}
-//	return subscribeTopicTable
-//}
-
 // ToSubscribeTopicTables 消费者订阅Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/7/14
@@ -130,6 +116,9 @@ func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnectionPlus,
 		ConsumerGroupId:     consumerGroupId,
 		ClientId:            c.ClientId,
 		ClientAddr:          c.ClientAddr,
+		Language:            c.Language,
+		Version:             int(c.Version),
+		VersionDesc:         mqversion.GetVersionDesc(int(c.Version)),
 		ConsumeTps:          progress.Tps,
 		DiffTotal:           progress.DiffTotal,
 		ConsumeFromWhere:    cc.ConsumeFromWhere.ToString(),
@@ -137,5 +126,6 @@ func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnectionPlus,
 		MessageModel:        cc.MessageModel.ToString(),
 		SubscribeTopicTable: ToSubscribeTopicTables(cc), // 订阅Topic列表
 	}
+
 	return consumerConnectionVo
 }
