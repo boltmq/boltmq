@@ -123,15 +123,30 @@ func (self *BrokerRuntimeInfo) ToCluterGeneral(brokerAddr, brokerName string, br
 	clusterGeneral.InTPS = JSONFloat(self.InTps)
 	clusterGeneral.OutTPS = JSONFloat(self.OutTps)
 
+	brokerRole := "slave"
 	if brokerId == stgcommon.MASTER_ID {
-		clusterGeneral.BrokerRole = "master"
-	} else {
-		clusterGeneral.BrokerRole = "slave"
+		brokerRole = "master"
 	}
-	clusterGeneral.InTotalToday, _ = strconv.ParseInt(self.MsgGetTotalTodayMorning, 10, 64)
-	clusterGeneral.OutTotalYest, _ = strconv.ParseInt(self.MsgPutTotalYesterdayMorning, 10, 64)
-	clusterGeneral.InTotalYest, _ = strconv.ParseInt(self.MsgPutTotalYesterdayMorning, 10, 64)
-	clusterGeneral.OutTotalToday, _ = strconv.ParseInt(self.MsgPutTotalTodayMorning, 10, 64)
+	clusterGeneral.BrokerRole = brokerRole
+
+	msgPutTotalYesterdayMorning, _ := strconv.ParseInt(self.MsgPutTotalYesterdayMorning, 10, 64)
+	msgPutTotalTodayMorning, _ := strconv.ParseInt(self.MsgPutTotalTodayMorning, 10, 64)
+	msgPutTotalTodayNow, _ := strconv.ParseInt(self.MsgPutTotalTodayNow, 10, 64)
+
+	msgGetTotalYesterdayMorning, _ := strconv.ParseInt(self.MsgGetTotalYesterdayMorning, 10, 64)
+	msgGetTotalTodayMorning, _ := strconv.ParseInt(self.MsgGetTotalTodayMorning, 10, 64)
+	msgGetTotalTodayNow, _ := strconv.ParseInt(self.MsgGetTotalTodayNow, 10, 64)
+
+	inTotalYest := msgPutTotalTodayMorning - msgPutTotalYesterdayMorning
+	outTotalYest := msgGetTotalTodayMorning - msgGetTotalYesterdayMorning
+
+	inTotalToday := msgPutTotalTodayNow - msgPutTotalTodayMorning
+	outTotalToday := msgGetTotalTodayNow - msgGetTotalTodayMorning
+
+	clusterGeneral.InTotalYest = inTotalYest
+	clusterGeneral.OutTotalYest = outTotalYest
+	clusterGeneral.InTotalToday = inTotalToday
+	clusterGeneral.OutTotalToday = outTotalToday
 
 	return clusterGeneral
 }

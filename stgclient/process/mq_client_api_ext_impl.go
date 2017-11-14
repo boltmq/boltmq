@@ -337,6 +337,8 @@ func (impl *MQClientAPIImpl) GetBrokerRuntimeInfo(brokerAddr string, timeoutMill
 		logger.Errorf("GetBrokerRuntimeInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
+	//logger.Infof(">>>> %s,    %s", request.ToString(), response.ToString())
+
 	kvTable := new(body.KVTable)
 	err = kvTable.CustomDecode(response.Body, kvTable)
 	return kvTable, err
