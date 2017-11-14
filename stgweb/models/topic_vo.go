@@ -237,7 +237,7 @@ func IsNormalTopic(topic string) bool {
 // Since: 2017/11/6
 func IsSystemTopic(topic string) bool {
 	if strings.Contains(topic, "broker-") {
-		return true // 约定以“broker-”开始的都是系统topic
+		return true //TODO: 约定以“broker-”开始的都是系统topic，后续待优化
 	}
 
 	for _, value := range SystemTopics {

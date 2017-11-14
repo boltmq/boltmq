@@ -141,7 +141,7 @@ func (service *ConnectionService) SumOnlineConsumerNums(topic string) ([]string,
 			}
 		}
 	}
-	logger.Infof("sumOnlineConsumerNums.consumerGroupIds = %v        --------------", consumerGroupIds)
+	logger.Infof("sumOnlineConsumerNums.consumerGroupIds = [%v] ", strings.Join(consumerGroupIds, ","))
 	return consumerGroupIds, consumerNums, nil
 }
 

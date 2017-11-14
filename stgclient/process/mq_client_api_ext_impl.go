@@ -174,7 +174,6 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 	}
 	requestHeader := header.NewGetConsumeStatsRequestHeader(consumerGroupWithProjectGroup, topic)
 	request := protocol.CreateRequestCommand(code.GET_CONSUME_STATS, requestHeader)
-	fmt.Printf("GetConsumeStatsByTopic.request >>>>>>>>>   %s \n", request.ToString())
 
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
@@ -195,7 +194,7 @@ func (impl *MQClientAPIImpl) GetConsumeStatsByTopic(brokerAddr, consumerGroup, t
 	if content == nil || len(content) == 0 {
 		return consumeStats, nil
 	}
-	fmt.Printf("GetConsumeStatsByTopic.response >>>>>>>>>   %s \n", response.ToString())
+
 	err = consumeStatsPlus.CustomDecode(content, consumeStatsPlus)
 	if err != nil {
 		return consumeStats, err
@@ -285,7 +284,6 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		logger.Errorf("GetConsumerConnectionList failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	logger.Infof("GetConsumerConnectionList ----> %s", response.ToString())
 
 	consumerConnectionPlus := body.NewConsumerConnectionPlus()
 	content := response.Body
@@ -327,7 +325,6 @@ func (impl *MQClientAPIImpl) GetBrokerRuntimeInfo(brokerAddr string, timeoutMill
 		logger.Errorf("GetBrokerRuntimeInfo failed. %s", response.ToString())
 		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
-	//logger.Infof(">>>> %s,    %s", request.ToString(), response.ToString())
 
 	kvTable := new(body.KVTable)
 	err = kvTable.CustomDecode(response.Body, kvTable)

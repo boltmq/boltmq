@@ -54,27 +54,6 @@ func (plus *ClusterPlusInfo) ToString() {
 	if plus == nil {
 		logger.Infof("ClusterPlusInfo is nil")
 	}
-
-	//if plus.BrokerAddrTable != nil {
-	//	for brokerName, bd := range plus.BrokerAddrTable {
-	//		if bd != nil {
-	//			//logger.Infof("-->  brokerName=%s, %s", brokerName, bd.ToString())
-	//		} else {
-	//			//logger.Infof("-->  brokerName=%s, BrokerData is nil", brokerName)
-	//		}
-	//	}
-	//}
-	//
-	//if plus.ClusterAddrTable != nil {
-	//	for clusterName, brokerNames := range plus.ClusterAddrTable {
-	//		val := ""
-	//		if brokerNames != nil {
-	//			val = strings.Join(brokerNames, ",")
-	//		}
-	//		//logger.Infof("-->  clusterName=%s, brokerNames=[%s]", clusterName, val)
-	//	}
-	//}
-
 }
 
 // ToClusterInfo 转化为 ClusterInfo 类型

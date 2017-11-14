@@ -65,9 +65,10 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicStats(topic string) (*admin.Topic
 		if brokerAddr != "" {
 			tst, err := impl.mqClientInstance.MQClientAPIImpl.GetTopicStatsInfo(brokerAddr, topic, timeoutMillis)
 			if err != nil {
-				logger.Errorf("ExamineTopicStats err: %s", err.Error())
-				continue
+				logger.Errorf("ExamineTopicStats err: %s, topic: %s, brokerAddr: %s", err.Error(), topic, brokerAddr)
+				return result, err
 			}
+
 			if tst != nil && tst.OffsetTable != nil {
 				for mq, topicOffset := range tst.OffsetTable {
 					result.OffsetTable[mq] = topicOffset
@@ -161,7 +162,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 		}
 	}
 	if len(result.OffsetTable) == 0 {
-		format := "Not found the consumer group consume stats, because return offset table is empty, maybe the consumer not consume any message"
+		format := "not found the consumer group consume stats, because return offset table is empty, maybe the consumer not consume any message"
 		return result, fmt.Errorf(format)
 	}
 	return result, nil
@@ -365,6 +366,7 @@ func (impl *DefaultMQAdminExtImpl) CreateOrUpdateOrderConf(key, value string, is
 	oldOrderConfs, err := impl.mqClientInstance.MQClientAPIImpl.GetKVConfigValue(namesrvUtils.NAMESPACE_ORDER_TOPIC_CONFIG, key, timeoutMillis)
 	if err != nil {
 		logger.Errorf("CreateOrUpdateOrderConf err: %s", err.Error())
+		return err
 	}
 
 	orderConfMap := make(map[string]string)
@@ -618,6 +620,7 @@ func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGro
 				if brokerAddr, ok := brokerData.BrokerAddrs[stgcommon.MASTER_ID]; ok && brokerAddr != "" {
 					format := "brokerAddr=%s, msg.StoreHost=%s, offsetwapper.ConsumerOffset=%d, msg.QueueOffset=%d"
 					logger.Infof(format, brokerAddr, msg.StoreHost, offsetwapper.ConsumerOffset, msg.QueueOffset)
+
 					if brokerAddr == msg.StoreHost {
 						if offsetwapper != nil && offsetwapper.ConsumerOffset > msg.QueueOffset {
 							return true, nil
@@ -705,7 +708,7 @@ func (impl *DefaultMQAdminExtImpl) SearchOffset(mq message.MessageQueue, timesta
 
 // 查询MessageQueue最大偏移量
 func (impl *DefaultMQAdminExtImpl) MaxOffset(mq *message.MessageQueue) (int64, error) {
-	return 0, nil
+	return impl.mqClientInstance.MQAdminImpl.MaxOffset(mq), nil
 }
 
 // 查询MessageQueue最小偏移量

@@ -43,7 +43,7 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-	log.Println("read config file success.")
+	log.Println("read config file success. cfgPath: ", cfgPath)
 }
 
 // GetConfig 取配置

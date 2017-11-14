@@ -13,7 +13,7 @@ import (
 func QueryNamesrvAddrs(ctx context.Context) {
 	data, err := clusterService.Default().GetNamesrvNodes()
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}

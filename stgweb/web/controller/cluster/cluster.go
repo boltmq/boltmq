@@ -1,8 +1,8 @@
 package cluster
 
 import (
-	"git.oschina.net/cloudzone/cloudcommon-go/logger"
 	"git.oschina.net/cloudzone/cloudcommon-go/web/resp"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/brokerService"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/clusterService"
 	"github.com/kataras/iris/context"
@@ -14,7 +14,7 @@ import (
 func ClusterList(ctx context.Context) {
 	data, err := clusterService.Default().GetCluserNames()
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
@@ -28,7 +28,7 @@ func ClusterList(ctx context.Context) {
 func ClusterGeneral(ctx context.Context) {
 	data, err := brokerService.Default().GetBrokerRuntimeInfo()
 	if err != nil {
-		logger.Warn("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
+		logger.Errorf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())
 		ctx.JSON(resp.NewFailedResponse(resp.ResponseCodes.ServerError, err.Error()))
 		return
 	}
