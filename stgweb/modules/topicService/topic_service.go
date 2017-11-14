@@ -79,6 +79,10 @@ func (service *TopicService) UpdateTopicConfig(topicVo *models.UpdateTopic) erro
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
+	//if models.IsSystemTopic(topic) {
+	//	return fmt.Errorf("系统Topic不允许更新")
+	//}
+
 	custername, _, err := service.FindClusterByTopic(topicVo.Topic)
 	if err != nil || custername == "" {
 		return fmt.Errorf("Topic名称 %s 不存在 ", topicVo.Topic)
@@ -105,6 +109,10 @@ func (service *TopicService) DeleteTopic(topic, clusterName string) error {
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
+
+	if models.IsSystemTopic(topic) {
+		return fmt.Errorf("系统Topic不允许删除")
+	}
 
 	custername, _, err := service.FindClusterByTopic(topic)
 	if err != nil || custername == "" {

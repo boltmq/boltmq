@@ -7,7 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/g"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/route"
 	"os"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
+	//"git.oschina.net/cloudzone/smartgo/stgcommon"
 )
 
 const (
@@ -16,8 +16,8 @@ const (
 
 func main() {
 
-	os.Setenv(stgcommon.NAMESRV_ADDR_ENV, "10.112.68.190:9876;10.112.68.192:9876")
-	os.Setenv(stgcommon.BLOTMQ_WEB_CONFIG_ENV, "E:/source/src/git.oschina.net/cloudzone/smartgo/stgweb/web/etc/cfg.json")
+	//os.Setenv(stgcommon.NAMESRV_ADDR_ENV, "10.112.68.190:9876;10.112.68.192:9876")
+	//os.Setenv(stgcommon.BLOTMQ_WEB_CONFIG_ENV, "E:/source/src/git.oschina.net/cloudzone/smartgo/stgweb/web/etc/cfg.json")
 
 	v := flag.Bool("v", false, "version")
 	help := flag.Bool("h", false, "help")
