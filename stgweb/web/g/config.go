@@ -1,6 +1,7 @@
 package g
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/cloudcommon-go/utils"
 	"git.oschina.net/cloudzone/cloudcommon-go/web"
 	"git.oschina.net/cloudzone/smartgo/stgcommon"
@@ -33,12 +34,16 @@ func configPath() string {
 		return cfgPath
 	}
 
-	return "etc/cfg.json"
+	return ""
 }
 
 //Init 模块初始化
 func Init() {
 	cfgPath := configPath()
+	if cfgPath == "" {
+		panic(fmt.Errorf("please set 'BLOTMQ_WEB_CONFIG' environment to blotmq console"))
+	}
+
 	err := utils.ParseConfig(cfgPath, &cfg)
 	if err != nil {
 		panic(err)
