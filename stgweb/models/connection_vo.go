@@ -2,7 +2,6 @@ package models
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 )
 
 // ConnectionOnline 在线进程列表
@@ -67,7 +66,7 @@ type SubscribeTopicTable struct {
 	SubString       string   `json:"subString"`
 	ClassFilterMode bool     `json:"classFilterMode"`
 	TagsSet         []string `json:"tags"`
-	CodeSet         []int    `json:"codeSet"`
+	CodeSet         []int32  `json:"codeSet"`
 	SubVersion      int64    `json:"subVersion"`
 }
 
@@ -85,39 +84,40 @@ func NewConnectionOnline(clusterName, topic string, consumerGroupIds []string, c
 	return connectionOnline
 }
 
-// ToSubscribeTopicTable 转化单个SubscriptionData
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
-// Since: 2017/11/10
-func ToSubscribeTopicTable(data *heartbeat.SubscriptionData) *SubscribeTopicTable {
-	subscribeTopicTable := &SubscribeTopicTable{
-		Topic:           data.Topic,
-		SubString:       data.SubString,
-		ClassFilterMode: data.ClassFilterMode,
-		SubVersion:      int64(data.SubVersion),
-		//TagsSet:         data.TagsSet,
-		//CodeSet:         data.CodeSet,
-	}
-	return subscribeTopicTable
-}
+//
+//// ToSubscribeTopicTable 转化单个SubscriptionData
+//// Author: tianyuliang, <tianyuliang@gome.com.cn>
+//// Since: 2017/11/10
+//func ToSubscribeTopicTable(data *heartbeat.SubscriptionData) *SubscribeTopicTable {
+//	subscribeTopicTable := &SubscribeTopicTable{
+//		Topic:           data.Topic,
+//		SubString:       data.SubString,
+//		ClassFilterMode: data.ClassFilterMode,
+//		SubVersion:      int64(data.SubVersion),
+//		TagsSet:         data.TagsSet,
+//		CodeSet:         data.CodeSet,
+//	}
+//	return subscribeTopicTable
+//}
 
 // ToSubscribeTopicTables 消费者订阅Topic列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/7/14
-func ToSubscribeTopicTables(cc *body.ConsumerConnection) (subscribeTables []*SubscribeTopicTable) {
+func ToSubscribeTopicTables(cc *body.ConsumerConnectionPlus) (subscribeTables []*SubscribeTopicTable) {
 	subscribeTables = make([]*SubscribeTopicTable, 0)
-	for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
-		_, value, _ := itor.Next()
-		if data, ok := value.(*heartbeat.SubscriptionData); ok && data != nil {
-			subscribeTable := &SubscribeTopicTable{
-				Topic:           data.Topic,
-				SubString:       data.SubString,
-				ClassFilterMode: data.ClassFilterMode,
-				SubVersion:      int64(data.SubVersion),
-				//TagsSet:         data.TagsSet,
-				//CodeSet:         data.CodeSet,
-			}
-			subscribeTables = append(subscribeTables, subscribeTable)
+	for _, data := range cc.SubscriptionTable {
+		if data == nil {
+			continue
 		}
+		subscribeTable := &SubscribeTopicTable{
+			Topic:           data.Topic,
+			SubString:       data.SubString,
+			ClassFilterMode: data.ClassFilterMode,
+			SubVersion:      int64(data.SubVersion),
+			TagsSet:         data.TagsSet,
+			CodeSet:         data.CodeSet,
+		}
+		subscribeTables = append(subscribeTables, subscribeTable)
 	}
 	return subscribeTables
 }
@@ -125,7 +125,7 @@ func ToSubscribeTopicTables(cc *body.ConsumerConnection) (subscribeTables []*Sub
 // ToConsumerConnectionVo 转化为消费进程对象
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/7/14
-func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnection, progress *ConsumerProgress, consumerGroupId string) *ConsumerConnectionVo {
+func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnectionPlus, progress *ConsumerProgress, consumerGroupId string) *ConsumerConnectionVo {
 	consumerConnectionVo := &ConsumerConnectionVo{
 		ConsumerGroupId:     consumerGroupId,
 		ClientId:            c.ClientId,

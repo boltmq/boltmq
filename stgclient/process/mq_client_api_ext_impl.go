@@ -11,7 +11,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/header/namesrv"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 	set "github.com/deckarep/golang-set"
@@ -268,7 +267,7 @@ func (impl *MQClientAPIImpl) GetProducerConnectionList(brokerAddr, producerGroup
 // GetConsumerConnectionList 查询在线消费进程列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*body.ConsumerConnection, error) {
+func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*body.ConsumerConnectionPlus, error) {
 	consumerGroupWithProjectGroup := consumerGroup
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
@@ -288,37 +287,28 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 	}
 	logger.Infof("GetConsumerConnectionList ----> %s", response.ToString())
 
-	consumerConnection := body.NewConsumerConnection()
-	consumerConnectionPlus := new(body.ConsumerConnectionPlus)
+	consumerConnectionPlus := body.NewConsumerConnectionPlus()
 	content := response.Body
 	if content == nil || len(content) == 0 {
-		return consumerConnection, nil
+		return consumerConnectionPlus, nil
 	}
 
 	err = consumerConnectionPlus.CustomDecode(content, consumerConnectionPlus)
 	if err != nil {
-		return nil, err
+		return consumerConnectionPlus, err
 	}
-	consumerConnection = consumerConnectionPlus.ToConsumerConnection()
 
-	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumerConnection != nil && consumerConnection.SubscriptionTable != nil {
-		subscriptionDataConcurrentHashMap := consumerConnection.SubscriptionTable
-		for subscriptionDataEntry := subscriptionDataConcurrentHashMap.Iterator(); subscriptionDataEntry.HasNext(); {
-			key, value, _ := subscriptionDataEntry.Next()
-			if key == nil || value == nil {
+	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumerConnectionPlus != nil && consumerConnectionPlus.SubscriptionTable != nil {
+		for topic, subscriptionData := range consumerConnectionPlus.SubscriptionTable {
+			if subscriptionData == nil {
 				continue
 			}
-			topic := key.(string)
-			subscriptionData, ok := value.(*heartbeat.SubscriptionData)
-			if ok {
-				subscriptionData.Topic = stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix)
-				subscriptionDataConcurrentHashMap.Put(topic, subscriptionData)
-			} else {
-				logger.Warnf("GetConsumerConnectionList err: %v", subscriptionData)
-			}
+			subscriptionData.Topic = stgclient.ClearProjectGroup(topic, impl.ProjectGroupPrefix)
+			consumerConnectionPlus.SubscriptionTable[topic] = subscriptionData
 		}
+
 	}
-	return consumerConnection, nil
+	return consumerConnectionPlus, nil
 }
 
 // GetBrokerRuntimeInfo 查询Broker运行时状态信息

@@ -2,7 +2,6 @@ package connectionService
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
@@ -137,7 +136,7 @@ func (service *ConnectionService) SumOnlineConsumerNums(topic string) ([]string,
 			} else {
 				if consumerConnection != nil && consumerConnection.ConnectionSet != nil {
 					consumerGroupIds = append(consumerGroupIds, groupId)
-					consumerNums += consumerConnection.ConnectionSet.Cardinality()
+					consumerNums += len(consumerConnection.ConnectionSet)
 				}
 			}
 		}
@@ -223,11 +222,12 @@ func (service *ConnectionService) queryOnlineConsumer(clusterName, topic string)
 			}
 
 			if cc != nil && cc.ConnectionSet != nil {
-				for itor := range cc.ConnectionSet.Iterator().C {
-					if c, ok := itor.(*body.Connection); ok {
-						consumerConnectionVo := models.ToConsumerConnectionVo(c, cc, progress, groupId)
-						result = append(result, consumerConnectionVo)
+				for _, c := range cc.ConnectionSet {
+					if c == nil {
+						continue
 					}
+					consumerConnectionVo := models.ToConsumerConnectionVo(c, cc, progress, groupId)
+					result = append(result, consumerConnectionVo)
 				}
 			}
 		}
