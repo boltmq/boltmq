@@ -178,8 +178,8 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.T
 }
 
 // 查看Consumer网络连接、订阅关系
-func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnection, error) {
-	result := body.NewConsumerConnection()
+func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnectionPlus, error) {
+	result := body.NewConsumerConnectionPlus()
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
 	if topic != "" {
 		retryTopic = topic
@@ -537,7 +537,7 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 				tracks = append(tracks, messageTrack)
 				continue
 			}
-			if cc == nil || cc.ConnectionSet == nil || cc.ConnectionSet.Cardinality() == 0 {
+			if cc == nil || cc.ConnectionSet == nil || len(cc.ConnectionSet) == 0 {
 				messageTrack.Code = code.CONSUMER_NOT_ONLINE
 				messageTrack.ExceptionDesc = fmt.Sprintf("the consumer group[%s] not online.", consumerGroupId)
 				tracks = append(tracks, messageTrack)
@@ -561,19 +561,17 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 					messageTrack.Code = code.SUCCESS
 					// 查看订阅关系是否匹配
 					if cc != nil && cc.SubscriptionTable != nil {
-						for itor := cc.SubscriptionTable.Iterator(); itor.HasNext(); {
-							key, value, _ := itor.Next()
-							if topic, ok := key.(string); ok && topic != msg.Topic {
+						for topic, subscriptionData := range cc.SubscriptionTable {
+							if topic != msg.Topic {
 								continue
 							}
-
-							subscriptionData, ok := value.(*heartbeat.SubscriptionData)
-							if ok && subscriptionData != nil && subscriptionData.TagsSet != nil {
-								for itor := range subscriptionData.TagsSet.Iterator().C {
-									if msgTag, ok := itor.(string); ok && msgTag != msg.GetTags() && msgTag != "*" {
-										messageTrack.TrackType = track.SubscribedButFilterd
-										messageTrack.Code = code.SUCCESS
-									}
+							if subscriptionData == nil || subscriptionData.TagsSet == nil {
+								continue
+							}
+							for _, msgTag := range subscriptionData.TagsSet {
+								if msgTag != msg.GetTags() && msgTag != "*" {
+									messageTrack.TrackType = track.SubscribedButFilterd
+									messageTrack.Code = code.SUCCESS
 								}
 							}
 						}

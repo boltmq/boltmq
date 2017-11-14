@@ -6,7 +6,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message/track"
 	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
@@ -185,12 +184,13 @@ func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackE
 		} else {
 			connectionVos := make([]*models.ConnectionVo, 0)
 			if consumerConnection != nil && consumerConnection.ConnectionSet != nil {
-				for itor := range consumerConnection.ConnectionSet.Iterator().C {
-					if connection, ok := itor.(*body.Connection); ok {
-						ip, pid := stgcommon.ParseClientAddr(connection.ClientAddr)
-						connectionVo := &models.ConnectionVo{IP: ip, PID: int64(pid)}
-						connectionVos = append(connectionVos, connectionVo)
+				for _, connection := range consumerConnection.ConnectionSet {
+					if connection == nil {
+						continue
 					}
+					ip, pid := stgcommon.ParseClientAddr(connection.ClientAddr)
+					connectionVo := &models.ConnectionVo{IP: ip, PID: int64(pid)}
+					connectionVos = append(connectionVos, connectionVo)
 				}
 			}
 			consumeExt.Connection = connectionVos
