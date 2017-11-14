@@ -1,6 +1,7 @@
 package groupGervice
 
 import (
+	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
@@ -132,7 +133,9 @@ func (service *GroupService) QueryConsumerGroupId(topic string) ([]string, error
 func (service *GroupService) ConsumeProgressByPage(topic, clusterName, consumerGroupId string, limit, offset int) (*models.ConsumerProgress, error) {
 	progress, err := service.ConsumeProgress(topic, consumerGroupId)
 	if err != nil {
-		return nil, err
+		logger.Errorf("ConsumeProgressByPage err: %s", err.Error())
+		data := make([]*models.ConsumerGroup, 0)
+		return models.NewConsumerProgress(data, 0, 0, consumerGroupId, 0), nil
 	}
 
 	data := service.consumeProgressPaging(progress.Total, limit, offset, progress.Data)
@@ -177,7 +180,7 @@ func (service *GroupService) ConsumeProgress(topic, consumerGroupId string) (*mo
 	defer defaultMQAdminExt.Shutdown()
 
 	consumerProgress := new(models.ConsumerProgress)
-	consumeStats, err := defaultMQAdminExt.ExamineConsumeStatsByTopic(consumerGroupId, topic)
+	consumeStats, err := defaultMQAdminExt.ExamineConsumeStatsByTopic(consumerGroupId, "")
 	if err != nil {
 		return consumerProgress, err
 	}

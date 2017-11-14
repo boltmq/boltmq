@@ -46,6 +46,10 @@ func ConsumeProgress(ctx context.Context) {
 	limit := pageRequest.Limit
 	offset := pageRequest.Offset
 
+	if consumerGroupId == "undefined" {
+		// 特殊过滤页面传递过来的“undefined”标识
+		consumerGroupId = ""
+	}
 	data, err := groupGervice.Default().ConsumeProgressByPage(topic, clusterName, consumerGroupId, limit, offset)
 	if err != nil {
 		logger.Warnf("%s %s %s", err.Error(), ctx.Method(), ctx.Path())

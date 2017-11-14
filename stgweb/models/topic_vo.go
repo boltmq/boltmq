@@ -236,6 +236,10 @@ func IsNormalTopic(topic string) bool {
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func IsSystemTopic(topic string) bool {
+	if strings.Contains(topic, "broker-") {
+		return true // 约定以“broker-”开始的都是系统topic
+	}
+
 	for _, value := range SystemTopics {
 		if value == topic {
 			return true
