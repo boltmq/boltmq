@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"git.oschina.net/cloudzone/cloudcommon-go/web"
-	"git.oschina.net/cloudzone/smartgo/stgcommon"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/g"
 	"git.oschina.net/cloudzone/smartgo/stgweb/web/route"
 	"os"
@@ -15,8 +14,9 @@ const (
 )
 
 func main() {
-	os.Setenv(stgcommon.NAMESRV_ADDR_ENV, "127.0.0.1:9876")
-	os.Setenv(stgcommon.BLOTMQ_WEB_CONFIG_ENV, "E:\\source\\src\\git.oschina.net\\cloudzone\\smartgo\\stgweb\\web\\etc\\cfg.json")
+
+	//os.Setenv(stgcommon.NAMESRV_ADDR_ENV, "127.0.0.1:9876")
+	//os.Setenv(stgcommon.BLOTMQ_WEB_CONFIG_ENV, "~/gopath/source/src/git.oschina.net/cloudzone/smartgo/stgweb/web/etc/cfg.json")
 
 	v := flag.Bool("v", false, "version")
 	help := flag.Bool("h", false, "help")
