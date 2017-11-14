@@ -12,7 +12,7 @@ import (
 // Since 2017/9/19
 type ConsumerConnection struct {
 	ConnectionSet     set.Set                    `json:"connectionSet"`     // type: Connection
-	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // topic<*SubscriptionData>
+	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // topic<*SubscriptionDataPlus>
 	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
 	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
 	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
@@ -23,11 +23,11 @@ type ConsumerConnection struct {
 // Author rongzhihong
 // Since 2017/9/19
 type ConsumerConnectionPlus struct {
-	ConnectionSet     []*Connection              `json:"connectionSet"`     // type: Connection
-	SubscriptionTable *sync.Map                  `json:"subscriptionTable"` // topic<*SubscriptionData>
-	ConsumeType       heartbeat.ConsumeType      `json:"consumeType"`
-	MessageModel      heartbeat.MessageModel     `json:"messageModel"`
-	ConsumeFromWhere  heartbeat.ConsumeFromWhere `json:"consumeFromWhere"`
+	ConnectionSet     []*Connection                              `json:"connectionSet"`     // type: Connection
+	SubscriptionTable map[string]*heartbeat.SubscriptionDataPlus `json:"subscriptionTable"` // topic<*SubscriptionDataPlus>
+	ConsumeType       heartbeat.ConsumeType                      `json:"consumeType"`
+	MessageModel      heartbeat.MessageModel                     `json:"messageModel"`
+	ConsumeFromWhere  heartbeat.ConsumeFromWhere                 `json:"consumeFromWhere"`
 	*protocol.RemotingSerializable
 }
 
@@ -37,7 +37,7 @@ type ConsumerConnectionPlus struct {
 func NewConsumerConnectionPlus() *ConsumerConnectionPlus {
 	connect := new(ConsumerConnectionPlus)
 	connect.ConnectionSet = make([]*Connection, 0)
-	connect.SubscriptionTable = sync.NewMap()
+	connect.SubscriptionTable = make(map[string]*heartbeat.SubscriptionDataPlus)
 	connect.RemotingSerializable = new(protocol.RemotingSerializable)
 	return connect
 }
@@ -56,9 +56,8 @@ func (plus *ConsumerConnectionPlus) ToConsumerConnection() *ConsumerConnection {
 	}
 
 	if plus.SubscriptionTable != nil {
-		for itor := plus.SubscriptionTable.Iterator(); itor.HasNext(); {
-			key, value, _ := itor.Next()
-			consumerConnection.SubscriptionTable.Put(key.(string), value.(*heartbeat.SubscriptionData))
+		for k, v := range plus.SubscriptionTable {
+			consumerConnection.SubscriptionTable.Put(k, v)
 		}
 	}
 

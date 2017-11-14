@@ -235,11 +235,11 @@ func (cg *ConsumerGroupInfo) FindChannel(clientId string) *ChannelInfo {
 // SubscriptionTableToMap SubscriptionTable To Map
 // Author rongzhihong
 // Since 2017/9/17
-func (cg *ConsumerGroupInfo) SubscriptionTableToMap() map[interface{}]interface{} {
-	subscriptionDataMap := map[interface{}]interface{}{}
+func (cg *ConsumerGroupInfo) SubscriptionTableToMap() map[string]*heartbeat.SubscriptionDataPlus {
+	subscriptionDataMap := make(map[string]*heartbeat.SubscriptionDataPlus)
 	for iterator := cg.SubscriptionTable.Iterator(); iterator.HasNext(); {
 		k, v, _ := iterator.Next()
-		subscriptionDataMap[k] = v
+		subscriptionDataMap[k.(string)] = v.(*heartbeat.SubscriptionDataPlus)
 	}
 	return subscriptionDataMap
 }

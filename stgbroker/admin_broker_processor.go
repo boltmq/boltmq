@@ -534,12 +534,12 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 
 	consumerGroupInfo := abp.BrokerController.ConsumerManager.GetConsumerGroupInfo(requestHeader.ConsumerGroup)
 	if consumerGroupInfo != nil {
-		bodydata := body.NewConsumerConnection()
+		bodydata := body.NewConsumerConnectionPlus()
 		bodydata.ConsumeFromWhere = consumerGroupInfo.ConsumeFromWhere
 		bodydata.ConsumeType = consumerGroupInfo.ConsumeType
 		bodydata.MessageModel = consumerGroupInfo.MessageModel
-		bodydata.SubscriptionTable.PutAll(consumerGroupInfo.SubscriptionTableToMap())
-
+		subscriptionMap := consumerGroupInfo.SubscriptionTableToMap()
+		bodydata.SubscriptionTable = subscriptionMap
 		iterator := consumerGroupInfo.ConnTable.Iterator()
 		for iterator.HasNext() {
 			_, value, _ := iterator.Next()
@@ -549,8 +549,7 @@ func (abp *AdminBrokerProcessor) getConsumerConnectionList(ctx netm.Context, req
 				connection.Language = info.LanguageCode
 				connection.Version = info.Version
 				connection.ClientAddr = remotingUtil.ParseChannelRemoteAddr(info.Context)
-
-				bodydata.ConnectionSet.Add(connection)
+				bodydata.ConnectionSet = append(bodydata.ConnectionSet, connection)
 			}
 		}
 
