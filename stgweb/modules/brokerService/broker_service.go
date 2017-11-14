@@ -7,7 +7,6 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -144,22 +143,6 @@ func getBrokerNameByAddr(brokerAddrTable map[string]*route.BrokerData, addr stri
 	return -1, ""
 }
 
-func parseTpsString(str string) []float64 {
-	var tpsf []float64
-	tpss := strings.Split(str, " ")
-
-	for _, v := range tpss {
-		vi, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			continue
-		}
-		vi = math.Floor(vi*1e2) * 1e-2
-		tpsf = append(tpsf, vi)
-	}
-
-	return tpsf
-}
-
 func parseKvTable(table *body.KVTable) *models.BrokerRuntimeInfo {
 	brokerRuntimeInfo := new(models.BrokerRuntimeInfo)
 	if v, ok := table.Table["brokerVersionDesc"]; ok {
@@ -205,4 +188,20 @@ func parseKvTable(table *body.KVTable) *models.BrokerRuntimeInfo {
 		}
 	}
 	return brokerRuntimeInfo
+}
+
+func parseTpsString(str string) []float64 {
+	var tpsf []float64
+	tpss := strings.Split(str, " ")
+
+	for _, v := range tpss {
+		vi, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			continue
+		}
+		// vi = math.Floor(vi*1e2) * 1e-2
+		vi = models.JSONFloat(vi).AccurateJSONFloat()
+		tpsf = append(tpsf, vi)
+	}
+	return tpsf
 }
