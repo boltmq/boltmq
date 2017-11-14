@@ -48,7 +48,7 @@ func taskC() {
 var (
 	def_consumerGroupId = "consumerGroupId-200"
 	def_topic           = "cloudzone123"
-	def_namesrvAddr     = "127.0.0.1:9876"
+	def_namesrvAddr     = "10.112.68.189:9876"
 	def_tag             = "tagA"
 )
 
