@@ -19,18 +19,20 @@ func main() {
 	flag.Parse()
 
 	var (
-		maxConnNum int
-		connTotal  int
-		sendTotal  int
-		receTotal  int32
-		hbs        int
-		hbf        int
-		cStartTime time.Time
-		cEndTime   time.Time
-		cd         time.Duration
-		sStartTime time.Time
-		sEndTime   time.Time
-		sd         time.Duration
+		maxConnNum   int
+		connTotal    int
+		sendTotal    int
+		sFailedTotal int
+		receTotal    int32
+		failedTotal  int
+		hbs          int
+		hbf          int
+		cStartTime   time.Time
+		cEndTime     time.Time
+		cd           time.Duration
+		sStartTime   time.Time
+		sEndTime     time.Time
+		sd           time.Duration
 	)
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
@@ -54,20 +56,20 @@ func main() {
 	cd = cEndTime.Sub(cStartTime)
 
 	// 发送消息(第一次发送直接发送心跳)
-	msg := "Ping"
+	//msg := "Ping"
 	//fmt.Printf("msg content: %s\n", msg)
 	ctxs := b.Contexts()
 	sStartTime = time.Now()
-	for _, ctx := range ctxs {
-		_, err := ctx.Write([]byte(msg))
-		if err != nil {
-			hbf++
-			log.Printf("send msg faild: %s\n", err)
-			continue
+	/*
+		for _, ctx := range ctxs {
+			_, err := ctx.Write([]byte(msg))
+			if err != nil {
+				log.Printf("send msg faild: %s\n", err)
+				continue
+			}
+			sendTotal++
 		}
-		sendTotal++
-		hbs++
-	}
+	*/
 	sEndTime = time.Now()
 	sd = sEndTime.Sub(sStartTime)
 
@@ -81,7 +83,7 @@ func main() {
 			fmt.Println("  num  |      create connect      |                 send msg                |                 receive msg             |          heartbeat       |")
 			fmt.Printf("  %-5d|   success   |   failed   |     time     |   success   |   failed   |     time     |   success   |   failed   |   success   |   failed   |\n", i)
 			fmt.Printf("       | %-11d | %-10d | %10dus | %-11d | %-10d | %10dus | %-11d | %-10d | %-11d | %-10d |\n\n",
-				connTotal, maxConnNum-connTotal, cd.Nanoseconds(), sendTotal, connTotal-sendTotal, sd.Nanoseconds(), receTotal, sendTotal-int(receTotal), hbs, hbf)
+				connTotal, maxConnNum-connTotal, cd.Nanoseconds(), sendTotal, sFailedTotal, sd.Nanoseconds(), receTotal, failedTotal, hbs, hbf)
 		}
 	}()
 
@@ -89,7 +91,8 @@ func main() {
 	go func() {
 		interval := 60
 		rest := 3
-		timer := time.NewTimer(time.Duration(interval) * time.Second)
+		timer := time.NewTimer(time.Millisecond)
+		//timer := time.NewTimer(time.Duration(interval) * time.Second)
 		for {
 			<-timer.C
 			// 发送心跳
