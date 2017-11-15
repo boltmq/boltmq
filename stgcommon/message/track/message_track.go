@@ -8,11 +8,12 @@ import (
 type TrackTypes int
 
 const (
-	SubscribedAndConsumed      TrackTypes = iota // 订阅了，而且消费了（Offset越过了）
-	SubscribedButFilterd                         // 订阅了，但是被过滤掉了
-	SubscribedButPull                            // 订阅了，但是PULL，结果未知
-	SubscribedAndNotConsumeYet                   // 订阅了，但是没有消费（Offset小）
-	UnknowExeption                               // 未知异常
+	SubscribedAndConsumed       TrackTypes = iota // 订阅了，而且消费了（Offset越过了）
+	SubscribedButFilterd                          // 订阅了，但是被过滤掉了
+	SubscribedButPull                             // 订阅了，但是PULL，结果未知
+	SubscribedAndNotConsumeYet                    // 订阅了，但是没有消费（Offset小）
+	UnknowExeption                                // 未知异常
+	NotSubscribedAndNotConsumed                   // 未订阅，未消费
 )
 
 type MessageTrack struct {

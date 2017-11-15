@@ -526,6 +526,13 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 		return result, err
 	}
 	if groupList == nil || groupList.GroupList == nil || groupList.GroupList.Cardinality() == 0 {
+		//TODO: broker没有返回GroupList列表, 那么默认“MessageTrack”：未订阅，未消费
+		msgTrack := new(track.MessageTrack)
+		msgTrack.TrackType = track.NotSubscribedAndNotConsumed
+		msgTrack.Code = code.SUCCESS
+		msgTrack.ExceptionDesc = ""
+
+		result = append(result, msgTrack)
 		return result, nil
 	}
 	var tracks []*track.MessageTrack
