@@ -13,8 +13,8 @@ import (
 
 func main() {
 	debug.SetMaxThreads(100000)
-	host := flag.String("h", "10.128.31.108", "host")
-	port := flag.Int("p", 8000, "port")
+	sraddr := flag.String("r", "10.128.31.108:8000", "remote addr")
+	sladdr := flag.String("l", "10.128.31.108:0", "local addr")
 	mcn := flag.Int("c", 50000, "max connect num")
 	flag.Parse()
 
@@ -42,7 +42,7 @@ func main() {
 	maxConnNum = *mcn
 	cStartTime = time.Now()
 	for i := 0; i < maxConnNum; i++ {
-		_, err := b.NewRandomConnect(*host, *port)
+		_, err := b.NewRandomConnect(*sraddr, *sladdr)
 		if err != nil {
 			log.Printf("create conn faild: %s\n", err)
 			break
