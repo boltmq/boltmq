@@ -35,7 +35,7 @@ func main() {
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
 		atomic.AddInt32(&receTotal, 1)
-		log.Printf("client receive msg form %s, local[%s]. total: %d msg: %s\n", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), receTotal, string(buffer))
+		//log.Printf("client receive msg form %s, local[%s]. total: %d msg: %s\n", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), receTotal, string(buffer))
 	})
 
 	// 创建连接
@@ -53,18 +53,20 @@ func main() {
 	cEndTime = time.Now()
 	cd = cEndTime.Sub(cStartTime)
 
-	// 发送消息
-	msg := "hello netm"
+	// 发送消息(第一次发送直接发送心跳)
+	msg := "Ping"
 	//fmt.Printf("msg content: %s\n", msg)
 	ctxs := b.Contexts()
 	sStartTime = time.Now()
 	for _, ctx := range ctxs {
 		_, err := ctx.Write([]byte(msg))
 		if err != nil {
+			hbf++
 			log.Printf("send msg faild: %s\n", err)
 			continue
 		}
 		sendTotal++
+		hbs++
 	}
 	sEndTime = time.Now()
 	sd = sEndTime.Sub(sStartTime)
@@ -99,7 +101,7 @@ func main() {
 				}
 
 				ctx := ctxs[i]
-				_, err := ctx.Write([]byte("P"))
+				_, err := ctx.Write([]byte("Ping"))
 				if err != nil {
 					hbf++
 					log.Printf("heartbeat faild: %s\n", err)
