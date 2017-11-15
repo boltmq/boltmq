@@ -4,7 +4,7 @@
     "desc": "blotmq api v1",
     "serve": {
       "procotol": "http",
-      "listen": "0.0.0.0:9900",
+      "listen": "0.0.0.0:8970",
       "cross": {
         "allow_origins": ["*"],
         "allow_methods": ["OPTIONS", "HEAD", "GET", "POST", "PUT", "DELETE"],
@@ -38,7 +38,11 @@
     "engine": {
       "adapter": "file",
       "config": {
-        "filename": "./logs/cloudzone.log"
+        "filename": "./logs/stgweb.log",
+        "level":6,
+        "maxdays":30,
+        "enableFuncCallDepth":false,
+        "loggerFuncCallDepth":3
       }
     },
     "path": "",

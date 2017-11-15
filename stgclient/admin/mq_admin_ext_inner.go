@@ -60,7 +60,7 @@ type MQAdminExtInner interface {
 	ExamineConsumeStatsByTopic(consumerGroup, topic string) (*admin.ConsumeStats, error)
 
 	// 查看集群信息
-	ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, error)
+	ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, []*body.ClusterBrokerWapper, error)
 
 	// 查看Topic路由信息
 	ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error)

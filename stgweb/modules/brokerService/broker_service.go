@@ -3,10 +3,10 @@ package brokerService
 import (
 	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
+	set "github.com/deckarep/golang-set"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,68 +80,56 @@ func (service *BrokerService) GetBrokerRuntimeInfo() (*models.ClusterGeneralVoWa
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
-	clusterWapper := &models.ClusterGeneralVoWapper{}
-	clusterGeneralVos := make([]*models.ClusterGeneralVo, 0)
-	clusterWapper.ClusterGeneralVo = clusterGeneralVos
-
-	clusterNames, brokerAddrTable, err := defaultMQAdminExt.GetAllClusterNames()
+	clusterWapper := models.NewClusterGeneralVoWapper()
+	_, wappers, err := defaultMQAdminExt.ExamineBrokerClusterInfo()
 	if err != nil {
 		return clusterWapper, err
 	}
-	for _, clusterName := range clusterNames {
-		clusterGeneralVo := new(models.ClusterGeneralVo)
-		clusterGeneralVo.ClusterName = clusterName
-		clusterGeneralVo.NamesrvAddrs = strings.Split(service.ConfigureInitializer.GetNamesrvAddr(), ";")
-		clusterGeneralVo.BrokerGeneral = make([]*models.ClusterGeneral, 0)
+	if wappers == nil || len(wappers) == 0 {
+		return clusterWapper, fmt.Errorf("the cluster or master is empty")
+	}
 
-		masterSet, err := defaultMQAdminExt.FetchMasterAddrByClusterName(clusterName)
-		if err != nil {
-			return clusterWapper, err
-		}
-		if masterSet == nil || masterSet.Cardinality() == 0 {
-			return clusterWapper, fmt.Errorf("the brokerAddr of master is empty")
-		}
+	clusterNames := getClusterNames(wappers)
+	for itor := range clusterNames.Iterator().C {
+		if clusterName, ok := itor.(string); ok {
+			clusterGeneralVo := new(models.ClusterGeneralVo)
+			clusterGeneralVo.ClusterName = clusterName
+			clusterGeneralVo.NamesrvAddrs = strings.Split(service.ConfigureInitializer.GetNamesrvAddr(), ";")
+			clusterGeneralVo.BrokerGeneral = make([]*models.ClusterGeneral, 0)
 
-		clusterGeneralList := make([]*models.ClusterGeneral, 0)
-		for itor := range masterSet.Iterator().C {
-			if brokerAddr, ok := itor.(string); ok {
-				table, err := defaultMQAdminExt.FetchBrokerRuntimeStats(brokerAddr)
+			for _, w := range wappers {
+				if w.ClusterName != clusterName {
+					// 每次循环，过滤非CluserName的数据
+					fmt.Println("filter ClusterWapper:  >>>>>>>>>>>> ", w.ToString())
+					continue
+				}
 
+				table, err := defaultMQAdminExt.FetchBrokerRuntimeStats(w.BrokerAddr)
 				if err != nil {
 					return clusterWapper, err
 				}
 				if table == nil || table.Table == nil || len(table.Table) == 0 {
 					return clusterWapper, nil
 				}
-
 				brokerRuntimeInfo := parseKvTable(table)
-				brokerId, brokerName := getBrokerNameByAddr(brokerAddrTable, brokerAddr)
-				clusterGeneral := brokerRuntimeInfo.ToCluterGeneral(brokerAddr, brokerName, brokerId)
-				clusterGeneralList = append(clusterGeneralList, clusterGeneral)
+				clusterGeneral := brokerRuntimeInfo.ToCluterGeneral(w.BrokerAddr, w.BrokerName, w.BrokerId)
+				clusterGeneralVo.BrokerGeneral = append(clusterGeneralVo.BrokerGeneral, clusterGeneral)
 			}
+			clusterWapper.ClusterGeneralVo = append(clusterWapper.ClusterGeneralVo, clusterGeneralVo)
 		}
-		clusterGeneralVo.BrokerGeneral = clusterGeneralList
-		clusterGeneralVos = append(clusterGeneralVos, clusterGeneralVo)
 	}
-
-	clusterWapper.ClusterGeneralVo = clusterGeneralVos
 	return clusterWapper, nil
 }
 
-func getBrokerNameByAddr(brokerAddrTable map[string]*route.BrokerData, addr string) (int, string) {
-	if brokerAddrTable == nil || len(brokerAddrTable) == 0 {
-		return -1, ""
+func getClusterNames(clusterWappers []*body.ClusterBrokerWapper) set.Set {
+	clusterNames := set.NewSet()
+	if clusterWappers == nil || len(clusterWappers) == 0 {
+		return clusterNames
 	}
-	for _, brokerData := range brokerAddrTable {
-		if brokerData != nil && brokerData.BrokerAddrs != nil {
-			for brokerId, brokerAddr := range brokerData.BrokerAddrs {
-				if brokerAddr == addr {
-					return brokerId, brokerData.BrokerName
-				}
-			}
-		}
+	for _, wapper := range clusterWappers {
+		clusterNames.Add(wapper.ClusterName)
 	}
-	return -1, ""
+	return clusterNames
 }
 
 func parseKvTable(table *body.KVTable) *models.BrokerRuntimeInfo {

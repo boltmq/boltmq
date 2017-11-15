@@ -334,29 +334,29 @@ func (impl *MQClientAPIImpl) GetBrokerRuntimeInfo(brokerAddr string, timeoutMill
 // GetBrokerClusterInfo 查询Cluster集群信息
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.ClusterPlusInfo, error) {
+func (impl *MQClientAPIImpl) GetBrokerClusterInfo(timeoutMillis int64) (*body.ClusterPlusInfo, []*body.ClusterBrokerWapper, error) {
 	request := protocol.CreateRequestCommand(code.GET_BROKER_CLUSTER_INFO)
 	response, err := impl.DefalutRemotingClient.InvokeSync("", request, timeoutMillis)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if response == nil {
-		return nil, fmt.Errorf("GetBrokerClusterInfo response is nil")
+		return nil, nil, fmt.Errorf("GetBrokerClusterInfo response is nil")
 	}
 	if response.Code != code.SUCCESS {
 		logger.Errorf("GetBrokerClusterInfo failed. %s", response.ToString())
-		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
-	clusterPlusInfo := body.NewClusterPlusInfo()
-	err = clusterPlusInfo.CustomDecode(response.Body, clusterPlusInfo)
+	clusterPlus := body.NewClusterPlusInfo()
+	err = clusterPlus.CustomDecode(response.Body, clusterPlus)
 	if err != nil {
 		logger.Errorf("clusterPlusInfo.CustomDecode() err: %s, %s", err.Error(), response.Body)
-		return nil, err
+		return nil, nil, err
 	}
 
-	clusterPlusInfo.ToString()
-	return clusterPlusInfo, nil
+	_, clusterBrokerWappers := clusterPlus.ResolveClusterBrokerWapper()
+	return clusterPlus, clusterBrokerWappers, nil
 }
 
 // WipeWritePermOfBroker 关闭broker写权限
