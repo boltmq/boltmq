@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 const (
@@ -38,6 +38,10 @@ type StoreStatsService struct {
 	dispatchMaxBuffer            int64
 	lockSampling                 *sync.Mutex
 	lastPrintTimestamp           int64
+	stop                         bool
+	notify                       *WaitNotifyObject
+	timesMapMutex                *sync.RWMutex
+	sizeMapMutex                 *sync.RWMutex
 }
 
 func NewStoreStatsService() *StoreStatsService {
@@ -60,6 +64,10 @@ func NewStoreStatsService() *StoreStatsService {
 	service.getMessageEntireTimeMax = 0
 	service.dispatchMaxBuffer = 0
 	service.lastPrintTimestamp = time.Now().UnixNano() / 1000000
+	service.stop = false
+	service.notify = NewWaitNotifyObject()
+	service.timesMapMutex = new(sync.RWMutex)
+	service.sizeMapMutex = new(sync.RWMutex)
 
 	for i := 0; i < len(service.putMessageDistributeTime); i++ {
 		service.putMessageDistributeTime[i] = 0
@@ -69,7 +77,58 @@ func NewStoreStatsService() *StoreStatsService {
 }
 
 func (self *StoreStatsService) Start() {
-	// TODO
+	logger.Info("store stats service started")
+
+	for {
+		if self.stop {
+			break
+		}
+
+		self.notify.waitForRunning(1000)
+		self.sampling()
+		self.printTps()
+	}
+
+	logger.Info("store stats service end")
+}
+
+func (self *StoreStatsService) sampling() {
+	self.lockSampling.Lock()
+	defer self.lockSampling.Unlock()
+
+	self.putTimesList.PushBack(NewCallSnapshot(timeutil.CurrentTimeMillis(), self.GetPutMessageTimesTotal()))
+	if self.putTimesList.Len() > MaxRecordsOfSampling+1 {
+		self.putTimesList.Remove(self.putTimesList.Front())
+	}
+
+	self.getTimesFoundList.PushBack(NewCallSnapshot(timeutil.CurrentTimeMillis(),
+		atomic.LoadInt64(&self.getMessageTimesTotalFound)))
+	if self.getTimesFoundList.Len() > MaxRecordsOfSampling+1 {
+		self.getTimesFoundList.Remove(self.getTimesFoundList.Front())
+	}
+
+	self.getTimesMissList.PushBack(NewCallSnapshot(timeutil.CurrentTimeMillis(),
+		atomic.LoadInt64(&self.getMessageTimesTotalMiss)))
+	if self.getTimesMissList.Len() > MaxRecordsOfSampling+1 {
+		self.getTimesMissList.Remove(self.getTimesMissList.Front())
+	}
+
+	self.transferedMsgCountList.PushBack(NewCallSnapshot(timeutil.CurrentTimeMillis(),
+		atomic.LoadInt64(&self.getMessageTransferedMsgCount)))
+	if self.transferedMsgCountList.Len() > MaxRecordsOfSampling+1 {
+		self.transferedMsgCountList.Remove(self.transferedMsgCountList.Front())
+	}
+}
+
+func (self *StoreStatsService) printTps() {
+	if timeutil.CurrentTimeMillis() > self.lastPrintTimestamp+PrintTPSInterval*1000 {
+		self.lastPrintTimestamp = timeutil.CurrentTimeMillis()
+
+		logger.Info("put_tps ", self.getPutTpsByTime(PrintTPSInterval))
+		logger.Info("get_found_tps ", self.getGetFoundTpsByTime(PrintTPSInterval))
+		logger.Info("get_miss_tps ", self.getGetMissTpsByTime(PrintTPSInterval))
+		logger.Info("get_transfered_tps ", self.getGetTransferedTpsByTime(PrintTPSInterval))
+	}
 }
 
 func (self *StoreStatsService) setGetMessageEntireTimeMax(value int64) {
@@ -85,6 +144,9 @@ func (self *StoreStatsService) GetGetMessageTransferedMsgCount() int64 {
 }
 
 func (self *StoreStatsService) GetPutMessageTimesTotal() int64 {
+	self.timesMapMutex.RLock()
+	defer self.timesMapMutex.RUnlock()
+
 	result := int64(0)
 	for _, data := range self.putMessageTopicTimesTotal {
 		atomic.AddInt64(&result, atomic.LoadInt64(&data))
@@ -113,8 +175,10 @@ func (self *StoreStatsService) getFormatRuntime() string {
 }
 
 func (self *StoreStatsService) getPutMessageSizeTotal() int64 {
-	result := int64(0)
+	self.sizeMapMutex.RLock()
+	defer self.sizeMapMutex.RUnlock()
 
+	result := int64(0)
 	for _, value := range self.putMessageTopicSizeTotal {
 		atomic.AddInt64(&result, value)
 	}
@@ -168,7 +232,7 @@ func (self *StoreStatsService) getPutTpsByTime(time int) string {
 		if self.putTimesList.Len() > time {
 			lastBefore := getCallSnapshotListByIndex(self.putTimesList, self.putTimesList.Len()-(time+1))
 			if lastBefore != nil {
-				result += strconv.FormatFloat(getTPS(lastBefore, last), 'E', -1, 64)
+				result = fmt.Sprintf("%0.2f", getTPS(lastBefore, last))
 			}
 		}
 	}
@@ -209,7 +273,7 @@ func (self *StoreStatsService) getGetFoundTpsByTime(time int) string {
 		if self.getTimesFoundList.Len() > time {
 			lastBefore := getCallSnapshotListByIndex(self.getTimesFoundList, self.getTimesFoundList.Len()-(time+1))
 			if lastBefore != nil {
-				result += strconv.FormatFloat(getTPS(lastBefore, last), 'E', -1, 64)
+				result = fmt.Sprintf("%0.2f", getTPS(lastBefore, last))
 			}
 		}
 	}
@@ -250,7 +314,7 @@ func (self *StoreStatsService) getGetMissTpsByTime(time int) string {
 		if self.getTimesMissList.Len() > time {
 			lastBefore := getCallSnapshotListByIndex(self.getTimesMissList, self.getTimesMissList.Len()-(time+1))
 			if lastBefore != nil {
-				result += strconv.FormatFloat(getTPS(lastBefore, last), 'E', -1, 64)
+				result = fmt.Sprintf("%0.2f", getTPS(lastBefore, last))
 			}
 		}
 	}
@@ -316,7 +380,7 @@ func (self *StoreStatsService) getGetTotalTpsByTime(time int) string {
 		}
 	}
 
-	return strconv.FormatFloat(found+miss, 'E', -1, 64)
+	return fmt.Sprintf("%0.2f", found+miss)
 }
 
 func (self *StoreStatsService) getGetTransferedTps() string {
@@ -352,7 +416,7 @@ func (self *StoreStatsService) getGetTransferedTpsByTime(time int) string {
 		if self.transferedMsgCountList.Len() > time {
 			lastBefore := getCallSnapshotListByIndex(self.transferedMsgCountList, self.transferedMsgCountList.Len()-(time+1))
 			if lastBefore != nil {
-				result += strconv.FormatFloat(getTPS(lastBefore, last), 'E', -1, 64)
+				result = fmt.Sprintf("%0.2f", getTPS(lastBefore, last))
 			}
 		}
 	}
@@ -386,15 +450,15 @@ func (self *StoreStatsService) GetRuntimeInfo() map[string]string {
 }
 
 func (self *StoreStatsService) setSinglePutMessageTopicSizeTotal(topic string, value int64) {
-	self.lockPut.Lock()
-	defer self.lockPut.Unlock()
+	self.sizeMapMutex.Lock()
+	defer self.sizeMapMutex.Unlock()
 
 	self.putMessageTopicSizeTotal[topic] = value
 }
 
 func (self *StoreStatsService) getSinglePutMessageTopicSizeTotal(topic string) int64 {
-	self.lockPut.Lock()
-	defer self.lockPut.Unlock()
+	self.sizeMapMutex.Lock()
+	defer self.sizeMapMutex.Unlock()
 
 	result, ok := self.putMessageTopicSizeTotal[topic]
 	if !ok {
@@ -430,15 +494,15 @@ func (self *StoreStatsService) setPutMessageEntireTimeMax(value int64) {
 }
 
 func (self *StoreStatsService) setSinglePutMessageTopicTimesTotal(topic string, value int64) {
-	self.lockPut.Lock()
-	defer self.lockPut.Unlock()
+	self.timesMapMutex.Lock()
+	defer self.timesMapMutex.Unlock()
 
 	self.putMessageTopicTimesTotal[topic] = value
 }
 
 func (self *StoreStatsService) getSinglePutMessageTopicTimesTotal(topic string) int64 {
-	self.lockPut.Lock()
-	defer self.lockPut.Unlock()
+	self.timesMapMutex.Lock()
+	defer self.timesMapMutex.Unlock()
 
 	result, ok := self.putMessageTopicTimesTotal[topic]
 	if !ok {
@@ -456,7 +520,7 @@ func (self *StoreStatsService) setDispatchMaxBuffer(value int64) {
 }
 
 func (self *StoreStatsService) Shutdown() {
-	// TODO
+	self.stop = true
 }
 
 type CallSnapshot struct {
