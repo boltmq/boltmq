@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -37,11 +38,20 @@ func main() {
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
 		atomic.AddInt32(&receTotal, 1)
+
+		laddr := ctx.LocalAddr().String()
+		responseTableMu.RLock()
+		done, ok := responseTable[laddr]
+		if ok {
+			done <- struct{}{}
+		}
+		responseTableMu.RUnlock()
 		//log.Printf("client receive msg form %s, local[%s]. total: %d msg: %s\n", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), receTotal, string(buffer))
 	})
 
 	// 创建连接
 	maxConnNum = *mcn
+	responseTable = make(map[string]chan struct{}, maxConnNum)
 	cStartTime = time.Now()
 	for i := 0; i < maxConnNum; i++ {
 		_, err := b.NewRandomConnect(*sraddr, *sladdr)
@@ -90,21 +100,15 @@ func main() {
 	// 心跳维持
 	go func() {
 		interval := 60
-		rest := 3
+		//rest := 3
 		timer := time.NewTimer(time.Millisecond)
 		//timer := time.NewTimer(time.Duration(interval) * time.Second)
 		for {
 			<-timer.C
 			// 发送心跳
-			interval = 60
 			for i := 0; i < len(ctxs); i++ {
-				if i%1000 == 0 && i != 0 {
-					time.Sleep(time.Duration(rest) * time.Second)
-					interval -= rest
-				}
-
 				ctx := ctxs[i]
-				_, err := ctx.Write([]byte("Ping"))
+				err := sendSync(ctx, []byte("Ping"))
 				if err != nil {
 					hbf++
 					log.Printf("heartbeat faild: %s\n", err)
@@ -113,14 +117,56 @@ func main() {
 
 				hbs++
 			}
+			timer.Reset(time.Duration(interval) * time.Second)
+			/*
+				interval = 60
+				for i := 0; i < len(ctxs); i++ {
+					if i%1000 == 0 && i != 0 {
+						time.Sleep(time.Duration(rest) * time.Second)
+						interval -= rest
+					}
 
-			if interval <= 0 {
-				timer.Reset(10 * time.Millisecond)
-			} else {
-				timer.Reset(time.Duration(interval) * time.Second)
-			}
+					ctx := ctxs[i]
+					_, err := ctx.Write([]byte("Ping"))
+					if err != nil {
+						hbf++
+						log.Printf("heartbeat faild: %s\n", err)
+						continue
+					}
+
+					hbs++
+				}
+
+				if interval <= 0 {
+					timer.Reset(10 * time.Millisecond)
+				} else {
+					timer.Reset(time.Duration(interval) * time.Second)
+				}
+			*/
 		}
 	}()
 
 	select {}
+}
+
+var responseTableMu sync.RWMutex
+var responseTable map[string]chan struct{}
+
+func sendSync(ctx netm.Context, msg []byte) error {
+	laddr := ctx.LocalAddr().String()
+	responseTableMu.Lock()
+	done, ok := responseTable[laddr]
+	if !ok {
+		done = make(chan struct{})
+		responseTable[laddr] = done
+	}
+	responseTableMu.Unlock()
+
+	_, err := ctx.Write(msg)
+	if err != nil {
+		return err
+	}
+
+	<-done
+	return nil
 }
