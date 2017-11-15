@@ -163,7 +163,7 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 		return ctx, nil
 	}
 
-	nctx, e := bootstrap.connect(addr)
+	nctx, e := bootstrap.connect(addr, "")
 	if e != nil {
 		bootstrap.contextTableLock.Unlock()
 		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
@@ -188,8 +188,21 @@ func (bootstrap *Bootstrap) ConnectJoinAddrAndReturn(addr string) (Context, erro
 }
 
 // 创建新连接
-func (bootstrap *Bootstrap) connect(addr string) (Context, error) {
-	conn, e := net.Dial("tcp", addr)
+func (bootstrap *Bootstrap) connect(sraddr, sladdr string) (Context, error) {
+	raddr, e := net.ResolveTCPAddr("tcp", sraddr)
+	if e != nil {
+		return nil, errors.Wrap(e, 0)
+	}
+
+	var laddr *net.TCPAddr
+	if sladdr != "" {
+		laddr, e = net.ResolveTCPAddr("tcp", sladdr)
+		if e != nil {
+			return nil, errors.Wrap(e, 0)
+		}
+	}
+
+	conn, e := net.DialTCP("tcp", laddr, raddr)
 	if e != nil {
 		return nil, errors.Wrap(e, 0)
 	}
@@ -199,7 +212,7 @@ func (bootstrap *Bootstrap) connect(addr string) (Context, error) {
 		return nil, e
 	}
 
-	ctx := newDefaultContext(addr, conn, bootstrap)
+	ctx := newDefaultContext(sraddr, conn, bootstrap)
 	return ctx, nil
 }
 
@@ -351,18 +364,16 @@ func (bootstrap *Bootstrap) Size() int {
 	return len(bootstrap.contextTable)
 }
 
-// NewRandomConnect 连接指定地址、端口(客户端随机端口地址管理连接)。特殊业务使用
-func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (Context, error) {
+// NewRandomConnect 连接指定本地和远程地址、端口(laddr端口为0为随机端口)。特殊业务使用
+func (bootstrap *Bootstrap) NewRandomConnect(sraddr, sladdr string) (Context, error) {
 	// check handlers if register
 	if len(bootstrap.handlers) == 0 {
 		bootstrap.Warnf("no handler register, data not process.")
 	}
 
-	addr := net.JoinHostPort(host, strconv.Itoa(port))
-
-	nctx, e := bootstrap.connect(addr)
+	nctx, e := bootstrap.connect(sraddr, sladdr)
 	if e != nil {
-		bootstrap.Fatalf("Error Connect on port: %s, %q", addr, e)
+		bootstrap.Fatalf("Error Connect on port: %s, %q", sraddr, e)
 		return nil, errors.Wrap(e, 0)
 	}
 
@@ -370,7 +381,7 @@ func (bootstrap *Bootstrap) NewRandomConnect(host string, port int) (Context, er
 	bootstrap.contextTableLock.Lock()
 	bootstrap.contextTable[localAddr] = nctx
 	bootstrap.contextTableLock.Unlock()
-	bootstrap.Noticef("Connect listening on port: %s", addr)
+	bootstrap.Noticef("Connect listening on port: %s", sraddr)
 	bootstrap.Noticef("client connections on %s", localAddr)
 
 	bootstrap.startGoRoutine(func() {
