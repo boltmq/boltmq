@@ -29,6 +29,7 @@ type ConsumeTrackVo struct {
 	Connection      []*ConnectionVo `json:"connection"`
 	ConsumerGroupId string          `json:"consumerGroupId"` // 消费组ID
 	Code            int             `json:"code"`            // 消息消费结果 0:消费成功, 1:失败
+	TrackType       int             `json:"trackType"`       // 消息轨迹类型
 }
 
 // ProduceTrackVo 消费轨迹-生产节点

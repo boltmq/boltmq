@@ -203,6 +203,8 @@ func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackE
 				for _, msgTrack := range tracks {
 					if msgTrack.ConsumerGroupId == consumerGroupId {
 						consumeExt.ConsumerGroupId = msgTrack.ConsumerGroupId
+						consumeExt.TrackType = int(msgTrack.TrackType)
+
 						if msgTrack.TrackType == track.SubscribedAndConsumed {
 							consumeExt.Code = code.SUCCESS
 						} else {
