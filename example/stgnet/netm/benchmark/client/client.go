@@ -34,6 +34,9 @@ func main() {
 		sStartTime   time.Time
 		sEndTime     time.Time
 		sd           time.Duration
+		maxTime      time.Duration
+		minTime      time.Duration
+		averageTime  time.Duration
 	)
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
@@ -90,10 +93,10 @@ func main() {
 			<-timer.C
 			timer.Reset(10 * time.Second)
 			i++
-			fmt.Println("  num  |      create connect      |                 send msg                |                 receive msg             |          heartbeat       |")
-			fmt.Printf("  %-5d|   success   |   failed   |     time     |   success   |   failed   |     time     |   success   |   failed   |   success   |   failed   |\n", i)
-			fmt.Printf("       | %-11d | %-10d | %10dus | %-11d | %-10d | %10dus | %-11d | %-10d | %-11d | %-10d |\n\n",
-				connTotal, maxConnNum-connTotal, cd.Nanoseconds(), sendTotal, sFailedTotal, sd.Nanoseconds(), receTotal, failedTotal, hbs, hbf)
+			fmt.Println("  num  |      create connect      |                 send msg                |                 receive msg             |          heartbeat       |   averageTime")
+			fmt.Printf("  %-5d|   success   |   failed   |     time     |   success   |   failed   |     time     |   success   |   failed   |   success   |   failed   |   averageTime\n", i)
+			fmt.Printf("       | %-11d | %-10d | %10dus | %-11d | %-10d | %10dus | %-11d | %-10d | %-11d | %-10d | %-10dus\n\n",
+				connTotal, maxConnNum-connTotal, cd.Nanoseconds(), sendTotal, sFailedTotal, sd.Nanoseconds(), receTotal, failedTotal, hbs, hbf, averageTime.Nanoseconds())
 		}
 	}()
 
@@ -101,14 +104,29 @@ func main() {
 	go func() {
 		interval := 60
 		//rest := 3
-		timer := time.NewTimer(time.Millisecond)
-		//timer := time.NewTimer(time.Duration(interval) * time.Second)
+
+		timer := time.NewTimer(time.Duration(interval) * time.Second)
 		for {
 			<-timer.C
 			// 发送心跳
 			for i := 0; i < len(ctxs); i++ {
 				ctx := ctxs[i]
+				//发送开始时间
+				startTime := time.Now()
 				err := sendSync(ctx, []byte("Ping"))
+				//结束时间
+				endTime := time.Now()
+				spendTime := endTime.Sub(startTime)
+				//获得最大值最小值时间
+				if spendTime > 0 {
+					if spendTime > maxTime {
+						maxTime = spendTime
+					}
+					if spendTime < minTime {
+						minTime = spendTime
+					}
+				}
+
 				if err != nil {
 					hbf++
 					log.Printf("heartbeat faild: %s\n", err)
@@ -117,6 +135,9 @@ func main() {
 
 				hbs++
 			}
+			//取得平均时间
+			averageTime = (maxTime + minTime) / 2
+
 			timer.Reset(time.Duration(interval) * time.Second)
 			/*
 				interval = 60
