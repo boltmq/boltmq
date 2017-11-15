@@ -432,7 +432,7 @@ func (impl *DefaultMQAdminExtImpl) QueryConsumeTimeSpan(topic, consumerGroupId s
 			logger.Errorf("QueryConsumeTimeSpan err: %s", err.Error())
 			continue
 		}
-		spanSet.Union(qcts)
+		spanSet = spanSet.Union(qcts)
 	}
 	return spanSet, nil
 }
