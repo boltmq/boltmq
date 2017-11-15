@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
@@ -26,12 +25,14 @@ func main() {
 
 	b.Bind("0.0.0.0", 8000).
 		RegisterHandler(func(buffer []byte, ctx netm.Context) {
-			content := string(buffer)
-			if content != "P" {
-				log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
-				ctx.Write([]byte("hi, client"))
-			} else {
-				atomic.AddInt64(&heartbeat, 1)
-			}
+			atomic.AddInt64(&heartbeat, 1)
+			ctx.Write([]byte("Pong"))
+			//content := string(buffer)
+			//if content != "P" {
+			//log.Printf("serve receive msg form %s, local[%s]. msg: %s", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
+			//ctx.Write([]byte("hi, client"))
+			//} else {
+			//atomic.AddInt64(&heartbeat, 1)
+			//}
 		}).Sync()
 }
