@@ -7,6 +7,7 @@ import (
 	"sync"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"encoding/binary"
+	"io"
 )
 
 // HAClient HA高可用客户端
@@ -136,37 +137,64 @@ func (self *HAClient) reportSlaveMaxOffsetPlus() bool {
 	return result
 }
 
-func (self *HAClient) dispatchReadRequest() bool {
+func (self *HAClient) processRead() bool {
 	self.mutex.Lock()
-	defer self.mutex.Unlock()
+	self.mutex.Unlock()
 
-	msgHeaderSize := 8 + 4 // phyoffset + size
+	var (
+		offset  int64 = 0
+		size    int32 = 0
+		msgbuf        = bytes.NewBuffer(make([]byte, 0))
+		databuf       = make([]byte, self.haService.defaultMessageStore.MessageStoreConfig.HaTransferBatchSize)
+	)
 
 	for {
-		if int64(self.dispatchPosition) >= self.haService.defaultMessageStore.GetMaxPhyOffset() {
-			self.dispatchPosition = 0
+		n, err := self.connection.Read(databuf)
+		if err == io.EOF {
+			logger.Infof("connection error: %s", self.connection.RemoteAddr())
+			return false
+		}
+		if err != nil {
+			logger.Infof("ha client read error: %s", err)
+			return false
 		}
 
-		diff := self.byteBufferRead.Len() - int(self.dispatchPosition)
-		if diff >= msgHeaderSize {
-			var (
-				masterPhyOffset int64 = 0
-				bodySize        int32 = 0
-			)
+		// 数据添加到消息缓冲
+		n, err = msgbuf.Write(databuf[:n])
+		if err != nil {
+			logger.Infof("ha client buffer write error: %s\n", err)
+			return false
+		}
 
-			for {
-				offsetBytes := make([]byte, 8)
-				sizeBytes := make([]byte, 4)
-				self.byteBufferRead.Read(offsetBytes)
-				self.byteBufferRead.Read(sizeBytes)
-				binary.Read(bytes.NewReader(offsetBytes), binary.BigEndian, &masterPhyOffset)
-				binary.Read(bytes.NewReader(sizeBytes), binary.BigEndian, &bodySize)
-
-				if bodySize > 0 || self.byteBufferRead.Len() == 0 {
-					break
-				}
+		for {
+			if size == 0 && msgbuf.Len() >= 12 {
+				binary.Read(msgbuf, binary.BigEndian, &offset)
+				binary.Read(msgbuf, binary.BigEndian, &size)
 			}
 
+			if size > 0 && int32(msgbuf.Len()) >= size {
+				// handle message body
+				if !self.handleMessageBody(offset, size, msgbuf) {
+					return false
+				}
+
+				size = 0
+			} else {
+				break
+			}
+		}
+	}
+
+	return true
+}
+
+func (self *HAClient) handleMessageBody(masterPhyOffset int64, bodySize int32, msgbuf *bytes.Buffer) bool {
+	if bodySize > 0 {
+		msgHeaderSize := 8 + 4
+		bodyData := make([]byte, bodySize)
+		msgbuf.Read(bodyData)
+
+		if len(bodyData) > 0 {
 			slavePhyOffset := self.haService.defaultMessageStore.GetMaxPhyOffset()
 
 			// 发生重大错误
@@ -178,64 +206,13 @@ func (self *HAClient) dispatchReadRequest() bool {
 				}
 			}
 
-			if diff >= msgHeaderSize+int(bodySize) {
-				//self.byteBufferRead.Read(make([]byte, msgHeaderSize))
-				bodyData := make([]byte, self.byteBufferRead.Len())
-				self.byteBufferRead.Read(bodyData)
+			logger.Infof("ha client append to commit log offset:%d size:%d", masterPhyOffset, bodySize)
+			self.haService.defaultMessageStore.AppendToCommitLog(masterPhyOffset, bodyData)
+			self.dispatchPosition += int32(msgHeaderSize) + bodySize
 
-				if len(bodyData) > 0 {
-					logger.Infof("ha client append to commit log offset:%d size:%d", masterPhyOffset, bodySize)
-					self.haService.defaultMessageStore.AppendToCommitLog(masterPhyOffset, bodyData)
-					self.dispatchPosition += int32(msgHeaderSize) + bodySize
-				}
-
-				if !self.reportSlaveMaxOffsetPlus() {
-					return false
-				}
-
-				continue
-			}
-		}
-
-		if self.byteBufferRead.Len() == 0 {
-			self.byteBufferRead.Reset()
-			self.dispatchPosition = 0
-		}
-
-		break
-	}
-
-	return true
-}
-
-func (self *HAClient) processReadEvent() bool {
-	readSizeZeroTimes := 0
-	var a [1024 * 1024]byte
-	buf := a[:]
-
-	for {
-		readSize, err := self.connection.Read(buf)
-		if err != nil {
-			logger.Info("ha client process read event read socket data error")
-			return false
-		}
-
-		if readSize > 0 {
-			self.byteBufferRead.Write(buf[:readSize])
-			self.lastWriteTimestamp = time.Now().UnixNano() / 1000000
-			readSizeZeroTimes = 0
-
-			if !self.dispatchReadRequest() {
-				logger.Error("HAClient, dispatchReadRequest error")
+			if !self.reportSlaveMaxOffsetPlus() {
 				return false
 			}
-		} else if readSize == 0 {
-			if readSizeZeroTimes += 1; readSizeZeroTimes >= 3 {
-				break
-			}
-		} else {
-			logger.Error("HAClient, processReadEvent read socket < 0")
-			return false
 		}
 	}
 
@@ -262,7 +239,7 @@ func (self *HAClient) start() {
 
 			time.Sleep(1000 * time.Millisecond)
 
-			if !self.processReadEvent() {
+			if !self.processRead() {
 				self.closeMaster()
 			}
 
