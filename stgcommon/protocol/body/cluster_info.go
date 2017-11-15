@@ -1,6 +1,7 @@
 package body
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/route"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
@@ -28,6 +29,37 @@ type ClusterPlusInfo struct {
 	*protocol.RemotingSerializable
 }
 
+// ClusterBrokerInfo cluster与broker包装器
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+type ClusterBrokerWapper struct {
+	ClusterName string `json:"clusterName"`
+	BrokerName  string `json:"brokerName"`
+	BrokerAddr  string `json:"brokerAddr"`
+	BrokerId    int    `json:"brokerId"`
+}
+
+// NewClusterBrokerWapper 初始化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+func NewClusterBrokerWapper(clusterName, brokerName, brokerAddr string, brokerId int) *ClusterBrokerWapper {
+	clusterBrokerWapper := &ClusterBrokerWapper{
+		ClusterName: clusterName,
+		BrokerName:  brokerName,
+		BrokerAddr:  brokerAddr,
+		BrokerId:    brokerId,
+	}
+	return clusterBrokerWapper
+}
+
+// ToString 格式化ClusterBrokerWapper数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+func (wapper *ClusterBrokerWapper) ToString() string {
+	format := "ClusterBrokerWapper {clusterName=%s, brokerName=%s, brokerAddr=%s, brokerId=%d}"
+	return fmt.Sprintf(format, wapper.ClusterName, wapper.BrokerName, wapper.BrokerAddr, wapper.BrokerId)
+}
+
 // NewClusterInfo 初始化
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
@@ -44,16 +76,21 @@ func NewClusterInfo() *ClusterInfo {
 // Since: 2017/9/4
 func NewClusterPlusInfo() *ClusterPlusInfo {
 	clusterPlusInfo := &ClusterPlusInfo{
-		BrokerAddrTable:   make(map[string]*route.BrokerData),
+		BrokerAddrTable:  make(map[string]*route.BrokerData),
 		ClusterAddrTable: make(map[string][]string),
 	}
 	return clusterPlusInfo
 }
 
-func (plus *ClusterPlusInfo) ToString() {
+// ToString 格式化
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+func (plus *ClusterPlusInfo) ToString() string {
 	if plus == nil {
 		logger.Infof("ClusterPlusInfo is nil")
 	}
+	//TODO
+	return "ClusterPlusInfo {} ......."
 }
 
 // ToClusterInfo 转化为 ClusterInfo 类型
@@ -149,21 +186,52 @@ func (self *ClusterPlusInfo) RetrieveAllClusterNames() []string {
 // RetrieveAllAddrByCluster 处理所有brokerAddr地址
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/9/4
-func (self *ClusterPlusInfo) RetrieveAllAddrByCluster(clusterName string) []string {
+func (self *ClusterPlusInfo) RetrieveAllAddrByCluster(clusterName string) ([]string, []*ClusterBrokerWapper) {
+	clusterBrokerWappers := make([]*ClusterBrokerWapper, 0)
+	brokerAddrs := make([]string, 0)
 	if self.ClusterAddrTable == nil || len(self.ClusterAddrTable) == 0 {
-		return []string{}
+		return brokerAddrs, clusterBrokerWappers
 	}
 
-	brokerAddrs := make([]string, 0)
 	if brokerNames, ok := self.ClusterAddrTable[clusterName]; ok && brokerNames != nil {
 		for _, brokerName := range brokerNames {
 			brokerData, ok := self.BrokerAddrTable[brokerName]
 			if ok && brokerData != nil && brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
-				for _, addr := range brokerData.BrokerAddrs {
-					brokerAddrs = append(brokerAddrs, addr)
+				for brokerId, brokerAddr := range brokerData.BrokerAddrs {
+					brokerAddrs = append(brokerAddrs, brokerAddr)
+
+					wapper := NewClusterBrokerWapper(clusterName, brokerName, brokerAddr, brokerId)
+					clusterBrokerWappers = append(clusterBrokerWappers, wapper)
 				}
 			}
 		}
 	}
-	return brokerAddrs
+	return brokerAddrs, clusterBrokerWappers
+}
+
+// RetrieveAllAddrByCluster 处理所有brokerAddr地址
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/9/4
+func (self *ClusterPlusInfo) ResolveClusterBrokerWapper() ([]string, []*ClusterBrokerWapper) {
+	clusterBrokerWappers := make([]*ClusterBrokerWapper, 0)
+	brokerAddrs := make([]string, 0)
+	if self.ClusterAddrTable == nil || len(self.ClusterAddrTable) == 0 {
+		return brokerAddrs, clusterBrokerWappers
+	}
+	for clusterName, _ := range self.ClusterAddrTable {
+		if brokerNames, ok := self.ClusterAddrTable[clusterName]; ok && brokerNames != nil {
+			for _, brokerName := range brokerNames {
+				brokerData, ok := self.BrokerAddrTable[brokerName]
+				if ok && brokerData != nil && brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
+					for brokerId, brokerAddr := range brokerData.BrokerAddrs {
+						brokerAddrs = append(brokerAddrs, brokerAddr)
+
+						wapper := NewClusterBrokerWapper(clusterName, brokerName, brokerAddr, brokerId)
+						clusterBrokerWappers = append(clusterBrokerWappers, wapper)
+					}
+				}
+			}
+		}
+	}
+	return brokerAddrs, clusterBrokerWappers
 }

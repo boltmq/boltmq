@@ -44,3 +44,24 @@ type ClusterList struct {
 type ResultVo struct {
 	Result bool `json:"result"` // 操作结果 true:操作成功, false:操作失败
 }
+
+// ClusterGeneralVo 初始化ClusterGeneralVo
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+func NewClusterGeneralVo() *ClusterGeneralVo {
+	clusterGeneralVo := &ClusterGeneralVo{
+		BrokerGeneral: make([]*ClusterGeneral, 0),
+		NamesrvAddrs:  make([]string, 0),
+	}
+	return clusterGeneralVo
+}
+
+// NewClusterGeneralVoWapper 初始化ClusterGeneralVoWapper
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/15
+func NewClusterGeneralVoWapper() *ClusterGeneralVoWapper {
+	clusterGeneralVoWapper := &ClusterGeneralVoWapper{
+		ClusterGeneralVo: make([]*ClusterGeneralVo, 0),
+	}
+	return clusterGeneralVoWapper
+}

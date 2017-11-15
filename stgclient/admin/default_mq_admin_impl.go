@@ -169,7 +169,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumeStatsByTopic(consumerGroup, top
 }
 
 // 查看集群信息
-func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineBrokerClusterInfo() (*body.ClusterPlusInfo, []*body.ClusterBrokerWapper, error) {
 	return impl.mqClientInstance.MQClientAPIImpl.GetBrokerClusterInfo(timeoutMillis)
 }
 
@@ -441,7 +441,7 @@ func (impl *DefaultMQAdminExtImpl) QueryConsumeTimeSpan(topic, consumerGroupId s
 // cluster 如果参数cluster为空，则表示所有集群
 // return 清理是否成功
 func (impl *DefaultMQAdminExtImpl) CleanExpiredConsumerQueue(clusterName string) (result bool, err error) {
-	clusterPlusInfo, err := impl.ExamineBrokerClusterInfo()
+	clusterPlusInfo, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return false, err
 	}
@@ -466,7 +466,7 @@ func (impl *DefaultMQAdminExtImpl) cleanExpiredConsumerQueueByCluster(clusterInf
 		return false, nil
 	}
 
-	brokerAddrs := clusterInfo.RetrieveAllAddrByCluster(clusterName)
+	brokerAddrs, _ := clusterInfo.RetrieveAllAddrByCluster(clusterName)
 	for _, brokerAddr := range brokerAddrs {
 		result, err = impl.CleanExpiredConsumerQueueByAddr(brokerAddr)
 	}
@@ -598,7 +598,7 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/6
 func (impl *DefaultMQAdminExtImpl) Consumed(msg *message.MessageExt, consumerGroupId string) (bool, error) {
-	ci, err := impl.ExamineBrokerClusterInfo()
+	ci, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return false, err
 	}
@@ -724,7 +724,7 @@ func (impl *DefaultMQAdminExtImpl) MinOffset(mq *message.MessageQueue) (int64, e
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) FetchMasterAddrByClusterName(clusterName string) (set.Set, error) {
 	masterSet := set.NewSet()
-	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	clusterInfoWrapper, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return masterSet, err
 	}
@@ -756,7 +756,7 @@ func (impl *DefaultMQAdminExtImpl) FetchMasterAddrByClusterName(clusterName stri
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByClusterName(clusterName string) (set.Set, error) {
-	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	clusterInfoWrapper, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -782,7 +782,7 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByClusterName(clusterName stri
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (string, error) {
-	clusterInfoWrapper, err := impl.ExamineBrokerClusterInfo()
+	clusterInfoWrapper, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return "", err
 	}
@@ -806,7 +806,7 @@ func (impl *DefaultMQAdminExtImpl) FetchBrokerNameByAddr(brokerAddr string) (str
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
 func (impl *DefaultMQAdminExtImpl) GetAllClusterNames() ([]string, map[string]*route.BrokerData, error) {
-	clusterPlus, err := impl.ExamineBrokerClusterInfo()
+	clusterPlus, _, err := impl.ExamineBrokerClusterInfo()
 	if err != nil {
 		return []string{}, nil, err
 	}
