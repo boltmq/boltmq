@@ -788,7 +788,7 @@ func (abp *AdminBrokerProcessor) queryTopicConsumeByWho(ctx netm.Context, reques
 	// 从Offset持久化查询topic被谁消费，离线和在线都会查询
 	groupInOffset := abp.BrokerController.ConsumerOffsetManager.WhichGroupByTopic(requestHeader.Topic)
 	if groupInOffset != nil {
-		groups.Union(groupInOffset)
+		groups = groups.Union(groupInOffset)
 	}
 
 	groupList := body.NewGroupList()
