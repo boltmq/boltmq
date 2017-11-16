@@ -35,6 +35,7 @@ func main() {
 		maxTime     time.Duration
 		minTime     time.Duration
 		averageTime time.Duration
+		allTime     time.Duration
 	)
 	b := netm.NewBootstrap()
 	b.RegisterHandler(func(buffer []byte, ctx netm.Context) {
@@ -108,11 +109,14 @@ func main() {
 	go func() {
 		interval := 60
 		//rest := 3
+		var sc int64
 
 		timer := time.NewTimer(10 * time.Millisecond)
 		for {
 			<-timer.C
 			// 发送心跳
+			allTime = 0
+			sc = 0
 			for i := 0; i < len(ctxs); i++ {
 				ctx := ctxs[i]
 				//发送开始时间
@@ -137,15 +141,13 @@ func main() {
 					minTime = spendTime
 				}
 				//取得平均时间
-				if averageTime == time.Duration(0) {
-					averageTime = spendTime
-				} else {
-					averageTime = (averageTime + spendTime) / 2
-				}
+				allTime += spendTime
 
 				hbs++
+				sc++
 			}
 
+			averageTime = time.Duration(int64(allTime) / sc)
 			timer.Reset(time.Duration(interval) * time.Second)
 			/*
 				interval = 60
