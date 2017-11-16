@@ -2,11 +2,13 @@ package connectionService
 
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
+	code "git.oschina.net/cloudzone/smartgo/stgcommon/protocol"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/groupGervice"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/topicService"
+	set "github.com/deckarep/golang-set"
 	"sort"
 	"strings"
 	"sync"
@@ -71,7 +73,12 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 			// logger.Warnf("search topic [%s] is invalid", t.Topic)
 			continue
 		}
-		consumerGroupIds, consumerNums, err := service.SumOnlineConsumerNums(t.Topic)
+		if models.IsRetryTopic(t.Topic) {
+			// 过滤重试TTopic对应的数据
+			continue
+		}
+
+		groupIds, consumerNums, err := service.SumOnlineConsumerNums(t.Topic)
 		if err != nil {
 			return connectionOnlines, total, err
 		}
@@ -79,6 +86,11 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 		_, producerNums, err := service.sumOnlineProducerNums(t.Topic)
 		if err != nil {
 			return connectionOnlines, total, err
+		}
+
+		consumerGroupIds := make([]string, 0)
+		for groupId := range groupIds.Iterator().C {
+			consumerGroupIds = append(consumerGroupIds, groupId.(string))
 		}
 
 		connectionOnline := models.NewConnectionOnline(t.ClusterName, t.Topic, consumerGroupIds, consumerNums, producerNums)
@@ -112,39 +124,43 @@ func (service *ConnectionService) sumOnlineProducerNums(topic string) ([]string,
 // SumOnlineConsumerNums 统计topic对应的在线生产进程数
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/10
-func (service *ConnectionService) SumOnlineConsumerNums(topic string) ([]string, int, error) {
+func (service *ConnectionService) SumOnlineConsumerNums(topic string) (set.Set, int, error) {
 	defer utils.RecoveredFn()
 	defaultMQAdminExt := service.GetDefaultMQAdminExtImpl()
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
-	consumerGroupIds := make([]string, 0)
-	consumerNums := 0
+	var (
+		groupIdSet   = set.NewSet()
+		consumerNums = 0
+	)
+
 	groupList, err := defaultMQAdminExt.QueryTopicConsumeByWho(topic)
 	if err != nil {
-		return consumerGroupIds, consumerNums, err
+		return groupIdSet, consumerNums, err
 	}
 	if groupList == nil || groupList.GroupList == nil || groupList.GroupList.Cardinality() == 0 {
-		return consumerGroupIds, consumerNums, nil
+		return groupIdSet, consumerNums, nil
 	}
 
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
-			consumerConnection, _, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
-
+			consumerConnection, onlineCode, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 			if err != nil {
+				if onlineCode == code.CONSUMER_NOT_ONLINE {
+					continue
+				}
 				logger.Errorf("query consumerConnection err: %s.  consumerGroupId=%s", err.Error(), groupId)
-				// return consumerGroupIdList, consumerNums, err // ingore
+				// return groupIdSet, consumerNums, err // ingore
 			} else {
 				if consumerConnection != nil && consumerConnection.ConnectionSet != nil {
-					consumerGroupIds = append(consumerGroupIds, groupId)
 					consumerNums += len(consumerConnection.ConnectionSet)
+					groupIdSet.Add(groupId)
 				}
 			}
 		}
 	}
-	logger.Infof("sumOnlineConsumerNums.consumerGroupIds = [%v] ", strings.Join(consumerGroupIds, ","))
-	return consumerGroupIds, consumerNums, nil
+	return groupIdSet, consumerNums, nil
 }
 
 // connectionOnlineListPaging 分页获取
@@ -211,9 +227,13 @@ func (service *ConnectionService) queryOnlineConsumer(clusterName, topic string)
 
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
-			cc, _, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
+			cc, onlineCode, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 			if err != nil {
 				logger.Errorf("query consumerConnection error: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
+				if onlineCode == code.CONSUMER_NOT_ONLINE {
+					logger.Infof("groupId = %s, code=%d", groupId, onlineCode)
+					continue
+				}
 				return result, err
 			}
 

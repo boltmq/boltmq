@@ -8,6 +8,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/brokerService"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/connectionService"
+	set "github.com/deckarep/golang-set"
 	"strings"
 	"sync"
 )
@@ -165,14 +166,19 @@ func (service *GeneralService) getConsumerCount() (int64, error) {
 	if err != nil {
 		return conusmerCount, err
 	}
+
+	groups := set.NewSet()
 	for _, tw := range topicWapper {
-		_, count, err := service.ConnectionServ.SumOnlineConsumerNums(tw.TopicName)
+		if models.IsRetryTopic(tw.TopicName) {
+			continue // 过滤重试TTopic对应的数据
+		}
+		groupSet, _, err := service.ConnectionServ.SumOnlineConsumerNums(tw.TopicName)
 		if err != nil {
 			continue
 		}
-		conusmerCount += int64(count)
+		groups = groups.Union(groupSet)
 	}
-
+	conusmerCount += int64(groups.Cardinality())
 	return conusmerCount, nil
 }
 
