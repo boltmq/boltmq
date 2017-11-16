@@ -3,6 +3,7 @@ package topicService
 import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/utils"
 	"git.oschina.net/cloudzone/smartgo/stgweb/models"
+	"sort"
 	"strings"
 )
 
@@ -12,11 +13,13 @@ import (
 func (service *TopicService) GetTopicList(clusterName, topicPrefix string, extra bool, topicType, limit, offset int) ([]*models.TopicVo, int64, error) {
 	defer utils.RecoveredFn()
 
+	srcTopics := make(models.TopicVos, 0)
 	srcTopics, err := service.GetAllList()
 	if err != nil {
-		return []*models.TopicVo{}, 0, nil
+		return srcTopics, 0, nil
 	}
 
+	sort.Sort(srcTopics)
 	destTopics := service.GetTopicByParam(topicType, topicPrefix, srcTopics)
 	total := len(destTopics)
 	return service.topicVoListPaging(total, limit, offset, destTopics), int64(total), nil

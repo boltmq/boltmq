@@ -87,6 +87,28 @@ type TopicVo struct {
 	IsSystemTopic bool           `json:"isSystemTopic"` // 是否为系统Topic
 }
 
+type TopicVos []*TopicVo
+
+func (self TopicVos) Less(i, j int) bool {
+	iq := self[i]
+	jq := self[j]
+
+	if iq.Topic < jq.Topic {
+		return true
+	} else if iq.Topic > jq.Topic {
+		return false
+	}
+	return false
+}
+
+func (self TopicVos) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+
+func (self TopicVos) Len() int {
+	return len(self)
+}
+
 // TopicConfigVo topic配置项
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7

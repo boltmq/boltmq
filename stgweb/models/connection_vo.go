@@ -16,6 +16,8 @@ type ConnectionOnline struct {
 	ConsumeNums      int      `json:"consumeNums"`      // 消费进程总数
 }
 
+type ConnectionOnlines []*ConnectionOnline
+
 // ConnectionDetail 在线进程详情
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/7
@@ -70,6 +72,26 @@ type SubscribeTopicTable struct {
 	TagsSet         []string `json:"tags"`
 	CodeSet         []int32  `json:"codeSet"`
 	SubVersion      int64    `json:"subVersion"`
+}
+
+func (self ConnectionOnlines) Less(i, j int) bool {
+	iq := self[i]
+	jq := self[j]
+
+	if iq.Topic < jq.Topic {
+		return true
+	} else if iq.Topic > jq.Topic {
+		return false
+	}
+	return false
+}
+
+func (self ConnectionOnlines) Swap(i, j int) {
+	self[i], self[j] = self[j], self[i]
+}
+
+func (self ConnectionOnlines) Len() int {
+	return len(self)
 }
 
 // NewConnectionOnline 初始化ConnectionOnline

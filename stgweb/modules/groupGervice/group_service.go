@@ -53,6 +53,7 @@ func (service *GroupService) GroupList(topic, clusterName string, limit, offset 
 	defaultMQAdminExt.Start()
 	defer defaultMQAdminExt.Shutdown()
 
+	allTopic := make(models.TopicVos, 0)
 	consumerGroupVos := make([]*models.ConsumerGroupVo, 0)
 	total := int64(0)
 
@@ -60,6 +61,7 @@ func (service *GroupService) GroupList(topic, clusterName string, limit, offset 
 	if err != nil || allTopic == nil || len(allTopic) == 0 {
 		return consumerGroupVos, total, err
 	}
+	sort.Sort(allTopic)
 
 	for _, t := range allTopic {
 		if topic != "" && t.Topic != topic {

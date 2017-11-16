@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/groupGervice"
 	"git.oschina.net/cloudzone/smartgo/stgweb/modules/topicService"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -56,7 +57,7 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 	defer defaultMQAdminExt.Shutdown()
 
 	var (
-		connectionOnlines []*models.ConnectionOnline
+		connectionOnlines models.ConnectionOnlines
 		total             int64
 	)
 
@@ -84,6 +85,7 @@ func (service *ConnectionService) ConnectionOnline(searchTopic string, limit, of
 		connectionOnlines = append(connectionOnlines, connectionOnline)
 	}
 
+	sort.Sort(connectionOnlines)
 	total = int64(len(connectionOnlines))
 	pageConnections := service.connectionOnlineListPaging(total, limit, offset, connectionOnlines)
 	return pageConnections, total, nil
