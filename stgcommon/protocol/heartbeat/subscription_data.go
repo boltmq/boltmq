@@ -36,8 +36,8 @@ func (self *SubscriptionData) ToString() string {
 	if self == nil {
 		return "SubscriptionData is nil"
 	}
-	format := "SubscriptionData {Topic=%s, SubString=%s, TagsSet=%s, CodeSet=%s, SubVersion=%d, ClassFilterMode=%t}"
-	return fmt.Sprintf(format, self.Topic, self.SubString, self.TagsSet.String(), self.CodeSet.String(), self.SubString, self.ClassFilterMode)
+	format := "SubscriptionData {topic=%s, subString=%s, tagsSet=%s, codeSet=%s, subVersion=%d, classFilterMode=%t}"
+	return fmt.Sprintf(format, self.Topic, self.SubString, self.TagsSet.String(), self.CodeSet.String(), self.SubVersion, self.ClassFilterMode)
 }
 
 // ToString 格式化订阅信息结构体的内容
@@ -50,5 +50,5 @@ func (self *SubscriptionDataPlus) ToString() string {
 
 	tags := strings.Join(self.TagsSet, ",")
 	format := "SubscriptionDataPlus {Topic=%s, SubString=%s, TagsSet=[%s], CodeSet=[%v], SubVersion=%d, ClassFilterMode=%t}"
-	return fmt.Sprintf(format, self.Topic, self.SubString, tags, self.CodeSet,self.SubVersion, self.ClassFilterMode)
+	return fmt.Sprintf(format, self.Topic, self.SubString, tags, self.CodeSet, self.SubVersion, self.ClassFilterMode)
 }

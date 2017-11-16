@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/mqversion"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/body"
 )
@@ -67,9 +68,9 @@ type ConsumerConnectionVo struct {
 
 type SubscribeTopicTable struct {
 	Topic           string   `json:"topic"`
-	SubString       string   `json:"subString"`
+	SubString       string   `json:"tags"`
 	ClassFilterMode bool     `json:"classFilterMode"`
-	TagsSet         []string `json:"tags"`
+	TagsSet         []string `json:"tagsSet"`
 	CodeSet         []int32  `json:"codeSet"`
 	SubVersion      int64    `json:"subVersion"`
 }
@@ -126,6 +127,7 @@ func ToSubscribeTopicTables(cc *body.ConsumerConnectionPlus) (subscribeTables []
 			TagsSet:         data.TagsSet,
 			CodeSet:         data.CodeSet,
 		}
+		//fmt.Println("subscribeTable  >>>>>>>>>> ", subscribeTable)
 		subscribeTables = append(subscribeTables, subscribeTable)
 	}
 	return subscribeTables
@@ -151,4 +153,12 @@ func ToConsumerConnectionVo(c *body.Connection, cc *body.ConsumerConnectionPlus,
 	}
 
 	return consumerConnectionVo
+}
+
+// String 打印SubscribeTopicTable数据
+// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Since: 2017/11/16
+func (s *SubscribeTopicTable) String() string {
+	format := "SubscribeTopicTable {topic=%s, tags=%s, tagsSet=[%v], codeSet=[%v], classFilterMode=%t, subVersion=%d}"
+	return fmt.Sprintf(format, s.Topic, s.SubString, s.TagsSet, s.CodeSet, s.ClassFilterMode, s.SubVersion)
 }
