@@ -7,6 +7,7 @@ import (
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/message"
 	"git.oschina.net/cloudzone/smartgo/stgcommon/protocol/heartbeat"
+	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 	"github.com/toolkits/file"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"git.oschina.net/cloudzone/smartgo/stgcommon/utils/timeutil"
 )
 
 const (
@@ -856,8 +856,8 @@ func (self *DefaultMessageStore) GetRuntimeInfo() map[string]string {
 		self.ScheduleMessageService.buildRunningStats(result)
 	}
 
-	result[stgcommon.COMMIT_LOG_MIN_OFFSET.String()] = string(self.CommitLog.getMinOffset())
-	result[stgcommon.COMMIT_LOG_MAX_OFFSET.String()] = string(self.CommitLog.getMaxOffset())
+	result[stgcommon.COMMIT_LOG_MIN_OFFSET.String()] = fmt.Sprintf("%d", self.CommitLog.getMinOffset())
+	result[stgcommon.COMMIT_LOG_MAX_OFFSET.String()] = fmt.Sprintf("%d", self.CommitLog.getMaxOffset())
 
 	return result
 }

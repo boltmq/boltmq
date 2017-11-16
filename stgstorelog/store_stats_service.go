@@ -219,7 +219,7 @@ func (self *StoreStatsService) getPutTpsByTime(time int) string {
 	self.lockSampling.Lock()
 	defer self.lockSampling.Unlock()
 
-	result := ""
+	result := "0.00"
 	lastElement := self.putTimesList.Back()
 
 	if lastElement != nil {
@@ -260,7 +260,7 @@ func (self *StoreStatsService) getGetFoundTpsByTime(time int) string {
 	self.lockSampling.Lock()
 	defer self.lockSampling.Unlock()
 
-	result := ""
+	result := "0.00"
 	lastElement := self.getTimesFoundList.Back()
 
 	if lastElement != nil {
@@ -301,7 +301,7 @@ func (self *StoreStatsService) getGetMissTpsByTime(time int) string {
 	self.lockSampling.Lock()
 	defer self.lockSampling.Unlock()
 
-	result := ""
+	result := "0.00"
 	lastElement := self.getTimesMissList.Back()
 
 	if lastElement != nil {
@@ -403,7 +403,7 @@ func (self *StoreStatsService) getGetTransferedTpsByTime(time int) string {
 	self.lockSampling.Lock()
 	defer self.lockSampling.Unlock()
 
-	result := ""
+	result := "0.00"
 	lastElement := self.transferedMsgCountList.Back()
 
 	if lastElement != nil {
