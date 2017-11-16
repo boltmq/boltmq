@@ -179,18 +179,19 @@ func (impl *DefaultMQAdminExtImpl) ExamineTopicRouteInfo(topic string) (*route.T
 }
 
 // 查看Consumer网络连接、订阅关系
-func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnectionPlus, error) {
+func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnectionPlus, int, error) {
 	result := body.NewConsumerConnectionPlus()
+	onlineCode := 0
 	retryTopic := stgcommon.GetRetryTopic(consumerGroup)
 	if topic != "" {
 		retryTopic = topic
 	}
 	topicRouteData, err := impl.ExamineTopicRouteInfo(retryTopic)
 	if err != nil {
-		return result, err
+		return result, onlineCode, err
 	}
 	if topicRouteData == nil || topicRouteData.BrokerDatas == nil {
-		return result, nil
+		return result, onlineCode, nil
 	}
 	for _, bd := range topicRouteData.BrokerDatas {
 		brokerAddr := bd.SelectBrokerAddr()
@@ -199,8 +200,7 @@ func (impl *DefaultMQAdminExtImpl) ExamineConsumerConnectionInfo(consumerGroup, 
 		}
 	}
 
-	format := "not found the consumer group connection"
-	return result, fmt.Errorf(format)
+	return result, onlineCode, fmt.Errorf("not found the consumer group connection")
 }
 
 // 查看Producer网络连接
@@ -408,7 +408,7 @@ func (impl *DefaultMQAdminExtImpl) QueryTopicConsumeByWho(topic string) (*body.G
 		}
 		break
 	}
-	return nil, nil
+	return nil, fmt.Errorf("QueryTopicConsumeByWho failed, but unknown reason. topic = %s", topic)
 }
 
 // 根据 topic 和 group 获取消息的时间跨度
@@ -539,10 +539,16 @@ func (impl *DefaultMQAdminExtImpl) MessageTrackDetail(msg *message.MessageExt) (
 	for itor := range groupList.GroupList.Iterator().C {
 		if consumerGroupId, ok := itor.(string); ok {
 			messageTrack := track.NewMessageTrack(consumerGroupId)
-			cc, err := impl.ExamineConsumerConnectionInfo(consumerGroupId, msg.Topic)
+			cc, onlineCode, err := impl.ExamineConsumerConnectionInfo(consumerGroupId, msg.Topic)
 			if err != nil {
+				if onlineCode == code.CONSUMER_NOT_ONLINE {
+					messageTrack.TrackType = track.ConsumerGroupIdNotOnline
+					messageTrack.ExceptionDesc = ""
+				} else {
+					messageTrack.TrackType = track.UnknowExeption
+					messageTrack.ExceptionDesc = err.Error()
+				}
 				messageTrack.Code = code.SYSTEM_ERROR
-				messageTrack.ExceptionDesc = err.Error()
 				tracks = append(tracks, messageTrack)
 				continue
 			}

@@ -266,8 +266,12 @@ func (impl *MQClientAPIImpl) GetProducerConnectionList(brokerAddr, producerGroup
 // GetConsumerConnectionList 查询在线消费进程列表
 // Author: tianyuliang, <tianyuliang@gome.com.cn>
 // Since: 2017/11/3
-func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*body.ConsumerConnectionPlus, error) {
-	consumerGroupWithProjectGroup := consumerGroup
+func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup string, timeoutMillis int64) (*body.ConsumerConnectionPlus, int, error) {
+	var (
+		consumerGroupWithProjectGroup = consumerGroup
+		onlineCode                    = 0
+	)
+
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) {
 		consumerGroupWithProjectGroup = stgclient.BuildWithProjectGroup(consumerGroup, impl.ProjectGroupPrefix)
 	}
@@ -275,25 +279,29 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 	request := protocol.CreateRequestCommand(code.GET_CONSUMER_CONNECTION_LIST, requestHeader)
 	response, err := impl.DefalutRemotingClient.InvokeSync(brokerAddr, request, timeoutMillis)
 	if err != nil {
-		return nil, err
+		return nil, onlineCode, err
 	}
 	if response == nil {
-		return nil, fmt.Errorf("GetConsumerConnectionList response is nil")
+		return nil, onlineCode, fmt.Errorf("GetConsumerConnectionList response is nil")
+	}
+	if response.Code == code.CONSUMER_NOT_ONLINE {
+		onlineCode = int(response.Code)
+		return nil, onlineCode, fmt.Errorf("%s", response.Remark)
 	}
 	if response.Code != code.SUCCESS {
 		logger.Errorf("GetConsumerConnectionList failed. %s", response.ToString())
-		return nil, fmt.Errorf("%d, %s", response.Code, response.Remark)
+		return nil, onlineCode, fmt.Errorf("%d, %s", response.Code, response.Remark)
 	}
 
 	consumerConnectionPlus := body.NewConsumerConnectionPlus()
 	content := response.Body
 	if content == nil || len(content) == 0 {
-		return consumerConnectionPlus, nil
+		return consumerConnectionPlus, onlineCode, fmt.Errorf("GetConsumerConnectionList failed. response.body is empty")
 	}
 
 	err = consumerConnectionPlus.CustomDecode(content, consumerConnectionPlus)
 	if err != nil {
-		return consumerConnectionPlus, err
+		return consumerConnectionPlus, onlineCode, err
 	}
 
 	if !stgcommon.IsEmpty(impl.ProjectGroupPrefix) && consumerConnectionPlus != nil && consumerConnectionPlus.SubscriptionTable != nil {
@@ -306,7 +314,7 @@ func (impl *MQClientAPIImpl) GetConsumerConnectionList(brokerAddr, consumerGroup
 		}
 
 	}
-	return consumerConnectionPlus, nil
+	return consumerConnectionPlus, onlineCode, nil
 }
 
 // GetBrokerRuntimeInfo 查询Broker运行时状态信息

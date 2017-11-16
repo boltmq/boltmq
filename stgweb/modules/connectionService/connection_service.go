@@ -130,7 +130,7 @@ func (service *ConnectionService) SumOnlineConsumerNums(topic string) ([]string,
 
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
-			consumerConnection, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
+			consumerConnection, _, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 
 			if err != nil {
 				logger.Errorf("query consumerConnection err: %s.  consumerGroupId=%s", err.Error(), groupId)
@@ -211,7 +211,7 @@ func (service *ConnectionService) queryOnlineConsumer(clusterName, topic string)
 
 	for itor := range groupList.GroupList.Iterator().C {
 		if groupId, ok := itor.(string); ok {
-			cc, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
+			cc, _, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(groupId, topic)
 			if err != nil {
 				logger.Errorf("query consumerConnection error: %s. consumerGroupId=%s, topic=%s", err.Error(), groupId, topic)
 				return result, err

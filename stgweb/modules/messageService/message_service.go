@@ -178,7 +178,7 @@ func (service *MessageService) MessageTrack(msgId string) (*models.MessageTrackE
 	consumeExts := make([]*models.ConsumeTrackVo, 0)
 	for _, consumerGroupId := range groupIds {
 		consumeExt := &models.ConsumeTrackVo{}
-		consumerConnection, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(consumerGroupId, messageExt.Topic)
+		consumerConnection, _, err := defaultMQAdminExt.ExamineConsumerConnectionInfo(consumerGroupId, messageExt.Topic)
 		if err != nil {
 			logger.Errorf("query consumerConnection err: %s.  consumerGroupId=%s", err.Error(), consumerGroupId)
 		} else {

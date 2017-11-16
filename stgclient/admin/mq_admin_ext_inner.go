@@ -66,7 +66,8 @@ type MQAdminExtInner interface {
 	ExamineTopicRouteInfo(topic string) (*route.TopicRouteData, error)
 
 	// 查看Consumer网络连接、订阅关系
-	ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnectionPlus, error)
+	// 注意：第二个参数标记消费组对应的connection进程是否在线 code=206说明消费进程不在线
+	ExamineConsumerConnectionInfo(consumerGroup, topic string) (*body.ConsumerConnectionPlus, int, error)
 
 	// 查看Producer网络连接
 	ExamineProducerConnectionInfo(producerGroup, topic string) (*body.ProducerConnection, error)
