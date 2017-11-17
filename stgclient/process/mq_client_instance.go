@@ -325,7 +325,7 @@ func (mqClientInstance *MQClientInstance) UpdateTopicRouteInfoFromNameServerByAr
 		var err error
 		topicRouteData, err = mqClientInstance.MQClientAPIImpl.GetTopicRouteInfoFromNameServer(topic, 1000*3)
 		if err != nil {
-			logger.Errorf(err.Error())
+			logger.Error(err.Error())
 		}
 	}
 	if topicRouteData != nil {
