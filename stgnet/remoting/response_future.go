@@ -3,6 +3,7 @@ package remoting
 import (
 	"time"
 
+	"fmt"
 	"git.oschina.net/cloudzone/smartgo/stgnet/protocol"
 )
 
@@ -41,4 +42,20 @@ func (responseFuture *ResponseFuture) IsSendRequestOK() bool {
 // GetRemotingCommand 获取RemotingCommand
 func (responseFuture *ResponseFuture) GetRemotingCommand() *protocol.RemotingCommand {
 	return responseFuture.responseCommand
+}
+
+// String 格式化ResponseFuture结构体
+func (r *ResponseFuture) String() string {
+	if r == nil {
+		return "ResponseFuture is nil"
+	}
+
+	val := "invokeCallback is nil"
+	if r.invokeCallback != nil {
+		val = "invokeCallback is not nil"
+	}
+
+	command := r.responseCommand.ToString()
+	format := "ResponseFuture {sendRequestOK=%t, err=%v, opaque=%d, timeoutMillis=%d, beginTimestamp=%d, done=%t, %s, %s}"
+	return fmt.Sprintf(format, r.sendRequestOK, r.err, r.opaque, r.timeoutMillis, r.beginTimestamp, r.done, val, command)
 }
