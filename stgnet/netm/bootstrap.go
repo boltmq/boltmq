@@ -381,8 +381,8 @@ func (bootstrap *Bootstrap) NewRandomConnect(sraddr, sladdr string) (Context, er
 	bootstrap.contextTableLock.Lock()
 	bootstrap.contextTable[localAddr] = nctx
 	bootstrap.contextTableLock.Unlock()
-	bootstrap.Noticef("Connect listening on port: %s", sraddr)
-	bootstrap.Noticef("client connections on %s", localAddr)
+	//bootstrap.Noticef("Connect listening on port: %s", sraddr)
+	//bootstrap.Noticef("client connections on %s", localAddr)
 
 	bootstrap.startGoRoutine(func() {
 		bootstrap.handleConn(nctx)
