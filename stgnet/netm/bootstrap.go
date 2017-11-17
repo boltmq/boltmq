@@ -120,7 +120,7 @@ func (bootstrap *Bootstrap) Sync() {
 		bootstrap.contextTableLock.Lock()
 		bootstrap.contextTable[remoteAddr] = ctx
 		bootstrap.contextTableLock.Unlock()
-		bootstrap.Debugf("Client connection created %s", remoteAddr)
+		//bootstrap.Debugf("Client connection created %s", remoteAddr)
 
 		bootstrap.startGoRoutine(func() {
 			bootstrap.handleConn(ctx)
@@ -132,7 +132,7 @@ func (bootstrap *Bootstrap) Sync() {
 		})
 	}
 
-	bootstrap.Noticef("Bootstrap Exiting..")
+	//bootstrap.Noticef("Bootstrap Exiting..")
 }
 
 // Connect 连接指定地址、端口(服务器地址管理连接)
