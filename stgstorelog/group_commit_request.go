@@ -1,7 +1,6 @@
 package stgstorelog
 
 import (
-	"git.oschina.net/cloudzone/smartgo/stgcommon/sync"
 	"time"
 )
 
@@ -9,25 +8,31 @@ import (
 // Author zhoufei
 // Since 2017/10/18
 type GroupCommitRequest struct {
-	nextOffset int64
-	notify     *sync.Notify
-	flushOK    bool
+	nextOffset  int64
+	flushOK     bool
+	requestChan chan bool
 }
 
 func NewGroupCommitRequest(nextOffset int64) *GroupCommitRequest {
 	request := new(GroupCommitRequest)
-	request.nextOffset = 0
-	request.notify = sync.NewNotify()
+	request.nextOffset = nextOffset
 	request.flushOK = false
+	request.requestChan = make(chan bool, 1)
 	return request
 }
 
 func (self *GroupCommitRequest) wakeupCustomer(flushOK bool) {
 	self.flushOK = flushOK
-	self.notify.Signal()
+	self.requestChan <- true
 }
 
 func (self *GroupCommitRequest) waitForFlush(timeout int64) bool {
-	self.notify.WaitTimeout(time.Duration(timeout) * time.Millisecond)
+	select {
+	case <-self.requestChan:
+		break
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+		break
+	}
+
 	return self.flushOK
 }
