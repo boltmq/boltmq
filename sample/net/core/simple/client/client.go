@@ -2,21 +2,20 @@ package main
 
 import (
 	"log"
-	"net"
 	"sync"
 
 	"github.com/boltmq/boltmq/net/core"
 )
 
-type demoEventListener struct {
+type clientEventListener struct {
 }
 
-func (listener *demoEventListener) OnContextActive(ctx net.Conn) {
-	log.Printf("demo OnContextActive: Connection active, %s.\n", ctx.RemoteAddr().String())
+func (listener *clientEventListener) OnContextActive(ctx core.Context) {
+	log.Printf("client OnContextActive: Connection active, %s.\n", ctx.RemoteAddr().String())
 }
 
-func (listener *demoEventListener) OnContextConnect(ctx net.Conn) {
-	log.Printf("demo OnContextConnect: Client %s connect to %s.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String())
+func (listener *clientEventListener) OnContextConnect(ctx core.Context) {
+	log.Printf("client OnContextConnect: Client %s connect to %s.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String())
 
 	// 发送消息
 	msg := "hello core"
@@ -24,24 +23,27 @@ func (listener *demoEventListener) OnContextConnect(ctx net.Conn) {
 	ctx.Write([]byte(msg))
 }
 
-func (listener *demoEventListener) OnContextClosed(ctx net.Conn) {
-	log.Printf("demo OnContextClosed: local %s Exiting, Remote %s.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String())
+func (listener *clientEventListener) OnContextClosed(ctx core.Context) {
+	log.Printf("client OnContextClosed: local %s Exiting, Remote %s.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String())
 }
 
-func (listener *demoEventListener) OnContextError(ctx net.Conn, err error) {
-	log.Printf("demo OnContextError: local %s, Remote %s, err: %v.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String(), err)
+func (listener *clientEventListener) OnContextError(ctx core.Context, err error) {
+	log.Printf("client OnContextError: local %s, Remote %s, err: %v.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String(), err)
 }
 
 func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	b := core.NewBootstrap().SetReadBufferSize(512).SetEventListener(&demoEventListener{})
-	b.RegisterHandler(func(buffer []byte, ctx net.Conn) {
+	b := core.NewBootstrap().SetReadBufferSize(512).SetEventListener(&clientEventListener{})
+	err := b.RegisterHandler(func(buffer []byte, ctx core.Context) {
 		log.Printf("client receive msg form %s, local[%s]. msg: %s\n", ctx.RemoteAddr().String(), ctx.LocalAddr().String(), string(buffer))
-		wg.Done()
 		ctx.Close()
+		wg.Done()
 	}).Connect("10.122.1.200:8000")
+	if err != nil {
+		panic(err)
+	}
 
 	wg.Wait()
 }

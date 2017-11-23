@@ -108,8 +108,9 @@ func (bootstrap *Bootstrap) Sync() {
 
 		bootstrap.startGoRoutine(func() {
 			// 事件通知-客户端连接
-			bootstrap.eventListener.OnContextActive(conn)
-			bootstrap.handleContext(conn)
+			ctx := newDefaultContext(conn)
+			bootstrap.eventListener.OnContextActive(ctx)
+			bootstrap.handleContext(ctx)
 		})
 	}
 
@@ -117,7 +118,7 @@ func (bootstrap *Bootstrap) Sync() {
 }
 
 // 连接接收数据
-func (bootstrap *Bootstrap) handleContext(ctx net.Conn) {
+func (bootstrap *Bootstrap) handleContext(ctx Context) {
 	var (
 		n int
 		e error
@@ -138,6 +139,8 @@ func (bootstrap *Bootstrap) handleContext(ctx net.Conn) {
 	// 判断e确定事件通知
 	if e == io.EOF {
 		bootstrap.eventListener.OnContextClosed(ctx)
+	} else if oe := e.(*net.OpError); oe.Err.Error() == "use of closed network connection" {
+		bootstrap.eventListener.OnContextClosed(ctx)
 	} else {
 		bootstrap.eventListener.OnContextError(ctx, e)
 	}
@@ -155,7 +158,7 @@ func (bootstrap *Bootstrap) ConnectUseInterface(sraddr, sladdr string) error {
 		bootstrap.Warnf("no handler register, data not process.")
 	}
 
-	ctx, e := bootstrap.connect(sraddr, sladdr)
+	conn, e := bootstrap.connect(sraddr, sladdr)
 	if e != nil {
 		//bootstrap.Fatalf("Error Connect on port: %s, %q", sraddr, e)
 		return errors.Wrap(e, 0)
@@ -163,6 +166,7 @@ func (bootstrap *Bootstrap) ConnectUseInterface(sraddr, sladdr string) error {
 
 	bootstrap.startGoRoutine(func() {
 		// 事件通知-创建连接
+		ctx := newDefaultContext(conn)
 		bootstrap.eventListener.OnContextConnect(ctx)
 		bootstrap.handleContext(ctx)
 	})
@@ -195,7 +199,6 @@ func (bootstrap *Bootstrap) connect(sraddr, sladdr string) (net.Conn, error) {
 		return nil, e
 	}
 
-	//ctx := newDefaultContext(sraddr, conn, bootstrap)
 	return conn, nil
 }
 
