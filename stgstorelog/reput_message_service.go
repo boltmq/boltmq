@@ -25,6 +25,12 @@ func NewReputMessageService(defaultMessageStore *DefaultMessageStore) *ReputMess
 	}
 }
 
+func (self *ReputMessageService) notify() {
+	if !self.stoped {
+		self.reputChan <- true
+	}
+}
+
 func (self *ReputMessageService) setReputFromOffset(offset int64) {
 	self.reputFromOffset = offset
 }
@@ -87,6 +93,7 @@ func (self *ReputMessageService) start() {
 			self.doReput()
 		case <-time.After(1000 * time.Millisecond):
 			self.doReput()
+			break
 		}
 	}
 }
