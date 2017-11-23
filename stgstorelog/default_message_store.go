@@ -1003,7 +1003,7 @@ func (self *DefaultMessageStore) GetMaxPhyOffset() int64 {
 func (self *DefaultMessageStore) AppendToCommitLog(startOffset int64, data []byte) bool {
 	result := self.CommitLog.appendData(startOffset, data)
 	if result {
-		self.ReputMessageService.reputChan <- true
+		self.ReputMessageService.notify()
 	} else {
 		logger.Errorf("appendToPhyQueue failed %d %d", startOffset, len(data))
 	}
