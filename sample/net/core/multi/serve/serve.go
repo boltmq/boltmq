@@ -28,11 +28,13 @@ func (listener *serveEventListener) OnContextConnect(ctx core.Context) {
 
 func (listener *serveEventListener) OnContextClosed(ctx core.Context) {
 	atomic.AddInt64(&listener.closed, 1)
+	ctx.Close()
 	//fmt.Printf("serve OnContextClosed: local %s Exiting, Remote %s.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String())
 }
 
 func (listener *serveEventListener) OnContextError(ctx core.Context, err error) {
 	atomic.AddInt64(&listener.errors, 1)
+	ctx.Close()
 	//fmt.Printf("serve OnContextError: local %s, Remote %s, err: %v.\n", ctx.LocalAddr().String(), ctx.RemoteAddr().String(), err)
 }
 
