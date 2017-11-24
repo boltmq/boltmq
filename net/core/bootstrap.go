@@ -106,12 +106,14 @@ func (bootstrap *Bootstrap) Sync() {
 			continue
 		}
 
+		ctx := newDefaultContext(conn)
+
 		bootstrap.startGoRoutine(func() {
-			// 事件通知-客户端连接
-			ctx := newDefaultContext(conn)
-			bootstrap.eventListener.OnContextActive(ctx)
 			bootstrap.handleContext(ctx)
 		})
+
+		// 事件通知-客户端连接
+		bootstrap.eventListener.OnContextActive(ctx)
 	}
 
 	bootstrap.Noticef("Bootstrap Exiting..")
@@ -163,13 +165,14 @@ func (bootstrap *Bootstrap) ConnectUseInterface(sraddr, sladdr string) error {
 		//bootstrap.Fatalf("Error Connect on port: %s, %q", sraddr, e)
 		return errors.Wrap(e, 0)
 	}
+	ctx := newDefaultContext(conn)
 
 	bootstrap.startGoRoutine(func() {
-		// 事件通知-创建连接
-		ctx := newDefaultContext(conn)
-		bootstrap.eventListener.OnContextConnect(ctx)
 		bootstrap.handleContext(ctx)
 	})
+
+	// 事件通知-创建连接
+	bootstrap.eventListener.OnContextConnect(ctx)
 
 	return nil
 }

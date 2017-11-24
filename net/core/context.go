@@ -12,6 +12,8 @@ type Context interface {
 	WriteSerialData(s Serializable) (n int, e error)
 	LocalAddr() net.Addr
 	RemoteAddr() net.Addr
+	LocalAddrToSocketAddr() *SocketAddr
+	RemoteAddrToSocketAddr() *SocketAddr
 	Close() error
 	IsClosed() bool
 	String() string
@@ -63,6 +65,35 @@ func (ctx *defaultContext) Close() error {
 // LocalAddr 本地连接地址
 func (ctx *defaultContext) LocalAddr() net.Addr {
 	return ctx.conn.LocalAddr()
+}
+
+// LocalAddrToSocketAddr 本地连接地址转为SocketAddr，SocketAddr是可比较的对象
+func (ctx *defaultContext) LocalAddrToSocketAddr() (sa *SocketAddr) {
+	localAddr := ctx.LocalAddr()
+	tcpAddr, ok := localAddr.(*net.TCPAddr)
+	if !ok {
+		return nil
+	}
+
+	sa = &SocketAddr{
+		Port: tcpAddr.Port,
+	}
+	copy(sa.IP[:], tcpAddr.IP[0:net.IPv4len])
+	return
+}
+
+func (ctx *defaultContext) RemoteAddrToSocketAddr() (sa *SocketAddr) {
+	remoteAddr := ctx.RemoteAddr()
+	tcpAddr, ok := remoteAddr.(*net.TCPAddr)
+	if !ok {
+		return nil
+	}
+
+	sa = &SocketAddr{
+		Port: tcpAddr.Port,
+	}
+	copy(sa.IP[:], tcpAddr.IP[0:net.IPv4len])
+	return
 }
 
 // RemoteAddr 远程连接地址
