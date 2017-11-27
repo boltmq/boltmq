@@ -92,8 +92,8 @@ func (bootstrap *Bootstrap) Sync() {
 				bootstrap.Errorf("Accept error: %v", err)
 				continue
 			} else {
-				bootstrap.Errorf("Exiting: %v", err)
-				bootstrap.LogFlush()
+				//bootstrap.Errorf("Exiting: %v", err)
+				//bootstrap.LogFlush()
 				break
 			}
 		}
@@ -106,7 +106,7 @@ func (bootstrap *Bootstrap) Sync() {
 			continue
 		}
 
-		ctx := newDefaultContext(conn)
+		ctx := newDefaultContext(conn, true)
 
 		bootstrap.startGoRoutine(func() {
 			bootstrap.handleContext(ctx)
@@ -155,6 +155,23 @@ func (bootstrap *Bootstrap) Connect(sraddr string) error {
 
 // ConnectUseInterface 连接服务器连接地址、端口，使用指定网络接口连接(laddr端口为0使用随机端口)。
 func (bootstrap *Bootstrap) ConnectUseInterface(sraddr, sladdr string) error {
+	ctx, err := bootstrap.CreateContextUseInterface(sraddr, sladdr)
+	if err != nil {
+		return err
+	}
+
+	// 事件通知-创建连接
+	bootstrap.eventListener.OnContextConnect(ctx)
+	return nil
+}
+
+// CreateContext 连接服务器连接地址、端口，使用指定网络接口连接(laddr端口为0使用随机端口)。
+func (bootstrap *Bootstrap) CreateContext(sraddr string) (Context, error) {
+	return bootstrap.CreateContextUseInterface(sraddr, "")
+}
+
+// CreateContextUseInterface 连接服务器连接地址、端口，使用指定网络接口连接(laddr端口为0使用随机端口)。
+func (bootstrap *Bootstrap) CreateContextUseInterface(sraddr, sladdr string) (Context, error) {
 	// check handlers if register
 	if len(bootstrap.handlers) == 0 {
 		bootstrap.Warnf("no handler register, data not process.")
@@ -163,18 +180,15 @@ func (bootstrap *Bootstrap) ConnectUseInterface(sraddr, sladdr string) error {
 	conn, e := bootstrap.connect(sraddr, sladdr)
 	if e != nil {
 		//bootstrap.Fatalf("Error Connect on port: %s, %q", sraddr, e)
-		return errors.Wrap(e, 0)
+		return nil, errors.Wrap(e, 0)
 	}
-	ctx := newDefaultContext(conn)
+	ctx := newDefaultContext(conn, false)
 
 	bootstrap.startGoRoutine(func() {
 		bootstrap.handleContext(ctx)
 	})
 
-	// 事件通知-创建连接
-	bootstrap.eventListener.OnContextConnect(ctx)
-
-	return nil
+	return ctx, nil
 }
 
 // 创建新连接
@@ -252,6 +266,10 @@ func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
 
 // Shutdown 关闭bootstrap
 func (bootstrap *Bootstrap) Shutdown() {
+	bootstrap.runningMu.Lock()
+	bootstrap.running = false
+	bootstrap.runningMu.Unlock()
+
 	// 关闭listener
 	if bootstrap.listener != nil {
 		bootstrap.listener.Close()

@@ -14,20 +14,25 @@ type Context interface {
 	RemoteAddr() net.Addr
 	LocalAddrToSocketAddr() *SocketAddr
 	RemoteAddrToSocketAddr() *SocketAddr
+	UniqueSocketAddr() *SocketAddr
+	ServMode() bool
 	Close() error
-	IsClosed() bool
+	Closed() bool
 	String() string
 }
 
 type defaultContext struct {
-	conn     net.Conn
-	isClosed bool
+	conn        net.Conn
+	sa          *SocketAddr
+	isServModel bool //是否服务器模式的连接
+	isClosed    bool
 }
 
 // 创建一个连接context
-func newDefaultContext(conn net.Conn) *defaultContext {
+func newDefaultContext(conn net.Conn, isServModel bool) *defaultContext {
 	return &defaultContext{
-		conn: conn,
+		conn:        conn,
+		isServModel: isServModel,
 	}
 }
 
@@ -82,6 +87,7 @@ func (ctx *defaultContext) LocalAddrToSocketAddr() (sa *SocketAddr) {
 	return
 }
 
+// RemoteAddrToSocketAddr 远程连接地址转为SocketAddr，SocketAddr是可比较的对象
 func (ctx *defaultContext) RemoteAddrToSocketAddr() (sa *SocketAddr) {
 	remoteAddr := ctx.RemoteAddr()
 	tcpAddr, ok := remoteAddr.(*net.TCPAddr)
@@ -96,13 +102,33 @@ func (ctx *defaultContext) RemoteAddrToSocketAddr() (sa *SocketAddr) {
 	return
 }
 
+// UniqueSocketAddr 唯一的连接地址转为SocketAddr，SocketAddr是可比较的对象
+func (ctx *defaultContext) UniqueSocketAddr() (sa *SocketAddr) {
+	if ctx.sa != nil {
+		return ctx.sa
+	}
+
+	if ctx.isServModel {
+		ctx.sa = ctx.RemoteAddrToSocketAddr()
+	} else {
+		ctx.sa = ctx.LocalAddrToSocketAddr()
+	}
+
+	return ctx.sa
+}
+
 // RemoteAddr 远程连接地址
 func (ctx *defaultContext) RemoteAddr() net.Addr {
 	return ctx.conn.RemoteAddr()
 }
 
-// IsClosed 连接是否关闭
-func (ctx *defaultContext) IsClosed() bool {
+// ServMode 连接是否服务器端连接
+func (ctx *defaultContext) ServMode() bool {
+	return ctx.isServModel
+}
+
+// Closed 连接是否关闭
+func (ctx *defaultContext) Closed() bool {
 	return ctx.isClosed
 }
 
