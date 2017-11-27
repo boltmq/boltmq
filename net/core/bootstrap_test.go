@@ -3,6 +3,7 @@ package core
 import (
 	"sync"
 	"testing"
+	"time"
 )
 
 type serveEventListener struct {
@@ -12,7 +13,7 @@ type serveEventListener struct {
 }
 
 func (listener *serveEventListener) OnContextActive(ctx Context) {
-	socketAddr := ctx.RemoteAddrToSocketAddr()
+	socketAddr := ctx.UniqueSocketAddr()
 	if socketAddr == nil {
 		return
 	}
@@ -67,6 +68,7 @@ func TestClient2ServerBootstrap(t *testing.T) {
 	}()
 
 	wg.Add(1)
+	time.Sleep(time.Second)
 	// Client
 	go func() {
 		cBootstrap = NewBootstrap().SetReadBufferSize(512).SetEventListener(cEventListener)
@@ -88,8 +90,8 @@ func TestClient2ServerBootstrap(t *testing.T) {
 
 	wg.Wait()
 	sBootstrap.Shutdown()
-	sEventListener.CloseConntexts()
 	cBootstrap.Shutdown()
+	sEventListener.CloseConntexts()
 	cEventListener.context.Close()
 
 	if sc != 1 {
