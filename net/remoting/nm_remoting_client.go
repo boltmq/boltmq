@@ -10,10 +10,12 @@ import (
 
 // NMRemotingClient net manage remoting client
 type NMRemotingClient struct {
-	namesrvAddrList     []string
-	namesrvAddrListLock sync.RWMutex
-	namesrvAddrChoosed  string
-	namesrvIndex        uint32
+	namesrvAddrList    []string
+	namesrvAddrListMu  sync.RWMutex
+	namesrvAddrChoosed string
+	namesrvIndex       uint32
+	contextsMu         sync.RWMutex
+	contexts           map[string]core.Context
 	BaseRemotingAchieve
 }
 
@@ -23,6 +25,7 @@ func NewNMRemotingClient() *NMRemotingClient {
 	remotingClient.responseTable = make(map[int32]*ResponseFuture)
 	remotingClient.fragmentationActuator = NewLengthFieldFragmentationAssemblage(FRAME_MAX_LENGTH, 0, 4, 0)
 	remotingClient.bootstrap = core.NewBootstrap()
+	remotingClient.contexts = make(map[string]core.Context)
 	return remotingClient
 }
 
@@ -46,13 +49,19 @@ func (rc *NMRemotingClient) Shutdown() {
 	if rc.bootstrap != nil {
 		rc.bootstrap.Shutdown()
 	}
+
+	for addr, ctx := range rc.contexts {
+		ctx.Close()
+		delete(rc.contexts, addr)
+	}
+
 	rc.isRunning = false
 }
 
 // GetNameServerAddressList return nameserver addr list
 func (rc *NMRemotingClient) GetNameServerAddressList() []string {
-	rc.namesrvAddrListLock.RLock()
-	defer rc.namesrvAddrListLock.RUnlock()
+	rc.namesrvAddrListMu.RLock()
+	defer rc.namesrvAddrListMu.RUnlock()
 	return rc.namesrvAddrList
 }
 
@@ -62,7 +71,7 @@ func (rc *NMRemotingClient) UpdateNameServerAddressList(addrs []string) {
 		repeat bool
 	)
 
-	rc.namesrvAddrListLock.Lock()
+	rc.namesrvAddrListMu.Lock()
 	for _, addr := range addrs {
 		// 去除重复地址
 		for _, oaddr := range rc.namesrvAddrList {
@@ -76,7 +85,7 @@ func (rc *NMRemotingClient) UpdateNameServerAddressList(addrs []string) {
 			rc.namesrvAddrList = append(rc.namesrvAddrList, addr)
 		}
 	}
-	rc.namesrvAddrListLock.Unlock()
+	rc.namesrvAddrListMu.Unlock()
 }
 
 // InvokeSync 同步调用并返回响应, addr为空字符串，则在namesrvAddrList中选择地址
@@ -139,8 +148,21 @@ func (rc *NMRemotingClient) createContextByAddr(addr string) (core.Context, erro
 		addr = rc.chooseNameseverAddr()
 	}
 
-	// 创建连接，如果连接存在，则不会创建。
-	return rc.bootstrap.CreateContext(addr)
+	rc.contextsMu.Lock()
+	defer rc.contextsMu.Unlock()
+	ctx, ok := rc.contexts[addr]
+	if ok {
+		return ctx, nil
+	}
+
+	// 创建连接，如果连接不存在。
+	ctx, err := rc.bootstrap.CreateContext(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	rc.contexts[addr] = ctx
+	return ctx, nil
 }
 
 func (rc *NMRemotingClient) chooseNameseverAddr() string {
@@ -157,7 +179,7 @@ func (rc *NMRemotingClient) chooseNameseverAddr() string {
 		nlen  uint32
 		i     uint32
 	)
-	rc.namesrvAddrListLock.RLock()
+	rc.namesrvAddrListMu.RLock()
 	nlen = uint32(len(rc.namesrvAddrList))
 	for ; i < nlen; i++ {
 		atomic.AddUint32(&rc.namesrvIndex, 1)
@@ -173,7 +195,7 @@ func (rc *NMRemotingClient) chooseNameseverAddr() string {
 		//	break
 		//}
 	}
-	rc.namesrvAddrListLock.RUnlock()
+	rc.namesrvAddrListMu.RUnlock()
 
 	return caddr
 }

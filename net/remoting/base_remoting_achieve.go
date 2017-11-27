@@ -39,8 +39,8 @@ func (ra *BaseRemotingAchieve) RegisterProcessor(requestCode int32, processor Re
 	ra.processorTableLock.Unlock()
 }
 
-// RegisterDefaultProcessor register default porcessor
-func (ra *BaseRemotingAchieve) RegisterDefaultProcessor(processor RequestProcessor) {
+// SetDefaultProcessor set default porcessor
+func (ra *BaseRemotingAchieve) SetDefaultProcessor(processor RequestProcessor) {
 	ra.defaultProcessor = processor
 }
 
