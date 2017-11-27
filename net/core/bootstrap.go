@@ -24,7 +24,7 @@ type Bootstrap struct {
 func NewBootstrap() *Bootstrap {
 	b := &Bootstrap{
 		opts:          &Options{ReadBufferSize: READ_BUFFER_SIZE},
-		eventListener: &defaultEventListener{},
+		eventListener: &DefaultEventListener{},
 	}
 	return b
 }
@@ -248,4 +248,13 @@ func (bootstrap *Bootstrap) setConnect(conn net.Conn) error {
 	}
 
 	return nil
+}
+
+// Shutdown 关闭bootstrap
+func (bootstrap *Bootstrap) Shutdown() {
+	// 关闭listener
+	if bootstrap.listener != nil {
+		bootstrap.listener.Close()
+		bootstrap.listener = nil
+	}
 }
