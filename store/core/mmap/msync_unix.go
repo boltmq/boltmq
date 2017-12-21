@@ -11,6 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package core
 
-type Handler func(buffer []byte, ctx Context)
+// +build darwin dragonfly freebsd linux openbsd solaris
+
+package mmap
+
+import (
+	"syscall"
+)
+
+const _SYS_MSYNC = syscall.SYS_MSYNC
+const _MS_SYNC = syscall.MS_SYNC
