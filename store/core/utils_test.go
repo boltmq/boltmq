@@ -15,40 +15,43 @@ package core
 
 import (
 	"os"
-	"path/filepath"
+	"testing"
 )
 
-func parentDirectory(dir string) string {
-	return filepath.Dir(dir)
+func TestParentDirectory(t *testing.T) {
+	var (
+		tv     = "testdata/001"
+		expect = "testdata"
+	)
+
+	dir := parentDirectory(tv)
+	if dir != expect {
+		t.Errorf("%s parent Directory is %s", tv, expect)
+	}
 }
 
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
+func TestPathExist(t *testing.T) {
+	var (
+		dir = "testdata/001"
+	)
 
-func ensureDir(dirName string) error {
-	if len(dirName) == 0 {
-		return nil
-	}
-
-	exist, err := pathExists(dirName)
+	_, err := pathExists(dir)
 	if err != nil {
-		return err
+		t.Errorf("%s path exist: %s", dir, err)
+		return
+	}
+}
+
+func TestEnsureDir(t *testing.T) {
+	var (
+		dir = "testdata/001"
+	)
+
+	err := ensureDir(dir)
+	if err != nil {
+		t.Errorf("%s path exist: %s", dir, err)
+		return
 	}
 
-	if !exist {
-		err := os.MkdirAll(dirName, os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	os.RemoveAll(parentDirectory(dir))
 }
