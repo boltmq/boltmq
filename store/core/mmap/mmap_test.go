@@ -27,9 +27,7 @@ import (
 )
 
 var testData = []byte("0123456789ABCDEF")
-
-//var testPath = filepath.Join(os.TempDir(), "testdata")
-var testPath = filepath.Join("./", "testdata")
+var testPath = filepath.Join(os.TempDir(), "testdata")
 
 func prepare() {
 	f := openFile(os.O_RDWR | os.O_CREATE | os.O_TRUNC)
