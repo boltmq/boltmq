@@ -3,9 +3,9 @@ BoltMQ is a distributed queue, writern on Go. it is based on apache open source 
 
 ### Features
 
-* Pub/Sub messaging model
-* Scheduled message delivery
-* Big data integration
+* Pub/Sub messaging
+* Scheduled message
+* Load balancing
 * Reliable FIFO and strict ordered messaging in the same queue
 * Support Master & Salve
 
@@ -20,10 +20,7 @@ git clone https://github.com/boltmq/boltmq.git
 ```
 
 
-### How to start
-
-
-### How to start
+### Getting started
 
 
 ### Contributing
