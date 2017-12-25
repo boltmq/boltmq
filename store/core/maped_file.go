@@ -76,13 +76,13 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 	mapedFile.fileName = filePath
 	mapedFile.fileSize = filesize
 
-	commitRootDir := parentDirectory(filePath)
-	err := ensureDir(commitRootDir)
+	commitRootDir := ParentDirectory(filePath)
+	err := EnsureDir(commitRootDir)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
 
-	exist, err := pathExists(filePath)
+	exist, err := PathExists(filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
