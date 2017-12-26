@@ -24,7 +24,7 @@ func TestParentDirectory(t *testing.T) {
 		expect = "testdata"
 	)
 
-	dir := parentDirectory(tv)
+	dir := ParentDirectory(tv)
 	if dir != expect {
 		t.Errorf("%s parent Directory is %s", tv, expect)
 	}
@@ -35,7 +35,7 @@ func TestPathExist(t *testing.T) {
 		dir = "testdata/001"
 	)
 
-	_, err := pathExists(dir)
+	_, err := PathExists(dir)
 	if err != nil {
 		t.Errorf("%s path exist: %s", dir, err)
 		return
@@ -47,11 +47,11 @@ func TestEnsureDir(t *testing.T) {
 		dir = "testdata/001"
 	)
 
-	err := ensureDir(dir)
+	err := EnsureDir(dir)
 	if err != nil {
 		t.Errorf("%s path exist: %s", dir, err)
 		return
 	}
 
-	os.RemoveAll(parentDirectory(dir))
+	os.RemoveAll(ParentDirectory(dir))
 }

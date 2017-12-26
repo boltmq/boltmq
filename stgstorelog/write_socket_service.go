@@ -2,11 +2,12 @@ package stgstorelog
 
 import (
 	"bytes"
+	"encoding/binary"
 	"net"
 	"sync"
 	"time"
+
 	"git.oschina.net/cloudzone/smartgo/stgcommon/logger"
-	"encoding/binary"
 	"git.oschina.net/cloudzone/smartgo/stgstorelog/config"
 )
 

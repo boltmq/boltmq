@@ -23,7 +23,7 @@ import (
 var testFile = filepath.Join(os.TempDir(), "testdata/001")
 
 func remove() {
-	if err := os.RemoveAll(parentDirectory(testFile)); err != nil {
+	if err := os.RemoveAll(ParentDirectory(testFile)); err != nil {
 		panic(err)
 	}
 }
@@ -39,7 +39,7 @@ func TestOpenMapedFile(t *testing.T) {
 		return
 	}
 
-	maps := mapFile.mappedByteBuffer.MMapBuf
+	maps := mapFile.MByteBuffer.MMapBuf
 	if int(size) != len(maps) {
 		t.Errorf("NewMapedFile size is %d not equal expect %d", len(maps), size)
 	}
@@ -60,7 +60,7 @@ func TestMapedFile_Write(t *testing.T) {
 
 	for i := 1; i <= 64; i++ {
 		msg := fmt.Sprintf("helloword%d", i)
-		mapFile.appendMessage([]byte(msg))
+		mapFile.AppendMessage([]byte(msg))
 	}
 	mapFile.Flush()
 	mapFile.Unmap()
@@ -79,7 +79,7 @@ func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
 		return
 	}
 
-	byteBuffer := mapFile.mappedByteBuffer
+	byteBuffer := mapFile.MByteBuffer
 	for i := 1; i <= 1024; i++ {
 		byteBuffer.WriteInt32(int32(i))
 	}

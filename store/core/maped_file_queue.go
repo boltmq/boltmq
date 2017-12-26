@@ -64,7 +64,7 @@ func NewMapedFileQueue(storePath string, mapedFileSize int64,
 	return mfq
 }
 
-func (mfq *MapedFileQueue) getMapedFileByTime(timestamp int64) (mf *MapedFile) {
+func (mfq *MapedFileQueue) GetMapedFileByTime(timestamp int64) (mf *MapedFile) {
 	mapedFileSlice := mfq.copyMapedFiles(0)
 	if mapedFileSlice == nil {
 		return nil
@@ -112,10 +112,10 @@ func (mfq *MapedFileQueue) copyMapedFiles(reservedMapedFiles int) []*MapedFile {
 	return mapedFileSlice
 }
 
-// truncateDirtyFiles recover时调用，不需要加锁
+// TruncateDirtyFiles recover时调用，不需要加锁
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/7
-func (mfq *MapedFileQueue) truncateDirtyFiles(offset int64) {
+func (mfq *MapedFileQueue) TruncateDirtyFiles(offset int64) {
 	willRemoveFiles := list.New()
 
 	// Iterate through list and print its contents.
@@ -125,22 +125,22 @@ func (mfq *MapedFileQueue) truncateDirtyFiles(offset int64) {
 		if fileTailOffset > offset {
 			if offset >= mf.fileFromOffset {
 				pos := offset % int64(mfq.mapedFileSize)
-				mf.wrotePostion = pos
-				mf.mappedByteBuffer.WritePos = int(pos)
-				mf.committedPosition = pos
+				mf.WrotePostion = pos
+				mf.MByteBuffer.WritePos = int(pos)
+				mf.CommittedPosition = pos
 			} else {
 				mf.destroy(1000)
 				willRemoveFiles.PushBack(mf)
 			}
 		}
 	}
-	mfq.deleteExpiredFile(willRemoveFiles)
+	mfq.DeleteExpiredFile(willRemoveFiles)
 }
 
-// deleteExpiredFile 删除过期文件只能从头开始删
+// DeleteExpiredFile 删除过期文件只能从头开始删
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/7
-func (mfq *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
+func (mfq *MapedFileQueue) DeleteExpiredFile(mfs *list.List) {
 	if mfs != nil && mfs.Len() > 0 {
 		mfq.rwLock.Lock()
 		defer mfq.rwLock.Unlock()
@@ -160,10 +160,10 @@ func (mfq *MapedFileQueue) deleteExpiredFile(mfs *list.List) {
 	}
 }
 
-// load 从磁盘加载mapedfile到内存映射
+// Load 从磁盘加载mapedfile到内存映射
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/8
-func (mfq *MapedFileQueue) load() bool {
+func (mfq *MapedFileQueue) Load() bool {
 	exist, err := PathExists(mfq.storePath)
 	if err != nil {
 		logger.Infof("maped file queue load store path error:", err.Error())
@@ -203,9 +203,9 @@ func (mfq *MapedFileQueue) load() bool {
 					return false
 				}
 
-				mapedFile.wrotePostion = mfq.mapedFileSize
-				mapedFile.committedPosition = mfq.mapedFileSize
-				mapedFile.mappedByteBuffer.WritePos = int(mapedFile.wrotePostion)
+				mapedFile.WrotePostion = mfq.mapedFileSize
+				mapedFile.CommittedPosition = mfq.mapedFileSize
+				mapedFile.MByteBuffer.WritePos = int(mapedFile.WrotePostion)
 				mfq.mapedFiles.PushBack(mapedFile)
 				logger.Infof("load mapfiled %v success.", mapedFile.fileName)
 			}
@@ -224,21 +224,21 @@ func (mfq *MapedFileQueue) howMuchFallBehind() int64 {
 	}
 	committed := mfq.committedWhere
 	if committed != 0 {
-		mapedFile, error := mfq.getLastMapedFile(0)
+		mapedFile, error := mfq.GetLastMapedFile(0)
 		if error != nil {
 			logger.Error(error.Error())
 		}
-		return mapedFile.fileFromOffset + mapedFile.wrotePostion - committed
+		return mapedFile.fileFromOffset + mapedFile.WrotePostion - committed
 	}
 	return 0
 }
 
-// getLastMapedFile 获取最后一个MapedFile对象，如果一个都没有，则新创建一个，
+// GetLastMapedFile 获取最后一个MapedFile对象，如果一个都没有，则新创建一个，
 // 如果最后一个写满了，则新创建一个
 // Params: startOffset 如果创建新的文件，起始offset
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/8
-func (mfq *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, error) {
+func (mfq *MapedFileQueue) GetLastMapedFile(startOffset int64) (*MapedFile, error) {
 	var createOffset int64 = -1
 	var mapedFile, mapedFileLast *MapedFile
 	mfq.rwLock.RLock()
@@ -288,7 +288,7 @@ func (mfq *MapedFileQueue) getLastMapedFile(startOffset int64) (*MapedFile, erro
 	return mapedFileLast, nil
 }
 
-func (mfq *MapedFileQueue) getMinOffset() int64 {
+func (mfq *MapedFileQueue) GetMinOffset() int64 {
 	mfq.rwLock.RLock()
 	defer mfq.rwLock.RUnlock()
 	if mfq.mapedFiles.Len() > 0 {
@@ -299,19 +299,19 @@ func (mfq *MapedFileQueue) getMinOffset() int64 {
 	return -1
 }
 
-func (mfq *MapedFileQueue) getMaxOffset() int64 {
+func (mfq *MapedFileQueue) GetMaxOffset() int64 {
 	mfq.rwLock.RLock()
 	defer mfq.rwLock.RUnlock()
 	if mfq.mapedFiles.Len() > 0 {
 		mappedfile := mfq.mapedFiles.Back().Value.(*MapedFile)
-		return mappedfile.fileFromOffset + mappedfile.wrotePostion
+		return mappedfile.fileFromOffset + mappedfile.WrotePostion
 	}
 
 	return 0
 }
 
-// deleteLastMapedFile 恢复时调用
-func (mfq *MapedFileQueue) deleteLastMapedFile() {
+// DeleteLastMapedFile 恢复时调用
+func (mfq *MapedFileQueue) DeleteLastMapedFile() {
 	if mfq.mapedFiles.Len() != 0 {
 		last := mfq.mapedFiles.Back()
 		lastMapedFile := last.Value.(*MapedFile)
@@ -321,11 +321,11 @@ func (mfq *MapedFileQueue) deleteLastMapedFile() {
 	}
 }
 
-// deleteExpiredFileByTime 根据文件过期时间来删除物理队列文件
+// DeleteExpiredFileByTime 根据文件过期时间来删除物理队列文件
 // Return: 删除过期文件的数量
 // Author: tantexian, <tantexian@qq.com>
 // Since: 17/8/9
-func (mfq *MapedFileQueue) deleteExpiredFileByTime(expiredTime int64, deleteFilesInterval int,
+func (mfq *MapedFileQueue) DeleteExpiredFileByTime(expiredTime int64, deleteFilesInterval int,
 	intervalForcibly int64, cleanImmediately bool) int {
 	// 获取当前MapedFiles列表中所有元素副本的切片
 	files := mfq.copyMapedFiles(0)
@@ -359,17 +359,17 @@ func (mfq *MapedFileQueue) deleteExpiredFileByTime(expiredTime int64, deleteFile
 		}
 	}
 
-	mfq.deleteExpiredFile(toBeDeleteMfList)
+	mfq.DeleteExpiredFile(toBeDeleteMfList)
 
 	return delCount
 }
 
-// deleteExpiredFileByOffset 根据物理队列最小Offset来删除逻辑队列
+// DeleteExpiredFileByOffset 根据物理队列最小Offset来删除逻辑队列
 // Params: offset 物理队列最小offset
 // Params: unitsize ???
 // Author: tantexian, <tantexian@qq.com>
 // Since: 17/8/9
-func (mfq *MapedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int) int {
+func (mfq *MapedFileQueue) DeleteExpiredFileByOffset(offset int64, unitsize int) int {
 	toBeDeleteFileList := list.New()
 	deleteCount := 0
 	mfs := mfq.copyMapedFiles(0)
@@ -386,7 +386,7 @@ func (mfq *MapedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int)
 				continue
 			}
 
-			result := mf.selectMapedBuffer(mfq.mapedFileSize - int64(unitsize))
+			result := mf.SelectMapedBuffer(mfq.mapedFileSize - int64(unitsize))
 
 			if result != nil {
 				maxOffsetInLogicQueue := result.MappedByteBuffer.ReadInt64()
@@ -409,14 +409,14 @@ func (mfq *MapedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int)
 		}
 	}
 
-	mfq.deleteExpiredFile(toBeDeleteFileList)
+	mfq.DeleteExpiredFile(toBeDeleteFileList)
 	return deleteCount
 }
 
-func (mfq *MapedFileQueue) commit(flushLeastPages int32) bool {
+func (mfq *MapedFileQueue) Commit(flushLeastPages int32) bool {
 	result := true
 
-	mapedFile := mfq.findMapedFileByOffset(mfq.committedWhere, true)
+	mapedFile := mfq.FindMapedFileByOffset(mfq.committedWhere, true)
 	if mapedFile != nil {
 		tmpTimeStamp := mapedFile.storeTimestamp
 		offset := mapedFile.Commit(flushLeastPages)
@@ -443,7 +443,7 @@ func (mfq *MapedFileQueue) getFirstMapedFile() *MapedFile {
 	return result
 }
 
-func (mfq *MapedFileQueue) getLastMapedFile2() *MapedFile {
+func (mfq *MapedFileQueue) GetLastMapedFile2() *MapedFile {
 	if mfq.mapedFiles.Len() == 0 {
 		return nil
 	}
@@ -457,7 +457,8 @@ func (mfq *MapedFileQueue) getLastMapedFile2() *MapedFile {
 	return result
 }
 
-func (mfq *MapedFileQueue) findMapedFileByOffset(offset int64, returnFirstOnNotFound bool) *MapedFile {
+// FindMapedFileByOffset
+func (mfq *MapedFileQueue) FindMapedFileByOffset(offset int64, returnFirstOnNotFound bool) *MapedFile {
 	mfq.rwLock.RLock()
 	defer mfq.rwLock.RUnlock()
 
@@ -503,7 +504,7 @@ func (mfq *MapedFileQueue) getMapedMemorySize() int64 {
 }
 
 func (mfq *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
-	mapFile := mfq.getFirstMapedFileOnLock()
+	mapFile := mfq.GetFirstMapedFileOnLock()
 	if mapFile != nil {
 		if !mapFile.isAvailable() {
 			logger.Warn("the mapedfile was destroyed once, but still alive, ", mapFile.fileName)
@@ -513,7 +514,7 @@ func (mfq *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 				logger.Info("the mapedfile redelete OK, ", mapFile.fileName)
 				tmps := list.New()
 				tmps.PushBack(mapFile)
-				mfq.deleteExpiredFile(tmps)
+				mfq.DeleteExpiredFile(tmps)
 			} else {
 				logger.Warn("the mapedfile redelete Failed, ", mapFile.fileName)
 			}
@@ -525,7 +526,7 @@ func (mfq *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 	return false
 }
 
-func (mfq *MapedFileQueue) getFirstMapedFileOnLock() *MapedFile {
+func (mfq *MapedFileQueue) GetFirstMapedFileOnLock() *MapedFile {
 	mfq.rwLock.RLock()
 	defer mfq.rwLock.RUnlock()
 	return mfq.getFirstMapedFile()
@@ -536,10 +537,10 @@ func (mfq *MapedFileQueue) shutdown(intervalForcibly int64) {
 
 }
 
-// destroy 销毁队列，队列数据被删除，此函数有可能不成功
-func (mfq *MapedFileQueue) destroy() {
+// Destroy 销毁队列，队列数据被删除，此函数有可能不成功
+func (mfq *MapedFileQueue) Destroy() {
 	mfq.rwLock.Lock()
-	mfq.rwLock.Unlock()
+	defer mfq.rwLock.Unlock()
 
 	for element := mfq.mapedFiles.Front(); element != nil; element = element.Next() {
 		mapedFile, ok := element.Value.(*MapedFile)
@@ -564,4 +565,14 @@ func (mfq *MapedFileQueue) destroy() {
 			os.RemoveAll(mfq.storePath)
 		}
 	}
+}
+
+// MapedFiles 返回mapedFiles
+func (mfq *MapedFileQueue) MapedFiles() *list.List {
+	return mfq.mapedFiles
+}
+
+// MapedFileSize 返回mapedFileSize
+func (mfq *MapedFileQueue) MapedFileSize() int64 {
+	return mfq.mapedFileSize
 }
