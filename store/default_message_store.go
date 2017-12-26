@@ -30,9 +30,10 @@ func newConsumeQueueTable() *ConsumeQueueTable {
 // Author zhoufei
 // Since 2017/9/6
 type DefaultMessageStore struct {
-	config            *Config // 存储配置
-	commitLog         *CommitLog
-	consumeTopicTable map[string]*ConsumeQueueTable
+	config                   *Config // 存储配置
+	commitLog                *CommitLog
+	consumeTopicTable        map[string]*ConsumeQueueTable
+	allocateMapedFileService *AllocateMapedFileService // 预分配文件
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
@@ -44,7 +45,7 @@ type DefaultMessageStore struct {
 		CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
 		DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
 		IndexService             *IndexService             // 消息索引服务
-		AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
+		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
 		ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
 		HAService                *HAService                // HA服务
 		ScheduleMessageService   *ScheduleMessageService   // 定时服务

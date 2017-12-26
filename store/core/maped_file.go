@@ -139,7 +139,7 @@ func (mf *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageCal
 	curPos := atomic.LoadInt64(&mf.WrotePostion)
 	// 表示还有剩余空间
 	if curPos < mf.fileSize {
-		result := appendMessageCallback.doAppend(mf.fileFromOffset, mf.MByteBuffer, int32(mf.fileSize)-int32(curPos), msg)
+		result := appendMessageCallback.DoAppend(mf.fileFromOffset, mf.MByteBuffer, int32(mf.fileSize)-int32(curPos), msg)
 		atomic.AddInt64(&mf.WrotePostion, int64(result.WroteBytes))
 		mf.storeTimestamp = result.StoreTimestamp
 		return result
@@ -236,7 +236,7 @@ func (mf *MapedFile) isFull() bool {
 	return mf.fileSize == int64(mf.WrotePostion)
 }
 
-func (mf *MapedFile) destroy(intervalForcibly int64) bool {
+func (mf *MapedFile) Destroy(intervalForcibly int64) bool {
 	mf.shutdown(intervalForcibly)
 
 	if mf.isCleanupOver() {

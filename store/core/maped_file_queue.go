@@ -129,7 +129,7 @@ func (mfq *MapedFileQueue) TruncateDirtyFiles(offset int64) {
 				mf.MByteBuffer.WritePos = int(pos)
 				mf.CommittedPosition = pos
 			} else {
-				mf.destroy(1000)
+				mf.Destroy(1000)
 				willRemoveFiles.PushBack(mf)
 			}
 		}
@@ -215,10 +215,10 @@ func (mfq *MapedFileQueue) Load() bool {
 	return true
 }
 
-// howMuchFallBehind 刷盘进度落后了多少
+// HowMuchFallBehind 刷盘进度落后了多少
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/8
-func (mfq *MapedFileQueue) howMuchFallBehind() int64 {
+func (mfq *MapedFileQueue) HowMuchFallBehind() int64 {
 	if mfq.mapedFiles.Len() == 0 {
 		return 0
 	}
@@ -315,7 +315,7 @@ func (mfq *MapedFileQueue) DeleteLastMapedFile() {
 	if mfq.mapedFiles.Len() != 0 {
 		last := mfq.mapedFiles.Back()
 		lastMapedFile := last.Value.(*MapedFile)
-		lastMapedFile.destroy(1000)
+		lastMapedFile.Destroy(1000)
 		mfq.mapedFiles.Remove(last)
 		logger.Infof("on recover, destroy a logic maped file %v", lastMapedFile.fileName)
 	}
@@ -341,7 +341,7 @@ func (mfq *MapedFileQueue) DeleteExpiredFileByTime(expiredTime int64, deleteFile
 		if mf != nil {
 			liveMaxTimestamp := mf.storeTimestamp + expiredTime
 			if CurrentTimeMillis() > liveMaxTimestamp || cleanImmediately {
-				if mf.destroy(intervalForcibly) {
+				if mf.Destroy(intervalForcibly) {
 					toBeDeleteMfList.PushBack(mf)
 					delCount++
 					// 每次触发删除文件，最多删除多少个文件
@@ -402,7 +402,7 @@ func (mfq *MapedFileQueue) DeleteExpiredFileByOffset(offset int64, unitsize int)
 				break
 			}
 
-			if destroy && mf.destroy(1000*60) {
+			if destroy && mf.Destroy(1000*60) {
 				toBeDeleteFileList.PushBack(mf)
 				deleteCount++
 			}
@@ -509,7 +509,7 @@ func (mfq *MapedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 		if !mapFile.isAvailable() {
 			logger.Warn("the mapedfile was destroyed once, but still alive, ", mapFile.fileName)
 
-			result := mapFile.destroy(intervalForcibly)
+			result := mapFile.Destroy(intervalForcibly)
 			if result {
 				logger.Info("the mapedfile redelete OK, ", mapFile.fileName)
 				tmps := list.New()
@@ -548,7 +548,7 @@ func (mfq *MapedFileQueue) Destroy() {
 			logger.Warnf("maped file queue destroy type conversion error")
 			continue
 		}
-		mapedFile.destroy(1000 * 3)
+		mapedFile.Destroy(1000 * 3)
 	}
 
 	mfq.mapedFiles.Init()
@@ -575,4 +575,14 @@ func (mfq *MapedFileQueue) MapedFiles() *list.List {
 // MapedFileSize 返回mapedFileSize
 func (mfq *MapedFileQueue) MapedFileSize() int64 {
 	return mfq.mapedFileSize
+}
+
+// CommittedWhere 返回committedWhere
+func (mfq *MapedFileQueue) CommittedWhere() int64 {
+	return mfq.committedWhere
+}
+
+// StoreTimestamp 返回storeTimestamp
+func (mfq *MapedFileQueue) StoreTimestamp() int64 {
+	return mfq.storeTimestamp
 }

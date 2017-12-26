@@ -15,8 +15,13 @@ package store
 
 import (
 	"sync"
+	"sync/atomic"
+	"time"
 
+	"github.com/boltmq/boltmq/stgcommon"
 	"github.com/boltmq/boltmq/store/core"
+	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/message"
 )
 
 const (
@@ -24,37 +29,49 @@ const (
 	BlankMagicCode   = 0xBBCCDDEE ^ 1880681586 + 8
 )
 
+type DispatchRequest struct {
+	topic                     string
+	queueId                   int32
+	commitLogOffset           int64
+	msgSize                   int64
+	tagsCode                  int64
+	storeTimestamp            int64
+	consumeQueueOffset        int64
+	keys                      string
+	sysFlag                   int32
+	preparedTransactionOffset int64
+	producerGroup             string
+	tranStateTableOffset      int64
+}
+
 type CommitLog struct {
-	mapedFileQueue      *core.MapedFileQueue
-	defaultMessageStore *DefaultMessageStore
-	//GroupCommitService    *GroupCommitService
-	//FlushRealTimeService  *FlushRealTimeService
-	//AppendMessageCallback *DefaultAppendMessageCallback
-	//topicQueueTable map[string]int64
-	mutex sync.Mutex
+	mapedFileQueue        *core.MapedFileQueue
+	defaultMessageStore   *DefaultMessageStore
+	flushCommitLogService FlushCommitLogService
+	appendMessageCallback core.AppendMessageCallback
+	topicQueueTable       map[string]int64
+	mutex                 sync.Mutex
 }
 
 func newCommitLog(defaultMessageStore *DefaultMessageStore) *CommitLog {
 	commitLog := &CommitLog{}
 	commitLog.mapedFileQueue = core.NewMapedFileQueue(defaultMessageStore.config.StorePathCommitLog,
-		int64(defaultMessageStore.config.MapedFileSizeCommitLog), defaultMessageStore.AllocateMapedFileService)
+		int64(defaultMessageStore.config.MapedFileSizeCommitLog), defaultMessageStore.allocateMapedFileService)
 	commitLog.defaultMessageStore = defaultMessageStore
 
 	if SYNC_FLUSH == defaultMessageStore.config.FlushDisk {
-		commitLog.GroupCommitService = NewGroupCommitService(commitLog)
+		commitLog.flushCommitLogService = newGroupCommitService(commitLog)
 	} else {
-		commitLog.FlushRealTimeService = NewFlushRealTimeService(commitLog)
+		commitLog.flushCommitLogService = newFlushRealTimeService(commitLog)
 	}
 
-	commitLog.TopicQueueTable = make(map[string]int64, 1024)
-	commitLog.AppendMessageCallback = NewDefaultAppendMessageCallback(defaultMessageStore.config.MaxMessageSize, commitLog)
-
+	commitLog.topicQueueTable = make(map[string]int64, 1024)
+	commitLog.appendMessageCallback = newDefaultAppendMessageCallback(defaultMessageStore.config.MaxMessageSize, commitLog)
 	return commitLog
 }
 
-/*
 func (clog *CommitLog) Load() bool {
-	result := clog.mapedFileQueue.load()
+	result := clog.mapedFileQueue.Load()
 
 	if result {
 		logger.Info("load commit log OK")
@@ -65,7 +82,7 @@ func (clog *CommitLog) Load() bool {
 	return result
 }
 
-func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult {
+func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *core.PutMessageResult {
 	msg.StoreTimestamp = time.Now().UnixNano() / 1000000
 	msg.BodyCRC, _ = stgcommon.Crc32(msg.Body)
 
@@ -74,39 +91,39 @@ func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 	beginLockTimestamp := time.Now().UnixNano() / 1000000
 	msg.BornTimestamp = beginLockTimestamp
 
-	mapedFile, err := clog.mapedFileQueue.getLastMapedFile(int64(0))
+	mapedFile, err := clog.mapedFileQueue.GetLastMapedFile(int64(0))
 	if err != nil {
 		// TODO
-		return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED}
+		return &core.PutMessageResult{Status: core.CREATE_MAPEDFILE_FAILED}
 	}
 
 	if mapedFile == nil {
 		// TODO
-		return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED}
+		return &core.PutMessageResult{Status: core.CREATE_MAPEDFILE_FAILED}
 	}
 
-	result := mapedFile.AppendMessageWithCallBack(msg, clog.AppendMessageCallback)
+	result := mapedFile.AppendMessageWithCallBack(msg, clog.appendMessageCallback)
 	switch result.Status {
-	case APPENDMESSAGE_PUT_OK:
+	case core.APPENDMESSAGE_PUT_OK:
 		break
-	case END_OF_FILE:
-		mapedFile, err = clog.mapedFileQueue.getLastMapedFile(int64(0))
+	case core.END_OF_FILE:
+		mapedFile, err = clog.mapedFileQueue.GetLastMapedFile(int64(0))
 		if err != nil {
 			logger.Error(err.Error())
-			return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED, AppendMessageResult: result}
+			return &core.PutMessageResult{Status: core.CREATE_MAPEDFILE_FAILED, Result: result}
 		}
 
 		if mapedFile == nil {
 			logger.Errorf("create maped file2 error, topic:%s clientAddr:%s", msg.Topic, msg.BornHost)
-			return &PutMessageResult{PutMessageStatus: CREATE_MAPEDFILE_FAILED, AppendMessageResult: result}
+			return &core.PutMessageResult{Status: core.CREATE_MAPEDFILE_FAILED, Result: result}
 		}
 
-		result = mapedFile.AppendMessageWithCallBack(msg, clog.AppendMessageCallback)
+		result = mapedFile.AppendMessageWithCallBack(msg, clog.appendMessageCallback)
 		break
-	case MESSAGE_SIZE_EXCEEDED:
-		return &PutMessageResult{PutMessageStatus: MESSAGE_ILLEGAL, AppendMessageResult: result}
+	case core.MESSAGE_SIZE_EXCEEDED:
+		return &core.PutMessageResult{Status: core.MESSAGE_ILLEGAL, Result: result}
 	default:
-		return &PutMessageResult{PutMessageStatus: PUTMESSAGE_UNKNOWN_ERROR, AppendMessageResult: result}
+		return &core.PutMessageResult{Status: core.PUTMESSAGE_UNKNOWN_ERROR, Result: result}
 	}
 
 	// DispatchRequest
@@ -134,7 +151,7 @@ func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 		logger.Warn("putMessage in lock eclipse time(ms) ", eclipseTimeInLock)
 	}
 
-	putMessageResult := &PutMessageResult{PutMessageStatus: PUTMESSAGE_PUT_OK, AppendMessageResult: result}
+	putMessageResult := &core.PutMessageResult{Status: core.PUTMESSAGE_PUT_OK, Result: result}
 
 	// Statistics
 	size := clog.defaultMessageStore.StoreStatsService.getSinglePutMessageTopicSizeTotal(msg.Topic)
@@ -144,28 +161,33 @@ func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *PutMessageResult 
 	if SYNC_FLUSH == clog.defaultMessageStore.config.FlushDisk {
 		if msg.isWaitStoreMsgOK() {
 			request := NewGroupCommitRequest(result.WroteOffset + result.WroteBytes)
-			clog.GroupCommitService.putRequest(request)
-			flushOk := request.waitForFlush(int64(clog.defaultMessageStore.config.SyncFlushTimeout))
-			if flushOk == false {
-				logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s",
-					msg.Topic, msg.GetTags(), msg.BornHost)
-				putMessageResult.PutMessageStatus = FLUSH_DISK_TIMEOUT
+
+			if groupCommitService, ok := clog.flushCommitLogService.(*GroupCommitService); ok {
+				groupCommitService.putRequest(request)
+
+				flushOk := request.waitForFlush(int64(clog.defaultMessageStore.config.SyncFlushTimeout))
+				if flushOk == false {
+					logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s",
+						msg.Topic, msg.GetTags(), msg.BornHost)
+					putMessageResult.Status = core.FLUSH_DISK_TIMEOUT
+				}
 			}
 		}
 	} else {
-		if clog.FlushRealTimeService != nil {
-			clog.FlushRealTimeService.wakeup()
+		if flushRealTimeService, ok := clog.flushCommitLogService.(*FlushRealTimeService); ok {
+			flushRealTimeService.wakeup()
 		}
 	}
 
 	// Synchronous write double
-	if config.SYNC_MASTER == clog.defaultMessageStore.config.BrokerRole {
+	if SYNC_MASTER == clog.defaultMessageStore.config.BrokerRole {
 		// TODO
 	}
 
 	return putMessageResult
 }
 
+/*
 func (clog *CommitLog) getMessage(offset int64, size int32) *SelectMapedBufferResult {
 	returnFirstOnNotFound := false
 	if 0 == offset {
@@ -262,11 +284,11 @@ func (clog *CommitLog) getMaxOffset() int64 {
 	return clog.mapedFileQueue.getMaxOffset()
 }
 
-func (clog *CommitLog) removeQueurFromTopicQueueTable(topic string, queueId int32) {
+func (clog *CommitLog) removeQueurFromtopicQueueTable(topic string, queueId int32) {
 	clog.mutex.Lock()
 	clog.mutex.Unlock()
 	key := fmt.Sprintf("%s-%d", topic, queueId)
-	delete(clog.TopicQueueTable, key)
+	delete(clog.topicQueueTable, key)
 }
 
 func (clog *CommitLog) checkMessageAndReturnSize(mappedByteBuffer *MappedByteBuffer, checkCRC bool, readBody bool) *DispatchRequest {

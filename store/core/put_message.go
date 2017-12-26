@@ -56,10 +56,10 @@ func (status PutMessageStatus) String() string {
 // Author gaoyanlei
 // Since 2017/8/16
 type PutMessageResult struct {
-	putMessageStatus    PutMessageStatus
-	appendMessageResult *AppendMessageResult
+	Status PutMessageStatus
+	Result *AppendMessageResult
 }
 
 func (pms *PutMessageResult) isOk() bool {
-	return pms.appendMessageResult != nil && pms.appendMessageResult.Status == APPENDMESSAGE_PUT_OK
+	return pms.Result != nil && pms.Result.Status == APPENDMESSAGE_PUT_OK
 }
