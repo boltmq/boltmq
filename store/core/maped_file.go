@@ -49,12 +49,12 @@ type MapedFile struct {
 	// 映射的文件
 	file *os.File
 	// 映射的内存对象，position永远不变
-	mappedByteBuffer *MappedByteBuffer
+	MByteBuffer *MappedByteBuffer
 	//mmapBytes        mmap.MemoryMap
 	// 当前写到什么位置
-	wrotePostion int64
+	WrotePostion int64
 	// Flush到什么位置
-	committedPosition int64
+	CommittedPosition int64
 	// 最后一条消息存储时间
 	storeTimestamp     int64
 	firstCreateInQueue bool
@@ -119,7 +119,7 @@ func NewMapedFile(filePath string, filesize int64) (*MapedFile, error) {
 		//return nil, err
 	}
 
-	mapedFile.mappedByteBuffer = NewMappedByteBuffer(mmapBytes)
+	mapedFile.MByteBuffer = NewMappedByteBuffer(mmapBytes)
 	atomic.AddInt64(&mapedFile.TotalMapedVitualMemory, int64(filesize))
 	atomic.AddInt32(&mapedFile.TotalMapedFiles, 1)
 
@@ -136,34 +136,34 @@ func (mf *MapedFile) AppendMessageWithCallBack(msg interface{}, appendMessageCal
 		return nil
 	}
 
-	curPos := atomic.LoadInt64(&mf.wrotePostion)
+	curPos := atomic.LoadInt64(&mf.WrotePostion)
 	// 表示还有剩余空间
 	if curPos < mf.fileSize {
-		result := appendMessageCallback.doAppend(mf.fileFromOffset, mf.mappedByteBuffer, int32(mf.fileSize)-int32(curPos), msg)
-		atomic.AddInt64(&mf.wrotePostion, int64(result.WroteBytes))
+		result := appendMessageCallback.doAppend(mf.fileFromOffset, mf.MByteBuffer, int32(mf.fileSize)-int32(curPos), msg)
+		atomic.AddInt64(&mf.WrotePostion, int64(result.WroteBytes))
 		mf.storeTimestamp = result.StoreTimestamp
 		return result
 	}
 
 	// TODO: 上层应用应该保证不会走到这里
-	logger.Errorf("MapedFile.appendMessage return null, wrotePostion:%d fileSize:%d", curPos, mf.fileSize)
+	logger.Errorf("MapedFile.appendMessage return null, WrotePostion:%d fileSize:%d", curPos, mf.fileSize)
 	return &AppendMessageResult{Status: APPENDMESSAGE_UNKNOWN_ERROR}
 }
 
-// appendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
+// AppendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
 // Params: data 追加数据
 // Return: 追加是否成功
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
-func (mf *MapedFile) appendMessage(data []byte) bool {
-	currPos := int64(mf.wrotePostion)
+func (mf *MapedFile) AppendMessage(data []byte) bool {
+	currPos := int64(mf.WrotePostion)
 	if currPos+int64(len(data)) <= mf.fileSize {
-		n, err := mf.mappedByteBuffer.Write(data)
+		n, err := mf.MByteBuffer.Write(data)
 		if err != nil {
 			logger.Error("maped file append message error:", err.Error())
 			return false
 		}
-		atomic.AddInt64(&mf.wrotePostion, int64(n))
+		atomic.AddInt64(&mf.WrotePostion, int64(n))
 		return true
 	}
 
@@ -179,31 +179,31 @@ func (mf *MapedFile) Commit(flushLeastPages int32) (flushPosition int64) {
 	if mf.isAbleToFlush(flushLeastPages) {
 		if mf.hold() {
 			mf.rwLock.Lock()           // 对文件加写锁
-			currPos := mf.wrotePostion // 获取当前写的位置
-			mf.Flush()                 // 将mappedByteBuffer的数据强制刷新到磁盘文件中
+			currPos := mf.WrotePostion // 获取当前写的位置
+			mf.Flush()                 // 将MByteBuffer的数据强制刷新到磁盘文件中
 			//mf.mmapBytes
-			mf.committedPosition = currPos // 刷新完毕，则将committedPosition即flush的位置更新为当前位置记录
+			mf.CommittedPosition = currPos // 刷新完毕，则将CommittedPosition即flush的位置更新为当前位置记录
 			mf.rwLock.Unlock()             // 释放锁
 			mf.release()
 		} else {
-			logger.Warn("in commit, hold failed, commit offset = ", atomic.LoadInt64(&mf.committedPosition))
-			mf.committedPosition = atomic.LoadInt64(&mf.wrotePostion)
+			logger.Warn("in commit, hold failed, commit offset = ", atomic.LoadInt64(&mf.CommittedPosition))
+			mf.CommittedPosition = atomic.LoadInt64(&mf.WrotePostion)
 		}
 	}
 
-	return mf.committedPosition
+	return mf.CommittedPosition
 }
 
 // Flush
 func (mf *MapedFile) Flush() {
-	mf.mappedByteBuffer.flush()
+	mf.MByteBuffer.flush()
 }
 
 // Unmap
 func (mf *MapedFile) Unmap() {
 	atomic.AddInt64(&mf.TotalMapedVitualMemory, -int64(mf.fileSize))
 	atomic.AddInt32(&mf.TotalMapedFiles, -1)
-	mf.mappedByteBuffer.unmap()
+	mf.MByteBuffer.unmap()
 }
 
 // isAbleToFlush 根据最少需要刷盘page数值来判断当前是否需要立即刷新缓存数据到磁盘
@@ -213,9 +213,9 @@ func (mf *MapedFile) Unmap() {
 // Since: 2017/8/6
 func (mf *MapedFile) isAbleToFlush(flushLeastPages int32) bool {
 	// 获取当前flush到磁盘的位置
-	flush := mf.committedPosition
+	flush := mf.CommittedPosition
 	// 获取当前write到缓冲区的位置
-	write := mf.wrotePostion
+	write := mf.WrotePostion
 	if mf.isFull() {
 
 		return true
@@ -233,7 +233,7 @@ func (mf *MapedFile) isAbleToFlush(flushLeastPages int32) bool {
 }
 
 func (mf *MapedFile) isFull() bool {
-	return mf.fileSize == int64(mf.wrotePostion)
+	return mf.fileSize == int64(mf.WrotePostion)
 }
 
 func (mf *MapedFile) destroy(intervalForcibly int64) bool {
@@ -266,16 +266,16 @@ func (mf *MapedFile) shutdown(intervalForcibly int64) {
 	}
 }
 
-func (mf *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
-	if pos < mf.wrotePostion && pos >= 0 {
+func (mf *MapedFile) SelectMapedBuffer(pos int64) *SelectMapedBufferResult {
+	if pos < mf.WrotePostion && pos >= 0 {
 		if mf.hold() {
-			size := mf.mappedByteBuffer.WritePos - int(pos)
-			if mf.mappedByteBuffer.WritePos > len(mf.mappedByteBuffer.MMapBuf) {
+			size := mf.MByteBuffer.WritePos - int(pos)
+			if mf.MByteBuffer.WritePos > len(mf.MByteBuffer.MMapBuf) {
 				return nil
 			}
 
-			newMmpBuffer := NewMappedByteBuffer(mf.mappedByteBuffer.Bytes())
-			newMmpBuffer.WritePos = mf.mappedByteBuffer.WritePos
+			newMmpBuffer := NewMappedByteBuffer(mf.MByteBuffer.Bytes())
+			newMmpBuffer.WritePos = mf.MByteBuffer.WritePos
 			newMmpBuffer.ReadPos = int(pos)
 			return newSelectMapedBufferResult(mf.fileFromOffset+pos, newMmpBuffer, int32(size), mf)
 		}
@@ -285,14 +285,14 @@ func (mf *MapedFile) selectMapedBuffer(pos int64) *SelectMapedBufferResult {
 }
 
 func (mf *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
-	if (pos + int64(size)) <= mf.wrotePostion {
+	if (pos + int64(size)) <= mf.WrotePostion {
 		if mf.hold() {
 			end := pos + int64(size)
-			if end > int64(len(mf.mappedByteBuffer.MMapBuf)) {
+			if end > int64(len(mf.MByteBuffer.MMapBuf)) {
 				return nil
 			}
 
-			byteBuffer := NewMappedByteBuffer(mf.mappedByteBuffer.MMapBuf[pos:end])
+			byteBuffer := NewMappedByteBuffer(mf.MByteBuffer.MMapBuf[pos:end])
 			byteBuffer.WritePos = int(size)
 			return newSelectMapedBufferResult(mf.fileFromOffset+pos, byteBuffer, size, mf)
 		} else {
@@ -319,12 +319,27 @@ func (mf *MapedFile) cleanup(currentRef int64) bool {
 		return true
 	}
 
-	clean(mf.mappedByteBuffer)
+	clean(mf.MByteBuffer)
 	// TotalMapedVitualMemory
 	// TotalMapedFiles
 	logger.Infof("unmap file[REF:%d] %s OK", currentRef, mf.fileName)
 
 	return true
+}
+
+// FileFromOffset return fileFromOffset
+func (mf *MapedFile) FileFromOffset() int64 {
+	return mf.fileFromOffset
+}
+
+// FileName return fileName
+func (mf *MapedFile) FileName() string {
+	return mf.fileName
+}
+
+// IsFirstCreateInQueue return firstCreateInQueue
+func (mf *MapedFile) IsFirstCreateInQueue() bool {
+	return mf.firstCreateInQueue
 }
 
 func (mf *MapedFile) release() {
@@ -338,11 +353,11 @@ func (mf *MapedFile) release() {
 	mf.rwLock.Unlock()
 }
 
-func clean(mappedByteBuffer *MappedByteBuffer) {
-	if mappedByteBuffer == nil {
+func clean(mbb *MappedByteBuffer) {
+	if mbb == nil {
 		return
 	}
 
 	// TODO
-	mappedByteBuffer.unmap()
+	mbb.unmap()
 }
