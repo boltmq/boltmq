@@ -13,11 +13,6 @@
 // limitations under the License.
 package core
 
-// PutMessageStatus 写入消息过程的返回结果
-// Author gaoyanlei
-// Since 2017/8/16
-type PutMessageStatus int
-
 const (
 	PUTMESSAGE_PUT_OK PutMessageStatus = iota
 	FLUSH_DISK_TIMEOUT
@@ -28,6 +23,11 @@ const (
 	MESSAGE_ILLEGAL
 	PUTMESSAGE_UNKNOWN_ERROR
 )
+
+// PutMessageStatus 写入消息过程的返回结果
+// Author gaoyanlei
+// Since 2017/8/16
+type PutMessageStatus int
 
 func (status PutMessageStatus) String() string {
 	switch status {
@@ -50,4 +50,16 @@ func (status PutMessageStatus) String() string {
 	default:
 		return "Unknow"
 	}
+}
+
+// PutMessageResult 写入消息返回结果
+// Author gaoyanlei
+// Since 2017/8/16
+type PutMessageResult struct {
+	putMessageStatus    PutMessageStatus
+	appendMessageResult *AppendMessageResult
+}
+
+func (pms *PutMessageResult) isOk() bool {
+	return pms.appendMessageResult != nil && pms.appendMessageResult.Status == APPENDMESSAGE_PUT_OK
 }

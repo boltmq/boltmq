@@ -13,10 +13,7 @@
 // limitations under the License.
 package core
 
-// GetMessageStatus 访问消息返回的状态码
-// Author gaoyanlei
-// Since 2017/8/17
-type GetMessageStatus int
+import "container/list"
 
 const (
 	// 找到消息
@@ -39,8 +36,13 @@ const (
 	NO_MESSAGE_IN_QUEUE
 )
 
-func (self GetMessageStatus) String() string {
-	switch self {
+// GetMessageStatus 访问消息返回的状态码
+// Author gaoyanlei
+// Since 2017/8/17
+type GetMessageStatus int
+
+func (gms GetMessageStatus) String() string {
+	switch gms {
 	case FOUND:
 		return "FOUND"
 	case NO_MATCHED_MESSAGE:
@@ -61,5 +63,57 @@ func (self GetMessageStatus) String() string {
 		return "NO_MESSAGE_IN_QUEUE"
 	default:
 		return ""
+	}
+}
+
+// GetMessageResult 访问消息返回结果
+// Author gaoyanlei
+// Since 2017/8/17
+type GetMessageResult struct {
+	// 多个连续的消息集合
+	MessageMapedList list.List
+
+	// 用来向Consumer传送消息
+	MessageBufferList list.List
+
+	// 枚举变量，取消息结果
+	Status GetMessageStatus
+
+	// 当被过滤后，返回下一次开始的Offset
+	NextBeginOffset int64
+
+	// 逻辑队列中的最小Offset
+	MinOffset int64
+
+	// 逻辑队列中的最大Offset
+	MaxOffset int64
+
+	// ByteBuffer 总字节数
+	BufferTotalSize int
+
+	// 是否建议从slave拉消息
+	SuggestPullingFromSlave bool
+}
+
+// GetMessageCount 获取message个数
+// Author gaoyanlei
+// Since 2017/8/17
+func (gmr *GetMessageResult) GetMessageCount() int {
+	return gmr.MessageMapedList.Len()
+}
+
+func (gmr *GetMessageResult) addMessage(mapedBuffer *SelectMapedBufferResult) {
+	gmr.MessageMapedList.PushBack(mapedBuffer)
+	gmr.MessageBufferList.PushBack(mapedBuffer.MappedByteBuffer)
+	gmr.BufferTotalSize += int(mapedBuffer.Size)
+}
+
+// Release
+func (gmr *GetMessageResult) Release() {
+	for element := gmr.MessageMapedList.Front(); element != nil; element = element.Next() {
+		selectResult := element.Value.(*SelectMapedBufferResult)
+		if selectResult != nil {
+			selectResult.Release()
+		}
 	}
 }
