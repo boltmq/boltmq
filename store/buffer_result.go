@@ -24,14 +24,14 @@ type ByteBuffer interface {
 	Bytes() []byte
 
 	Write([]byte) (int, error)
-	WriteInt8(int8)
-	WriteInt16(int16)
-	WriteInt32(int32)
-	WriteInt64(int64)
+	WriteInt8(int8) error
+	WriteInt16(int16) error
+	WriteInt32(int32) error
+	WriteInt64(int64) error
 
-	Read([]byte) (int, error)
-	ReadInt8() (int8, error)
-	ReadInt16() (int16, error)
-	ReadInt32() (int32, error)
-	ReadInt64() (int64, error)
+	Read([]byte) int
+	ReadInt8() int8
+	ReadInt16() int16
+	ReadInt32() int32
+	ReadInt64() int64
 }

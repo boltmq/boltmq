@@ -20,14 +20,6 @@ const (
 	APPENDMESSAGE_UNKNOWN_ERROR
 )
 
-// AppendMessageCallback 写消息回调接口
-// Author: tantexian, <tantexian@qq.com>
-// Since: 2017/8/6
-type AppendMessageCallback interface {
-	// write MapedByteBuffer,and return How many bytes to write
-	DoAppend(fileFromOffset int64, byteBuffer ByteBuffer, maxBlank int32, msg interface{}) *AppendMessageResult
-}
-
 // AppendMessageResult 写入commitlong返回结果集
 // Author gaoyanlei
 // Since 2017/8/16
