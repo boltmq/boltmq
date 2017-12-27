@@ -11,4 +11,27 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package core
+package store
+
+type BufferResult interface {
+	Release()
+	Buffer() ByteBuffer
+	Size() int
+}
+
+// ByteBuffer
+type ByteBuffer interface {
+	Bytes() []byte
+
+	Write([]byte) (int, error)
+	WriteInt8(int8)
+	WriteInt16(int16)
+	WriteInt32(int32)
+	WriteInt64(int64)
+
+	Read([]byte) (int, error)
+	ReadInt8() (int8, error)
+	ReadInt16() (int16, error)
+	ReadInt32() (int32, error)
+	ReadInt64() (int64, error)
+}

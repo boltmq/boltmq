@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package core
+package store
 
 import "container/list"
 
@@ -102,18 +102,37 @@ func (gmr *GetMessageResult) GetMessageCount() int {
 	return gmr.MessageMapedList.Len()
 }
 
-func (gmr *GetMessageResult) addMessage(mapedBuffer *SelectMapedBufferResult) {
-	gmr.MessageMapedList.PushBack(mapedBuffer)
-	gmr.MessageBufferList.PushBack(mapedBuffer.MappedByteBuffer)
-	gmr.BufferTotalSize += int(mapedBuffer.Size)
+func (gmr *GetMessageResult) addMessage(bufferResult BufferResult) {
+	gmr.MessageMapedList.PushBack(bufferResult)
+	gmr.MessageBufferList.PushBack(bufferResult.Buffer())
+	gmr.BufferTotalSize += bufferResult.Size()
 }
 
 // Release
 func (gmr *GetMessageResult) Release() {
 	for element := gmr.MessageMapedList.Front(); element != nil; element = element.Next() {
-		selectResult := element.Value.(*SelectMapedBufferResult)
+		selectResult := element.Value.(BufferResult)
 		if selectResult != nil {
 			selectResult.Release()
 		}
 	}
+}
+
+// QueryMessageResult 通过Key查询消息，返回结果
+// Author zhoufei
+// Since 2017/9/6
+type QueryMessageResult struct {
+	MessageMapedList         []BufferResult // 多个连续的消息集合
+	MessageBufferList        []ByteBuffer   // 用来向Consumer传送消息
+	IndexLastUpdateTimestamp int64
+	IndexLastUpdatePhyoffset int64
+	BufferTotalSize          int32 // ByteBuffer 总字节数
+}
+
+func NewQueryMessageResult() *QueryMessageResult {
+	return &QueryMessageResult{}
+}
+
+func (qmr *QueryMessageResult) AddMessage(bufferResult BufferResult) {
+	qmr.MessageMapedList = append(qmr.MessageMapedList, bufferResult)
 }

@@ -20,16 +20,16 @@ import (
 	"github.com/boltmq/common/message"
 )
 
-// MessageExtBrokerInner 存储内部使用的Message对象
+// MessageExtInner 存储内部使用的Message对象
 // Author gaoyanlei
 // Since 2017/8/16
-type MessageExtBrokerInner struct {
+type MessageExtInner struct {
 	message.MessageExt
 	PropertiesString string
 	TagsCode         int64
 }
 
-func (mebi *MessageExtBrokerInner) isWaitStoreMsgOK() bool {
+func (mebi *MessageExtInner) isWaitStoreMsgOK() bool {
 	properties, ok := mebi.MessageExt.Message.Properties[message.PROPERTY_WAIT_STORE_MSG_OK]
 	if !ok {
 		return true
