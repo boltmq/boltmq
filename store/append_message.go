@@ -1,4 +1,4 @@
-// Copyright 2017 gaoyanlei
+// Copyright 2017 luoji
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package core
+package store
 
 const (
 	APPENDMESSAGE_PUT_OK AppendMessageStatus = iota
@@ -25,7 +25,7 @@ const (
 // Since: 2017/8/6
 type AppendMessageCallback interface {
 	// write MapedByteBuffer,and return How many bytes to write
-	DoAppend(fileFromOffset int64, mappedByteBuffer *MappedByteBuffer, maxBlank int32, msg interface{}) *AppendMessageResult
+	DoAppend(fileFromOffset int64, byteBuffer ByteBuffer, maxBlank int32, msg interface{}) *AppendMessageResult
 }
 
 // AppendMessageResult 写入commitlong返回结果集

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package core
+package store
 
 const (
 	PUTMESSAGE_PUT_OK PutMessageStatus = iota
@@ -60,6 +60,6 @@ type PutMessageResult struct {
 	Result *AppendMessageResult
 }
 
-func (pms *PutMessageResult) isOk() bool {
+func (pms *PutMessageResult) IsOk() bool {
 	return pms.Result != nil && pms.Result.Status == APPENDMESSAGE_PUT_OK
 }
