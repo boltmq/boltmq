@@ -29,7 +29,7 @@ type ByteBuffer interface {
 	WriteInt32(int32) error
 	WriteInt64(int64) error
 
-	Read([]byte) int
+	Read([]byte) (int, error)
 	ReadInt8() int8
 	ReadInt16() int16
 	ReadInt32() int32

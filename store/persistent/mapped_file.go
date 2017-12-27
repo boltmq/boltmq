@@ -36,7 +36,7 @@ const (
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
 type appendMessageCallback interface {
-	// write MapedByteBuffer,and return How many bytes to write
+	// write MappedByteBuffer,and return How many bytes to write
 	doAppend(fileFromOffset int64, byteBuffer *mappedByteBuffer, maxBlank int32, msg interface{}) *store.AppendMessageResult
 }
 
@@ -81,13 +81,13 @@ func (rf *referenceResource) isCleanupOver() bool {
 	return rf.refCount <= 0 && rf.cleanupOver
 }
 
-// mappedFile 封装mapedfile类用于操作commitlog文件及consumelog文件
+// mappedFile 封装mappedfile类用于操作commitlog文件及consumelog文件
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
 type mappedFile struct {
 	referenceResource
 	// 当前映射的虚拟内存总大小
-	totalMapedVitualMemory int64
+	totalMappedVitualMemory int64
 	// 当前mmap句柄数量
 	totalmappedFiles int32
 	// 映射的文件名
@@ -112,7 +112,7 @@ type mappedFile struct {
 	rwLock sync.RWMutex
 }
 
-// NewMappedFile 根据文件名新建mapedfile
+// newMappedFile 根据文件名新建mappedfile
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
 func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
@@ -148,7 +148,7 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	if exist == false {
 		// 如果文件不存在则新建filesize大小文件
 		if err := os.Truncate(filePath, filesize); err != nil {
-			logger.Error("maped file set file size error:", err.Error())
+			logger.Error("mapped file set file size error:", err.Error())
 			return nil, errors.Wrap(err, 0)
 		}
 	}
@@ -170,17 +170,17 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	}
 
 	mf.byteBuffer = newMappedByteBuffer(mmapBytes)
-	atomic.AddInt64(&mf.totalMapedVitualMemory, int64(filesize))
+	atomic.AddInt64(&mf.totalMappedVitualMemory, int64(filesize))
 	atomic.AddInt32(&mf.totalmappedFiles, 1)
 
 	return mf, nil
 }
 
-// AppendMessageWithCallBack 向MapedBuffer追加消息
+// appendMessageWithCallBack 向MappedBuffer追加消息
 // Return: appendNums 成功添加消息字节数
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/5
-func (mf *mappedFile) AppendMessageWithCallBack(msg interface{}, amcb appendMessageCallback) *store.AppendMessageResult {
+func (mf *mappedFile) appendMessageWithCallBack(msg interface{}, amcb appendMessageCallback) *store.AppendMessageResult {
 	if msg == nil {
 		logger.Error("AppendMessage nil msg error!!!")
 		return nil
@@ -200,17 +200,17 @@ func (mf *mappedFile) AppendMessageWithCallBack(msg interface{}, amcb appendMess
 	return &store.AppendMessageResult{Status: store.APPENDMESSAGE_UNKNOWN_ERROR}
 }
 
-// AppendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
+// appendMessage 向存储层追加数据，一般在SLAVE存储结构中使用
 // Params: data 追加数据
 // Return: 追加是否成功
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
-func (mf *mappedFile) AppendMessage(data []byte) bool {
+func (mf *mappedFile) appendMessage(data []byte) bool {
 	currPos := int64(mf.wrotePostion)
 	if currPos+int64(len(data)) <= mf.fileSize {
 		n, err := mf.byteBuffer.Write(data)
 		if err != nil {
-			logger.Error("maped file append message error:", err.Error())
+			logger.Error("mapped file append message error:", err.Error())
 			return false
 		}
 		atomic.AddInt64(&mf.wrotePostion, int64(n))
@@ -220,17 +220,17 @@ func (mf *mappedFile) AppendMessage(data []byte) bool {
 	return false
 }
 
-// Commit 消息提交刷盘
+// commit 消息提交刷盘
 // Params: flushLeastPages 一次刷盘最少个数
 // Return: flushPosition 当前刷盘位置
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/6
-func (mf *mappedFile) Commit(flushLeastPages int32) (flushPosition int64) {
+func (mf *mappedFile) commit(flushLeastPages int32) (flushPosition int64) {
 	if mf.isAbleToFlush(flushLeastPages) {
 		if mf.hold() {
 			mf.rwLock.Lock()           // 对文件加写锁
 			currPos := mf.wrotePostion // 获取当前写的位置
-			mf.Flush()                 // 将byteBuffer的数据强制刷新到磁盘文件中
+			mf.flush()                 // 将byteBuffer的数据强制刷新到磁盘文件中
 			//mf.mmapBytes
 			mf.committedPosition = currPos // 刷新完毕，则将committedPosition即flush的位置更新为当前位置记录
 			mf.rwLock.Unlock()             // 释放锁
@@ -244,14 +244,12 @@ func (mf *mappedFile) Commit(flushLeastPages int32) (flushPosition int64) {
 	return mf.committedPosition
 }
 
-// Flush
-func (mf *mappedFile) Flush() {
+func (mf *mappedFile) flush() {
 	mf.byteBuffer.flush()
 }
 
-// Unmap
-func (mf *mappedFile) Unmap() {
-	atomic.AddInt64(&mf.totalMapedVitualMemory, -int64(mf.fileSize))
+func (mf *mappedFile) unmap() {
+	atomic.AddInt64(&mf.totalMappedVitualMemory, -int64(mf.fileSize))
 	atomic.AddInt32(&mf.totalmappedFiles, -1)
 	mf.byteBuffer.unmap()
 }
@@ -286,11 +284,11 @@ func (mf *mappedFile) isFull() bool {
 	return mf.fileSize == int64(mf.wrotePostion)
 }
 
-func (mf *mappedFile) Destroy(intervalForcibly int64) bool {
+func (mf *mappedFile) destroy(intervalForcibly int64) bool {
 	mf.shutdown(intervalForcibly)
 
 	if mf.isCleanupOver() {
-		mf.Unmap()
+		mf.unmap()
 		mf.file.Close()
 		logger.Infof("close file %s OK", mf.fileName)
 
@@ -316,7 +314,7 @@ func (mf *mappedFile) shutdown(intervalForcibly int64) {
 	}
 }
 
-func (mf *mappedFile) SelectMapedBuffer(pos int64) *mappedBufferResult {
+func (mf *mappedFile) selectMappedBuffer(pos int64) *mappedBufferResult {
 	if pos < mf.wrotePostion && pos >= 0 {
 		if mf.hold() {
 			size := mf.byteBuffer.writePos - int(pos)
@@ -334,7 +332,7 @@ func (mf *mappedFile) SelectMapedBuffer(pos int64) *mappedBufferResult {
 	return nil
 }
 
-func (mf *mappedFile) SelectMapedBufferByPosAndSize(pos int64, size int32) *mappedBufferResult {
+func (mf *mappedFile) selectMappedBufferByPosAndSize(pos int64, size int32) *mappedBufferResult {
 	if (pos + int64(size)) <= mf.wrotePostion {
 		if mf.hold() {
 			end := pos + int64(size)
@@ -349,7 +347,7 @@ func (mf *mappedFile) SelectMapedBufferByPosAndSize(pos int64, size int32) *mapp
 			logger.Warn("matched, but hold failed, request pos: %d, fileFromOffset: %d", pos, mf.fileFromOffset)
 		}
 	} else {
-		logger.Warnf("SelectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
+		logger.Warnf("selectMappedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
 			pos, size, mf.fileFromOffset)
 	}
 
@@ -370,7 +368,7 @@ func (mf *mappedFile) cleanup(currentRef int64) bool {
 	}
 
 	clean(mf.byteBuffer)
-	// totalMapedVitualMemory
+	// totalMappedVitualMemory
 	// totalmappedFiles
 	logger.Infof("unmap file[REF:%d] %s OK", currentRef, mf.fileName)
 
