@@ -13,7 +13,11 @@
 // limitations under the License.
 package persistent
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/boltmq/boltmq/store"
+)
 
 // mappedBufferResult 查询Pagecache返回结果
 // Author zhoufei
@@ -43,4 +47,12 @@ func (mbr *mappedBufferResult) Release() {
 		mbr.mfile.release()
 		mbr.mfile = nil
 	}
+}
+
+func (mbr *mappedBufferResult) Buffer() store.ByteBuffer {
+	return mbr.byteBuffer
+}
+
+func (mbr *mappedBufferResult) Size() int {
+	return int(mbr.size)
 }
