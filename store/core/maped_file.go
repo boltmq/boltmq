@@ -284,7 +284,7 @@ func (mf *MapedFile) SelectMapedBuffer(pos int64) *SelectMapedBufferResult {
 	return nil
 }
 
-func (mf *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
+func (mf *MapedFile) SelectMapedBufferByPosAndSize(pos int64, size int32) *SelectMapedBufferResult {
 	if (pos + int64(size)) <= mf.WrotePostion {
 		if mf.hold() {
 			end := pos + int64(size)
@@ -299,7 +299,7 @@ func (mf *MapedFile) selectMapedBufferByPosAndSize(pos int64, size int32) *Selec
 			logger.Warn("matched, but hold failed, request pos: %d, fileFromOffset: %d", pos, mf.fileFromOffset)
 		}
 	} else {
-		logger.Warnf("selectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
+		logger.Warnf("SelectMapedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
 			pos, size, mf.fileFromOffset)
 	}
 

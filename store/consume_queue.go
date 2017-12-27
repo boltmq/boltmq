@@ -304,7 +304,7 @@ func (cq *ConsumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, sto
 	}
 
 	logger.Errorf("consume queue can not write %s %d", cq.topic, cq.queueId)
-	cq.defaultMessageStore.RunningFlags.makeLogicsQueueError()
+	cq.defaultMessageStore.runningFlags.makeLogicsQueueError()
 }
 
 func (cq *ConsumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset int64) bool {

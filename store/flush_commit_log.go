@@ -106,7 +106,7 @@ func (gcs *GroupCommitService) doCommit() {
 			request := element.Value.(*GroupCommitRequest)
 			flushOk := false
 			for i := 0; i < 2 && !flushOk; i++ {
-				flushOk = gcs.commitLog.mapedFileQueue.CommittedWhere() >= request.nextOffset
+				flushOk = gcs.commitLog.mapedFileQueue.CommittedWhere >= request.nextOffset
 				if !flushOk {
 					gcs.commitLog.mapedFileQueue.Commit(0)
 				}
