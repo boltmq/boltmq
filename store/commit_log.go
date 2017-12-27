@@ -187,18 +187,17 @@ func (clog *CommitLog) putMessage(msg *MessageExtBrokerInner) *core.PutMessageRe
 	return putMessageResult
 }
 
-/*
-func (clog *CommitLog) getMessage(offset int64, size int32) *SelectMapedBufferResult {
+func (clog *CommitLog) getMessage(offset int64, size int32) *core.SelectMapedBufferResult {
 	returnFirstOnNotFound := false
 	if 0 == offset {
 		returnFirstOnNotFound = true
 	}
 
-	mapedFile := clog.mapedFileQueue.findMapedFileByOffset(offset, returnFirstOnNotFound)
+	mapedFile := clog.mapedFileQueue.FindMapedFileByOffset(offset, returnFirstOnNotFound)
 	if mapedFile != nil {
 		mapedFileSize := clog.defaultMessageStore.config.MapedFileSizeCommitLog
 		pos := offset % int64(mapedFileSize)
-		result := mapedFile.selectMapedBufferByPosAndSize(pos, size)
+		result := mapedFile.SelectMapedBufferByPosAndSize(pos, size)
 		return result
 	}
 
@@ -213,7 +212,7 @@ func (clog *CommitLog) rollNextFile(offset int64) int64 {
 
 func (clog *CommitLog) recoverNormally() {
 	checkCRCOnRecover := clog.defaultMessageStore.config.CheckCRCOnRecover
-	mapedFiles := clog.mapedFileQueue.mapedFiles
+	mapedFiles := clog.mapedFileQueue.MapedFiles()
 	if mapedFiles != nil && mapedFiles.Len() > 0 {
 		index := mapedFiles.Len() - 3
 		if index < 0 {
@@ -221,9 +220,9 @@ func (clog *CommitLog) recoverNormally() {
 		}
 
 		mapedFile := getMapedFileByIndex(mapedFiles, index)
-		mappedByteBuffer := NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
-		mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
-		processOffset := mapedFile.fileFromOffset
+		mappedByteBuffer := core.NewMappedByteBuffer(mapedFile.MByteBuffer.Bytes())
+		mappedByteBuffer.WritePos = mapedFile.MByteBuffer.WritePos
+		processOffset := mapedFile.FileFromOffset()
 		mapedFileOffset := int64(0)
 		for {
 			dispatchRequest := clog.checkMessageAndReturnSize(mappedByteBuffer,
@@ -232,18 +231,18 @@ func (clog *CommitLog) recoverNormally() {
 			if size > 0 {
 				mapedFileOffset += size
 			} else if size == -1 {
-				logger.Info("recover physics file end, ", mapedFile.fileName)
+				logger.Info("recover physics file end, ", mapedFile.FileName())
 				break
 			} else if size == 0 {
 				index++
 				if index >= mapedFiles.Len() {
-					logger.Info("recover last 3 physics file over, last maped file ", mapedFile.fileName)
+					logger.Info("recover last 3 physics file over, last maped file ", mapedFile.FileName())
 					break
 				} else {
 					mapedFile = getMapedFileByIndex(mapedFiles, index)
-					mappedByteBuffer = mapedFile.mappedByteBuffer
-					mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
-					processOffset = mapedFile.fileFromOffset
+					mappedByteBuffer = mapedFile.MByteBuffer
+					mappedByteBuffer.WritePos = mapedFile.MByteBuffer.WritePos
+					processOffset = mapedFile.FileFromOffset()
 					mapedFileOffset = 0
 				}
 			}
@@ -256,6 +255,7 @@ func (clog *CommitLog) recoverNormally() {
 	}
 }
 
+/*
 func (clog *CommitLog) pickupStoretimestamp(offset int64, size int32) int64 {
 	if offset > clog.getMinOffset() {
 		result := clog.getMessage(offset, size)
@@ -274,7 +274,7 @@ func (clog *CommitLog) getMinOffset() int64 {
 	mapedFile := clog.mapedFileQueue.getFirstMapedFileOnLock()
 	if mapedFile != nil {
 		// TODO mapedFile.isAvailable()
-		return mapedFile.fileFromOffset
+		return mapedFile.FileFromOffset()
 	}
 
 	return -1
@@ -415,15 +415,15 @@ func (clog *CommitLog) recoverAbnormally() {
 			index--
 			mapedFile = element.Value.(*MapedFile)
 			if clog.isMapedFileMatchedRecover(mapedFile) {
-				logger.Info("recover from this maped file ", mapedFile.fileName)
+				logger.Info("recover from this maped file ", mapedFile.FileName())
 				break
 			}
 		}
 
 		if mapedFile != nil {
-			mappedByteBuffer := NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
-			mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
-			processOffset := mapedFile.fileFromOffset
+			mappedByteBuffer := NewMappedByteBuffer(mapedFile.MByteBuffer.Bytes())
+			mappedByteBuffer.WritePos = mapedFile.MByteBuffer.WritePos
+			processOffset := mapedFile.FileFromOffset()
 			mapedFileOffset := int64(0)
 
 			for {
@@ -434,24 +434,24 @@ func (clog *CommitLog) recoverAbnormally() {
 					mapedFileOffset += size
 					clog.defaultMessageStore.putDispatchRequest(dispatchRequest)
 				} else if size == -1 { // Intermediate file read error
-					logger.Info("recover physics file end, ", mapedFile.fileName)
+					logger.Info("recover physics file end, ", mapedFile.FileName())
 					break
 				} else if size == 0 {
 					index++
 
 					if index >= mapedFiles.Len() { // The current branch under normal circumstances should
-						logger.Info("recover physics file over, last maped file ", mapedFile.fileName)
+						logger.Info("recover physics file over, last maped file ", mapedFile.FileName())
 						break
 					} else {
 						i := 0
 						for element := mapedFiles.Front(); element != nil; element = element.Next() {
 							if i == index {
 								mapedFile = element.Value.(*MapedFile)
-								mappedByteBuffer = NewMappedByteBuffer(mapedFile.mappedByteBuffer.Bytes())
-								mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
-								processOffset = mapedFile.fileFromOffset
+								mappedByteBuffer = NewMappedByteBuffer(mapedFile.MByteBuffer.Bytes())
+								mappedByteBuffer.WritePos = mapedFile.MByteBuffer.WritePos
+								processOffset = mapedFile.FileFromOffset()
 								mapedFileOffset = 0
-								logger.Info("recover next physics file,", mapedFile.fileName)
+								logger.Info("recover next physics file,", mapedFile.FileName())
 								break
 							}
 
@@ -476,13 +476,13 @@ func (clog *CommitLog) recoverAbnormally() {
 }
 
 func (clog *CommitLog) isMapedFileMatchedRecover(mapedFile *MapedFile) bool {
-	byteBuffer := mapedFile.mappedByteBuffer.Bytes()
+	byteBuffer := mapedFile.MByteBuffer.Bytes()
 	if len(byteBuffer) == 0 {
 		return false
 	}
 
 	mappedByteBuffer := NewMappedByteBuffer(byteBuffer)
-	mappedByteBuffer.WritePos = mapedFile.mappedByteBuffer.WritePos
+	mappedByteBuffer.WritePos = mapedFile.MByteBuffer.WritePos
 	mappedByteBuffer.ReadPos = message.MessageMagicCodePostion
 	magicCode := mappedByteBuffer.ReadInt32()
 	messageMagicCode := MessageMagicCode
@@ -549,7 +549,7 @@ func (clog *CommitLog) appendData(startOffset int64, data []byte) bool {
 		return false
 	}
 
-	size := mapedFile.mappedByteBuffer.Limit - mapedFile.mappedByteBuffer.WritePos
+	size := mapedFile.MByteBuffer.Limit - mapedFile.MByteBuffer.WritePos
 	if len(data) > size {
 		mapedFile.appendMessage(data[:size])
 		mapedFile, err = clog.mapedFileQueue.getLastMapedFile(startOffset + int64(size))

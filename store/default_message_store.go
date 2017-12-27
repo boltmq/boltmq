@@ -34,6 +34,7 @@ type DefaultMessageStore struct {
 	commitLog                *CommitLog
 	consumeTopicTable        map[string]*ConsumeQueueTable
 	allocateMapedFileService *AllocateMapedFileService // 预分配文件
+	runningFlags             *RunningFlags             // 运行过程标志位
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
@@ -52,7 +53,7 @@ type DefaultMessageStore struct {
 		TransactionStateService  *TransactionStateService  // 分布式事务服务
 		TransactionCheckExecuter *TransactionCheckExecuter // 事务回查接口
 		StoreStatsService        *StoreStatsService        // 运行时数据统计
-		RunningFlags             *RunningFlags             // 运行过程标志位
+		//RunningFlags             *RunningFlags             // 运行过程标志位
 		SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
 		ShutdownFlag             bool                      // 存储服务是否启动
 		StoreCheckpoint          *StoreCheckpoint

@@ -577,11 +577,6 @@ func (mfq *MapedFileQueue) MapedFileSize() int64 {
 	return mfq.mapedFileSize
 }
 
-// CommittedWhere 返回committedWhere
-func (mfq *MapedFileQueue) CommittedWhere() int64 {
-	return mfq.committedWhere
-}
-
 // StoreTimestamp 返回storeTimestamp
 func (mfq *MapedFileQueue) StoreTimestamp() int64 {
 	return mfq.storeTimestamp
