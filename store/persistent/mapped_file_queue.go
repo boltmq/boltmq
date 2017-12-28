@@ -537,7 +537,7 @@ func (mfq *mappedFileQueue) shutdown(intervalForcibly int64) {
 
 }
 
-// Destroy 销毁队列，队列数据被删除，此函数有可能不成功
+// destroy 销毁队列，队列数据被删除，此函数有可能不成功
 func (mfq *mappedFileQueue) destroy() {
 	mfq.rwLock.Lock()
 	defer mfq.rwLock.Unlock()
