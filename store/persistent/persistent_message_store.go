@@ -20,7 +20,7 @@ type PersistentMessageStore struct {
 	config *Config // 存储配置
 	//commitLog                *CommitLog
 	//consumeTopicTable        map[string]*ConsumeQueueTable
-	//allocateMapedFileService *AllocateMapedFileService // 预分配文件
+	allocateMFileService *allocateMappedFileService // 预分配文件
 	//runningFlags             *RunningFlags             // 运行过程标志位
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
