@@ -29,7 +29,7 @@ type MessageExtInner struct {
 	TagsCode         int64
 }
 
-func (mebi *MessageExtInner) isWaitStoreMsgOK() bool {
+func (mebi *MessageExtInner) IsWaitStoreMsgOK() bool {
 	properties, ok := mebi.MessageExt.Message.Properties[message.PROPERTY_WAIT_STORE_MSG_OK]
 	if !ok {
 		return true
@@ -42,19 +42,4 @@ func (mebi *MessageExtInner) isWaitStoreMsgOK() bool {
 	}
 
 	return result
-}
-
-func TagsString2tagsCode(filterType message.TopicFilterType, tags string) int64 {
-	if tags == "" || len(tags) == 0 {
-		return 0
-	}
-	return HashCode(tags)
-}
-
-func HashCode(s string) int64 {
-	var h int64
-	for i := 0; i < len(s); i++ {
-		h = 31*h + int64(s[i])
-	}
-	return h
 }

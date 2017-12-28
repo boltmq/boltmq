@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/utils/system"
 	concurrent "github.com/fanliao/go-concurrentMap"
 )
 
@@ -132,7 +133,7 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 		}
 
 		if request.mf == nil {
-			beginTime := time.Now().UnixNano() / 1000000
+			beginTime := system.CurrentTimeMillis()
 			mf, err := newMappedFile(request.filePath, request.fileSize)
 			if mf == nil {
 				logger.Error("New Mapped File")
@@ -143,7 +144,7 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 				return false
 			}
 
-			eclipseTime := beginTime - time.Now().UnixNano()/1000000
+			eclipseTime := beginTime - system.CurrentTimeMillis()
 			if eclipseTime > 10 {
 				// TODO
 			}
