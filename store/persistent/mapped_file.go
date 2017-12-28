@@ -19,11 +19,11 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent/mmap"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/utils/system"
 	"github.com/go-errors/errors"
 )
 
@@ -304,10 +304,10 @@ func (mf *mappedFile) destroy(intervalForcibly int64) bool {
 func (mf *mappedFile) shutdown(intervalForcibly int64) {
 	if mf.available {
 		mf.available = false
-		mf.firstShutdownTimestamp = time.Now().UnixNano() / 1000000
+		mf.firstShutdownTimestamp = system.CurrentTimeMillis()
 		mf.release()
 	} else if mf.refCount > 0 { // 强制shutdown
-		if (time.Now().UnixNano()/1000000 - mf.firstShutdownTimestamp) >= intervalForcibly {
+		if (system.CurrentTimeMillis() - mf.firstShutdownTimestamp) >= intervalForcibly {
 			mf.refCount = -1000 - mf.refCount
 			mf.release()
 		}

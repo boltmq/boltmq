@@ -14,9 +14,14 @@
 package persistent
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
+
+	"github.com/boltmq/common/message"
+	"github.com/boltmq/common/utils/codec"
 )
 
 func parentDirectory(dir string) string {
@@ -92,4 +97,17 @@ func listFilesOrDir(path string, listType string) ([]string, error) {
 		return nil
 	})
 	return pathSlice, err
+}
+
+func timeMillisecondToHumanString(t time.Time) string {
+	millisecond := t.Nanosecond() / 1000000
+	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), millisecond)
+}
+
+func tagsString2tagsCode(filterType message.TopicFilterType, tags string) int64 {
+	if tags == "" || len(tags) == 0 {
+		return 0
+	}
+
+	return codec.HashCode(tags)
 }
