@@ -28,7 +28,7 @@ func remove() {
 	}
 }
 
-func TestOpenMapedFile(t *testing.T) {
+func TestOpenMappedFile(t *testing.T) {
 	var (
 		size int64 = 1024 * 64
 	)
@@ -47,7 +47,7 @@ func TestOpenMapedFile(t *testing.T) {
 	remove()
 }
 
-func TestMapedFile_Write(t *testing.T) {
+func TestMappedFile_Write(t *testing.T) {
 	var (
 		size int64 = 1024 * 64
 	)
@@ -68,7 +68,7 @@ func TestMapedFile_Write(t *testing.T) {
 	remove()
 }
 
-func TestMapedFile_MMapBufferWithInt32(t *testing.T) {
+func TestMappedFile_MMapBufferWithInt32(t *testing.T) {
 	var (
 		size int64 = 1024 * 64
 	)
