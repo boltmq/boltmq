@@ -30,11 +30,12 @@ func newConsumeQueueTable() *consumeQueueTable {
 // Author zhoufei
 // Since 2017/9/6
 type PersistentMessageStore struct {
-	config *Config // 存储配置
-	//commitLog                *CommitLog
+	config               *Config // 存储配置
+	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
 	allocateMFileService *allocateMappedFileService // 预分配文件
-	//runningFlags             *RunningFlags             // 运行过程标志位
+	runFlags             *runningFlags              // 运行过程标志位
+	steCheckpoint        *storeCheckpoint
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
@@ -56,7 +57,7 @@ type PersistentMessageStore struct {
 		//RunningFlags             *RunningFlags             // 运行过程标志位
 		SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
 		ShutdownFlag             bool                      // 存储服务是否启动
-		StoreCheckpoint          *StoreCheckpoint
+		//StoreCheckpoint          *StoreCheckpoint
 		BrokerStatsManager       *stats.BrokerStatsManager
 		storeTicker              *timeutil.Ticker
 		printTimes               int64

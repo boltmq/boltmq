@@ -226,7 +226,7 @@ func (cq *consumeQueue) getOffsetInQueueByTime(timestamp int64) int64 {
 				phyOffset := buffer.ReadInt64()
 				size := buffer.ReadInt32()
 
-				storeTime := cq.messageStore.CommitLog.pickupStoretimestamp(phyOffset, size)
+				storeTime := cq.messageStore.clog.pickupStoretimestamp(phyOffset, size)
 				if storeTime < 0 { // 没有从物理文件找到消息，此时直接返回0
 					return 0
 				} else if storeTime == timestamp {
@@ -281,11 +281,11 @@ func (cq *consumeQueue) getMaxOffsetInQueue() int64 {
 
 func (cq *consumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset int64) {
 	maxRetries := 5
-	//canWrite := cq.messageStore.RunningFlags.isWriteable()
+	//canWrite := cq.messageStore.runFlags.isWriteable()
 	for i := 0; i < maxRetries; i++ {
 		result := cq.putMessagePostionInfo(offset, size, tagsCode, logicOffset)
 		if result {
-			cq.messageStore.StoreCheckpoint.logicsMsgTimestamp = storeTimestamp
+			cq.messageStore.steCheckpoint.logicsMsgTimestamp = storeTimestamp
 			return
 		} else {
 			logger.Warnf("put commit log postion info to %s : %d failed, retry %d times %d",
@@ -296,7 +296,7 @@ func (cq *consumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, sto
 	}
 
 	logger.Errorf("consume queue can not write %s %d", cq.topic, cq.queueId)
-	cq.messageStore.RunningFlags.makeLogicsQueueError()
+	cq.messageStore.runFlags.makeLogicsQueueError()
 }
 
 func (cq *consumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset int64) bool {
