@@ -13,20 +13,33 @@
 // limitations under the License.
 package persistent
 
+import "sync"
+
+type consumeQueueTable struct {
+	consumeQueues   map[int32]*consumeQueue
+	consumeQueuesMu sync.RWMutex
+}
+
+func newConsumeQueueTable() *consumeQueueTable {
+	table := new(consumeQueueTable)
+	//table.consumeQueues = make(map[int32]*consumeQueue)
+	return table
+}
+
 // PersistentMessageStore 存储层对外提供的接口
 // Author zhoufei
 // Since 2017/9/6
 type PersistentMessageStore struct {
 	config *Config // 存储配置
 	//commitLog                *CommitLog
-	//consumeTopicTable        map[string]*ConsumeQueueTable
+	consumeTopicTable    map[string]*consumeQueueTable
 	allocateMFileService *allocateMappedFileService // 预分配文件
 	//runningFlags             *RunningFlags             // 运行过程标志位
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
 		//CommitLog                *CommitLog
-		//consumeTopicTable        map[string]*ConsumeQueueTable
+		//consumeTopicTable        map[string]*consumeQueueTable
 		consumeQueueTableMu      *sync.RWMutex
 		FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
 		CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务

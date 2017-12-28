@@ -36,21 +36,21 @@ type Config struct {
 	StoreCheckpoint                        string                `json:"StoreCheckpoint"`                        // 异常退出产生的文件
 	AbortFile                              string                `json:"AbortFile"`                              // 异常退出产生的文件
 	TranStateTableStorePath                string                `json:"TranStateTableStorePath"`                // 分布式事务配置
-	TranStateTableMapedFileSize            int32                 `json:"TranStateTableMapedFileSize"`            //
+	TranStateTableMappedFileSize           int32                 `json:"TranStateTableMappedFileSize"`           //
 	TranRedoLogStorePath                   string                `json:"TranRedoLogStorePath"`                   //
-	TranRedoLogMapedFileSize               int32                 `json:"TranRedoLogMapedFileSize"`               //
+	TranRedoLogMappedFileSize              int32                 `json:"TranRedoLogMappedFileSize"`              //
 	CheckTransactionMessageAtleastInterval int64                 `json:"CheckTransactionMessageAtleastInterval"` // 事务回查至少间隔时间
 	CheckTransactionMessageTimerInterval   int64                 `json:"CheckTransactionMessageTimerInterval"`   // 事务回查定时间隔时间
 	CheckTransactionMessageEnable          bool                  `json:"CheckTransactionMessageEnable"`          // 是否开启事务Check过程，双十一时，可以关闭
-	MapedFileSizeCommitLog                 int32                 `json:"MapedFileSizeCommitLog"`                 // CommitLog每个文件大小 1G
-	MapedFileSizeConsumeQueue              int32                 `json:"MapedFileSizeConsumeQueue"`              // ConsumeQueue每个文件大小 默认存储30W条消息
+	MappedFileSizeCommitLog                int32                 `json:"MappedFileSizeCommitLog"`                // CommitLog每个文件大小 1G
+	MappedFileSizeConsumeQueue             int32                 `json:"MappedFileSizeConsumeQueue"`             // ConsumeQueue每个文件大小 默认存储30W条消息
 	FlushIntervalCommitLog                 int32                 `json:"FlushIntervalCommitLog"`                 // CommitLog刷盘间隔时间（单位毫秒）
 	FlushCommitLogTimed                    bool                  `json:"FlushCommitLogTimed"`                    // 是否定时方式刷盘，默认是实时刷盘
 	FlushIntervalConsumeQueue              int32                 `json:"FlushIntervalConsumeQueue"`              // ConsumeQueue刷盘间隔时间（单位毫秒）
 	CleanResourceInterval                  int32                 `json:"CleanResourceInterval"`                  // 清理资源间隔时间（单位毫秒）
 	DeleteCommitLogFilesInterval           int32                 `json:"DeleteCommitLogFilesInterval"`           // 删除多个CommitLog文件的间隔时间（单位毫秒）
 	DeleteConsumeQueueFilesInterval        int32                 `json:"DeleteConsumeQueueFilesInterval"`        // 删除多个ConsumeQueue文件的间隔时间（单位毫秒）
-	DestroyMapedFileIntervalForcibly       int32                 `json:"DestroyMapedFileIntervalForcibly"`       // 强制删除文件间隔时间（单位毫秒）
+	DestroyMappedFileIntervalForcibly      int32                 `json:"DestroyMappedFileIntervalForcibly"`      // 强制删除文件间隔时间（单位毫秒）
 	RedeleteHangedFileInterval             int32                 `json:"RedeleteHangedFileInterval"`             // 定期检查Hanged文件间隔时间（单位毫秒）
 	DeleteWhen                             string                `json:"DeleteWhen"`                             // 何时触发删除文件, 默认凌晨4点删除文件
 	DiskMaxUsedSpaceRatio                  int32                 `json:"DiskMaxUsedSpaceRatio"`                  // 磁盘空间最大使用率
@@ -98,21 +98,21 @@ func defaultConfig() *Config {
 	conf.StoreCheckpoint = fmt.Sprintf("%s%ccheckpoint", storeRootDir, os.PathSeparator)
 	conf.AbortFile = fmt.Sprintf("%s%cabort", storeRootDir, os.PathSeparator)
 	conf.TranStateTableStorePath = fmt.Sprintf("%s%ctransaction%cstatetable", storeRootDir, os.PathSeparator, os.PathSeparator)
-	conf.TranStateTableMapedFileSize = 2000000 * 1
+	conf.TranStateTableMappedFileSize = 2000000 * 1
 	conf.TranRedoLogStorePath = fmt.Sprintf("%s%ctransaction%credolog", storeRootDir, os.PathSeparator)
-	conf.TranRedoLogMapedFileSize = 2000000 * CQStoreUnitSize
+	conf.TranRedoLogMappedFileSize = 2000000 * CQStoreUnitSize
 	conf.CheckTransactionMessageAtleastInterval = 1000 * 60
 	conf.CheckTransactionMessageTimerInterval = 1000 * 60
 	conf.CheckTransactionMessageEnable = true
-	conf.MapedFileSizeCommitLog = 1024 * 1024 * 1024
-	conf.MapedFileSizeConsumeQueue = 300000 * CQStoreUnitSize
+	conf.MappedFileSizeCommitLog = 1024 * 1024 * 1024
+	conf.MappedFileSizeConsumeQueue = 300000 * CQStoreUnitSize
 	conf.FlushIntervalCommitLog = 1000
 	conf.FlushCommitLogTimed = false
 	conf.FlushIntervalConsumeQueue = 1000
 	conf.CleanResourceInterval = 10000
 	conf.DeleteCommitLogFilesInterval = 100
 	conf.DeleteConsumeQueueFilesInterval = 100
-	conf.DestroyMapedFileIntervalForcibly = 1000 * 120
+	conf.DestroyMappedFileIntervalForcibly = 1000 * 120
 	conf.RedeleteHangedFileInterval = 1000 * 120
 	conf.DeleteWhen = "04"
 	conf.DiskMaxUsedSpaceRatio = 75
@@ -149,8 +149,8 @@ func defaultConfig() *Config {
 	return conf
 }
 
-func (conf *Config) getMapedFileSizeConsumeQueue() int32 {
-	factor := math.Ceil(float64(conf.MapedFileSizeConsumeQueue) / float64(CQStoreUnitSize*1.0))
+func (conf *Config) getMappedFileSizeConsumeQueue() int32 {
+	factor := math.Ceil(float64(conf.MappedFileSizeConsumeQueue) / float64(CQStoreUnitSize*1.0))
 	return int32(factor * CQStoreUnitSize)
 }
 

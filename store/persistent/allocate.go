@@ -135,7 +135,7 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 			beginTime := time.Now().UnixNano() / 1000000
 			mf, err := newMappedFile(request.filePath, request.fileSize)
 			if mf == nil {
-				logger.Error("New Maped File")
+				logger.Error("New Mapped File")
 			}
 
 			if err != nil {
@@ -152,7 +152,6 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 		}
 
 		request.syncChan <- true
-
 		break
 	}
 
