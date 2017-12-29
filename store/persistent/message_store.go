@@ -40,6 +40,7 @@ type PersistentMessageStore struct {
 	consumeQueueTableMu  sync.RWMutex
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
+	idxService           *indexService              // 消息索引服务
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	runFlags             *runningFlags              // 运行过程标志位
 	steCheckpoint        *storeCheckpoint
