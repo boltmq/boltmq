@@ -87,12 +87,12 @@ func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageR
 	mf, err := clog.mfq.getLastMappedFile(int64(0))
 	if err != nil {
 		// TODO
-		return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED}
+		return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED}
 	}
 
 	if mf == nil {
 		// TODO
-		return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED}
+		return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED}
 	}
 
 	result := mf.appendMessageWithCallBack(msg, clog.appendMsgCallback)
@@ -103,12 +103,12 @@ func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageR
 		mf, err = clog.mfq.getLastMappedFile(int64(0))
 		if err != nil {
 			logger.Error(err.Error())
-			return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED, Result: result}
+			return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED, Result: result}
 		}
 
 		if mf == nil {
 			logger.Errorf("create mapped file2 error, topic:%s clientAddr:%s", msg.Topic, msg.BornHost)
-			return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED, Result: result}
+			return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED, Result: result}
 		}
 
 		result = mf.appendMessageWithCallBack(msg, clog.appendMsgCallback)
