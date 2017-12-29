@@ -92,14 +92,14 @@ func defaultConfig() *Config {
 
 	conf := &Config{}
 	conf.StorePathRootDir = storeRootDir
-	conf.StorePathCommitLog = fmt.Sprintf("%s%ccommitlog", storeRootDir, os.PathSeparator)
-	conf.StorePathConsumeQueue = fmt.Sprintf("%s%cconsumequeue", storeRootDir, os.PathSeparator)
-	conf.StorePathIndex = fmt.Sprintf("%s%cindex", storeRootDir, os.PathSeparator)
-	conf.StoreCheckpoint = fmt.Sprintf("%s%ccheckpoint", storeRootDir, os.PathSeparator)
-	conf.AbortFile = fmt.Sprintf("%s%cabort", storeRootDir, os.PathSeparator)
-	conf.TranStateTableStorePath = fmt.Sprintf("%s%ctransaction%cstatetable", storeRootDir, os.PathSeparator, os.PathSeparator)
+	conf.StorePathCommitLog = getStorePathCommitLog(storeRootDir)
+	conf.StorePathConsumeQueue = getStorePathConsumeQueue(storeRootDir)
+	conf.StorePathIndex = getStorePathIndex(storeRootDir)
+	conf.StoreCheckpoint = getStorePathCheckpoint(storeRootDir)
+	conf.AbortFile = getStorePathAbortFile(storeRootDir)
+	conf.TranStateTableStorePath = getTranStateTableStorePath(storeRootDir)
 	conf.TranStateTableMappedFileSize = 2000000 * 1
-	conf.TranRedoLogStorePath = fmt.Sprintf("%s%ctransaction%credolog", storeRootDir, os.PathSeparator)
+	conf.TranRedoLogStorePath = getTranRedoLogStorePath(storeRootDir)
 	conf.TranRedoLogMappedFileSize = 2000000 * CQStoreUnitSize
 	conf.CheckTransactionMessageAtleastInterval = 1000 * 60
 	conf.CheckTransactionMessageTimerInterval = 1000 * 60
@@ -249,4 +249,36 @@ func ParseFlushDiskType(desc string) (FlushDiskType, error) {
 		return fdt, nil
 	}
 	return -1, fmt.Errorf("ParseBrokerRole failed. unknown match '%s' to BrokerRole", desc)
+}
+
+func getStorePathCommitLog(rootDir string) string {
+	return fmt.Sprintf("%s%ccommitlog", rootDir, os.PathSeparator)
+}
+
+func getStorePathConsumeQueue(rootDir string) string {
+	return fmt.Sprintf("%s%cconsumequeue", rootDir, os.PathSeparator)
+}
+
+func getStorePathIndex(rootDir string) string {
+	return fmt.Sprintf("%s%cindex", rootDir, os.PathSeparator)
+}
+
+func getStorePathCheckpoint(rootDir string) string {
+	return fmt.Sprintf("%s%ccheckpoint", rootDir, os.PathSeparator)
+}
+
+func getStorePathAbortFile(rootDir string) string {
+	return fmt.Sprintf("%s%cabort", rootDir, os.PathSeparator)
+}
+
+func getDelayOffsetStorePath(rootDir string) string {
+	return fmt.Sprintf("%s%cconfig%cdelayOffset.json", rootDir, os.PathSeparator, os.PathSeparator)
+}
+
+func getTranStateTableStorePath(rootDir string) string {
+	return fmt.Sprintf("%s%ctransaction%cstatetable", rootDir, os.PathSeparator, os.PathSeparator)
+}
+
+func getTranRedoLogStorePath(rootDir string) string {
+	return fmt.Sprintf("%s%ctransaction%credolog", rootDir, os.PathSeparator, os.PathSeparator)
 }
