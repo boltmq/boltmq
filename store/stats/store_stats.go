@@ -19,13 +19,15 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )
 
 type StoreStats interface {
+	GetSinglePutMessageTopicSizeTotal(topic string) int64
+	SetSinglePutMessageTopicSizeTotal(topic string, value int64)
+	SetDispatchMaxBuffer(value int64)
 }
 
 const (
@@ -142,7 +144,7 @@ func (service *StoreStatsService) printTps() {
 	}
 }
 
-func (service *StoreStatsService) setGetMessageEntireTimeMax(value int64) {
+func (service *StoreStatsService) SetGetMessageEntireTimeMax(value int64) {
 	if value > service.getMessageEntireTimeMax {
 		service.lockGet.Lock()
 		service.getMessageEntireTimeMax = value
@@ -175,7 +177,7 @@ func (service *StoreStatsService) getFormatRuntime() string {
 		DAY         int64 = 24 * HOUR
 	)
 
-	time := time.Now().UnixNano()/1000000 - service.messageStoreBootTimestamp
+	time := system.CurrentTimeMillis() - service.messageStoreBootTimestamp
 	days := time / DAY
 	hours := (time % DAY) / HOUR
 	minutes := (time % HOUR) / MINUTE
@@ -460,14 +462,14 @@ func (service *StoreStatsService) GetRuntimeInfo() map[string]string {
 	return result
 }
 
-func (service *StoreStatsService) setSinglePutMessageTopicSizeTotal(topic string, value int64) {
+func (service *StoreStatsService) SetSinglePutMessageTopicSizeTotal(topic string, value int64) {
 	service.sizeMapMutex.Lock()
 	defer service.sizeMapMutex.Unlock()
 
 	service.putMessageTopicSizeTotal[topic] = value
 }
 
-func (service *StoreStatsService) getSinglePutMessageTopicSizeTotal(topic string) int64 {
+func (service *StoreStatsService) GetSinglePutMessageTopicSizeTotal(topic string) int64 {
 	service.sizeMapMutex.Lock()
 	defer service.sizeMapMutex.Unlock()
 
@@ -524,7 +526,7 @@ func (service *StoreStatsService) getSinglePutMessageTopicTimesTotal(topic strin
 	return result
 }
 
-func (service *StoreStatsService) setDispatchMaxBuffer(value int64) {
+func (service *StoreStatsService) SetDispatchMaxBuffer(value int64) {
 	if value > service.dispatchMaxBuffer {
 		service.dispatchMaxBuffer = value
 	}

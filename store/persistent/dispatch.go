@@ -86,7 +86,7 @@ func (dms *dispatchMessageService) putRequest(request *dispatchRequest) {
 		dms.requestsChan <- request
 		atomic.AddInt32(&dms.requestSize, 1)
 
-		dms.messageStore.StoreStatsService.setDispatchMaxBuffer(int64(atomic.LoadInt32(&dms.requestSize)))
+		dms.messageStore.storeStats.SetDispatchMaxBuffer(int64(atomic.LoadInt32(&dms.requestSize)))
 
 		putMsgIndexHightWater := dms.messageStore.config.PutMsgIndexHightWater
 		if atomic.LoadInt32(&dms.requestSize) > putMsgIndexHightWater {

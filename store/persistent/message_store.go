@@ -37,12 +37,13 @@ type PersistentMessageStore struct {
 	config               *Config // 存储配置
 	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
+	consumeQueueTableMu  sync.RWMutex
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	runFlags             *runningFlags              // 运行过程标志位
 	steCheckpoint        *storeCheckpoint
-	storeStatsService    *stats.StoreStatsService // 运行时数据统计
+	storeStats           stats.StoreStats // 运行时数据统计
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
@@ -69,4 +70,71 @@ type PersistentMessageStore struct {
 		storeTicker              *timeutil.Ticker
 		printTimes               int64
 	*/
+}
+
+// GetMaxOffsetInQueue 获取指定队列最大Offset 如果队列不存在，返回-1
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/9/20
+func (ms *PersistentMessageStore) GetMaxOffsetInQueue(topic string, queueId int32) int64 {
+	logic := ms.findConsumeQueue(topic, queueId)
+	if logic != nil {
+		return logic.getMaxOffsetInQueue()
+	}
+
+	return -1
+}
+
+func (ms *PersistentMessageStore) findConsumeQueue(topic string, queueId int32) *consumeQueue {
+	ms.consumeQueueTableMu.RLock()
+	cqMap, ok := ms.consumeTopicTable[topic]
+	ms.consumeQueueTableMu.RUnlock()
+
+	if !ok {
+		ms.consumeQueueTableMu.Lock()
+		cqMap = newConsumeQueueTable()
+		ms.consumeTopicTable[topic] = cqMap
+		ms.consumeQueueTableMu.Unlock()
+	}
+
+	cqMap.consumeQueuesMu.RLock()
+	logic, ok := cqMap.consumeQueues[queueId]
+	cqMap.consumeQueuesMu.RUnlock()
+
+	if !ok {
+		storePathRootDir := getStorePathConsumeQueue(ms.config.StorePathRootDir)
+		cqMap.consumeQueuesMu.Lock()
+		logic = newConsumeQueue(topic, queueId, storePathRootDir, int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
+		cqMap.consumeQueues[queueId] = logic
+		cqMap.consumeQueuesMu.Unlock()
+	}
+
+	return logic
+}
+
+func (ms *PersistentMessageStore) putDispatchRequest(dRequest *dispatchRequest) {
+	ms.dispatchMsgService.putRequest(dRequest)
+}
+
+func (ms *PersistentMessageStore) truncateDirtyLogicFiles(phyOffset int64) {
+	for _, queueMap := range ms.consumeTopicTable {
+		for _, logic := range queueMap.consumeQueues {
+			logic.truncateDirtyLogicFiles(phyOffset)
+		}
+	}
+}
+
+func (ms *PersistentMessageStore) destroyLogics() {
+	for _, queueMap := range ms.consumeTopicTable {
+		for _, logic := range queueMap.consumeQueues {
+			logic.destroy()
+		}
+	}
+}
+
+func (ms *PersistentMessageStore) putMessagePostionInfo(topic string, queueId int32, offset int64, size int64,
+	tagsCode, storeTimestamp, logicOffset int64) {
+	cq := ms.findConsumeQueue(topic, queueId)
+	if cq != nil {
+		cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
+	}
 }

@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/sysflag"
+	"github.com/boltmq/common/utils/codec"
 	"github.com/boltmq/common/utils/system"
 )
 
@@ -59,6 +61,516 @@ func newCommitLog(messageStore *PersistentMessageStore) *commitLog {
 	clog.topicQueueTable = make(map[string]int64, 1024)
 	clog.appendMsgCallback = newDefaultAppendMessageCallback(messageStore.config.MaxMessageSize, clog)
 	return clog
+}
+
+func (clog *commitLog) load() bool {
+	result := clog.mfq.load()
+
+	if result {
+		logger.Info("load commit log OK")
+	} else {
+		logger.Info("load commit log Failed")
+	}
+
+	return result
+}
+
+func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageResult {
+	msg.StoreTimestamp = system.CurrentTimeMillis()
+	msg.BodyCRC, _ = codec.Crc32(msg.Body)
+
+	// TODO 事务消息处理
+	clog.mutex.Lock()
+	beginLockTimestamp := system.CurrentTimeMillis()
+	msg.BornTimestamp = beginLockTimestamp
+
+	mf, err := clog.mfq.getLastMappedFile(int64(0))
+	if err != nil {
+		// TODO
+		return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED}
+	}
+
+	if mf == nil {
+		// TODO
+		return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED}
+	}
+
+	result := mf.appendMessageWithCallBack(msg, clog.appendMsgCallback)
+	switch result.Status {
+	case store.APPENDMESSAGE_PUT_OK:
+		break
+	case store.END_OF_FILE:
+		mf, err = clog.mfq.getLastMappedFile(int64(0))
+		if err != nil {
+			logger.Error(err.Error())
+			return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED, Result: result}
+		}
+
+		if mf == nil {
+			logger.Errorf("create mapped file2 error, topic:%s clientAddr:%s", msg.Topic, msg.BornHost)
+			return &store.PutMessageResult{Status: store.CREATE_MAPEDFILE_FAILED, Result: result}
+		}
+
+		result = mf.appendMessageWithCallBack(msg, clog.appendMsgCallback)
+		break
+	case store.MESSAGE_SIZE_EXCEEDED:
+		return &store.PutMessageResult{Status: store.MESSAGE_ILLEGAL, Result: result}
+	default:
+		return &store.PutMessageResult{Status: store.PUTMESSAGE_UNKNOWN_ERROR, Result: result}
+	}
+
+	// dispatchRequest
+	disRequest := &dispatchRequest{
+		topic:                     msg.Topic,
+		queueId:                   msg.QueueId,
+		commitLogOffset:           result.WroteOffset,
+		msgSize:                   result.WroteBytes,
+		tagsCode:                  msg.TagsCode,
+		storeTimestamp:            msg.StoreTimestamp,
+		consumeQueueOffset:        result.LogicsOffset,
+		keys:                      msg.GetKeys(),
+		sysFlag:                   msg.SysFlag,
+		tranStateTableOffset:      msg.QueueOffset,
+		preparedTransactionOffset: msg.PreparedTransactionOffset,
+		producerGroup:             message.PROPERTY_PRODUCER_GROUP,
+	}
+
+	clog.messageStore.dispatchMsgService.putRequest(disRequest)
+
+	eclipseTimeInLock := system.CurrentTimeMillis() - beginLockTimestamp
+	clog.mutex.Unlock()
+
+	if eclipseTimeInLock > 1000 {
+		logger.Warn("putMessage in lock eclipse time(ms) ", eclipseTimeInLock)
+	}
+
+	putMessageResult := &store.PutMessageResult{Status: store.PUTMESSAGE_PUT_OK, Result: result}
+
+	// Statistics
+	size := clog.messageStore.storeStats.GetSinglePutMessageTopicSizeTotal(msg.Topic)
+	clog.messageStore.storeStats.SetSinglePutMessageTopicSizeTotal(msg.Topic, atomic.AddInt64(&size, result.WroteBytes))
+
+	// Synchronization flush
+	if SYNC_FLUSH == clog.messageStore.config.FlushDisk {
+		if msg.IsWaitStoreMsgOK() {
+			if gcService, ok := clog.flushCLogService.(*groupCommitService); ok {
+				request := newGroupCommitRequest(result.WroteOffset + result.WroteBytes)
+				gcService.putRequest(request)
+
+				flushOk := request.waitForFlush(int64(clog.messageStore.config.SyncFlushTimeout))
+				if flushOk == false {
+					logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s",
+						msg.Topic, msg.GetTags(), msg.BornHost)
+					putMessageResult.Status = store.FLUSH_DISK_TIMEOUT
+				}
+			}
+		}
+	} else {
+		if flushRTimeService, ok := clog.flushCLogService.(*flushRealTimeService); ok {
+			flushRTimeService.wakeup()
+		}
+	}
+
+	// Synchronous write double
+	if SYNC_MASTER == clog.messageStore.config.BrokerRole {
+		// TODO
+	}
+
+	return putMessageResult
+}
+
+func (clog *commitLog) getMessage(offset int64, size int32) *mappedBufferResult {
+	returnFirstOnNotFound := false
+	if 0 == offset {
+		returnFirstOnNotFound = true
+	}
+
+	mf := clog.mfq.findMappedFileByOffset(offset, returnFirstOnNotFound)
+	if mf != nil {
+		mappedFileSize := clog.messageStore.config.MappedFileSizeCommitLog
+		pos := offset % int64(mappedFileSize)
+		result := mf.selectMappedBufferByPosAndSize(pos, size)
+		return result
+	}
+
+	return nil
+}
+
+func (clog *commitLog) rollNextFile(offset int64) int64 {
+	mappedFileSize := clog.messageStore.config.MappedFileSizeCommitLog
+	nextOffset := offset + int64(mappedFileSize) - offset%int64(mappedFileSize)
+	return nextOffset
+}
+
+func (clog *commitLog) recoverNormally() {
+	checkCRCOnRecover := clog.messageStore.config.CheckCRCOnRecover
+	mappedFiles := clog.mfq.mappedFiles
+	if mappedFiles != nil && mappedFiles.Len() > 0 {
+		index := mappedFiles.Len() - 3
+		if index < 0 {
+			index = 0
+		}
+
+		mf := getMappedFileByIndex(mappedFiles, index)
+		byteBuffer := newMappedByteBuffer(mf.byteBuffer.Bytes())
+		byteBuffer.writePos = mf.byteBuffer.writePos
+		processOffset := mf.fileFromOffset
+		mappedFileOffset := int64(0)
+		for {
+			disRequest := clog.checkMessageAndReturnSize(byteBuffer,
+				clog.messageStore.config.CheckCRCOnRecover, checkCRCOnRecover)
+			size := disRequest.msgSize
+			if size > 0 {
+				mappedFileOffset += size
+			} else if size == -1 {
+				logger.Info("recover physics file end, ", mf.fileName)
+				break
+			} else if size == 0 {
+				index++
+				if index >= mappedFiles.Len() {
+					logger.Info("recover last 3 physics file over, last mapped file ", mf.fileName)
+					break
+				} else {
+					mf = getMappedFileByIndex(mappedFiles, index)
+					byteBuffer = mf.byteBuffer
+					byteBuffer.writePos = mf.byteBuffer.writePos
+					processOffset = mf.fileFromOffset
+					mappedFileOffset = 0
+				}
+			}
+		}
+
+		processOffset += mappedFileOffset
+		clog.mfq.committedWhere = processOffset
+		clog.mfq.truncateDirtyFiles(processOffset)
+
+	}
+}
+
+func (clog *commitLog) pickupStoretimestamp(offset int64, size int32) int64 {
+	if offset > clog.getMinOffset() {
+		result := clog.getMessage(offset, size)
+		if result != nil {
+			defer result.Release()
+			result.byteBuffer.readPos = message.MessageStoreTimestampPostion
+			storeTimestamp := result.byteBuffer.ReadInt64()
+			return storeTimestamp
+		}
+	}
+
+	return -1
+}
+
+func (clog *commitLog) getMinOffset() int64 {
+	mf := clog.mfq.getFirstMappedFileOnLock()
+	if mf != nil {
+		// TODO mf.isAvailable()
+		return mf.fileFromOffset
+	}
+
+	return -1
+}
+
+func (clog *commitLog) getMaxOffset() int64 {
+	return clog.mfq.getMaxOffset()
+}
+
+func (clog *commitLog) removeQueurFromTopicQueueTable(topic string, queueId int32) {
+	clog.mutex.Lock()
+	clog.mutex.Unlock()
+	key := fmt.Sprintf("%s-%d", topic, queueId)
+	delete(clog.topicQueueTable, key)
+}
+
+func (clog *commitLog) checkMessageAndReturnSize(byteBuffer *mappedByteBuffer, checkCRC bool, readBody bool) *dispatchRequest {
+	messageMagicCode := MessageMagicCode
+	blankMagicCode := BlankMagicCode
+
+	bufferLen := byteBuffer.writePos - byteBuffer.readPos
+	totalSize := byteBuffer.ReadInt32() // 1 TOTALSIZE
+	magicCode := byteBuffer.ReadInt32() // 2 MAGICCODE
+
+	switch magicCode {
+	case int32(messageMagicCode):
+		break
+	case int32(blankMagicCode):
+		return &dispatchRequest{msgSize: 0}
+	default:
+		logger.Warnf("found a illegal magic code MessageMagicCode:%d BlankMagicCode:%d ActualMagicCode:%d",
+			messageMagicCode, blankMagicCode, magicCode)
+		return &dispatchRequest{msgSize: -1}
+	}
+
+	if totalSize > int32(bufferLen) {
+		return &dispatchRequest{msgSize: -1}
+	}
+
+	bodyCRC := byteBuffer.ReadInt32()                   // 3 BODYCRC
+	queueId := byteBuffer.ReadInt32()                   // 4 QUEUEID
+	byteBuffer.ReadInt32()                              // 5 FLAG
+	queueOffset := byteBuffer.ReadInt64()               // 6 QUEUEOFFSET
+	physicOffset := byteBuffer.ReadInt64()              // 7 PHYSICALOFFSET
+	sysFlag := byteBuffer.ReadInt32()                   // 8 SYSFLAG
+	byteBuffer.ReadInt64()                              // 9 BORNTIMESTAMP
+	byteBuffer.Read(make([]byte, 8))                    // 10 BORNHOST（IP+PORT）
+	storeTimestamp := byteBuffer.ReadInt64()            // 11 STORETIMESTAMP
+	byteBuffer.Read(make([]byte, 8))                    // 12 STOREHOST（IP+PORT）
+	byteBuffer.ReadInt32()                              // 13 RECONSUMETIMES
+	preparedTransactionOffset := byteBuffer.ReadInt64() // 14 Prepared Transaction Offset
+	// 15 BODY
+	bodyLen := byteBuffer.ReadInt32()
+	if bodyLen > 0 {
+		if readBody {
+			bodyContent := make([]byte, bodyLen)
+			byteBuffer.Read(bodyContent)
+			if checkCRC {
+				crc, _ := codec.Crc32(bodyContent)
+				if int32(crc) != bodyCRC {
+					logger.Warnf("CRC check failed crc:%d, bodyCRC:%d", crc, bodyCRC)
+					return &dispatchRequest{msgSize: -1}
+				}
+			}
+		} else {
+			byteBuffer.readPos = byteBuffer.readPos + int(bodyLen)
+		}
+	}
+
+	var (
+		topic          = ""
+		keys           = ""
+		tagsCode int64 = 0
+	)
+
+	// 16 TOPIC
+	topicLen := byteBuffer.ReadInt8()
+	if topicLen > 0 {
+		topicBytes := make([]byte, topicLen)
+		byteBuffer.Read(topicBytes)
+		topic = string(topicBytes)
+	}
+
+	// 17 properties
+	propertiesLength := byteBuffer.ReadInt16()
+	if propertiesLength > 0 {
+		propertiesBytes := make([]byte, propertiesLength)
+		byteBuffer.Read(propertiesBytes)
+		properties := string(propertiesBytes)
+		propertiesMap := message.String2messageProperties(properties)
+		keys = propertiesMap[message.PROPERTY_KEYS]
+		tags := propertiesMap[message.PROPERTY_TAGS]
+		if len(tags) > 0 {
+			tagsCode = tagsString2tagsCode(message.ParseTopicFilterType(sysFlag), tags)
+		}
+
+		// Timing message processing
+		delayLevelStr, ok := propertiesMap[message.PROPERTY_DELAY_TIME_LEVEL]
+		if SCHEDULE_TOPIC == topic && ok {
+			delayLevelTemp, _ := strconv.Atoi(delayLevelStr)
+			delayLevel := int32(delayLevelTemp)
+
+			if delayLevel > clog.messageStore.scheduleMsgService.maxDelayLevel {
+				delayLevel = clog.messageStore.scheduleMsgService.maxDelayLevel
+			}
+
+			if delayLevel > 0 {
+				tagsCode = clog.messageStore.scheduleMsgService.computeDeliverTimestamp(delayLevel, storeTimestamp)
+			}
+		}
+	}
+
+	return &dispatchRequest{
+		topic:                     topic,                     // 1
+		queueId:                   queueId,                   // 2
+		commitLogOffset:           physicOffset,              // 3
+		msgSize:                   int64(totalSize),          // 4
+		tagsCode:                  tagsCode,                  // 5
+		storeTimestamp:            storeTimestamp,            // 6
+		consumeQueueOffset:        queueOffset,               // 7
+		keys:                      keys,                      // 8
+		sysFlag:                   sysFlag,                   // 9
+		tranStateTableOffset:      int64(0),                  // 10
+		preparedTransactionOffset: preparedTransactionOffset, // 11
+		producerGroup:             "",                        // 12
+	}
+}
+
+func (clog *commitLog) recoverAbnormally() {
+	checkCRCOnRecover := clog.messageStore.config.CheckCRCOnRecover
+	mappedFiles := clog.mfq.mappedFiles
+	if mappedFiles.Len() > 0 {
+		// Looking beginning to recover from which file
+		var mf *mappedFile
+		index := mappedFiles.Len() - 1
+
+		for element := mappedFiles.Back(); element != nil; element = element.Prev() {
+			index--
+			mf = element.Value.(*mappedFile)
+			if clog.isMappedFileMatchedRecover(mf) {
+				logger.Info("recover from this mapped file ", mf.fileName)
+				break
+			}
+		}
+
+		if mf != nil {
+			mappedByteBuffer := newMappedByteBuffer(mf.byteBuffer.Bytes())
+			mappedByteBuffer.writePos = mf.byteBuffer.writePos
+			processOffset := mf.fileFromOffset
+			mappedFileOffset := int64(0)
+
+			for {
+				disRequest := clog.checkMessageAndReturnSize(mappedByteBuffer, checkCRCOnRecover, true)
+				size := disRequest.msgSize
+
+				if size > 0 { // Normal data
+					mappedFileOffset += size
+					clog.messageStore.putDispatchRequest(disRequest)
+				} else if size == -1 { // Intermediate file read error
+					logger.Info("recover physics file end, ", mf.fileName)
+					break
+				} else if size == 0 {
+					index++
+
+					if index >= mappedFiles.Len() { // The current branch under normal circumstances should
+						logger.Info("recover physics file over, last mapped file ", mf.fileName)
+						break
+					} else {
+						i := 0
+						for element := mappedFiles.Front(); element != nil; element = element.Next() {
+							if i == index {
+								mf = element.Value.(*mappedFile)
+								mappedByteBuffer = newMappedByteBuffer(mf.byteBuffer.Bytes())
+								mappedByteBuffer.writePos = mf.byteBuffer.writePos
+								processOffset = mf.fileFromOffset
+								mappedFileOffset = 0
+								logger.Info("recover next physics file,", mf.fileName)
+								break
+							}
+
+							i++
+						}
+					}
+				}
+			}
+
+			processOffset += mappedFileOffset
+			clog.mfq.committedWhere = processOffset
+			clog.mfq.truncateDirtyFiles(processOffset)
+
+			// Clear ConsumeQueue redundant data
+			clog.messageStore.truncateDirtyLogicFiles(processOffset)
+		} else {
+			// Commitlog case files are deleted
+			clog.mfq.committedWhere = 0
+			clog.messageStore.destroyLogics()
+		}
+	}
+}
+
+func (clog *commitLog) isMappedFileMatchedRecover(mf *mappedFile) bool {
+	bytes := mf.byteBuffer.Bytes()
+	if len(bytes) == 0 {
+		return false
+	}
+
+	byteBuffer := newMappedByteBuffer(bytes)
+	byteBuffer.writePos = mf.byteBuffer.writePos
+	byteBuffer.readPos = message.MessageMagicCodePostion
+	magicCode := byteBuffer.ReadInt32()
+	messageMagicCode := MessageMagicCode
+	if magicCode != int32(messageMagicCode) {
+		return false
+	}
+
+	byteBuffer.readPos = message.MessageStoreTimestampPostion
+	storeTimestamp := byteBuffer.ReadInt64()
+	if 0 == storeTimestamp {
+		return false
+	}
+
+	if clog.messageStore.config.MessageIndexEnable &&
+		clog.messageStore.config.MessageIndexSafe {
+		if storeTimestamp <= clog.messageStore.steCheckpoint.getMinTimestampIndex() {
+			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+				timeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
+			return true
+		}
+	} else {
+		if storeTimestamp <= clog.messageStore.steCheckpoint.getMinTimestamp() {
+			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+				timeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
+			return true
+		}
+	}
+
+	return false
+}
+
+func (clog *commitLog) deleteExpiredFile(expiredTime int64, deleteFilesInterval int32, intervalForcibly int64, cleanImmediately bool) int {
+	return clog.mfq.deleteExpiredFileByTime(expiredTime, int(deleteFilesInterval), intervalForcibly, cleanImmediately)
+}
+
+func (clog *commitLog) retryDeleteFirstFile(intervalForcibly int64) bool {
+	return clog.mfq.retryDeleteFirstFile(intervalForcibly)
+}
+
+func (clog *commitLog) getData(offset int64) *mappedBufferResult {
+	returnFirstOnNotFound := false
+	if offset == 0 {
+		returnFirstOnNotFound = true
+	}
+
+	mf := clog.mfq.findMappedFileByOffset(offset, returnFirstOnNotFound)
+	if mf != nil {
+		mappedFileSize := clog.messageStore.config.MappedFileSizeCommitLog
+		pos := offset % int64(mappedFileSize)
+		result := mf.selectMappedBuffer(pos)
+		return result
+	}
+
+	return nil
+}
+
+func (clog *commitLog) appendData(startOffset int64, data []byte) bool {
+	clog.mutex.Lock()
+	defer clog.mutex.Unlock()
+
+	mf, err := clog.mfq.getLastMappedFile(startOffset)
+	if err != nil {
+		logger.Error("commit log append data get last mapped file error:", err.Error())
+		return false
+	}
+
+	size := mf.byteBuffer.limit - mf.byteBuffer.writePos
+	if len(data) > size {
+		mf.appendMessage(data[:size])
+		mf, err = clog.mfq.getLastMappedFile(startOffset + int64(size))
+		if err != nil {
+			logger.Error("commit log append data get last mapped file error:", err.Error())
+			return false
+		}
+
+		return mf.appendMessage(data[size:])
+	}
+
+	return mf.appendMessage(data)
+}
+
+func (clog *commitLog) destroy() {
+	if clog.mfq != nil {
+		clog.mfq.destroy()
+	}
+}
+
+func (clog *commitLog) start() {
+	if clog.flushCLogService != nil {
+		go clog.flushCLogService.start()
+	}
+}
+
+func (clog *commitLog) shutdown() {
+	if clog.flushCLogService != nil {
+		clog.flushCLogService.shutdown()
+	}
 }
 
 const (
