@@ -33,7 +33,9 @@ type PersistentMessageStore struct {
 	config               *Config // 存储配置
 	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
+	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
+	scheduleMsgService   *scheduleMessageService    // 定时服务
 	runFlags             *runningFlags              // 运行过程标志位
 	steCheckpoint        *storeCheckpoint
 	/*
@@ -45,12 +47,12 @@ type PersistentMessageStore struct {
 		FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
 		CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
 		CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
-		DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
+		//DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
 		IndexService             *IndexService             // 消息索引服务
 		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
 		ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
 		HAService                *HAService                // HA服务
-		ScheduleMessageService   *ScheduleMessageService   // 定时服务
+		//ScheduleMessageService   *ScheduleMessageService   // 定时服务
 		TransactionStateService  *TransactionStateService  // 分布式事务服务
 		TransactionCheckExecuter *TransactionCheckExecuter // 事务回查接口
 		StoreStatsService        *StoreStatsService        // 运行时数据统计
