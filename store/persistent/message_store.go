@@ -13,7 +13,11 @@
 // limitations under the License.
 package persistent
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/boltmq/boltmq/store/stats"
+)
 
 type consumeQueueTable struct {
 	consumeQueues   map[int32]*consumeQueue
@@ -38,6 +42,7 @@ type PersistentMessageStore struct {
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	runFlags             *runningFlags              // 运行过程标志位
 	steCheckpoint        *storeCheckpoint
+	storeStatsService    *stats.StoreStatsService // 运行时数据统计
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
