@@ -140,7 +140,7 @@ func (dms *dispatchMessageService) doDispatch(request *dispatchRequest) {
 	}
 
 	if dms.messageStore.config.MessageIndexEnable {
-		dms.messageStore.IndexService.putRequest(request)
+		dms.messageStore.idxService.putRequest(request)
 	}
 }
 
