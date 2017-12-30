@@ -39,9 +39,11 @@ type PersistentMessageStore struct {
 	consumeTopicTable    map[string]*consumeQueueTable
 	consumeQueueTableMu  sync.RWMutex
 	flushCQService       *flushConsumeQueueService  // 逻辑队列刷盘服务
+	cleanCQService       *cleanConsumeQueueService  // 清理逻辑文件服务
 	cleanCLogService     *cleanCommitLogService     // 清理物理文件服务
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
+	reputMsgService      *reputMessageService       // 从物理队列解析消息重新发送到逻辑队列
 	idxService           *indexService              // 消息索引服务
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	runFlags             *runningFlags              // 运行过程标志位
@@ -53,9 +55,9 @@ type PersistentMessageStore struct {
 		//CommitLog                *CommitLog
 		//consumeTopicTable        map[string]*consumeQueueTable
 		//consumeQueueTableMu      *sync.RWMutex
-		FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
+		//FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
 		//CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
-		CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
+		//CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
 		//DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
 		//IndexService             *IndexService             // 消息索引服务
 		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
@@ -64,7 +66,7 @@ type PersistentMessageStore struct {
 		//ScheduleMessageService   *ScheduleMessageService   // 定时服务
 		TransactionStateService  *TransactionStateService  // 分布式事务服务
 		TransactionCheckExecuter *TransactionCheckExecuter // 事务回查接口
-		StoreStatsService        *StoreStatsService        // 运行时数据统计
+		//StoreStatsService        *StoreStatsService        // 运行时数据统计
 		//RunningFlags             *RunningFlags             // 运行过程标志位
 		SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
 		ShutdownFlag             bool                      // 存储服务是否启动

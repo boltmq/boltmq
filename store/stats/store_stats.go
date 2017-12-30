@@ -28,6 +28,7 @@ type StoreStats interface {
 	GetSinglePutMessageTopicSizeTotal(topic string) int64
 	SetSinglePutMessageTopicSizeTotal(topic string, value int64)
 	SetDispatchMaxBuffer(value int64)
+	GetSinglePutMessageTopicTimesTotal(topic string) int64
 }
 
 const (
@@ -513,7 +514,7 @@ func (service *StoreStatsService) setSinglePutMessageTopicTimesTotal(topic strin
 	service.putMessageTopicTimesTotal[topic] = value
 }
 
-func (service *StoreStatsService) getSinglePutMessageTopicTimesTotal(topic string) int64 {
+func (service *StoreStatsService) GetSinglePutMessageTopicTimesTotal(topic string) int64 {
 	service.timesMapMutex.Lock()
 	defer service.timesMapMutex.Unlock()
 
