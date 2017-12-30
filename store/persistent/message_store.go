@@ -46,6 +46,7 @@ type PersistentMessageStore struct {
 	reputMsgService      *reputMessageService       // 从物理队列解析消息重新发送到逻辑队列
 	idxService           *indexService              // 消息索引服务
 	scheduleMsgService   *scheduleMessageService    // 定时服务
+	tsService            *transactionService        // 分布式事务服务
 	runFlags             *runningFlags              // 运行过程标志位
 	steCheckpoint        *storeCheckpoint
 	storeStats           stats.StoreStats // 运行时数据统计
@@ -61,7 +62,7 @@ type PersistentMessageStore struct {
 		//DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
 		//IndexService             *IndexService             // 消息索引服务
 		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
-		ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
+		//ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
 		HAService                *HAService                // HA服务
 		//ScheduleMessageService   *ScheduleMessageService   // 定时服务
 		TransactionStateService  *TransactionStateService  // 分布式事务服务
