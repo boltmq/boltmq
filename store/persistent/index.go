@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/boltmq/boltmq/stgcommon/utils"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
@@ -206,7 +205,7 @@ func (idx *indexService) getAndCreateLastIndexFile() *indexFile {
 
 	// 如果没找到，使用写锁创建文件
 	if idxFile == nil {
-		fileName := fmt.Sprintf("%s%c%s", idx.storePath, os.PathSeparator, utils.TimeMillisecondToHumanString(time.Now()))
+		fileName := fmt.Sprintf("%s%c%s", idx.storePath, os.PathSeparator, timeMillisecondToHumanString(time.Now()))
 		idxFile := newIndexFile(fileName, idx.hashSlotNum, idx.indexNum, lastUpdateEndPhyOffset, lastUpdateIndexTimestamp)
 
 		idx.readWriteLock.Lock()

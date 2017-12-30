@@ -38,6 +38,7 @@ type PersistentMessageStore struct {
 	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
 	consumeQueueTableMu  sync.RWMutex
+	flushCQService       *flushConsumeQueueService  // 逻辑队列刷盘服务
 	cleanCLogService     *cleanCommitLogService     // 清理物理文件服务
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/boltmq/boltmq/stgcommon"
 	"github.com/boltmq/common/logger"
 )
 
@@ -56,7 +55,7 @@ func (sms *scheduleMessageService) buildRunningStats(stats map[string]string) {
 		delayOffset := value
 		maxOffset := sms.messageStore.GetMaxOffsetInQueue(SCHEDULE_TOPIC, queueId)
 		statsValue := fmt.Sprintf("%d,%d", delayOffset, maxOffset)
-		statsKey := fmt.Sprintf("%s_%d", stgcommon.SCHEDULE_MESSAGE_OFFSET.String(), key)
+		statsKey := fmt.Sprintf("%s_%d", SCHEDULE_MESSAGE_OFFSET, key)
 		stats[statsKey] = statsValue
 	}
 }
@@ -98,4 +97,31 @@ func (sms *scheduleMessageService) shutdown() {
 		sms.ticker.Stop()
 	}
 	logger.Info("shutdown schedule message service")
+}
+
+type runningStats int
+
+const (
+	COMMIT_LOG_MAX_OFFSET runningStats = iota
+	COMMIT_LOG_MIN_OFFSET
+	COMMIT_LOG_DISK_RATIO
+	CONSUME_QUEUE_DISK_RATIO
+	SCHEDULE_MESSAGE_OFFSET
+)
+
+func (state runningStats) String() string {
+	switch state {
+	case COMMIT_LOG_MAX_OFFSET:
+		return "commitLogMaxOffset"
+	case COMMIT_LOG_MIN_OFFSET:
+		return "commitLogMinOffset"
+	case COMMIT_LOG_DISK_RATIO:
+		return "commitLogDiskRatio"
+	case CONSUME_QUEUE_DISK_RATIO:
+		return "consumeQueueDiskRatio"
+	case SCHEDULE_MESSAGE_OFFSET:
+		return "scheduleMessageOffset"
+	default:
+		return "Unknow"
+	}
 }
