@@ -38,6 +38,7 @@ type PersistentMessageStore struct {
 	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
 	consumeQueueTableMu  sync.RWMutex
+	cleanCLogService     *cleanCommitLogService     // 清理物理文件服务
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
 	idxService           *indexService              // 消息索引服务
@@ -50,12 +51,12 @@ type PersistentMessageStore struct {
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
 		//CommitLog                *CommitLog
 		//consumeTopicTable        map[string]*consumeQueueTable
-		consumeQueueTableMu      *sync.RWMutex
+		//consumeQueueTableMu      *sync.RWMutex
 		FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
-		CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
+		//CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
 		CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
 		//DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
-		IndexService             *IndexService             // 消息索引服务
+		//IndexService             *IndexService             // 消息索引服务
 		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
 		ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
 		HAService                *HAService                // HA服务
