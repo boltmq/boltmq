@@ -94,3 +94,45 @@ func (fcqs *flushConsumeQueueService) shutdown() {
 	fcqs.doFlush(int32(RetryTimesOver))
 	logger.Info("flush consume queue service end")
 }
+
+// cleanConsumeQueueService 清理逻辑文件服务
+// Author zhoufei
+// Since 2017/10/13
+type cleanConsumeQueueService struct {
+	lastPhysicalMinOffset int64
+	messageStore          *PersistentMessageStore
+}
+
+func newCleanConsumeQueueService(messageStore *PersistentMessageStore) *cleanConsumeQueueService {
+	return &cleanConsumeQueueService{
+		lastPhysicalMinOffset: 0,
+		messageStore:          messageStore,
+	}
+}
+
+func (ccqs *cleanConsumeQueueService) run() {
+	ccqs.deleteExpiredFiles()
+}
+
+func (ccqs *cleanConsumeQueueService) deleteExpiredFiles() {
+	deleteLogicsFilesInterval := ccqs.messageStore.config.DeleteConsumeQueueFilesInterval
+	minOffset := ccqs.messageStore.clog.getMinOffset()
+	if minOffset > ccqs.lastPhysicalMinOffset {
+		ccqs.lastPhysicalMinOffset = minOffset
+	}
+
+	// 删除逻辑队列文件
+	consumeTopicTables := ccqs.messageStore.consumeTopicTable
+	for _, value := range consumeTopicTables {
+		for _, logic := range value.consumeQueues {
+			deleteCount := logic.deleteExpiredFile(minOffset)
+
+			if deleteCount > 0 && deleteLogicsFilesInterval > 0 {
+				time.Sleep(time.Duration(deleteLogicsFilesInterval))
+			}
+		}
+	}
+
+	// 删除索引
+	ccqs.messageStore.idxService.deleteExpiredFile(minOffset)
+}
