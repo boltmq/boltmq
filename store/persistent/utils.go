@@ -18,8 +18,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/boltmq/boltmq/store/persistent/statfs"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/utils/codec"
 )
@@ -110,4 +112,55 @@ func tagsString2tagsCode(filterType message.TopicFilterType, tags string) int64 
 	}
 
 	return codec.HashCode(tags)
+}
+
+// 获取磁盘分区空间使用率
+func getDiskPartitionSpaceUsedPercent(path string) (percent float64) {
+	if path == "" {
+		return -1
+	}
+
+	isExits, err := pathExists(path)
+	if err != nil {
+		return -1
+	}
+
+	if !isExits {
+		err := os.MkdirAll(path, os.ModePerm)
+		if err != nil {
+			return -1
+		}
+	}
+
+	diskStatus, err := statfs.DiskUsage(path)
+	if err != nil {
+		return -1
+	}
+
+	percent = float64(diskStatus.Used) / float64(diskStatus.All)
+	return
+}
+
+// isItTimeToDo
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/13
+func isItTimeToDo(when string) bool {
+	whiles := strings.Split(when, ";")
+	if whiles != nil && len(whiles) > 0 {
+		currentTime := time.Now()
+
+		for i := 0; i < len(whiles); i++ {
+			hour, err := strconv.Atoi(whiles[i])
+			if err != nil {
+				//logger.Warn("is it time to do parse time hour, error:", err.Error())
+				continue
+			}
+
+			if hour == currentTime.Hour() {
+				return true
+			}
+		}
+	}
+
+	return false
 }

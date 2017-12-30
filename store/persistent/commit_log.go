@@ -19,7 +19,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1016,5 +1018,196 @@ func (damcb *defaultAppendMessageCallback) resetMsgStoreItemMemory(length int32)
 	damcb.msgStoreItemMemory.limit = int(length)
 	if damcb.msgStoreItemMemory.writePos > damcb.msgStoreItemMemory.limit {
 		damcb.msgStoreItemMemory.writePos = damcb.msgStoreItemMemory.limit
+	}
+}
+
+const (
+	MaxManualDeleteFileTimes = 20 // 手工触发一次最多删除次数
+)
+
+// cleanCommitLogService 清理物理文件服务
+// Author zhoufei
+// Since 2017/10/13
+type cleanCommitLogService struct {
+	diskSpaceWarningLevelRatio   float64 // 磁盘空间警戒水位，超过，则停止接收新消息（出于保护自身目的）
+	diskSpaceCleanForciblyRatio  float64 // 磁盘空间强制删除文件水位
+	lastRedeleteTimestamp        int64   // 最后清理时间
+	manualDeleteFileSeveralTimes int64   // 手工触发删除消息
+	cleanImmediately             bool    // 立刻开始强制删除文件
+	messageStore                 *PersistentMessageStore
+}
+
+func newCleanCommitLogService(messageStore *PersistentMessageStore) *cleanCommitLogService {
+	ccls := new(cleanCommitLogService)
+	ccls.diskSpaceWarningLevelRatio = ccls.parseFloatProperty(
+		"boltmq.broker.diskSpaceWarningLevelRatio", 0.90)
+	ccls.diskSpaceCleanForciblyRatio = ccls.parseFloatProperty(
+		"boltmq.broker.diskSpaceCleanForciblyRatio", 0.85)
+	ccls.lastRedeleteTimestamp = 0
+	ccls.manualDeleteFileSeveralTimes = 0
+	ccls.cleanImmediately = false
+	ccls.messageStore = messageStore
+
+	return ccls
+}
+
+func (ccls *cleanCommitLogService) parseFloatProperty(propertyName string, defaultValue float64) float64 {
+	value := ccls.getSystemProperty(propertyName)
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return defaultValue
+	}
+
+	result, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		logger.Warnf("parse property(%s) error:%s, set default value %f", propertyName, err.Error(), defaultValue)
+		result = defaultValue
+	}
+
+	return result
+}
+
+func (ccls *cleanCommitLogService) getSystemProperty(name string) string {
+	value := os.Getenv(name)
+	return value
+}
+
+func (ccls *cleanCommitLogService) run() {
+	ccls.deleteExpiredFiles()
+	ccls.redeleteHangedFile()
+}
+
+func (ccls *cleanCommitLogService) deleteExpiredFiles() {
+	timeup := ccls.isTimeToDelete()
+	spacefull := ccls.isSpaceToDelete()
+	manualDelete := ccls.manualDeleteFileSeveralTimes > 0
+
+	// 删除物理队列文件
+	if timeup || spacefull || manualDelete {
+		if manualDelete {
+			ccls.manualDeleteFileSeveralTimes--
+		}
+
+		fileReservedTime := ccls.messageStore.config.FileReservedTime
+
+		// 是否立刻强制删除文件
+		cleanAtOnce := ccls.messageStore.config.CleanFileForciblyEnable && ccls.cleanImmediately
+		logger.Infof("begin to delete before %d hours file. timeup: %t spacefull: %t manualDeleteFileSeveralTimes: %d cleanAtOnce: %t",
+			fileReservedTime, timeup, spacefull, ccls.manualDeleteFileSeveralTimes, cleanAtOnce)
+
+		// 小时转化成毫秒
+		fileReservedTime *= 60 * 60 * 1000
+
+		deletePhysicFilesInterval := ccls.messageStore.config.DeleteCommitLogFilesInterval
+		destroyMappedFileIntervalForcibly := ccls.messageStore.config.DestroyMappedFileIntervalForcibly
+
+		deleteCount := ccls.messageStore.clog.deleteExpiredFile(fileReservedTime,
+			deletePhysicFilesInterval, int64(destroyMappedFileIntervalForcibly), cleanAtOnce)
+
+		if deleteCount > 0 {
+			// TODO
+		} else if spacefull { // 危险情况：磁盘满了，但是又无法删除文件
+			logger.Warn("disk space will be full soon, but delete file failed.")
+		}
+	}
+}
+
+func (ccls *cleanCommitLogService) isTimeToDelete() bool {
+	when := ccls.messageStore.config.DeleteWhen
+	if isItTimeToDo(when) {
+		logger.Info("it's time to reclaim disk space, ", when)
+		return true
+	}
+
+	return false
+}
+
+func (ccls *cleanCommitLogService) isSpaceToDelete() bool {
+	ccls.cleanImmediately = false
+
+	// 检测物理文件磁盘空间
+	if ccls.checkCommitLogFileSpace() {
+		return true
+	}
+
+	// 检测逻辑文件磁盘空间
+	if ccls.checkConsumeQueueFileSpace() {
+		return true
+	}
+
+	return false
+}
+
+func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
+	var (
+		ratio           = float64(ccls.messageStore.config.getDiskMaxUsedSpaceRatio()) / 100.0
+		storePathPhysic = ccls.messageStore.config.StorePathCommitLog
+		physicRatio     = getDiskPartitionSpaceUsedPercent(storePathPhysic)
+	)
+
+	if physicRatio > ccls.diskSpaceWarningLevelRatio {
+		diskFull := ccls.messageStore.runFlags.getAndMakeDiskFull()
+		if diskFull {
+			logger.Errorf("physic disk maybe full soon %f, so mark disk full", physicRatio)
+			// TODO System.gc()
+		}
+
+		ccls.cleanImmediately = true
+	} else if physicRatio > ccls.diskSpaceCleanForciblyRatio {
+		ccls.cleanImmediately = true
+	} else {
+		diskOK := ccls.messageStore.runFlags.getAndMakeDiskOK()
+		if !diskOK {
+			logger.Infof("physic disk space OK %f, so mark disk ok", physicRatio)
+		}
+	}
+
+	if physicRatio < 0 || physicRatio > ratio {
+		logger.Info("physic disk maybe full soon, so reclaim space, ", physicRatio)
+		return true
+	}
+
+	return false
+}
+
+func (ccls *cleanCommitLogService) checkConsumeQueueFileSpace() bool {
+	var (
+		ratio           = float64(ccls.messageStore.config.getDiskMaxUsedSpaceRatio()) / 100.0
+		storePathLogics = getStorePathConsumeQueue(ccls.messageStore.config.StorePathRootDir)
+		logicsRatio     = getDiskPartitionSpaceUsedPercent(storePathLogics)
+	)
+
+	if logicsRatio > ccls.diskSpaceWarningLevelRatio {
+		diskFull := ccls.messageStore.runFlags.getAndMakeDiskFull()
+		if diskFull {
+			logger.Errorf("logics disk maybe full soon %f, so mark disk full", logicsRatio)
+			// TODO System.gc()
+		}
+
+		ccls.cleanImmediately = true
+	} else if logicsRatio > ccls.diskSpaceCleanForciblyRatio {
+		ccls.cleanImmediately = true
+	} else {
+		diskOK := ccls.messageStore.runFlags.getAndMakeDiskOK()
+		if !diskOK {
+			logger.Infof("logics disk space OK %f, so mark disk ok", logicsRatio)
+		}
+	}
+
+	if logicsRatio < 0 || logicsRatio > ratio {
+		logger.Info("logics disk maybe full soon, so reclaim space, ", logicsRatio)
+		return true
+	}
+
+	return false
+}
+
+func (ccls *cleanCommitLogService) redeleteHangedFile() {
+	interval := ccls.messageStore.config.RedeleteHangedFileInterval
+	currentTimestamp := system.CurrentTimeMillis()
+	if (currentTimestamp - ccls.lastRedeleteTimestamp) > int64(interval) {
+		ccls.lastRedeleteTimestamp = currentTimestamp
+		destroyMappedFileIntervalForcibly := ccls.messageStore.config.DestroyMappedFileIntervalForcibly
+		ccls.messageStore.clog.retryDeleteFirstFile(int64(destroyMappedFileIntervalForcibly))
 	}
 }
