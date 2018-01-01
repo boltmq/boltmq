@@ -537,20 +537,8 @@ func (service *StoreStatsService) Shutdown() {
 	service.stop = true
 }
 
-type callSnapshot struct {
-	timestamp      int64
-	callTimesTotal int64
-}
-
-func newCallSnapshot(timestamp, callTimesTotal int64) *callSnapshot {
-	return &callSnapshot{
-		timestamp:      timestamp,
-		callTimesTotal: callTimesTotal,
-	}
-}
-
 func getTPS(begin, end *callSnapshot) float64 {
-	total := end.callTimesTotal - begin.callTimesTotal
+	total := end.times - begin.times
 	time := end.timestamp - begin.timestamp
 	tps := float64(total) / float64(time)
 	return tps * float64(1000)
