@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/boltmq/boltmq/store/stats"
+	"github.com/boltmq/common/utils/system"
 )
 
 type consumeQueueTable struct {
@@ -34,7 +35,8 @@ func newConsumeQueueTable() *consumeQueueTable {
 // Author zhoufei
 // Since 2017/9/6
 type PersistentMessageStore struct {
-	config               *Config // 存储配置
+	config               *Config       // 存储配置
+	msgFilter            MessageFilter // 消息过滤
 	clog                 *commitLog
 	consumeTopicTable    map[string]*consumeQueueTable
 	consumeQueueTableMu  sync.RWMutex
@@ -49,12 +51,14 @@ type PersistentMessageStore struct {
 	tsService            *transactionService        // 分布式事务服务
 	runFlags             *runningFlags              // 运行过程标志位
 	clock                *Clock                     // 优化获取时间性能，精度1ms
-	shutdownFlag         bool                       // 存储服务是否启动
 	storeStats           stats.StoreStats           // 运行时数据统计
 	brokerStats          *stats.BrokerStats
 	steCheckpoint        *storeCheckpoint
+	storeTicker          *system.Ticker
+	shutdownFlag         bool // 存储服务是否启动
+	printTimes           int64
 	/*
-		MessageFilter            *DefaultMessageFilter // 消息过滤
+		//MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
 		//CommitLog                *CommitLog
 		//consumeTopicTable        map[string]*consumeQueueTable
@@ -76,8 +80,8 @@ type PersistentMessageStore struct {
 		//ShutdownFlag             bool                      // 存储服务是否启动
 		//StoreCheckpoint          *StoreCheckpoint
 		//BrokerStatsManager       *stats.BrokerStatsManager
-		storeTicker              *timeutil.Ticker
-		printTimes               int64
+		//storeTicker              *timeutil.Ticker
+		//printTimes               int64
 	*/
 }
 
