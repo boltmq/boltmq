@@ -53,7 +53,7 @@ func (sms *scheduleMessageService) buildRunningStats(stats map[string]string) {
 	for key, value := range sms.offsetTable {
 		queueId := delayLevel2QueueId(key)
 		delayOffset := value
-		maxOffset := sms.messageStore.GetMaxOffsetInQueue(SCHEDULE_TOPIC, queueId)
+		maxOffset := sms.messageStore.MaxOffsetInQueue(SCHEDULE_TOPIC, queueId)
 		statsValue := fmt.Sprintf("%d,%d", delayOffset, maxOffset)
 		statsKey := fmt.Sprintf("%s_%d", SCHEDULE_MESSAGE_OFFSET, key)
 		stats[statsKey] = statsValue
