@@ -58,7 +58,7 @@ type StoreStatsService struct {
 	lockSampling                 sync.Mutex
 	lastPrintTimestamp           int64
 	stop                         bool
-	notify                       *WaitNotifyObject
+	notify                       *system.WaitNotify
 	timesMapMutex                sync.RWMutex
 	sizeMapMutex                 sync.RWMutex
 }
@@ -81,7 +81,7 @@ func NewStoreStatsService() *StoreStatsService {
 	service.dispatchMaxBuffer = 0
 	service.lastPrintTimestamp = system.CurrentTimeMillis()
 	service.stop = false
-	service.notify = NewWaitNotifyObject()
+	service.notify = system.NewWaitNotify()
 
 	for i := 0; i < len(service.putMessageDistributeTime); i++ {
 		service.putMessageDistributeTime[i] = 0
@@ -98,7 +98,7 @@ func (service *StoreStatsService) Start() {
 			break
 		}
 
-		service.notify.waitForRunning(1000)
+		service.notify.WaitForRunning(1000)
 		service.sampling()
 		service.printTps()
 	}

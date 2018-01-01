@@ -26,13 +26,13 @@ type MessageFilter interface {
 	IsMessageMatched(subscriptionData *heartbeat.SubscriptionData, tagsCode int64) bool
 }
 
-// DefaultMessageFilter 消息过滤规则实现
+// defaultMessageFilter 消息过滤规则实现
 // Author zhoufei
 // Since 2017/9/6
-type DefaultMessageFilter struct {
+type defaultMessageFilter struct {
 }
 
-func (filer *DefaultMessageFilter) IsMessageMatched(subscriptionData *heartbeat.SubscriptionData, tagsCode int64) bool {
+func (filer *defaultMessageFilter) IsMessageMatched(subscriptionData *heartbeat.SubscriptionData, tagsCode int64) bool {
 	if nil == subscriptionData {
 		return true
 	}

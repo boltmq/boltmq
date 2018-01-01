@@ -29,7 +29,7 @@ type reputMessageService struct {
 	mutex           sync.Mutex
 }
 
-func NewreputMessageService(messageStore *PersistentMessageStore) *reputMessageService {
+func newReputMessageService(messageStore *PersistentMessageStore) *reputMessageService {
 	return &reputMessageService{
 		messageStore:    messageStore,
 		reputFromOffset: int64(0),

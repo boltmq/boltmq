@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/boltmq/boltmq/store/stats"
+	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )
 
@@ -46,6 +47,7 @@ type PersistentMessageStore struct {
 	dispatchMsgService   *dispatchMessageService    // 分发消息索引服务
 	allocateMFileService *allocateMappedFileService // 预分配文件
 	reputMsgService      *reputMessageService       // 从物理队列解析消息重新发送到逻辑队列
+	ha                   *haService                 // HA服务
 	idxService           *indexService              // 消息索引服务
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	tsService            *transactionService        // 分布式事务服务
@@ -57,38 +59,114 @@ type PersistentMessageStore struct {
 	storeTicker          *system.Ticker
 	shutdownFlag         bool // 存储服务是否启动
 	printTimes           int64
-	/*
-		//MessageFilter            *DefaultMessageFilter // 消息过滤
-		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
-		//CommitLog                *CommitLog
-		//consumeTopicTable        map[string]*consumeQueueTable
-		//consumeQueueTableMu      *sync.RWMutex
-		//FlushConsumeQueueService *FlushConsumeQueueService // 逻辑队列刷盘服务
-		//CleanCommitLogService    *CleanCommitLogService    // 清理物理文件服务
-		//CleanConsumeQueueService *CleanConsumeQueueService // 清理逻辑文件服务
-		//DispatchMessageService   *DispatchMessageService   // 分发消息索引服务
-		//IndexService             *IndexService             // 消息索引服务
-		//AllocateMapedFileService *AllocateMapedFileService // 从物理队列解析消息重新发送到逻辑队列
-		//ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
-		HAService                *HAService                // HA服务
-		//ScheduleMessageService   *ScheduleMessageService   // 定时服务
-		//TransactionStateService  *TransactionStateService  // 分布式事务服务
-		TransactionCheckExecuter *TransactionCheckExecuter // 事务回查接口
-		//StoreStatsService        *StoreStatsService        // 运行时数据统计
-		//RunningFlags             *RunningFlags             // 运行过程标志位
-		//SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
-		//ShutdownFlag             bool                      // 存储服务是否启动
-		//StoreCheckpoint          *StoreCheckpoint
-		//BrokerStatsManager       *stats.BrokerStatsManager
-		//storeTicker              *timeutil.Ticker
-		//printTimes               int64
-	*/
 }
 
-// GetMaxOffsetInQueue 获取指定队列最大Offset 如果队列不存在，返回-1
+func NewPersistentMessageStore(config *Config, brokerStats *stats.BrokerStats) *PersistentMessageStore {
+	ms := &PersistentMessageStore{}
+	ms.msgFilter = new(defaultMessageFilter)
+	ms.runFlags = new(runningFlags)
+	ms.clock = NewClock(1000)
+	ms.shutdownFlag = true
+	ms.printTimes = 0
+
+	ms.config = config
+	ms.brokerStats = brokerStats
+	//ms.allocateMFileService = nil
+	ms.consumeTopicTable = make(map[string]*consumeQueueTable)
+	ms.clog = newCommitLog(ms)
+	ms.cleanCLogService = newCleanCommitLogService(ms)
+	ms.cleanCQService = newCleanConsumeQueueService(ms)
+	ms.storeStats = stats.NewStoreStatsService()
+	ms.idxService = newIndexService(ms)
+	ms.ha = newHAService(ms)
+	ms.dispatchMsgService = newDispatchMessageService(ms.config.PutMsgIndexHightWater, ms)
+	ms.tsService = newTransactionService(ms)
+	ms.flushCQService = newFlushConsumeQueueService(ms)
+
+	switch ms.config.BrokerRole {
+	case SLAVE:
+		ms.reputMsgService = newReputMessageService(ms)
+		// reputMessageService依赖scheduleMessageService做定时消息的恢复，确保储备数据一致
+		ms.scheduleMsgService = newScheduleMessageService(ms)
+		break
+	case ASYNC_MASTER:
+		fallthrough
+	case SYNC_MASTER:
+		ms.reputMsgService = nil
+		ms.scheduleMsgService = newScheduleMessageService(ms)
+		break
+	default:
+		ms.reputMsgService = nil
+		ms.scheduleMsgService = nil
+	}
+
+	return ms
+}
+
+// Load
+func (ms *PersistentMessageStore) Load() bool {
+	storeCheckpoint, err := newStoreCheckpoint(getStorePathCheckpoint(ms.config.StorePathRootDir))
+	if err != nil {
+		logger.Error("load exception", err.Error())
+		return false
+	}
+	ms.steCheckpoint = storeCheckpoint
+
+	// 过程依赖此服务，所以提前启动
+	if ms.allocateMFileService != nil {
+		go ms.allocateMFileService.start()
+	}
+
+	go ms.dispatchMsgService.start()
+	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
+	go ms.idxService.start()
+	//TODO: maybe sleep 1 s.
+
+	var (
+		lastExitOk bool
+		result     = true
+	)
+	if lastExitOk = !ms.isTempFileExist(); lastExitOk {
+		logger.Info("last shutdown normally")
+	} else {
+		logger.Info("last shutdown abnormally")
+	}
+
+	// load 定时进度
+	// 这个步骤要放置到最前面，从CommitLog里Recover定时消息需要依赖加载的定时级别参数
+	// slave依赖scheduleMessageService做定时消息的恢复
+	if nil != ms.scheduleMsgService {
+		result = result && ms.scheduleMsgService.load()
+	}
+
+	// load commit log
+	ms.clog.load()
+
+	// load consume queue
+	ms.loadConsumeQueue()
+
+	// TODO load 事务模块
+	ms.idxService.load(lastExitOk)
+
+	// 尝试恢复数据
+	ms.recover(lastExitOk)
+	return result
+}
+
+func (ms *PersistentMessageStore) isTempFileExist() bool {
+	fileName := getStorePathAbortFile(ms.config.StorePathRootDir)
+	exist, err := pathExists(fileName)
+	if err != nil {
+		exist = false
+	}
+
+	return exist
+}
+
+// MaxOffsetInQueue 获取指定队列最大Offset 如果队列不存在，返回-1
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/9/20
-func (ms *PersistentMessageStore) GetMaxOffsetInQueue(topic string, queueId int32) int64 {
+func (ms *PersistentMessageStore) MaxOffsetInQueue(topic string, queueId int32) int64 {
 	logic := ms.findConsumeQueue(topic, queueId)
 	if logic != nil {
 		return logic.getMaxOffsetInQueue()
@@ -150,4 +228,37 @@ func (ms *PersistentMessageStore) putMessagePostionInfo(topic string, queueId in
 	if cq != nil {
 		cq.putMessagePostionInfoWrapper(offset, size, tagsCode, storeTimestamp, logicOffset)
 	}
+}
+
+// GetCommitLogData 数据复制使用：获取CommitLog数据
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/23
+func (ms *PersistentMessageStore) GetCommitLogData(offset int64) *mappedBufferResult {
+	if ms.shutdownFlag {
+		logger.Warn("message store has shutdown, so getPhyQueueData is forbidden")
+		return nil
+	}
+
+	return ms.clog.getData(offset)
+}
+
+// MaxPhyOffset 获取物理队列最大offset
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/24
+func (ms *PersistentMessageStore) MaxPhyOffset() int64 {
+	return ms.clog.getMaxOffset()
+}
+
+// AppendToCommitLog 向CommitLog追加数据，并分发至各个Consume Queue
+// Author: zhoufei, <zhoufei17@gome.com.cn>
+// Since: 2017/10/24
+func (ms *PersistentMessageStore) AppendToCommitLog(startOffset int64, data []byte) bool {
+	result := ms.clog.appendData(startOffset, data)
+	if result {
+		ms.reputMsgService.notify()
+	} else {
+		logger.Errorf("appendToPhyQueue failed %d %d", startOffset, len(data))
+	}
+
+	return result
 }
