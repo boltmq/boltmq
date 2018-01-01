@@ -14,6 +14,10 @@
 package persistent
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
 	"sync"
 
 	"github.com/boltmq/boltmq/store/stats"
@@ -112,20 +116,35 @@ func (ms *PersistentMessageStore) Load() bool {
 	}
 	ms.steCheckpoint = storeCheckpoint
 
-	// 过程依赖此服务，所以提前启动
-	if ms.allocateMFileService != nil {
-		go ms.allocateMFileService.start()
-	}
-
-	go ms.dispatchMsgService.start()
-	// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
-	go ms.idxService.start()
-	//TODO: maybe sleep 1 s.
-
 	var (
 		lastExitOk bool
 		result     = true
+		wg         sync.WaitGroup
 	)
+
+	// load过程依赖此服务
+	if ms.allocateMFileService != nil {
+		wg.Add(1)
+		go func() {
+			ms.allocateMFileService.start()
+			wg.Done()
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		ms.dispatchMsgService.start()
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
+		ms.idxService.start()
+		wg.Done()
+	}()
+	wg.Wait()
+
 	if lastExitOk = !ms.isTempFileExist(); lastExitOk {
 		logger.Info("last shutdown normally")
 	} else {
@@ -161,6 +180,127 @@ func (ms *PersistentMessageStore) isTempFileExist() bool {
 	}
 
 	return exist
+}
+
+func (ms *PersistentMessageStore) loadConsumeQueue() bool {
+	dirLogicDir := getStorePathConsumeQueue(ms.config.StorePathRootDir)
+	exist, err := pathExists(dirLogicDir)
+	if err != nil {
+		return false
+	}
+
+	if !exist {
+		if err := os.MkdirAll(dirLogicDir, os.FileMode(os.O_CREATE)); err != nil {
+			logger.Errorf("create dir [%s] err: %s", dirLogicDir, err)
+			return false
+		}
+
+		logger.Infof("create %s successful", dirLogicDir)
+	}
+
+	files, err := ioutil.ReadDir(dirLogicDir)
+	if err != nil {
+		logger.Warnf("default message store load consume queue directory %s, error: %s", dirLogicDir, err.Error())
+		return false
+	}
+
+	if files == nil {
+		return true
+	}
+
+	for _, fileTopic := range files {
+		topic := fileTopic.Name()
+		topicDir := fmt.Sprintf("%s%c%s", dirLogicDir, os.PathSeparator, topic)
+		fileQueueIdList, err := ioutil.ReadDir(topicDir)
+		if err != nil {
+			logger.Error("message store load consume queue load topic directory error:", err.Error())
+			return false
+		}
+
+		if fileQueueIdList != nil {
+			for _, fileQueueId := range fileQueueIdList {
+				queueId, err := strconv.Atoi(fileQueueId.Name())
+				if err != nil {
+					logger.Error("message store load consume queue parse queue id error:", err.Error())
+					continue
+				}
+
+				logic := newConsumeQueue(topic, int32(queueId),
+					getStorePathConsumeQueue(ms.config.StorePathRootDir),
+					int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
+
+				ms.putConsumeQueue(topic, int32(queueId), logic)
+
+				if !logic.load() {
+					return false
+				}
+			}
+		}
+	}
+
+	logger.Info("load logics queue all over, OK")
+	return true
+}
+
+func (ms *PersistentMessageStore) putConsumeQueue(topic string, queueId int32, cq *consumeQueue) {
+	ms.consumeQueueTableMu.Lock()
+	defer ms.consumeQueueTableMu.Unlock()
+
+	cqMap, ok := ms.consumeTopicTable[topic]
+	if !ok {
+		cqMap = newConsumeQueueTable()
+		cqMap.consumeQueues[queueId] = cq
+		ms.consumeTopicTable[topic] = cqMap
+	}
+
+	cqMap.consumeQueues[queueId] = cq
+}
+
+func (ms *PersistentMessageStore) recover(lastExitOK bool) {
+	// 先按照正常流程恢复Consume Queue
+	ms.recoverConsumeQueue()
+
+	// 正常数据恢复
+	if lastExitOK {
+		ms.clog.recoverNormally()
+	} else {
+		// 异常数据恢复，OS CRASH或者机器掉电 else
+		ms.clog.recoverAbnormally()
+	}
+
+	// 保证消息都能从DispatchService缓冲队列进入到真正的队列
+	//		ticker := time.NewTicker(time.Millisecond * 500)
+	//	for _ = range ticker.C {
+	//		if !ms.dispatchMsgService.hasRemainMessage() {
+	//			break
+	//		}
+	//	}
+
+	// 恢复事务模块
+	// TODO ms.TransactionStateService.recoverStateTable(lastExitOK);
+	ms.recoverTopicQueueTable()
+}
+
+func (ms *PersistentMessageStore) recoverConsumeQueue() {
+	for _, value := range ms.consumeTopicTable {
+		for _, logic := range value.consumeQueues {
+			logic.recover()
+		}
+	}
+}
+
+func (ms *PersistentMessageStore) recoverTopicQueueTable() {
+	table := make(map[string]int64)
+	minPhyOffset := ms.clog.getMinOffset()
+	for _, cqTable := range ms.consumeTopicTable {
+		for _, logic := range cqTable.consumeQueues {
+			key := fmt.Sprintf("%s-%d", logic.topic, logic.queueId) // 恢复写入消息时，记录的队列offset
+			table[key] = logic.getMaxOffsetInQueue()
+			logic.correctMinOffset(minPhyOffset) // 恢复每个队列的最小offset
+		}
+	}
+
+	ms.clog.topicQueueTable = table
 }
 
 // MaxOffsetInQueue 获取指定队列最大Offset 如果队列不存在，返回-1
