@@ -48,8 +48,11 @@ type PersistentMessageStore struct {
 	scheduleMsgService   *scheduleMessageService    // 定时服务
 	tsService            *transactionService        // 分布式事务服务
 	runFlags             *runningFlags              // 运行过程标志位
+	clock                *Clock                     // 优化获取时间性能，精度1ms
+	shutdownFlag         bool                       // 存储服务是否启动
+	storeStats           stats.StoreStats           // 运行时数据统计
+	brokerStats          *stats.BrokerStats
 	steCheckpoint        *storeCheckpoint
-	storeStats           stats.StoreStats // 运行时数据统计
 	/*
 		MessageFilter            *DefaultMessageFilter // 消息过滤
 		//MessageStoreConfig       *MessageStoreConfig   // 存储配置
@@ -65,14 +68,14 @@ type PersistentMessageStore struct {
 		//ReputMessageService      *ReputMessageService      // 从物理队列解析消息重新发送到逻辑队列
 		HAService                *HAService                // HA服务
 		//ScheduleMessageService   *ScheduleMessageService   // 定时服务
-		TransactionStateService  *TransactionStateService  // 分布式事务服务
+		//TransactionStateService  *TransactionStateService  // 分布式事务服务
 		TransactionCheckExecuter *TransactionCheckExecuter // 事务回查接口
 		//StoreStatsService        *StoreStatsService        // 运行时数据统计
 		//RunningFlags             *RunningFlags             // 运行过程标志位
-		SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
-		ShutdownFlag             bool                      // 存储服务是否启动
+		//SystemClock              *stgcommon.SystemClock    // 优化获取时间性能，精度1ms
+		//ShutdownFlag             bool                      // 存储服务是否启动
 		//StoreCheckpoint          *StoreCheckpoint
-		BrokerStatsManager       *stats.BrokerStatsManager
+		//BrokerStatsManager       *stats.BrokerStatsManager
 		storeTicker              *timeutil.Ticker
 		printTimes               int64
 	*/
