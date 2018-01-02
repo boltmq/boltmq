@@ -22,10 +22,10 @@ import (
 // Author zhoufei
 // Since 2017/9/6
 type MessageStore interface {
-	//Load() bool //
-	//Start() error                                                 //
-	//Shutdown()                                                    // 关闭存储服务
-	//Destroy()                                                     //
+	Load() bool                                        //
+	Start() error                                      //
+	Shutdown()                                         // 关闭存储服务
+	Destroy()                                          //
 	PutMessage(msg *MessageExtInner) *PutMessageResult //
 	GetMessage(group string, topic string, queueId int32, offset int64, maxMsgNums int32, subscriptionData *heartbeat.SubscriptionData) *GetMessageResult
 	MaxOffsetInQueue(topic string, queueId int32) int64                                              // 获取指定队列最大Offset 如果队列不存在，返回-1

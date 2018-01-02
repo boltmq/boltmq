@@ -76,6 +76,10 @@ type PersistentMessageStore struct {
 	printTimes           int64
 }
 
+func NewMessageStore(config *Config, brokerStats *stats.BrokerStats) store.MessageStore {
+	return newPersistentMessageStore(config, brokerStats)
+}
+
 func newPersistentMessageStore(config *Config, brokerStats *stats.BrokerStats) *PersistentMessageStore {
 	ms := &PersistentMessageStore{}
 	ms.msgFilter = new(defaultMessageFilter)
@@ -384,7 +388,7 @@ func (ms *PersistentMessageStore) putMessagePostionInfo(topic string, queueId in
 // GetCommitLogData 数据复制使用：获取CommitLog数据
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/10/23
-func (ms *PersistentMessageStore) GetCommitLogData(offset int64) *mappedBufferResult {
+func (ms *PersistentMessageStore) GetCommitLogData(offset int64) store.BufferResult {
 	if ms.shutdownFlag {
 		logger.Warn("message store has shutdown, so getPhyQueueData is forbidden")
 		return nil
@@ -886,7 +890,7 @@ func (ms *PersistentMessageStore) CheckInDiskByConsumeOffset(topic string, queue
 // SelectOneMessageByOffset 通过物理队列Offset，查询消息。 如果发生错误，则返回null
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/9/20
-func (ms *PersistentMessageStore) SelectOneMessageByOffset(commitLogOffset int64) *mappedBufferResult {
+func (ms *PersistentMessageStore) SelectOneMessageByOffset(commitLogOffset int64) store.BufferResult {
 	selectResult := ms.clog.getMessage(commitLogOffset, 4)
 	if selectResult != nil {
 		defer selectResult.Release()
@@ -900,7 +904,7 @@ func (ms *PersistentMessageStore) SelectOneMessageByOffset(commitLogOffset int64
 // SelectOneMessageByOffsetAndSize 通过物理队列Offset、size，查询消息。 如果发生错误，则返回null
 // Author: zhoufei, <zhoufei17@gome.com.cn>
 // Since: 2017/9/20
-func (ms *PersistentMessageStore) SelectOneMessageByOffsetAndSize(commitLogOffset int64, msgSize int32) *mappedBufferResult {
+func (ms *PersistentMessageStore) SelectOneMessageByOffsetAndSize(commitLogOffset int64, msgSize int32) store.BufferResult {
 	return ms.clog.getMessage(commitLogOffset, msgSize)
 }
 
@@ -1094,4 +1098,26 @@ func (ms *PersistentMessageStore) MessageIds(topic string, queueId int32, minOff
 	}
 
 	return messageIds
+}
+
+//  CommitLogOffsetInQueue
+// Author: luoji, <gunsluo@gmail.com>
+// Since: 2018-01-02
+func (ms *PersistentMessageStore) CommitLogOffsetInQueue(topic string, queueId int32, cqOffset int64) int64 {
+	return 0
+}
+
+func (ms *PersistentMessageStore) ExcuteDeleteFilesManualy() {
+}
+
+func (ms *PersistentMessageStore) MessageTotalInQueue(topic string, queueId int32) int64 {
+	return 0
+}
+
+func (ms *PersistentMessageStore) MinPhyOffset() int64 {
+	return 0
+}
+
+func (ms *PersistentMessageStore) RunningDataInfo() string {
+	return ""
 }

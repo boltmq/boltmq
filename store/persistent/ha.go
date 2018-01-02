@@ -220,7 +220,8 @@ func (wss *writeSocketService) buildData() {
 	thisOffset := wss.nextTransferFromWhere
 	var size int32 = 0
 
-	wss.bufferResult = wss.haConn.ha.messageStore.GetCommitLogData(thisOffset)
+	bufferResult := wss.haConn.ha.messageStore.GetCommitLogData(thisOffset)
+	wss.bufferResult = bufferResult.(*mappedBufferResult)
 	var resultBuffer []byte
 	if wss.bufferResult != nil {
 		size = wss.bufferResult.size
