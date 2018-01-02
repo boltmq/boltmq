@@ -102,7 +102,7 @@ func (gmr *GetMessageResult) GetMessageCount() int {
 	return gmr.MessageMapedList.Len()
 }
 
-func (gmr *GetMessageResult) addMessage(bufferResult BufferResult) {
+func (gmr *GetMessageResult) AddMessage(bufferResult BufferResult) {
 	gmr.MessageMapedList.PushBack(bufferResult)
 	gmr.MessageBufferList.PushBack(bufferResult.Buffer())
 	gmr.BufferTotalSize += bufferResult.Size()
