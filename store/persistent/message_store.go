@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/boltmq/boltmq/store/stats"
+	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )
