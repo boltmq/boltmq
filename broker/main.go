@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime/debug"
+
+	"github.com/boltmq/boltmq/broker/config"
+	"github.com/boltmq/common/logger"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 )
 
 func main() {
-	c := flag.String("c", "configPath", "config broker.toml file")
+	c := flag.String("c", "", "broker config file, default etc/broker.toml")
 	h := flag.Bool("h", false, "help")
 	v := flag.Bool("v", false, "version")
 
@@ -23,9 +25,18 @@ func main() {
 	}
 
 	if *v {
-		fmt.Println("boltmq version: %s", version)
+		fmt.Println("boltmq broker version:", version)
 		os.Exit(0)
 	}
 
-	debug.SetMaxThreads(100000)
+	cfg, err := config.ParseConfig(*c)
+	if err != nil {
+		fmt.Printf("load config: %s.\n", err)
+		logger.Errorf("load config: %s.", err)
+		return
+	}
+	logger.Info("load config success.")
+
+	fmt.Println("->", cfg)
+	//debug.SetMaxThreads(100000)
 }
