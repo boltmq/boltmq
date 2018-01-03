@@ -1,0 +1,30 @@
+# This is broker config file, a TOML document.
+# clusetr: broker's cluster configuration
+# log:     broker's log configuration
+# store:   broker's store configuration
+
+[cluster]
+# cluster's name.name must be the same in cluster. 
+cluster_name="BoltMQCluster"
+# delete when, when to trigger the deletion of invalid message.
+delete_when=04
+# msg file reserved time, default: 48 hours.
+file_reserved_time=48
+# message flush disk type. type: SYNC_FLUSH, ASYNC_FLUSH
+flush_disk_type="SYNC_FLUSH"
+# auto create topic in broker. default: false
+auto_create_topic_enable=false
+# broker's name. master and salve have the same broker name. 
+broker_name="broker-name"
+# broker's id. master: zero salve: non-zero. 
+broker_id=0
+# broker's role. role: SYNC_MASTER, SLAVE.
+broker_role="SYNC_MASTER"
+
+[store]
+# boltmq's store root dir. default: $HOME/store.
+root_dir="$HOME/store"
+
+[log]
+# log's config file path. default: etc/seelog.xml.
+config_file_path="etc/seelog.xml"
