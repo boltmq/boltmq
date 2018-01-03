@@ -49,7 +49,7 @@ func TestParseConfig(t *testing.T) {
 		return
 	}
 
-	if cfg.Cluster.BrokerName != "broker-name" {
+	if cfg.Cluster.BrokerName != "broker-node" {
 		t.Errorf("ParseConfig failed")
 		return
 	}
@@ -59,13 +59,21 @@ func TestParseConfig(t *testing.T) {
 		return
 	}
 
-	if cfg.Store.RootDir != "$HOME/store" {
+	if cfg.Store.RootDir != defaultRootDir() {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
 	if cfg.Log.CfgFilePath != "etc/seelog.xml" {
 		t.Errorf("ParseConfig failed")
+		return
+	}
+}
+
+func TestParseConfigError(t *testing.T) {
+	_, err := ParseConfig("")
+	if err == nil {
+		t.Errorf("ParseConfig:%s", err)
 		return
 	}
 }

@@ -15,7 +15,7 @@ flush_disk_type="SYNC_FLUSH"
 # auto create topic in broker. default: false
 auto_create_topic_enable=false
 # broker's name. master and salve have the same broker name. 
-broker_name="broker-name"
+broker_name="broker-node"
 # broker's id. master: zero salve: non-zero. 
 broker_id=0
 # broker's role. role: SYNC_MASTER, SLAVE.
@@ -23,7 +23,7 @@ broker_role="SYNC_MASTER"
 
 [store]
 # boltmq's store root dir. default: $HOME/store.
-root_dir="$HOME/store"
+root_dir="{{HOME}}/store"
 
 [log]
 # log's config file path. default: etc/seelog.xml.
