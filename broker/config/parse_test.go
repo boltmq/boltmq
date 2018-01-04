@@ -24,37 +24,37 @@ func TestParseConfig(t *testing.T) {
 		return
 	}
 
-	if cfg.Cluster.ClusterName != "BoltMQCluster" {
+	if cfg.Cluster.Name != defaultConfig.Cluster.Name {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.DeleteWhen != 4 {
+	if cfg.Broker.DeleteWhen != defaultConfig.Broker.DeleteWhen {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.FileReservedTime != 48 {
+	if cfg.Store.FileReservedTime != defaultConfig.Store.FileReservedTime {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.FlushDiskType != "SYNC_FLUSH" {
+	if cfg.Store.FlushDiskType != defaultConfig.Store.FlushDiskType {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.AutoCreateTopicEnable != false {
+	if cfg.Broker.AutoCreateTopicEnable != defaultConfig.Broker.AutoCreateTopicEnable {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.BrokerName != "broker-node" {
+	if cfg.Cluster.BrokerName != defaultConfig.Cluster.BrokerName {
 		t.Errorf("ParseConfig failed")
 		return
 	}
 
-	if cfg.Cluster.BrokerRole != "SYNC_MASTER" {
+	if cfg.Cluster.BrokerRole != defaultConfig.Cluster.BrokerRole {
 		t.Errorf("ParseConfig failed")
 		return
 	}
@@ -64,7 +64,7 @@ func TestParseConfig(t *testing.T) {
 		return
 	}
 
-	if cfg.Log.CfgFilePath != "etc/seelog.xml" {
+	if cfg.Log.CfgFilePath != defaultConfig.Log.CfgFilePath {
 		t.Errorf("ParseConfig failed")
 		return
 	}

@@ -13,14 +13,33 @@
 // limitations under the License.
 package config
 
-import "os/user"
+import (
+	"os"
+	"os/user"
+)
 
 const (
 	envBoltmqBrokerConfigPath = "BOLTMQ_BROKER_CONFIG_PATH"
+	envNameSrvAddrs           = "NAMESRV_ADDRS"
 )
 
 var envNullDefaultValues = map[string]string{
 	"BOLTMQ_BROKER_CONFIG_PATH": "etc/broker.toml",
+	"NAMESRV_ADDRS":             "127.0.0.1:9876",
+}
+
+// 获取配置文件路径。1. 传入参数得到路径
+// 2.传入参数为空，从环境变量得到路径。 以上都未得到，返回默认路径。
+func getConfigEnvValue(val, envar string) string {
+	if val != "" {
+		return val
+	}
+
+	if val = os.Getenv(envar); val != "" {
+		return val
+	}
+
+	return defaultValue(envar)
 }
 
 func defaultValue(envar string) string {
