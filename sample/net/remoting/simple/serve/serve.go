@@ -20,7 +20,7 @@ import (
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header/namesrv"
+	"github.com/boltmq/common/protocol/namesrv"
 )
 
 var (

@@ -29,6 +29,7 @@ import (
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
+	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/sysflag"
 	"github.com/boltmq/common/utils/codec"
 	"github.com/boltmq/common/utils/system"
@@ -361,7 +362,7 @@ func (clog *commitLog) checkMessageAndReturnSize(byteBuffer *mappedByteBuffer, c
 		keys = propertiesMap[message.PROPERTY_KEYS]
 		tags := propertiesMap[message.PROPERTY_TAGS]
 		if len(tags) > 0 {
-			tagsCode = tagsString2tagsCode(message.ParseTopicFilterType(sysFlag), tags)
+			tagsCode = tagsString2tagsCode(protocol.ParseTopicFilterType(sysFlag), tags)
 		}
 
 		// Timing message processing
