@@ -15,12 +15,21 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/boltmq/common/utils/encoding"
 	"github.com/flosch/pongo2"
 	"github.com/imdario/mergo"
+	"github.com/juju/errors"
+)
+
+const (
+	defaultBrokerPermission = 6
+	defaultTopicQueueNums   = 8
+	MASTER_ID               = 0
 )
 
 // ParseConfig 解析配置文件
@@ -29,7 +38,7 @@ func ParseConfig(path string) (*Config, error) {
 		cfg Config
 	)
 
-	path = getConfigPath(path, envBoltmqBrokerConfigPath)
+	path = getConfigEnvValue(path, envBoltmqBrokerConfigPath)
 	if err := encoding.DecodeToml(path, &cfg); err != nil {
 		return nil, err
 	}
@@ -41,33 +50,42 @@ func ParseConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-// 获取配置文件路径。1. 传入参数得到路径
-// 2.传入参数为空，从环境变量得到路径。 以上都未得到，返回默认路径。
-func getConfigPath(path, envar string) string {
-	if path != "" {
-		return path
-	}
-
-	if path = os.Getenv(envar); path != "" {
-		return path
-	}
-
-	return defaultValue(envar)
-}
-
 var defaultConfig = &Config{
 	Cluster: ClusterConfig{
-		ClusterName:           "BoltMQCluster",
-		BrokerName:            "broker-node",
-		BrokerId:              0,
-		BrokerRole:            "SYNC_MASTER",
-		DeleteWhen:            4,
-		FileReservedTime:      48,
-		FlushDiskType:         "SYNC_FLUSH",
-		AutoCreateTopicEnable: false,
+		Name:         "BoltMQCluster",
+		BrokerId:     MASTER_ID,
+		BrokerName:   "broker-node",
+		BrokerRole:   "SYNC_MASTER",
+		HaServerIP:   defaultLocalAddress(),
+		NameSrvAddrs: getNameSrvAddrs(),
+	},
+	Broker: BrokerConfig{
+		IP:                                 defaultLocalAddress(),
+		Port:                               11911,
+		DeleteWhen:                         4,
+		Permission:                         defaultBrokerPermission,
+		DefaultTopicQueueNums:              defaultTopicQueueNums,
+		AutoCreateTopicEnable:              false,
+		ClusterTopicEnable:                 true,
+		BrokerTopicEnable:                  true,
+		AutoCreateSubscriptionGroup:        true,
+		FlushConsumerOffsetInterval:        5000,
+		FlushConsumerOffsetHistoryInterval: 60000,
+		RejectTransactionMessage:           false,
+		FetchNameSrvAddrByAddressServer:    false,
+		SendThreadPoolQueueCapacity:        100000,
+		PullThreadPoolQueueCapacity:        100000,
+		FilterServerNums:                   0,
+		LongPollingEnable:                  true,
+		ShortPollingTimeMills:              1000,
+		NotifyConsumerIdsChangedEnable:     true,
+		OffsetCheckInSlave:                 true,
+		HaMasterAddress:                    "",
 	},
 	Store: StoreConfig{
-		RootDir: defaultRootDir(),
+		RootDir:          defaultRootDir(),
+		FileReservedTime: 48,
+		FlushDiskType:    "SYNC_FLUSH",
 	},
 	Log: LogConfig{
 		CfgFilePath: "etc/seelog.xml",
@@ -112,4 +130,43 @@ func defaultRootDir() string {
 	}
 
 	return fmt.Sprintf("%s%cstore", uhome, os.PathSeparator)
+}
+
+func getNameSrvAddrs() []string {
+	vals := getConfigEnvValue("", envNameSrvAddrs)
+	return strings.Split(vals, ";")
+}
+
+func defaultLocalAddress() string {
+	if laddr, err := localAddress(); err == nil {
+		return laddr
+	}
+
+	return "127.0.0.1"
+}
+
+func localAddress() (laddr string, err error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return laddr, err
+	}
+
+	for _, addr := range addrs {
+		// 检查ip地址判断是否回环地址
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil && !isIntranetIpv4(ipnet.IP.String()) {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+
+	return "", errors.Errorf("<none>")
+}
+
+func isIntranetIpv4(ip string) bool {
+	//if strings.HasPrefix(ip, "192.168.") || strings.HasPrefix(ip, "169.254.") {
+	if strings.HasPrefix(ip, "169.254.") {
+		return true
+	}
+	return false
 }

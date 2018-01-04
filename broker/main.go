@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/boltmq/boltmq/broker/config"
+	"github.com/boltmq/boltmq/broker/server"
 	"github.com/boltmq/common/logger"
 )
 
@@ -37,6 +38,7 @@ func main() {
 	}
 	logger.Info("load config success.")
 
-	fmt.Println("->", cfg)
+	controller := server.NewBrokerController(cfg)
+	fmt.Println("->", cfg, controller)
 	//debug.SetMaxThreads(100000)
 }
