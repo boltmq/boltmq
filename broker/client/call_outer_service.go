@@ -18,6 +18,9 @@ import (
 
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/protocol/namesrv"
+	"github.com/juju/errors"
 )
 
 const (
@@ -64,8 +67,8 @@ func (cos *CallOuterService) Shutdown() {
 // UpdateNameServerAddressList 更新nameService地址
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) UpdateNameServerAddressList(namesrvAddrs string) {
-	addrs := strings.Split(namesrvAddrs, ";")
+func (cos *CallOuterService) UpdateNameServerAddressList(nameSrvAddrs string) {
+	addrs := strings.Split(nameSrvAddrs, ";")
 	if addrs != nil && len(addrs) > 0 {
 		cos.remotingClient.UpdateNameServerAddressList(addrs)
 	}
@@ -86,45 +89,40 @@ func (cos *CallOuterService) FetchNameServerAddr() string {
 	return cos.nameSrvAddr
 }
 
-/*
 // RegisterBroker 向nameService注册broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
-	topicConfigWrapper *body.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
+func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
+	topicConfigWrapper *protocol.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
+	requestHeader := namesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
+	request := protocol.CreateRequestCommand(protocol.REGISTER_BROKER, requestHeader)
 
-	requestHeader := headerNamesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
-	request := protocol.CreateRequestCommand(code.REGISTER_BROKER, requestHeader)
-
-	requestBody := body.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
+	requestBody := namesrv.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
 	content := requestBody.CustomEncode(requestBody)
 	request.Body = content
-	//logger.Infof("register broker, request.body is %s", string(content))
 
 	if oneway {
-		cos.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+		cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
 		return nil, nil
 	}
 
-	response, err := cos.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+	response, err := cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("register broker failed. err: %s, %s", err.Error(), request.ToString())
+		logger.Errorf("register broker failed. err: %s, %s", err.Error(), request)
 		return nil, err
 	}
 	if response == nil {
 		errMsg := "register broker end, but response nil"
 		logger.Error(errMsg)
-		return nil, fmt.Errorf(errMsg)
+		return nil, errors.Errorf(errMsg)
 	}
 
-	if response.Code != code.SUCCESS {
-		errMsg := "register broker end, but not success. %s"
-		logger.Errorf(errMsg, response.ToString())
-		return nil, fmt.Errorf(errMsg, response.ToString())
+	if response.Code != protocol.SUCCESS {
+		logger.Errorf("register broker end, but not success. %s", response.String())
+		return nil, errors.Errorf("register broker end, but not success. %s", response.String())
 	}
 
-	//logger.Infof("register broker ok. %s", response.ToString())
-	responseHeader := &headerNamesrv.RegisterBrokerResponseHeader{}
+	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
 		logger.Errorf("err: %s", err.Error())
@@ -143,6 +141,7 @@ func (cos *CallOuterService) RegisterBroker(namesrvAddr, clusterName, brokerAddr
 	return result, nil
 }
 
+/*
 // RegisterBrokerAll 向nameservice注册所有broker
 // Author gaoyanlei
 // Since 2017/8/22
@@ -156,8 +155,8 @@ func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerNa
 		return registerBrokerResult
 	}
 
-	for _, namesrvAddr := range nameServerAddressList {
-		result, err := cos.RegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
+	for _, nameSrvAddr := range nameServerAddressList {
+		result, err := cos.RegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
 		if err != nil {
 			logger.Errorf("brokerOuterAPI.RegisterBrokerAll() err: %s", err.Error())
 			return nil
@@ -165,7 +164,7 @@ func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerNa
 		if result != nil {
 			registerBrokerResult = result
 		}
-		//logger.Infof("register broker to name server %s OK, the result: %s", namesrvAddr, result.ToString())
+		//logger.Infof("register broker to name server %s OK, the result: %s", nameSrvAddr, result.ToString())
 	}
 	return registerBrokerResult
 }
@@ -173,12 +172,12 @@ func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerNa
 // UnRegisterBroker 注销单个broker
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
+func (cos *CallOuterService) UnRegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) {
 	defer utils.RecoveredFn()
 
 	requestHeader := headerNamesrv.NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName, brokerId)
 	request := protocol.CreateRequestCommand(code.UNREGISTER_BROKER, requestHeader)
-	response, err := cos.remotingClient.InvokeSync(namesrvAddr, request, timeout)
+	response, err := cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
 	if err != nil {
 		logger.Errorf("unRegisterBroker err: %s, the request is %s", err.Error(), request.ToString())
 		return
@@ -201,9 +200,9 @@ func (cos *CallOuterService) UnRegisterBrokerAll(clusterName, brokerAddr, broker
 		return
 	}
 
-	for _, namesrvAddr := range nameServerAddressList {
-		cos.UnRegisterBroker(namesrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-		logger.Infof("unregister all broker to name server %s OK", namesrvAddr)
+	for _, nameSrvAddr := range nameServerAddressList {
+		cos.UnRegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, brokerId)
+		logger.Infof("unregister all broker to name server %s OK", nameSrvAddr)
 	}
 }
 
