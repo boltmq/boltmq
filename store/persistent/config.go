@@ -87,9 +87,16 @@ type Config struct {
 	SyncMethod                             SynchronizationMethod `json:"SyncMethod"`               // 主从同步数据类型
 }
 
+func NewConfig(storeRootDir string) *Config {
+	return newConfig(storeRootDir)
+}
+
 func defaultConfig() *Config {
 	storeRootDir := fmt.Sprintf("%s%cstore", system.Home(), os.PathSeparator)
+	return newConfig(storeRootDir)
+}
 
+func newConfig(storeRootDir string) *Config {
 	conf := &Config{}
 	conf.StorePathRootDir = storeRootDir
 	conf.StorePathCommitLog = getStorePathCommitLog(storeRootDir)
