@@ -58,10 +58,50 @@ type BrokerController struct {
 }
 
 // NewBrokerController 创建BrokerController对象
-func NewBrokerController(cfg *config.Config) *BrokerController {
+func NewBrokerController(cfg *config.Config) (*BrokerController, error) {
 	controller := &BrokerController{
-		cfg: cfg,
+		cfg:      cfg,
+		storeCfg: persistent.NewConfig(cfg.Store.RootDir),
 	}
 
-	return controller
+	if err := controller.fixConfig(); err != nil {
+		return nil, err
+	}
+
+	return controller, nil
+}
+
+func (controller *BrokerController) fixConfig() error {
+	if brokerRole, err := persistent.ParseBrokerRoleType(controller.cfg.Cluster.BrokerRole); err != nil {
+		return err
+	} else {
+		controller.storeCfg.BrokerRole = brokerRole
+	}
+
+	if flushDisk, err := persistent.ParseFlushDiskType(controller.cfg.Store.FlushDiskType); err != nil {
+		return err
+	} else {
+		controller.storeCfg.FlushDisk = flushDisk
+	}
+
+	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
+	if controller.storeCfg.BrokerRole == persistent.SLAVE {
+		ratio := controller.storeCfg.AccessMessageInMemoryMaxRatio - 10
+		controller.storeCfg.AccessMessageInMemoryMaxRatio = ratio
+	}
+
+	switch controller.storeCfg.BrokerRole {
+	case persistent.ASYNC_MASTER:
+		fallthrough
+	case persistent.SYNC_MASTER:
+		controller.cfg.Cluster.BrokerId = config.MASTER_ID
+	case persistent.SLAVE:
+	default:
+	}
+
+	if controller.cfg.Broker.HaMasterAddress != "" {
+		controller.storeCfg.HaMasterAddress = controller.cfg.Broker.HaMasterAddress // HA功能配置此项
+	}
+
+	return nil
 }

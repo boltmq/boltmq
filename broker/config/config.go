@@ -54,7 +54,7 @@ type BrokerConfig struct {
 	ShortPollingTimeMills              int    `toml:"short_polling_timemills"`                // 如果是短轮询，服务器挂起时间
 	NotifyConsumerIdsChangedEnable     bool   `toml:"notify_consumer_ids_changed_enable"`     // notify consumerId changed 开关
 	OffsetCheckInSlave                 bool   `toml:"offset_check_in_slave"`                  // slave 是否需要纠正位点
-	HaMasterAddress                    string `toml:""`                                       // 适用场景：HA功能配置(将slave角色的 ha地址，指向master角色)
+	HaMasterAddress                    string `toml:"ha_master_addr"`                         // 适用场景：HA功能配置(将slave角色的 ha地址，指向master角色)
 }
 
 // StoreConfig 存储相关配置

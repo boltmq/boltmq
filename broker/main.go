@@ -38,7 +38,12 @@ func main() {
 	}
 	logger.Info("load config success.")
 
-	controller := server.NewBrokerController(cfg)
+	controller, err := server.NewBrokerController(cfg)
+	if err != nil {
+		fmt.Printf("create broker controller: %s.\n", err)
+		logger.Errorf("create broker controller: %s.", err)
+		return
+	}
 	fmt.Println("->", cfg, controller)
 	//debug.SetMaxThreads(100000)
 }
