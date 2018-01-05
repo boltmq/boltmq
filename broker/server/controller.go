@@ -16,21 +16,26 @@ package server
 import (
 	"github.com/boltmq/boltmq/broker/client"
 	"github.com/boltmq/boltmq/broker/config"
+	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
+	"github.com/boltmq/common/basis"
 )
 
 // BrokerController broker服务控制器
 // Author gaoyanlei
 // Since 2017/8/25
 type BrokerController struct {
-	cfg       *config.Config
-	storeCfg  *persistent.Config
-	callOuter *client.CallOuterService
+	cfg              *config.Config
+	storeCfg         *persistent.Config
+	dataVersion      *basis.DataVersion
+	csmOffsetManager *consumerOffsetManager
+	callOuter        *client.CallOuterService
+	messageStore     store.MessageStore
 	/*
 		//BrokerConfig                         *stgcommon.BrokerConfig
 		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
-		ConfigDataVersion                    *stgcommon.DataVersion
-		ConsumerOffsetManager                *ConsumerOffsetManager
+		//ConfigDataVersion                    *stgcommon.DataVersion
+		//ConsumerOffsetManager                *ConsumerOffsetManager
 		ConsumerManager                      *client.ConsumerManager
 		ProducerManager                      *client.ProducerManager
 		ClientHousekeepingService            *ClientHouseKeepingService
@@ -43,7 +48,7 @@ type BrokerController struct {
 		RebalanceLockManager                 *RebalanceLockManager
 		//BrokerOuterAPI                       *out.BrokerOuterAPI
 		SlaveSynchronize                     *SlaveSynchronize
-		MessageStore                         *stgstorelog.DefaultMessageStore
+		//MessageStore                         *stgstorelog.DefaultMessageStore
 		RemotingClient                       *remoting.DefalutRemotingClient
 		RemotingServer                       *remoting.DefalutRemotingServer
 		TopicConfigManager                   *TopicConfigManager

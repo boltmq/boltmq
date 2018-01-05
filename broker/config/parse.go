@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/boltmq/common/utils/encoding"
+	"github.com/boltmq/common/utils/system"
 	"github.com/flosch/pongo2"
 	"github.com/imdario/mergo"
 	"github.com/juju/errors"
@@ -104,8 +105,8 @@ func mergeConfig(cfg *Config) error {
 }
 
 func fixPath(path string) string {
-	uhome, err := home()
-	if err != nil {
+	uhome := system.Home()
+	if uhome == "" {
 		return path
 	}
 
@@ -124,11 +125,7 @@ func fixPath(path string) string {
 }
 
 func defaultRootDir() string {
-	uhome, err := home()
-	if err != nil {
-		return ""
-	}
-
+	uhome := system.Home()
 	return fmt.Sprintf("%s%cstore", uhome, os.PathSeparator)
 }
 

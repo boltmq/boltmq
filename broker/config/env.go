@@ -15,7 +15,6 @@ package config
 
 import (
 	"os"
-	"os/user"
 )
 
 const (
@@ -48,13 +47,4 @@ func defaultValue(envar string) string {
 	}
 
 	return ""
-}
-
-func home() (string, error) {
-	user, err := user.Current()
-	if nil == err {
-		return user.HomeDir, nil
-	}
-
-	return "", err
 }
