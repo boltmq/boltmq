@@ -29,6 +29,7 @@ type BrokerController struct {
 	storeCfg         *persistent.Config
 	dataVersion      *basis.DataVersion
 	csmOffsetManager *consumerOffsetManager
+	csmManager       *consumerManager
 	callOuter        *client.CallOuterService
 	messageStore     store.MessageStore
 	/*
@@ -36,7 +37,7 @@ type BrokerController struct {
 		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
 		//ConfigDataVersion                    *stgcommon.DataVersion
 		//ConsumerOffsetManager                *ConsumerOffsetManager
-		ConsumerManager                      *client.ConsumerManager
+		//ConsumerManager                      *client.ConsumerManager
 		ProducerManager                      *client.ProducerManager
 		ClientHousekeepingService            *ClientHouseKeepingService
 		DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter

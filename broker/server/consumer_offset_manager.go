@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/boltmq/boltmq/stgcommon"
 	"github.com/boltmq/common/logger"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
@@ -93,7 +92,7 @@ func (com *consumerOffsetManager) scanUnsubscribedTopic() {
 		}
 		topic := arrays[0]
 		group := arrays[1]
-		findSubscriptionData := com.brokerController.ConsumerManager.FindSubscriptionData(group, topic)
+		findSubscriptionData := com.brokerController.csmManager.findSubscriptionData(group, topic)
 		hasBehindMuchThanData := com.offsetBehindMuchThanData(topic, v)
 
 		// 当前订阅关系里面没有group-topic订阅关系（消费端当前是停机的状态）并且offset落后很多,则删除消费进度
@@ -217,7 +216,7 @@ func (com *consumerOffsetManager) cloneOffset(srcGroup, destGroup, topic string)
 func (com *consumerOffsetManager) queryMinOffsetInAllGroup(topic, filterGroups string) map[int]int64 {
 	queueMinOffset := make(map[int]int64)
 
-	if !stgcommon.IsBlank(filterGroups) {
+	if !IsBlank(filterGroups) {
 		for _, group := range strings.Split(filterGroups, ",") {
 			com.offsets.RemoveByFlag(func(topicAtGroup string, v map[int]int64) bool {
 				topicGroupArr := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)
