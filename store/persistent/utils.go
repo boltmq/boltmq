@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/boltmq/boltmq/store/persistent/statfs"
-	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/utils/codec"
 )
 
@@ -106,7 +106,7 @@ func timeMillisecondToHumanString(t time.Time) string {
 	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), millisecond)
 }
 
-func tagsString2tagsCode(filterType protocol.TopicFilterType, tags string) int64 {
+func tagsString2tagsCode(filterType basis.TopicFilterType, tags string) int64 {
 	if tags == "" || len(tags) == 0 {
 		return 0
 	}
