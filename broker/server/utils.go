@@ -18,6 +18,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 )
 
 // create2WriteFile 创建文件
@@ -114,4 +115,16 @@ func min(a, b int64) int64 {
 		return b
 	}
 	return a
+}
+
+var blankReg = regexp.MustCompile(`\S+?`)
+
+// IsBlank 是否为空
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func IsBlank(content string) bool {
+	if blankReg.FindString(content) != "" {
+		return false
+	}
+	return true
 }
