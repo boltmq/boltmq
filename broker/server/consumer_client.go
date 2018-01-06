@@ -52,7 +52,7 @@ func newDefaultConsumerIdsChangeListener(brokerController *BrokerController) *de
 func (listener *defaultConsumerIdsChangeListener) ConsumerIdsChanged(group string, channels []core.Context) {
 	if channels != nil && listener.brokerController.cfg.Broker.NotifyConsumerIdsChangedEnable {
 		for _, conn := range channels {
-			listener.brokerController.Broker2Client.notifyConsumerIdsChanged(conn, group)
+			listener.brokerController.b2Client.notifyConsumerIdsChanged(conn, group)
 		}
 	}
 }
