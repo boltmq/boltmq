@@ -19,6 +19,8 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+
+	"github.com/pquerna/ffjson/ffjson"
 )
 
 // create2WriteFile 创建文件
@@ -127,4 +129,18 @@ func IsBlank(content string) bool {
 		return false
 	}
 	return true
+}
+
+// Encode Json Encode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Encode(v interface{}) ([]byte, error) {
+	return ffjson.Marshal(v)
+}
+
+// Decode Json Decode
+// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Since: 2017/9/19
+func Decode(data []byte, v interface{}) error {
+	return ffjson.Unmarshal(data, v)
 }

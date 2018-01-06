@@ -16,6 +16,7 @@ package server
 import (
 	"github.com/boltmq/boltmq/broker/client"
 	"github.com/boltmq/boltmq/broker/config"
+	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
 	"github.com/boltmq/common/basis"
@@ -30,8 +31,11 @@ type BrokerController struct {
 	dataVersion      *basis.DataVersion
 	csmOffsetManager *consumerOffsetManager
 	csmManager       *consumerManager
+	b2Client         *broker2Client
 	callOuter        *client.CallOuterService
 	messageStore     store.MessageStore
+	remotingClient   remoting.RemotingClient
+	remotingServer   remoting.RemotingServer
 	/*
 		//BrokerConfig                         *stgcommon.BrokerConfig
 		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
@@ -43,15 +47,15 @@ type BrokerController struct {
 		DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
 		PullMessageProcessor                 *PullMessageProcessor
 		PullRequestHoldService               *PullRequestHoldService
-		Broker2Client                        *Broker2Client
+		//Broker2Client                        *Broker2Client
 		SubscriptionGroupManager             *SubscriptionGroupManager
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
 		RebalanceLockManager                 *RebalanceLockManager
 		//BrokerOuterAPI                       *out.BrokerOuterAPI
 		SlaveSynchronize                     *SlaveSynchronize
 		//MessageStore                         *stgstorelog.DefaultMessageStore
-		RemotingClient                       *remoting.DefalutRemotingClient
-		RemotingServer                       *remoting.DefalutRemotingServer
+		//RemotingClient                       *remoting.DefalutRemotingClient
+		//RemotingServer                       *remoting.DefalutRemotingServer
 		TopicConfigManager                   *TopicConfigManager
 		UpdateMasterHAServerAddrPeriodically bool
 		brokerStats                          *storeStats.BrokerStats
