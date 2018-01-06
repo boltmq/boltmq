@@ -14,28 +14,34 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/boltmq/boltmq/broker/client"
 	"github.com/boltmq/boltmq/broker/config"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
 	"github.com/boltmq/common/basis"
+	"github.com/boltmq/common/protocol"
 )
 
 // BrokerController broker服务控制器
 // Author gaoyanlei
 // Since 2017/8/25
 type BrokerController struct {
-	cfg              *config.Config
-	storeCfg         *persistent.Config
-	dataVersion      *basis.DataVersion
-	csmOffsetManager *consumerOffsetManager
-	csmManager       *consumerManager
-	b2Client         *broker2Client
-	callOuter        *client.CallOuterService
-	messageStore     store.MessageStore
-	remotingClient   remoting.RemotingClient
-	remotingServer   remoting.RemotingServer
+	cfg                         *config.Config
+	storeCfg                    *persistent.Config
+	dataVersion                 *basis.DataVersion
+	csmOffsetManager            *consumerOffsetManager
+	csmManager                  *consumerManager
+	b2Client                    *broker2Client
+	callOuter                   *client.CallOuterService
+	messageStore                store.MessageStore
+	remotingClient              remoting.RemotingClient
+	remotingServer              remoting.RemotingServer
+	tpConfigManager             *topicConfigManager
+	updateMasterHASrvAddrPeriod bool
+	filterSrvManager            *filterServerManager
 	/*
 		//BrokerConfig                         *stgcommon.BrokerConfig
 		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
@@ -56,8 +62,8 @@ type BrokerController struct {
 		//MessageStore                         *stgstorelog.DefaultMessageStore
 		//RemotingClient                       *remoting.DefalutRemotingClient
 		//RemotingServer                       *remoting.DefalutRemotingServer
-		TopicConfigManager                   *TopicConfigManager
-		UpdateMasterHAServerAddrPeriodically bool
+		//TopicConfigManager                   *TopicConfigManager
+		//UpdateMasterHAServerAddrPeriodically bool
 		brokerStats                          *storeStats.BrokerStats
 		FilterServerManager                  *FilterServerManager
 		brokerStatsManager                   *stats.BrokerStatsManager
@@ -116,4 +122,54 @@ func (controller *BrokerController) fixConfig() error {
 	}
 
 	return nil
+}
+
+// registerBrokerAll 注册所有broker
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) registerBrokerAll(checkOrderConfig bool, oneway bool) {
+	//logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
+	if !controller.cfg.HasWriteable() || !controller.cfg.HasReadable() {
+		controller.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.ForeachUpdate(func(topic string, topicConfig *protocol.TopicConfig) {
+			topicConfig.Perm = controller.cfg.Broker.Permission
+		})
+	}
+
+	topicConfigWrapper := controller.tpConfigManager.buildTopicConfigSerializeWrapper()
+	result := controller.callOuter.RegisterBrokerAll(
+		controller.cfg.Cluster.Name,
+		controller.getBrokerAddr(),
+		controller.cfg.Cluster.BrokerName,
+		controller.getHAServerAddr(),
+		controller.cfg.Cluster.BrokerId,
+		topicConfigWrapper,
+		oneway,
+		controller.FilterServerManager.BuildNewFilterServerList())
+
+	if result != nil {
+		if controller.updateMasterHASrvAddrPeriod && result.HaServerAddr != "" {
+			controller.messageStore.UpdateHaMasterAddress(result.HaServerAddr)
+		}
+
+		controller.SlaveSynchronize.masterAddr = result.MasterAddr
+
+		if checkOrderConfig {
+			controller.tpConfigManager.updateOrderTopicConfig(result.KvTable)
+		}
+	}
+	//logger.Info("register all broker end")
+}
+
+// getBrokerAddr 获得brokerAddr
+// Author rongzhihong
+// Since 2017/9/5
+func (controller *BrokerController) getBrokerAddr() string {
+	return fmt.Sprintf("%s:%d", controller.cfg.Broker.IP, controller.remotingServer.ListenPort())
+}
+
+// getHAServerAddr 获得HAServer的地址
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) getHAServerAddr() string {
+	return fmt.Sprintf("%s:%d", controller.cfg.Cluster.HaServerIP, controller.storeCfg.HaListenPort)
 }

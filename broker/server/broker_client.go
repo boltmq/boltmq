@@ -81,7 +81,7 @@ func (b2c *broker2Client) callClient(ctx core.Context, request *protocol.Remotin
 // Since 2017/9/18
 func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isForce bool) *protocol.RemotingCommand {
 	response := protocol.CreateDefaultResponseCommand()
-	topicConfig := b2c.brokerController.TopicConfigManager.SelectTopicConfig(topic)
+	topicConfig := b2c.brokerController.tpConfigManager.selectTopicConfig(topic)
 	if topicConfig == nil {
 		logger.Errorf("[reset-offset] reset offset failed, no topic in this broker. topic=%s", topic)
 		response.Code = protocol.SYSTEM_ERROR

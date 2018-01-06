@@ -13,7 +13,11 @@
 // limitations under the License.
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/boltmq/common/constant"
+)
 
 type Config struct {
 	Cluster ClusterConfig `toml:"cluster"` // 集群配置
@@ -25,7 +29,7 @@ type Config struct {
 // ClusterConfig 集群配置
 type ClusterConfig struct {
 	Name         string   `toml:"name"`          // 集群名称
-	BrokerId     int      `toml:"broker_id"`     // broker id
+	BrokerId     int64    `toml:"broker_id"`     // broker id
 	BrokerName   string   `toml:"broker_name"`   // broker名称
 	BrokerRole   string   `toml:"broker_role"`   // broker角色 主/备
 	HaServerIP   string   `toml:"ha_server_ip"`  // 主备配置
@@ -67,6 +71,17 @@ type StoreConfig struct {
 // LogConfig 日志配置
 type LogConfig struct {
 	CfgFilePath string `toml:"config_file_path"` // 日志配置文件路径
+}
+
+// HasReadable 校验Broker是否有读权限
+// Author: tianyuliang
+// Since: 2017/9/29
+func (cfg *Config) HasReadable() bool {
+	return constant.IsReadable(cfg.Broker.Permission)
+}
+
+func (cfg *Config) HasWriteable() bool {
+	return constant.IsWriteable(cfg.Broker.Permission)
 }
 
 // String
