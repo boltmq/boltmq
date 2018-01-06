@@ -16,6 +16,7 @@ package server
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -143,4 +144,22 @@ func Encode(v interface{}) ([]byte, error) {
 // Since: 2017/9/19
 func Decode(data []byte, v interface{}) error {
 	return ffjson.Unmarshal(data, v)
+}
+
+// callShell 执行命令
+// Author rongzhihong
+// Since 2017/9/8
+func CallShell(shellString string) error {
+	process := exec.Command(shellString)
+	err := process.Start()
+	if err != nil {
+		return err
+	}
+
+	err = process.Wait()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

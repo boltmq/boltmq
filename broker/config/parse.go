@@ -39,7 +39,7 @@ func ParseConfig(path string) (*Config, error) {
 		cfg Config
 	)
 
-	path = getConfigEnvValue(path, envBoltmqBrokerConfigPath)
+	path = getConfigEnvValue(path, envBoltMQBrokerConfigPath)
 	if err := encoding.DecodeToml(path, &cfg); err != nil {
 		return nil, err
 	}
@@ -52,6 +52,7 @@ func ParseConfig(path string) (*Config, error) {
 }
 
 var defaultConfig = &Config{
+	MQHome: getMQHome(),
 	Cluster: ClusterConfig{
 		Name:         "BoltMQCluster",
 		BrokerId:     MASTER_ID,
@@ -166,4 +167,14 @@ func isIntranetIpv4(ip string) bool {
 		return true
 	}
 	return false
+}
+
+func getMQHome() string {
+	mqHome := getConfigEnvValue("", envBoltMQHome)
+	if mqHome != "" {
+		return mqHome
+	}
+
+	dir, _ := os.Getwd()
+	return dir
 }

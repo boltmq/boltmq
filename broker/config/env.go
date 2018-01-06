@@ -18,13 +18,15 @@ import (
 )
 
 const (
-	envBoltmqBrokerConfigPath = "BOLTMQ_BROKER_CONFIG_PATH"
+	envBoltMQBrokerConfigPath = "BOLTMQ_BROKER_CONFIG_PATH"
 	envNameSrvAddrs           = "NAMESRV_ADDRS"
+	envBoltMQHome             = "BOLTMQ_HOME"
 )
 
 var envNullDefaultValues = map[string]string{
 	"BOLTMQ_BROKER_CONFIG_PATH": "etc/broker.toml",
 	"NAMESRV_ADDRS":             "127.0.0.1:9876",
+	"BOLTMQ_HOME":               "",
 }
 
 // 获取配置文件路径。1. 传入参数得到路径
