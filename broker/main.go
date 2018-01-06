@@ -51,6 +51,12 @@ func main() {
 	}
 	logger.Info("load config success.")
 
+	if cfg.MQHome == "" {
+		logger.Info("Please set the BOLTMQ_HOME variable in your environment to match the location of the BlotMQ installation.")
+		return
+	}
+	logger.Infof("Please reset the BOLTMQ_HOME:%s variable in your environment, if it is incorrect.", cfg.MQHome)
+
 	controller, err := server.NewBrokerController(cfg)
 	if err != nil {
 		fmt.Printf("create broker controller: %s.\n", err)

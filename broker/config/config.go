@@ -20,6 +20,7 @@ import (
 )
 
 type Config struct {
+	MQHome  string        `toml:"-"`       // BoltMQ安装运行路径
 	Cluster ClusterConfig `toml:"cluster"` // 集群配置
 	Broker  BrokerConfig  `toml:"broker"`  // 参数配置
 	Store   StoreConfig   `toml:"store"`   // store数据存储目录

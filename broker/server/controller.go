@@ -144,7 +144,7 @@ func (controller *BrokerController) registerBrokerAll(checkOrderConfig bool, one
 		controller.cfg.Cluster.BrokerId,
 		topicConfigWrapper,
 		oneway,
-		controller.FilterServerManager.BuildNewFilterServerList())
+		controller.filterSrvManager.buildNewFilterServerList())
 
 	if result != nil {
 		if controller.updateMasterHASrvAddrPeriod && result.HaServerAddr != "" {
