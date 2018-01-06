@@ -80,3 +80,7 @@ func (rs *NMRemotingServer) InvokeOneway(ctx core.Context, request *protocol.Rem
 	//addr := ctx.RemoteAddr().String()
 	return rs.invokeOneway(ctx, request, timeoutMillis)
 }
+
+func (rs *NMRemotingServer) ListenPort() int {
+	return rs.port
+}

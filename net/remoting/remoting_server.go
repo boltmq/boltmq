@@ -27,6 +27,7 @@ type RemotingServer interface {
 	SetDefaultProcessor(processor RequestProcessor)
 	RegisterRPCHook(rpcHook RPCHook)
 	SetContextEventListener(contextEventListener ContextEventListener)
+	ListenPort() int
 	Start()
 	Shutdown()
 }
