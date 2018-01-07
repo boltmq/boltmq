@@ -40,6 +40,7 @@ type BrokerController struct {
 	tsCheckSupervisor           *transactionCheckSupervisor
 	b2Client                    *broker2Client
 	subGroupManager             *subscriptionGroupManager
+	rblManager                  *rebalanceManager
 	callOuter                   *client.CallOuterService
 	slaveSync                   *slaveSynchronize
 	messageStore                store.MessageStore
@@ -57,7 +58,7 @@ type BrokerController struct {
 		//ConsumerOffsetManager                *ConsumerOffsetManager
 		//ConsumerManager                      *client.ConsumerManager
 		//ProducerManager                      *client.ProducerManager
-		ClientHousekeepingService            *ClientHouseKeepingService
+		//ClientHousekeepingService            *ClientHouseKeepingService
 		//DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
 		PullMessageProcessor                 *PullMessageProcessor
 		PullRequestHoldService               *PullRequestHoldService
