@@ -116,16 +116,16 @@ func (slave *slaveSynchronize) syncSubscriptionGroupConfig() {
 		return
 	}
 
-	slaveDataVersion := slave.brokerController.SubscriptionGroupManager.SubscriptionGroupTable.DataVersion
+	slaveDataVersion := slave.brokerController.subGroupManager.subTable.DataVersion
 	if slaveDataVersion.Timestamp != subscriptionWrapper.DataVersion.Timestamp ||
 		slaveDataVersion.Counter != subscriptionWrapper.DataVersion.Counter {
 		dataVersion := basis.DataVersion{Timestamp: subscriptionWrapper.DataVersion.Timestamp, Counter: subscriptionWrapper.DataVersion.Counter}
-		subscriptionGroupManager := slave.brokerController.SubscriptionGroupManager
-		subscriptionGroupManager.SubscriptionGroupTable.DataVersion.AssignNewOne(dataVersion)
-		subscriptionGroupManager.SubscriptionGroupTable.ClearAndPutAll(subscriptionWrapper.SubscriptionGroupTable)
-		subscriptionGroupManager.ConfigManagerExt.Persist()
+		subscriptionGroupManager := slave.brokerController.subGroupManager
+		subscriptionGroupManager.subTable.DataVersion.AssignNewOne(dataVersion)
+		subscriptionGroupManager.subTable.ClearAndPutAll(subscriptionWrapper.SubscriptionGroupTable)
+		subscriptionGroupManager.cfgManagerLoader.persist()
 
-		buf := subscriptionGroupManager.Encode(false)
+		buf := subscriptionGroupManager.encode(false)
 		logger.Infof("syncSubscriptionGroupConfig --> %s", buf)
 		logger.Infof("update slave subscription group from master, %s", slave.masterAddr)
 	}

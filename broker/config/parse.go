@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/utils/encoding"
 	"github.com/boltmq/common/utils/system"
 	"github.com/flosch/pongo2"
@@ -30,7 +31,6 @@ import (
 const (
 	defaultBrokerPermission = 6
 	defaultTopicQueueNums   = 8
-	MASTER_ID               = 0
 )
 
 // ParseConfig 解析配置文件
@@ -57,7 +57,7 @@ var defaultConfig = &Config{
 	CfgPath: "",
 	Cluster: ClusterConfig{
 		Name:         "BoltMQCluster",
-		BrokerId:     MASTER_ID,
+		BrokerId:     basis.MASTER_ID,
 		BrokerName:   "broker-node",
 		BrokerRole:   "SYNC_MASTER",
 		HaServerIP:   defaultLocalAddress(),

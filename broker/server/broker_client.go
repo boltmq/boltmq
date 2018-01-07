@@ -140,7 +140,6 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 		for iterator.HasNext() {
 			_, val, _ := iterator.Next()
 			if chanInfo, ok := val.(*channelInfo); ok {
-				version := chanInfo.version
 				b2c.brokerController.remotingServer.InvokeSync(chanInfo.ctx, request, 5000)
 
 				logger.Infof("[reset-offset] reset offset success. topic=%s, group=%s, clientId=%d",
@@ -208,7 +207,6 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 			continue
 		}
 
-		version := chanInfo.version
 		clientId := chanInfo.clientId
 		if IsBlank(originClientId) || strings.EqualFold(originClientId, clientId) {
 			// 不指定 originClientId 则对所有的 client 进行处理；若指定 originClientId 则只对当前
