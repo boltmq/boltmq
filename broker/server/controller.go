@@ -34,6 +34,8 @@ type BrokerController struct {
 	dataVersion                 *basis.DataVersion
 	csmOffsetManager            *consumerOffsetManager
 	csmManager                  *consumerManager
+	prcManager                  *producerManager
+	tsCheckSupervisor           *transactionCheckSupervisor
 	b2Client                    *broker2Client
 	subGroupManager             *subscriptionGroupManager
 	callOuter                   *client.CallOuterService
@@ -52,7 +54,7 @@ type BrokerController struct {
 		//ConsumerManager                      *client.ConsumerManager
 		ProducerManager                      *client.ProducerManager
 		ClientHousekeepingService            *ClientHouseKeepingService
-		DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
+		//DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
 		PullMessageProcessor                 *PullMessageProcessor
 		PullRequestHoldService               *PullRequestHoldService
 		//Broker2Client                        *Broker2Client
@@ -60,7 +62,7 @@ type BrokerController struct {
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
 		RebalanceLockManager                 *RebalanceLockManager
 		//BrokerOuterAPI                       *out.BrokerOuterAPI
-		SlaveSynchronize                     *SlaveSynchronize
+		//SlaveSynchronize                     *SlaveSynchronize
 		//MessageStore                         *stgstorelog.DefaultMessageStore
 		//RemotingClient                       *remoting.DefalutRemotingClient
 		//RemotingServer                       *remoting.DefalutRemotingServer
