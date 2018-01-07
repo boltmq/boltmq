@@ -36,6 +36,7 @@ type BrokerController struct {
 	csmOffsetManager            *consumerOffsetManager
 	csmManager                  *consumerManager
 	prcManager                  *producerManager
+	clientHouseKeepingSrv       *clientHouseKeepingService
 	tsCheckSupervisor           *transactionCheckSupervisor
 	b2Client                    *broker2Client
 	subGroupManager             *subscriptionGroupManager

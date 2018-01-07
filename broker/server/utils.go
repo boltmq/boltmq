@@ -123,7 +123,7 @@ func min(a, b int64) int64 {
 var blankReg = regexp.MustCompile(`\S+?`)
 
 // IsBlank 是否为空
-// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Author: rongzhihong
 // Since: 2017/9/19
 func IsBlank(content string) bool {
 	if blankReg.FindString(content) != "" {
@@ -133,14 +133,14 @@ func IsBlank(content string) bool {
 }
 
 // Encode Json Encode
-// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Author: rongzhihong
 // Since: 2017/9/19
 func Encode(v interface{}) ([]byte, error) {
 	return ffjson.Marshal(v)
 }
 
 // Decode Json Decode
-// Author: rongzhihong, <rongzhihong@gome.com.cn>
+// Author: rongzhihong
 // Since: 2017/9/19
 func Decode(data []byte, v interface{}) error {
 	return ffjson.Unmarshal(data, v)
