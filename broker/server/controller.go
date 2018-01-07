@@ -35,6 +35,7 @@ type BrokerController struct {
 	csmOffsetManager            *consumerOffsetManager
 	csmManager                  *consumerManager
 	b2Client                    *broker2Client
+	subGroupManager             *subscriptionGroupManager
 	callOuter                   *client.CallOuterService
 	slaveSync                   *slaveSynchronize
 	messageStore                store.MessageStore
@@ -55,7 +56,7 @@ type BrokerController struct {
 		PullMessageProcessor                 *PullMessageProcessor
 		PullRequestHoldService               *PullRequestHoldService
 		//Broker2Client                        *Broker2Client
-		SubscriptionGroupManager             *SubscriptionGroupManager
+		//SubscriptionGroupManager             *SubscriptionGroupManager
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
 		RebalanceLockManager                 *RebalanceLockManager
 		//BrokerOuterAPI                       *out.BrokerOuterAPI
@@ -113,7 +114,7 @@ func (controller *BrokerController) fixConfig() error {
 	case persistent.ASYNC_MASTER:
 		fallthrough
 	case persistent.SYNC_MASTER:
-		controller.cfg.Cluster.BrokerId = config.MASTER_ID
+		controller.cfg.Cluster.BrokerId = basis.MASTER_ID
 	case persistent.SLAVE:
 	default:
 	}
