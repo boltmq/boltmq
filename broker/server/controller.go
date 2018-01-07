@@ -19,6 +19,7 @@ import (
 	"github.com/boltmq/boltmq/broker/client"
 	"github.com/boltmq/boltmq/broker/config"
 	"github.com/boltmq/boltmq/net/remoting"
+	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
 	"github.com/boltmq/common/basis"
@@ -46,13 +47,15 @@ type BrokerController struct {
 	tpConfigManager             *topicConfigManager
 	updateMasterHASrvAddrPeriod bool
 	filterSrvManager            *filterServerManager
+	brokerStatsRelatedStore     stats.BrokerStatsRelatedStore
+	brokerStats                 stats.BrokerStats
 	/*
 		//BrokerConfig                         *stgcommon.BrokerConfig
 		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
 		//ConfigDataVersion                    *stgcommon.DataVersion
 		//ConsumerOffsetManager                *ConsumerOffsetManager
 		//ConsumerManager                      *client.ConsumerManager
-		ProducerManager                      *client.ProducerManager
+		//ProducerManager                      *client.ProducerManager
 		ClientHousekeepingService            *ClientHouseKeepingService
 		//DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
 		PullMessageProcessor                 *PullMessageProcessor
@@ -68,9 +71,9 @@ type BrokerController struct {
 		//RemotingServer                       *remoting.DefalutRemotingServer
 		//TopicConfigManager                   *TopicConfigManager
 		//UpdateMasterHAServerAddrPeriodically bool
-		brokerStats                          *storeStats.BrokerStats
+		//brokerStats                          *storeStats.BrokerStats
 		//FilterServerManager                  *FilterServerManager
-		brokerStatsManager                   *stats.BrokerStatsManager
+		//brokerStatsManager                   *stats.BrokerStatsManager
 		StoreHost                            string
 		//ConfigFile                           string
 		sendMessageHookList                  []mqtrace.SendMessageHook

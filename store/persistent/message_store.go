@@ -69,18 +69,18 @@ type PersistentMessageStore struct {
 	runFlags             *runningFlags              // 运行过程标志位
 	clock                *Clock                     // 优化获取时间性能，精度1ms
 	storeStats           stats.StoreStats           // 运行时数据统计
-	brokerStats          *stats.BrokerStats
+	brokerStats          stats.BrokerStats
 	steCheckpoint        *storeCheckpoint
 	storeTicker          *system.Ticker
 	shutdownFlag         bool // 存储服务是否启动
 	printTimes           int64
 }
 
-func NewMessageStore(config *Config, brokerStats *stats.BrokerStats) store.MessageStore {
+func NewMessageStore(config *Config, brokerStats stats.BrokerStats) store.MessageStore {
 	return newPersistentMessageStore(config, brokerStats)
 }
 
-func newPersistentMessageStore(config *Config, brokerStats *stats.BrokerStats) *PersistentMessageStore {
+func newPersistentMessageStore(config *Config, brokerStats stats.BrokerStats) *PersistentMessageStore {
 	ms := &PersistentMessageStore{}
 	ms.msgFilter = new(defaultMessageFilter)
 	ms.runFlags = new(runningFlags)
@@ -95,7 +95,7 @@ func newPersistentMessageStore(config *Config, brokerStats *stats.BrokerStats) *
 	ms.clog = newCommitLog(ms)
 	ms.cleanCLogService = newCleanCommitLogService(ms)
 	ms.cleanCQService = newCleanConsumeQueueService(ms)
-	ms.storeStats = stats.NewStoreStatsService()
+	ms.storeStats = stats.NewStoreStats()
 	ms.idxService = newIndexService(ms)
 	ms.ha = newHAService(ms)
 	ms.dispatchMsgService = newDispatchMessageService(ms.config.PutMsgIndexHightWater, ms)
@@ -1098,6 +1098,10 @@ func (ms *PersistentMessageStore) MessageIds(topic string, queueId int32, minOff
 	}
 
 	return messageIds
+}
+
+func (ms *PersistentMessageStore) StoreStats() stats.StoreStats {
+	return ms.storeStats
 }
 
 //  CommitLogOffsetInQueue
