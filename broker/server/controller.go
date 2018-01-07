@@ -36,6 +36,7 @@ type BrokerController struct {
 	csmManager                  *consumerManager
 	b2Client                    *broker2Client
 	callOuter                   *client.CallOuterService
+	slaveSync                   *slaveSynchronize
 	messageStore                store.MessageStore
 	remotingClient              remoting.RemotingClient
 	remotingServer              remoting.RemotingServer
@@ -65,10 +66,10 @@ type BrokerController struct {
 		//TopicConfigManager                   *TopicConfigManager
 		//UpdateMasterHAServerAddrPeriodically bool
 		brokerStats                          *storeStats.BrokerStats
-		FilterServerManager                  *FilterServerManager
+		//FilterServerManager                  *FilterServerManager
 		brokerStatsManager                   *stats.BrokerStatsManager
 		StoreHost                            string
-		ConfigFile                           string
+		//ConfigFile                           string
 		sendMessageHookList                  []mqtrace.SendMessageHook
 		consumeMessageHookList               []mqtrace.ConsumeMessageHook
 		brokerControllerTask                 *BrokerControllerTask
@@ -151,7 +152,7 @@ func (controller *BrokerController) registerBrokerAll(checkOrderConfig bool, one
 			controller.messageStore.UpdateHaMasterAddress(result.HaServerAddr)
 		}
 
-		controller.SlaveSynchronize.masterAddr = result.MasterAddr
+		controller.slaveSync.masterAddr = result.MasterAddr
 
 		if checkOrderConfig {
 			controller.tpConfigManager.updateOrderTopicConfig(result.KvTable)

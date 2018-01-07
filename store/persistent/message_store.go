@@ -124,7 +124,7 @@ func newPersistentMessageStore(config *Config, brokerStats *stats.BrokerStats) *
 
 // Load
 func (ms *PersistentMessageStore) Load() bool {
-	storeCheckpoint, err := newStoreCheckpoint(getStorePathCheckpoint(ms.config.StorePathRootDir))
+	storeCheckpoint, err := newStoreCheckpoint(GetStorePathCheckpoint(ms.config.StorePathRootDir))
 	if err != nil {
 		logger.Error("load exception", err.Error())
 		return false
@@ -188,7 +188,7 @@ func (ms *PersistentMessageStore) Load() bool {
 }
 
 func (ms *PersistentMessageStore) isTempFileExist() bool {
-	fileName := getStorePathAbortFile(ms.config.StorePathRootDir)
+	fileName := GetStorePathAbortFile(ms.config.StorePathRootDir)
 	exist, err := pathExists(fileName)
 	if err != nil {
 		exist = false
@@ -198,7 +198,7 @@ func (ms *PersistentMessageStore) isTempFileExist() bool {
 }
 
 func (ms *PersistentMessageStore) loadConsumeQueue() bool {
-	dirLogicDir := getStorePathConsumeQueue(ms.config.StorePathRootDir)
+	dirLogicDir := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
 	exist, err := pathExists(dirLogicDir)
 	if err != nil {
 		return false
@@ -241,7 +241,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 				}
 
 				logic := newConsumeQueue(topic, int32(queueId),
-					getStorePathConsumeQueue(ms.config.StorePathRootDir),
+					GetStorePathConsumeQueue(ms.config.StorePathRootDir),
 					int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
 
 				ms.putConsumeQueue(topic, int32(queueId), logic)
@@ -347,7 +347,7 @@ func (ms *PersistentMessageStore) findConsumeQueue(topic string, queueId int32) 
 	cqMap.consumeQueuesMu.RUnlock()
 
 	if !ok {
-		storePathRootDir := getStorePathConsumeQueue(ms.config.StorePathRootDir)
+		storePathRootDir := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
 		cqMap.consumeQueuesMu.Lock()
 		logic = newConsumeQueue(topic, queueId, storePathRootDir, int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
 		cqMap.consumeQueues[queueId] = logic
@@ -448,7 +448,7 @@ func (ms *PersistentMessageStore) Start() error {
 }
 
 func (ms *PersistentMessageStore) createTempFile() error {
-	abortPath := getStorePathAbortFile(ms.config.StorePathRootDir)
+	abortPath := GetStorePathAbortFile(ms.config.StorePathRootDir)
 	storeRootDir := parentDirectory(abortPath)
 	err := ensureDir(storeRootDir)
 	if err != nil {
@@ -532,7 +532,7 @@ func (ms *PersistentMessageStore) Shutdown() {
 		ms.steCheckpoint.flush()
 		ms.steCheckpoint.shutdown()
 
-		ms.deleteFile(getStorePathAbortFile(ms.config.StorePathRootDir))
+		ms.deleteFile(GetStorePathAbortFile(ms.config.StorePathRootDir))
 	}
 }
 
@@ -554,8 +554,8 @@ func (ms *PersistentMessageStore) Destroy() {
 	ms.destroyLogics()
 	ms.clog.destroy()
 	ms.idxService.destroy()
-	ms.deleteFile(getStorePathAbortFile(ms.config.StorePathRootDir))
-	ms.deleteFile(getStorePathCheckpoint(ms.config.StorePathRootDir))
+	ms.deleteFile(GetStorePathAbortFile(ms.config.StorePathRootDir))
+	ms.deleteFile(GetStorePathCheckpoint(ms.config.StorePathRootDir))
 }
 
 func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.PutMessageResult {
@@ -957,7 +957,7 @@ func (ms *PersistentMessageStore) RuntimeInfo() map[string]string {
 	result[COMMIT_LOG_DISK_RATIO.String()] = fmt.Sprintf("%f", physicRatio)
 
 	// 检测逻辑文件磁盘空间
-	storePathLogic := getStorePathConsumeQueue(ms.config.StorePathRootDir)
+	storePathLogic := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
 	logicRatio := getDiskPartitionSpaceUsedPercent(storePathLogic)
 	result[CONSUME_QUEUE_DISK_RATIO.String()] = fmt.Sprintf("%f", logicRatio)
 

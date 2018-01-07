@@ -96,8 +96,8 @@ func (fsm *filterServerManager) createFilterServer() {
 func (fsm *filterServerManager) buildStartCommand() string {
 	var config = ""
 
-	if fsm.brokerController.ConfigFile != "" {
-		config = fmt.Sprintf("-c %s", fsm.brokerController.ConfigFile)
+	if fsm.brokerController.cfg.CfgPath != "" {
+		config = fmt.Sprintf("-c %s", fsm.brokerController.cfg.CfgPath)
 	}
 
 	if len(fsm.brokerController.cfg.Cluster.NameSrvAddrs) > 0 {
