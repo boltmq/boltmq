@@ -38,6 +38,8 @@ type StoreStats interface {
 	SetMessageEntireTimeMax(value int64)
 	SetPutMessageEntireTimeMax(value int64)
 	SetDispatchMaxBuffer(value int64)
+	GetPutMessageTimesTotal() int64
+	GetGetMessageTransferedMsgCount() int64
 	RuntimeInfo() map[string]string
 }
 
@@ -47,7 +49,7 @@ const (
 	PrintTPSInterval     = 60 * 1
 )
 
-type StoreStatsService struct {
+type storeStatsService struct {
 	putMessageFailedTimes     int64
 	putMessageTopicTimesTotal map[string]int64
 	putMessageTopicSizeTotal  map[string]int64
@@ -73,8 +75,12 @@ type StoreStatsService struct {
 	sizeMapMutex              sync.RWMutex
 }
 
-func NewStoreStatsService() *StoreStatsService {
-	service := new(StoreStatsService)
+func NewStoreStats() StoreStats {
+	return newStoreStatsService()
+}
+
+func newStoreStatsService() *storeStatsService {
+	service := new(storeStatsService)
 	service.putMessageTopicTimesTotal = make(map[string]int64, 128)
 	service.putMessageTopicSizeTotal = make(map[string]int64, 128)
 	service.messageTimesTotalFound = 0
@@ -100,7 +106,7 @@ func NewStoreStatsService() *StoreStatsService {
 	return service
 }
 
-func (service *StoreStatsService) Start() {
+func (service *storeStatsService) Start() {
 	logger.Info("store stats service started")
 
 	for {
@@ -116,7 +122,7 @@ func (service *StoreStatsService) Start() {
 	logger.Info("store stats service end")
 }
 
-func (service *StoreStatsService) sampling() {
+func (service *storeStatsService) sampling() {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -144,7 +150,7 @@ func (service *StoreStatsService) sampling() {
 	}
 }
 
-func (service *StoreStatsService) printTps() {
+func (service *storeStatsService) printTps() {
 	if system.CurrentTimeMillis() > service.lastPrintTimestamp+PrintTPSInterval*1000 {
 		service.lastPrintTimestamp = system.CurrentTimeMillis()
 
@@ -155,7 +161,7 @@ func (service *StoreStatsService) printTps() {
 	}
 }
 
-func (service *StoreStatsService) SetMessageEntireTimeMax(value int64) {
+func (service *storeStatsService) SetMessageEntireTimeMax(value int64) {
 	if value > service.messageEntireTimeMax {
 		service.lockGet.Lock()
 		service.messageEntireTimeMax = value
@@ -163,11 +169,11 @@ func (service *StoreStatsService) SetMessageEntireTimeMax(value int64) {
 	}
 }
 
-func (service *StoreStatsService) GetGetMessageTransferedMsgCount() int64 {
+func (service *storeStatsService) GetGetMessageTransferedMsgCount() int64 {
 	return atomic.LoadInt64(&service.messageTransferedMsgCount)
 }
 
-func (service *StoreStatsService) GetPutMessageTimesTotal() int64 {
+func (service *storeStatsService) GetPutMessageTimesTotal() int64 {
 	service.timesMapMutex.RLock()
 	defer service.timesMapMutex.RUnlock()
 
@@ -179,7 +185,7 @@ func (service *StoreStatsService) GetPutMessageTimesTotal() int64 {
 	return result
 }
 
-func (service *StoreStatsService) getFormatRuntime() string {
+func (service *storeStatsService) getFormatRuntime() string {
 	var (
 		MILLISECOND int64 = 1
 		SECOND      int64 = 1000 * MILLISECOND
@@ -198,7 +204,7 @@ func (service *StoreStatsService) getFormatRuntime() string {
 	return result
 }
 
-func (service *StoreStatsService) getPutMessageSizeTotal() int64 {
+func (service *storeStatsService) getPutMessageSizeTotal() int64 {
 	service.sizeMapMutex.RLock()
 	defer service.sizeMapMutex.RUnlock()
 
@@ -210,7 +216,7 @@ func (service *StoreStatsService) getPutMessageSizeTotal() int64 {
 	return result
 }
 
-func (service *StoreStatsService) getPutMessageDistributeTimeStringInfo(total int64) string {
+func (service *storeStatsService) getPutMessageDistributeTimeStringInfo(total int64) string {
 	contentBuffer := bytes.Buffer{}
 
 	for value := range service.putMessageDistributeTime {
@@ -223,7 +229,7 @@ func (service *StoreStatsService) getPutMessageDistributeTimeStringInfo(total in
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getPutTps() string {
+func (service *storeStatsService) getPutTps() string {
 	contentBuffer := bytes.Buffer{}
 	// 10秒钟
 	contentBuffer.WriteString(service.getPutTpsByTime(10))
@@ -239,7 +245,7 @@ func (service *StoreStatsService) getPutTps() string {
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getPutTpsByTime(time int) string {
+func (service *storeStatsService) getPutTpsByTime(time int) string {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -264,7 +270,7 @@ func (service *StoreStatsService) getPutTpsByTime(time int) string {
 	return result
 }
 
-func (service *StoreStatsService) getGetFoundTps() string {
+func (service *storeStatsService) getGetFoundTps() string {
 	contentBuffer := bytes.Buffer{}
 	// 10秒钟
 	contentBuffer.WriteString(service.getGetFoundTpsByTime(10))
@@ -280,7 +286,7 @@ func (service *StoreStatsService) getGetFoundTps() string {
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getGetFoundTpsByTime(time int) string {
+func (service *storeStatsService) getGetFoundTpsByTime(time int) string {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -305,7 +311,7 @@ func (service *StoreStatsService) getGetFoundTpsByTime(time int) string {
 	return result
 }
 
-func (service *StoreStatsService) getGetMissTps() string {
+func (service *storeStatsService) getGetMissTps() string {
 	contentBuffer := bytes.Buffer{}
 	// 10秒钟
 	contentBuffer.WriteString(service.getGetMissTpsByTime(10))
@@ -321,7 +327,7 @@ func (service *StoreStatsService) getGetMissTps() string {
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getGetMissTpsByTime(time int) string {
+func (service *storeStatsService) getGetMissTpsByTime(time int) string {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -346,7 +352,7 @@ func (service *StoreStatsService) getGetMissTpsByTime(time int) string {
 	return result
 }
 
-func (service *StoreStatsService) getGetTotalTps() string {
+func (service *storeStatsService) getGetTotalTps() string {
 	contentBuffer := bytes.Buffer{}
 	// 10秒钟
 	contentBuffer.WriteString(service.getGetTotalTpsByTime(10))
@@ -362,7 +368,7 @@ func (service *StoreStatsService) getGetTotalTps() string {
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getGetTotalTpsByTime(time int) string {
+func (service *storeStatsService) getGetTotalTpsByTime(time int) string {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -407,7 +413,7 @@ func (service *StoreStatsService) getGetTotalTpsByTime(time int) string {
 	return fmt.Sprintf("%0.2f", found+miss)
 }
 
-func (service *StoreStatsService) getGetTransferedTps() string {
+func (service *storeStatsService) getGetTransferedTps() string {
 	contentBuffer := bytes.Buffer{}
 	// 10秒钟
 	contentBuffer.WriteString(service.getGetTransferedTpsByTime(10))
@@ -423,7 +429,7 @@ func (service *StoreStatsService) getGetTransferedTps() string {
 	return contentBuffer.String()
 }
 
-func (service *StoreStatsService) getGetTransferedTpsByTime(time int) string {
+func (service *storeStatsService) getGetTransferedTpsByTime(time int) string {
 	service.lockSampling.Lock()
 	defer service.lockSampling.Unlock()
 
@@ -448,7 +454,7 @@ func (service *StoreStatsService) getGetTransferedTpsByTime(time int) string {
 	return result
 }
 
-func (service *StoreStatsService) RuntimeInfo() map[string]string {
+func (service *storeStatsService) RuntimeInfo() map[string]string {
 	result := make(map[string]string)
 	totalTimes := service.GetPutMessageTimesTotal()
 	if 0 == totalTimes {
@@ -473,14 +479,14 @@ func (service *StoreStatsService) RuntimeInfo() map[string]string {
 	return result
 }
 
-func (service *StoreStatsService) SetSinglePutMessageTopicSizeTotal(topic string, value int64) {
+func (service *storeStatsService) SetSinglePutMessageTopicSizeTotal(topic string, value int64) {
 	service.sizeMapMutex.Lock()
 	defer service.sizeMapMutex.Unlock()
 
 	service.putMessageTopicSizeTotal[topic] = value
 }
 
-func (service *StoreStatsService) GetSinglePutMessageTopicSizeTotal(topic string) int64 {
+func (service *storeStatsService) GetSinglePutMessageTopicSizeTotal(topic string) int64 {
 	service.sizeMapMutex.Lock()
 	defer service.sizeMapMutex.Unlock()
 
@@ -493,7 +499,7 @@ func (service *StoreStatsService) GetSinglePutMessageTopicSizeTotal(topic string
 	return result
 }
 
-func (service *StoreStatsService) SetPutMessageEntireTimeMax(value int64) {
+func (service *storeStatsService) SetPutMessageEntireTimeMax(value int64) {
 	if value <= 0 {
 		atomic.AddInt64(&service.putMessageDistributeTime[0], 1)
 	} else if value < 10 {
@@ -517,14 +523,14 @@ func (service *StoreStatsService) SetPutMessageEntireTimeMax(value int64) {
 	}
 }
 
-func (service *StoreStatsService) SetSinglePutMessageTopicTimesTotal(topic string, value int64) {
+func (service *storeStatsService) SetSinglePutMessageTopicTimesTotal(topic string, value int64) {
 	service.timesMapMutex.Lock()
 	defer service.timesMapMutex.Unlock()
 
 	service.putMessageTopicTimesTotal[topic] = value
 }
 
-func (service *StoreStatsService) GetSinglePutMessageTopicTimesTotal(topic string) int64 {
+func (service *storeStatsService) GetSinglePutMessageTopicTimesTotal(topic string) int64 {
 	service.timesMapMutex.Lock()
 	defer service.timesMapMutex.Unlock()
 
@@ -537,29 +543,29 @@ func (service *StoreStatsService) GetSinglePutMessageTopicTimesTotal(topic strin
 	return result
 }
 
-func (service *StoreStatsService) SetDispatchMaxBuffer(value int64) {
+func (service *storeStatsService) SetDispatchMaxBuffer(value int64) {
 	if value > service.dispatchMaxBuffer {
 		service.dispatchMaxBuffer = value
 	}
 }
 
-func (service *StoreStatsService) SetPutMessageFailedTimes(value int64) {
+func (service *storeStatsService) SetPutMessageFailedTimes(value int64) {
 	atomic.AddInt64(&service.putMessageFailedTimes, value)
 }
 
-func (service *StoreStatsService) SetMessageTransferedMsgCount(value int64) {
+func (service *storeStatsService) SetMessageTransferedMsgCount(value int64) {
 	atomic.AddInt64(&service.messageTransferedMsgCount, value)
 }
 
-func (service *StoreStatsService) SetMessageTimesTotalFound(value int64) {
+func (service *storeStatsService) SetMessageTimesTotalFound(value int64) {
 	atomic.AddInt64(&service.messageTimesTotalFound, value)
 }
 
-func (service *StoreStatsService) SetMessageTimesTotalMiss(value int64) {
+func (service *storeStatsService) SetMessageTimesTotalMiss(value int64) {
 	atomic.AddInt64(&service.messageTimesTotalMiss, value)
 }
 
-func (service *StoreStatsService) Shutdown() {
+func (service *storeStatsService) Shutdown() {
 	service.stop = true
 }
 
