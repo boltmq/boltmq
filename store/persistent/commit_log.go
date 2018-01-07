@@ -1174,7 +1174,7 @@ func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
 func (ccls *cleanCommitLogService) checkConsumeQueueFileSpace() bool {
 	var (
 		ratio           = float64(ccls.messageStore.config.getDiskMaxUsedSpaceRatio()) / 100.0
-		storePathLogics = getStorePathConsumeQueue(ccls.messageStore.config.StorePathRootDir)
+		storePathLogics = GetStorePathConsumeQueue(ccls.messageStore.config.StorePathRootDir)
 		logicsRatio     = getDiskPartitionSpaceUsedPercent(storePathLogics)
 	)
 

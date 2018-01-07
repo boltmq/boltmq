@@ -43,6 +43,7 @@ func ParseConfig(path string) (*Config, error) {
 	if err := encoding.DecodeToml(path, &cfg); err != nil {
 		return nil, err
 	}
+	cfg.CfgPath = path
 
 	if err := mergeConfig(&cfg); err != nil {
 		return nil, err
@@ -52,7 +53,8 @@ func ParseConfig(path string) (*Config, error) {
 }
 
 var defaultConfig = &Config{
-	MQHome: getMQHome(),
+	MQHome:  getMQHome(),
+	CfgPath: "",
 	Cluster: ClusterConfig{
 		Name:         "BoltMQCluster",
 		BrokerId:     MASTER_ID,
@@ -102,6 +104,14 @@ func mergeConfig(cfg *Config) error {
 	//对路径进行修正
 	cfg.Store.RootDir = fixPath(cfg.Store.RootDir)
 	cfg.Log.CfgFilePath = fixPath(cfg.Log.CfgFilePath)
+
+	// 配置文件的绝对路径
+	if absPath, err := filepath.Abs(cfg.CfgPath); err != nil {
+		return err
+	} else {
+		cfg.CfgPath = absPath
+	}
+
 	return nil
 }
 
@@ -175,6 +185,7 @@ func getMQHome() string {
 		return mqHome
 	}
 
+	// 启动程序的路径作为默认BOLTMQ_HOME，可能会修改为可执行文件的路径。
 	dir, _ := os.Getwd()
 	return dir
 }

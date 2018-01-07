@@ -64,7 +64,7 @@ func newIndexService(messageStore *PersistentMessageStore) *indexService {
 	index.messageStore = messageStore
 	index.hashSlotNum = messageStore.config.MaxHashSlotNum
 	index.indexNum = messageStore.config.MaxIndexNum
-	index.storePath = getStorePathIndex(messageStore.config.StorePathRootDir)
+	index.storePath = GetStorePathIndex(messageStore.config.StorePathRootDir)
 
 	index.indexFileList = list.New()
 	index.requestQueue = make(chan interface{}, 300000)
