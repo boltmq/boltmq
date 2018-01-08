@@ -39,6 +39,7 @@ type BrokerController struct {
 	clientHouseKeepingSrv       *clientHouseKeepingService
 	tsCheckSupervisor           *transactionCheckSupervisor
 	pullMsgProcessor            *pullMessageProcessor
+	pullRequestHoldSrv          *pullRequestHoldService
 	b2Client                    *broker2Client
 	subGroupManager             *subscriptionGroupManager
 	rblManager                  *rebalanceManager
@@ -61,8 +62,8 @@ type BrokerController struct {
 		//ProducerManager                      *client.ProducerManager
 		//ClientHousekeepingService            *ClientHouseKeepingService
 		//DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
-		PullMessageProcessor                 *PullMessageProcessor
-		PullRequestHoldService               *PullRequestHoldService
+		//PullMessageProcessor                 *PullMessageProcessor
+		//PullRequestHoldService               *PullRequestHoldService
 		//Broker2Client                        *Broker2Client
 		//SubscriptionGroupManager             *SubscriptionGroupManager
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener

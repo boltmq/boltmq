@@ -293,7 +293,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 
 				suspendTimestamp := system.CurrentTimeMillis()
 				pullRequest := longpolling.NewPullRequest(request, ctx, int64(pollingTimeMills), suspendTimestamp, requestHeader.QueueOffset)
-				pmsgp.brokerController.PullRequestHoldService.SuspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
+				pmsgp.brokerController.pullRequestHoldSrv.suspendPullRequest(requestHeader.Topic, requestHeader.QueueId, pullRequest)
 				response = nil
 			}
 		case protocol.PULL_RETRY_IMMEDIATELY:
