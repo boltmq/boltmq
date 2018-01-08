@@ -14,6 +14,7 @@
 package server
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -21,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/boltmq/common/basis"
 	"github.com/pquerna/ffjson/ffjson"
 )
 
@@ -162,4 +164,8 @@ func CallShell(shellString string) error {
 	}
 
 	return nil
+}
+
+func getRetryTopic(consumerGroup string) string {
+	return fmt.Sprintf("%s%s", basis.RETRY_GROUP_TOPIC_PREFIX, consumerGroup)
 }

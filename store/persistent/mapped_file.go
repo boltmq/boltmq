@@ -22,6 +22,7 @@ import (
 
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent/mmap"
+	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 	"github.com/go-errors/errors"
@@ -126,13 +127,13 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	mf.fileName = filePath
 	mf.fileSize = filesize
 
-	commitRootDir := parentDirectory(filePath)
-	err := ensureDir(commitRootDir)
+	commitRootDir := basis.ParentDirectory(filePath)
+	err := basis.EnsureDir(commitRootDir)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
 
-	exist, err := pathExists(filePath)
+	exist, err := basis.PathExists(filePath)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}

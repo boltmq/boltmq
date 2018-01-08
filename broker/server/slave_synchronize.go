@@ -14,7 +14,7 @@
 package server
 
 import (
-	"github.com/boltmq/boltmq/store/persistent"
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 )
@@ -99,7 +99,7 @@ func (slave *slaveSynchronize) syncDelayOffset() {
 		return
 	}
 
-	fileName := persistent.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
+	fileName := common.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
 	String2File([]byte(delayOffset), fileName)
 	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s", slave.masterAddr, delayOffset)
 }

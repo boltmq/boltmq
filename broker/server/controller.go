@@ -24,6 +24,7 @@ import (
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
 	"github.com/boltmq/common/basis"
+	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
 )
 
@@ -57,10 +58,6 @@ type BrokerController struct {
 	brokerStatsRelatedStore     stats.BrokerStatsRelatedStore
 	brokerStats                 stats.BrokerStats
 	tasks                       *controllerTasks
-	/*
-		//SubscriptionGroupManager             *SubscriptionGroupManager
-		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
-	*/
 }
 
 // NewBrokerController 创建BrokerController对象
@@ -72,6 +69,30 @@ func NewBrokerController(cfg *config.Config) (*BrokerController, error) {
 
 	if err := controller.fixConfig(); err != nil {
 		return nil, err
+	}
+
+	controller.dataVersion = basis.NewDataVersion()
+	controller.csmOffsetManager = newConsumerOffsetManager(controller)
+	controller.tpConfigManager = newTopicConfigManager(controller)
+	controller.pullMsgProcessor = newPullMessageProcessor(controller)
+	controller.pullRequestHoldSrv = newPullRequestHoldService(controller)
+	controller.tsCheckSupervisor = newTransactionCheckSupervisor(controller)
+	controller.csmManager = newConsumerManager(newDefaultConsumerIdsChangeListener(controller))
+	controller.prcManager = newProducerManager()
+	controller.rblManager = newRebalanceManager()
+	controller.clientHouseKeepingSrv = newClientHouseKeepingService(controller)
+	controller.b2Client = newBroker2Client(controller)
+	controller.subGroupManager = newSubscriptionGroupManager(controller)
+	controller.remotingClient = remoting.NewNMRemotingClient()
+	controller.callOuter = client.NewCallOuterService(controller.remotingClient)
+	controller.filterSrvManager = newFilterServerManager(controller)
+	controller.tasks = newControllerTasks(controller)
+	controller.slaveSync = newSlaveSynchronize(controller)
+	controller.brokerStats = stats.NewBrokerStats(controller.cfg.Cluster.Name)
+	controller.updateMasterHASrvAddrPeriod = false
+	if len(controller.cfg.Cluster.NameSrvAddrs) > 0 {
+		controller.callOuter.UpdateNameServerAddressList(controller.cfg.Cluster.NameSrvAddrs)
+		logger.Infof("user specfied name server address: %s", controller.cfg.Cluster.NameSrvAddrs)
 	}
 
 	return controller, nil
@@ -105,6 +126,7 @@ func (controller *BrokerController) fixConfig() error {
 	default:
 	}
 
+	controller.storeCfg.HaListenPort = int32(controller.cfg.Broker.Port + 1)
 	if controller.cfg.Broker.HaMasterAddress != "" {
 		controller.storeCfg.HaMasterAddress = controller.cfg.Broker.HaMasterAddress // HA功能配置此项
 	}

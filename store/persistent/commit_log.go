@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
@@ -1143,7 +1144,7 @@ func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
 	var (
 		ratio           = float64(ccls.messageStore.config.getDiskMaxUsedSpaceRatio()) / 100.0
 		storePathPhysic = ccls.messageStore.config.StorePathCommitLog
-		physicRatio     = getDiskPartitionSpaceUsedPercent(storePathPhysic)
+		physicRatio     = common.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
 	)
 
 	if physicRatio > ccls.diskSpaceWarningLevelRatio {
@@ -1174,8 +1175,8 @@ func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
 func (ccls *cleanCommitLogService) checkConsumeQueueFileSpace() bool {
 	var (
 		ratio           = float64(ccls.messageStore.config.getDiskMaxUsedSpaceRatio()) / 100.0
-		storePathLogics = GetStorePathConsumeQueue(ccls.messageStore.config.StorePathRootDir)
-		logicsRatio     = getDiskPartitionSpaceUsedPercent(storePathLogics)
+		storePathLogics = common.GetStorePathConsumeQueue(ccls.messageStore.config.StorePathRootDir)
+		logicsRatio     = common.GetDiskPartitionSpaceUsedPercent(storePathLogics)
 	)
 
 	if logicsRatio > ccls.diskSpaceWarningLevelRatio {
