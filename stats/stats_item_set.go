@@ -125,19 +125,19 @@ func (statsItem *StatsItem) Init() {
 	samplingInHourTicker.Start()
 
 	// 分钟整点执行
-	diffMin := float64(computNextMinutesTimeMillis() - system.CurrentTimeMillis())
+	diffMin := float64(system.ComputNextMinutesTimeMillis() - system.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 	printAtMinutesTicker := system.NewTicker(false, time.Duration(delayMin)*time.Millisecond, time.Minute, func() { statsItem.PrintAtMinutes() })
 	printAtMinutesTicker.Start()
 
 	// 小时整点执行
-	diffHour := float64(computNextHourTimeMillis() - system.CurrentTimeMillis())
+	diffHour := float64(system.ComputNextHourTimeMillis() - system.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
 	printAtHourTicker := system.NewTicker(false, time.Duration(delayHour)*time.Millisecond, time.Hour, func() { statsItem.PrintAtHour() })
 	printAtHourTicker.Start()
 
 	// 每天0点执行
-	diffDay := float64(computNextHourTimeMillis()-system.CurrentTimeMillis()) - 2000
+	diffDay := float64(system.ComputNextHourTimeMillis()-system.CurrentTimeMillis()) - 2000
 	var delayDay int = int(math.Abs(diffDay))
 	printAtDayTicker := system.NewTicker(false, time.Duration(delayDay)*time.Millisecond, 24*time.Hour, func() { statsItem.PrintAtDay() })
 	printAtDayTicker.Start()
@@ -334,17 +334,17 @@ func (stats *StatsItemSet) Init() {
 	stats.allTickers.Register("statsItemSet_samplingInHourTicker", system.NewTicker(false, 0, time.Hour,
 		func() { stats.samplingInHour() }))
 
-	diffMin := float64(computNextMinutesTimeMillis() - system.CurrentTimeMillis())
+	diffMin := float64(system.ComputNextMinutesTimeMillis() - system.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 	stats.allTickers.Register("statsItemSet_printAtMinutesTicker", system.NewTicker(false, time.Duration(delayMin)*time.Millisecond,
 		time.Minute, func() { stats.printAtMinutes() }))
 
-	diffHour := float64(computNextHourTimeMillis() - system.CurrentTimeMillis())
+	diffHour := float64(system.ComputNextHourTimeMillis() - system.CurrentTimeMillis())
 	var delayHour int = int(math.Abs(diffHour))
 	stats.allTickers.Register("statsItemSet_printAtHourTicker", system.NewTicker(false, time.Duration(delayHour)*time.Millisecond,
 		time.Hour, func() { stats.printAtHour() }))
 
-	diffDay := float64(computNextMorningTimeMillis() - system.CurrentTimeMillis())
+	diffDay := float64(system.ComputNextMorningTimeMillis() - system.CurrentTimeMillis())
 	var delayDay int = int(math.Abs(diffDay))
 	stats.allTickers.Register("statsItemSet_printAtDayTicker", system.NewTicker(false, time.Duration(delayDay)*time.Millisecond,
 		24*time.Hour, func() { stats.printAtDay() }))

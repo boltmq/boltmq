@@ -46,7 +46,7 @@ func NewMomentStatsItem() *MomentStatsItem {
 // Since 2017/9/19
 func (item *MomentStatsItem) Init() {
 	// 分钟整点执行
-	var diff float64 = float64(computNextMinutesTimeMillis() - system.CurrentTimeMillis())
+	var diff float64 = float64(system.ComputNextMinutesTimeMillis() - system.CurrentTimeMillis())
 	var delay int = int(math.Abs(diff))
 	printAtMinutesTicker := system.NewTicker(false, time.Duration(delay)*time.Millisecond, 5*time.Minute, func() {
 		item.printAtMinutes()
@@ -113,7 +113,7 @@ func (moment *MomentStatsItemSet) SetValue(statsKey string, value int64) {
 // Author rongzhihong
 // Since 2017/9/19
 func (moment *MomentStatsItemSet) init() {
-	diffMin := float64(computNextMinutesTimeMillis() - system.CurrentTimeMillis())
+	diffMin := float64(system.ComputNextMinutesTimeMillis() - system.CurrentTimeMillis())
 	var delayMin int = int(math.Abs(diffMin))
 
 	moment.allTickers.Register("momentStatsItemSet_printAtMinutesTicker",

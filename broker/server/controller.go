@@ -18,6 +18,7 @@ import (
 
 	"github.com/boltmq/boltmq/broker/client"
 	"github.com/boltmq/boltmq/broker/config"
+	"github.com/boltmq/boltmq/broker/trace"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/boltmq/store"
@@ -51,38 +52,14 @@ type BrokerController struct {
 	tpConfigManager             *topicConfigManager
 	updateMasterHASrvAddrPeriod bool
 	filterSrvManager            *filterServerManager
+	sendMessageHookList         []trace.SendMessageHook
+	consumeMessageHookList      []trace.ConsumeMessageHook
 	brokerStatsRelatedStore     stats.BrokerStatsRelatedStore
 	brokerStats                 stats.BrokerStats
+	tasks                       *controllerTasks
 	/*
-		//BrokerConfig                         *stgcommon.BrokerConfig
-		//MessageStoreConfig                   *stgstorelog.MessageStoreConfig
-		//ConfigDataVersion                    *stgcommon.DataVersion
-		//ConsumerOffsetManager                *ConsumerOffsetManager
-		//ConsumerManager                      *client.ConsumerManager
-		//ProducerManager                      *client.ProducerManager
-		//ClientHousekeepingService            *ClientHouseKeepingService
-		//DefaultTransactionCheckExecuter      *DefaultTransactionCheckExecuter
-		//PullMessageProcessor                 *PullMessageProcessor
-		//PullRequestHoldService               *PullRequestHoldService
-		//Broker2Client                        *Broker2Client
 		//SubscriptionGroupManager             *SubscriptionGroupManager
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
-		//RebalanceLockManager                 *RebalanceLockManager
-		//BrokerOuterAPI                       *out.BrokerOuterAPI
-		//SlaveSynchronize                     *SlaveSynchronize
-		//MessageStore                         *stgstorelog.DefaultMessageStore
-		//RemotingClient                       *remoting.DefalutRemotingClient
-		//RemotingServer                       *remoting.DefalutRemotingServer
-		//TopicConfigManager                   *TopicConfigManager
-		//UpdateMasterHAServerAddrPeriodically bool
-		//brokerStats                          *storeStats.BrokerStats
-		//FilterServerManager                  *FilterServerManager
-		//brokerStatsManager                   *stats.BrokerStatsManager
-		StoreHost                            string
-		//ConfigFile                           string
-		sendMessageHookList                  []mqtrace.SendMessageHook
-		consumeMessageHookList               []mqtrace.ConsumeMessageHook
-		brokerControllerTask                 *BrokerControllerTask
 	*/
 }
 
