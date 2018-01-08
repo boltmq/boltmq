@@ -60,11 +60,11 @@ var defaultConfig = &Config{
 		BrokerId:     basis.MASTER_ID,
 		BrokerName:   "broker-node",
 		BrokerRole:   "SYNC_MASTER",
-		HaServerIP:   defaultLocalAddress(),
+		HaServerIP:   defaultHaServerIP(),
 		NameSrvAddrs: getNameSrvAddrs(),
 	},
 	Broker: BrokerConfig{
-		IP:                                 defaultLocalAddress(),
+		IP:                                 defaultBrokerIP(),
 		Port:                               11911,
 		DeleteWhen:                         4,
 		Permission:                         defaultBrokerPermission,
@@ -145,12 +145,30 @@ func getNameSrvAddrs() []string {
 	return strings.Split(vals, ";")
 }
 
+func defaultHaServerIP() string {
+	ip := defaultLocalAddress()
+	if ip != "" {
+		return ip
+	}
+
+	return "127.0.0.1"
+}
+
+func defaultBrokerIP() string {
+	ip := defaultLocalAddress()
+	if ip != "" {
+		return ip
+	}
+
+	return "0.0.0.0"
+}
+
 func defaultLocalAddress() string {
 	if laddr, err := localAddress(); err == nil {
 		return laddr
 	}
 
-	return "127.0.0.1"
+	return ""
 }
 
 func localAddress() (laddr string, err error) {

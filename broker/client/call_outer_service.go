@@ -37,9 +37,9 @@ type CallOuterService struct {
 // NewCallOuterService 初始化
 // Author gaoyanlei
 // Since 2017/8/22
-func NewCallOuterService() *CallOuterService {
+func NewCallOuterService(remotingClient remoting.RemotingClient) *CallOuterService {
 	cos := new(CallOuterService)
-	cos.remotingClient = remoting.NewNMRemotingClient()
+	cos.remotingClient = remotingClient
 	return cos
 }
 
@@ -67,10 +67,9 @@ func (cos *CallOuterService) Shutdown() {
 // UpdateNameServerAddressList 更新nameService地址
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) UpdateNameServerAddressList(nameSrvAddrs string) {
-	addrs := strings.Split(nameSrvAddrs, ";")
-	if addrs != nil && len(addrs) > 0 {
-		cos.remotingClient.UpdateNameServerAddressList(addrs)
+func (cos *CallOuterService) UpdateNameServerAddressList(nameSrvAddrs []string) {
+	if nameSrvAddrs != nil && len(nameSrvAddrs) > 0 {
+		cos.remotingClient.UpdateNameServerAddressList(nameSrvAddrs)
 	}
 }
 
@@ -84,7 +83,7 @@ func (cos *CallOuterService) FetchNameServerAddr() string {
 	}
 
 	logger.Infof("name server address changed, old: %s, new: %s.", cos.nameSrvAddr, addrs)
-	cos.UpdateNameServerAddressList(addrs)
+	cos.UpdateNameServerAddressList([]string{addrs})
 	cos.nameSrvAddr = addrs
 	return cos.nameSrvAddr
 }

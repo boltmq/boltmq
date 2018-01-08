@@ -20,61 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/boltmq/boltmq/store/persistent/statfs"
 )
-
-func parentDirectory(dir string) string {
-	return filepath.Dir(dir)
-}
-
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func ensureDir(dirName string) error {
-	if len(dirName) == 0 {
-		return nil
-	}
-
-	exist, err := pathExists(dirName)
-	if err != nil {
-		return err
-	}
-
-	if !exist {
-		err := os.MkdirAll(dirName, os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// offset2FileName 格式化位20个字符长度的string
-// Author: tantexian, <tantexian@qq.com>
-// Since: 2017/8/9
-func offset2FileName(offset int64) string {
-	fileName := strconv.FormatInt(offset, 10)
-	var byteList = make([]byte, 20)
-	i := 0
-	for i < 20 {
-		byteList[i] = 0 + '0'
-		i++
-	}
-	byteList = append(byteList, fileName...)
-	index := len(byteList) - 20
-
-	return string(byteList[index : index+20])
-}
 
 // listFilesOrDir 返回当前目录下所有的文件或者目录
 // Params: path 路径
@@ -104,33 +50,6 @@ func timeMillisecondToHumanString(t time.Time) string {
 	return fmt.Sprintf("%04d%02d%02d%02d%02d%02d%03d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), millisecond)
 }
 
-// 获取磁盘分区空间使用率
-func getDiskPartitionSpaceUsedPercent(path string) (percent float64) {
-	if path == "" {
-		return -1
-	}
-
-	isExits, err := pathExists(path)
-	if err != nil {
-		return -1
-	}
-
-	if !isExits {
-		err := os.MkdirAll(path, os.ModePerm)
-		if err != nil {
-			return -1
-		}
-	}
-
-	diskStatus, err := statfs.DiskUsage(path)
-	if err != nil {
-		return -1
-	}
-
-	percent = float64(diskStatus.Used) / float64(diskStatus.All)
-	return
-}
-
 // isItTimeToDo
 // Author: zhoufei
 // Since: 2017/10/13
@@ -153,4 +72,21 @@ func isItTimeToDo(when string) bool {
 	}
 
 	return false
+}
+
+// offset2FileName 格式化位20个字符长度的string
+// Author: tantexian, <tantexian@qq.com>
+// Since: 2017/8/9
+func offset2FileName(offset int64) string {
+	fileName := strconv.FormatInt(offset, 10)
+	var byteList = make([]byte, 20)
+	i := 0
+	for i < 20 {
+		byteList[i] = 0 + '0'
+		i++
+	}
+	byteList = append(byteList, fileName...)
+	index := len(byteList) - 20
+
+	return string(byteList[index : index+20])
 }

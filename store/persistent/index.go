@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
@@ -64,7 +65,7 @@ func newIndexService(messageStore *PersistentMessageStore) *indexService {
 	index.messageStore = messageStore
 	index.hashSlotNum = messageStore.config.MaxHashSlotNum
 	index.indexNum = messageStore.config.MaxIndexNum
-	index.storePath = GetStorePathIndex(messageStore.config.StorePathRootDir)
+	index.storePath = common.GetStorePathIndex(messageStore.config.StorePathRootDir)
 
 	index.indexFileList = list.New()
 	index.requestQueue = make(chan interface{}, 300000)

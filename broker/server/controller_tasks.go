@@ -42,7 +42,7 @@ func newControllerTasks(controller *BrokerController) *controllerTasks {
 	return controllerTask
 }
 
-func (ctasks *controllerTasks) Shutdown() bool {
+func (ctasks *controllerTasks) shutdown() bool {
 	if ctasks == nil {
 		return false
 	}
@@ -82,10 +82,10 @@ func (ctasks *controllerTasks) Shutdown() bool {
 	return true
 }
 
-// startdeleteTopicTask 清除未使用Topic
+// startDeleteTopicTask 清除未使用Topic
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startdeleteTopicTask() {
+func (ctasks *controllerTasks) startDeleteTopicTask() {
 	if ctasks.deleteTopicTask != nil {
 		return
 	}
@@ -101,10 +101,10 @@ func (ctasks *controllerTasks) startdeleteTopicTask() {
 	logger.Infof("deleteTopicTask start ok")
 }
 
-// startbrokerStatsRecordTask 定时统计broker各类信息
+// startBrokerStatsRecordTask 定时统计broker各类信息
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startbrokerStatsRecordTask() {
+func (ctasks *controllerTasks) startBrokerStatsRecordTask() {
 	initialDelay := system.ComputNextMorningTimeMillis() - system.CurrentTimeMillis()
 	ctasks.brokerStatsRecordTask = system.NewTicker(false, time.Duration(initialDelay)*time.Millisecond, 24*time.Hour, func() {
 		ctasks.brokerController.brokerStatsRelatedStore.Record()
@@ -113,10 +113,10 @@ func (ctasks *controllerTasks) startbrokerStatsRecordTask() {
 	logger.Infof("brokerStatsRecordTask start ok")
 }
 
-// startpersistConsumerOffsetTask 定时写入ConsumerOffset文件
+// startPersistConsumerOffsetTask 定时写入ConsumerOffset文件
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startpersistConsumerOffsetTask() {
+func (ctasks *controllerTasks) startPersistConsumerOffsetTask() {
 	period := time.Duration(ctasks.brokerController.cfg.Broker.FlushConsumerOffsetInterval) * time.Millisecond
 	ctasks.persistConsumerOffsetTask = system.NewTicker(false, 10*time.Second, period, func() {
 		ctasks.brokerController.csmOffsetManager.cfgManagerLoader.persist()
@@ -125,10 +125,10 @@ func (ctasks *controllerTasks) startpersistConsumerOffsetTask() {
 	logger.Infof("persistConsumerOffsetTask start ok")
 }
 
-// startscanUnSubscribedTopicTask 扫描被删除Topic，并删除该Topic对应的Offset
+// startCcanUnSubscribedTopicTask 扫描被删除Topic，并删除该Topic对应的Offset
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startscanUnSubscribedTopicTask() {
+func (ctasks *controllerTasks) startScanUnSubscribedTopicTask() {
 	ctasks.scanUnSubscribedTopicTask = system.NewTicker(false, 10*time.Minute, 1*time.Hour, func() {
 		ctasks.brokerController.csmOffsetManager.scanUnsubscribedTopic()
 	})
@@ -136,10 +136,10 @@ func (ctasks *controllerTasks) startscanUnSubscribedTopicTask() {
 	logger.Infof("scanUnSubscribedTopicTask start ok")
 }
 
-// startfetchNameServerAddrTask 更新Namesrv地址列表
+// startFetchNameServerAddrTask 更新Namesrv地址列表
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startfetchNameServerAddrTask() {
+func (ctasks *controllerTasks) startFetchNameServerAddrTask() {
 	ctasks.fetchNameServerAddrTask = system.NewTicker(false, 10*time.Second, 2*time.Minute, func() {
 		ctasks.brokerController.callOuter.FetchNameServerAddr()
 	})
@@ -147,10 +147,10 @@ func (ctasks *controllerTasks) startfetchNameServerAddrTask() {
 	logger.Infof("fetchNameServerAddrTask start ok")
 }
 
-// startslaveSynchronizeTask 启动“Slave同步所有数据”任务
+// startSlaveSynchronizeTask 启动“Slave同步所有数据”任务
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startslaveSynchronizeTask() {
+func (ctasks *controllerTasks) startSlaveSynchronizeTask() {
 	ctasks.slaveSynchronizeTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
 		ctasks.brokerController.slaveSync.syncAll()
 	})
@@ -158,10 +158,10 @@ func (ctasks *controllerTasks) startslaveSynchronizeTask() {
 	logger.Infof("slaveSynchronizeTask start ok")
 }
 
-// startprintMasterAndSlaveDiffTask 启动“输出主从偏移量差值”任务
+// startPrintMasterAndSlaveDiffTask 启动“输出主从偏移量差值”任务
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startprintMasterAndSlaveDiffTask() {
+func (ctasks *controllerTasks) startPrintMasterAndSlaveDiffTask() {
 	ctasks.printMasterAndSlaveDiffTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
 		diff := ctasks.brokerController.messageStore.SlaveFallBehindMuch()
 		if diff > 0 {
@@ -172,10 +172,10 @@ func (ctasks *controllerTasks) startprintMasterAndSlaveDiffTask() {
 	logger.Infof("printMasterAndSlaveDiffTask start ok")
 }
 
-// startregisterAllBrokerTask 注册所有Broker
+// startRegisterAllBrokerTask 注册所有Broker
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startregisterAllBrokerTask() {
+func (ctasks *controllerTasks) startRegisterAllBrokerTask() {
 	ctasks.registerAllBrokerTask = system.NewTicker(false, 10*time.Second, 30*time.Second, func() {
 		ctasks.brokerController.registerBrokerAll(true, false)
 	})

@@ -23,8 +23,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/boltmq/store"
+	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol/heartbeat"
@@ -124,7 +126,7 @@ func newPersistentMessageStore(config *Config, brokerStats stats.BrokerStats) *P
 
 // Load
 func (ms *PersistentMessageStore) Load() bool {
-	storeCheckpoint, err := newStoreCheckpoint(GetStorePathCheckpoint(ms.config.StorePathRootDir))
+	storeCheckpoint, err := newStoreCheckpoint(common.GetStorePathCheckpoint(ms.config.StorePathRootDir))
 	if err != nil {
 		logger.Error("load exception", err.Error())
 		return false
@@ -188,8 +190,8 @@ func (ms *PersistentMessageStore) Load() bool {
 }
 
 func (ms *PersistentMessageStore) isTempFileExist() bool {
-	fileName := GetStorePathAbortFile(ms.config.StorePathRootDir)
-	exist, err := pathExists(fileName)
+	fileName := common.GetStorePathAbortFile(ms.config.StorePathRootDir)
+	exist, err := basis.PathExists(fileName)
 	if err != nil {
 		exist = false
 	}
@@ -198,8 +200,8 @@ func (ms *PersistentMessageStore) isTempFileExist() bool {
 }
 
 func (ms *PersistentMessageStore) loadConsumeQueue() bool {
-	dirLogicDir := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
-	exist, err := pathExists(dirLogicDir)
+	dirLogicDir := common.GetStorePathConsumeQueue(ms.config.StorePathRootDir)
+	exist, err := basis.PathExists(dirLogicDir)
 	if err != nil {
 		return false
 	}
@@ -241,7 +243,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 				}
 
 				logic := newConsumeQueue(topic, int32(queueId),
-					GetStorePathConsumeQueue(ms.config.StorePathRootDir),
+					common.GetStorePathConsumeQueue(ms.config.StorePathRootDir),
 					int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
 
 				ms.putConsumeQueue(topic, int32(queueId), logic)
@@ -347,7 +349,7 @@ func (ms *PersistentMessageStore) findConsumeQueue(topic string, queueId int32) 
 	cqMap.consumeQueuesMu.RUnlock()
 
 	if !ok {
-		storePathRootDir := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
+		storePathRootDir := common.GetStorePathConsumeQueue(ms.config.StorePathRootDir)
 		cqMap.consumeQueuesMu.Lock()
 		logic = newConsumeQueue(topic, queueId, storePathRootDir, int64(ms.config.getMappedFileSizeConsumeQueue()), ms)
 		cqMap.consumeQueues[queueId] = logic
@@ -448,14 +450,14 @@ func (ms *PersistentMessageStore) Start() error {
 }
 
 func (ms *PersistentMessageStore) createTempFile() error {
-	abortPath := GetStorePathAbortFile(ms.config.StorePathRootDir)
-	storeRootDir := parentDirectory(abortPath)
-	err := ensureDir(storeRootDir)
+	abortPath := common.GetStorePathAbortFile(ms.config.StorePathRootDir)
+	storeRootDir := basis.ParentDirectory(abortPath)
+	err := basis.EnsureDir(storeRootDir)
 	if err != nil {
 		return err
 	}
 
-	exist, err := pathExists(abortPath)
+	exist, err := basis.PathExists(abortPath)
 	if err != nil {
 		return err
 	}
@@ -532,12 +534,12 @@ func (ms *PersistentMessageStore) Shutdown() {
 		ms.steCheckpoint.flush()
 		ms.steCheckpoint.shutdown()
 
-		ms.deleteFile(GetStorePathAbortFile(ms.config.StorePathRootDir))
+		ms.deleteFile(common.GetStorePathAbortFile(ms.config.StorePathRootDir))
 	}
 }
 
 func (ms *PersistentMessageStore) deleteFile(fileName string) {
-	exist, err := pathExists(fileName)
+	exist, err := basis.PathExists(fileName)
 	if err != nil {
 		logger.Warnf("delete file: %s", err)
 		return
@@ -554,8 +556,8 @@ func (ms *PersistentMessageStore) Destroy() {
 	ms.destroyLogics()
 	ms.clog.destroy()
 	ms.idxService.destroy()
-	ms.deleteFile(GetStorePathAbortFile(ms.config.StorePathRootDir))
-	ms.deleteFile(GetStorePathCheckpoint(ms.config.StorePathRootDir))
+	ms.deleteFile(common.GetStorePathAbortFile(ms.config.StorePathRootDir))
+	ms.deleteFile(common.GetStorePathCheckpoint(ms.config.StorePathRootDir))
 }
 
 func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.PutMessageResult {
@@ -953,12 +955,12 @@ func (ms *PersistentMessageStore) RuntimeInfo() map[string]string {
 
 	// 检测物理文件磁盘空间
 	storePathPhysic := ms.config.StorePathCommitLog
-	physicRatio := getDiskPartitionSpaceUsedPercent(storePathPhysic)
+	physicRatio := common.GetDiskPartitionSpaceUsedPercent(storePathPhysic)
 	result[COMMIT_LOG_DISK_RATIO.String()] = fmt.Sprintf("%f", physicRatio)
 
 	// 检测逻辑文件磁盘空间
-	storePathLogic := GetStorePathConsumeQueue(ms.config.StorePathRootDir)
-	logicRatio := getDiskPartitionSpaceUsedPercent(storePathLogic)
+	storePathLogic := common.GetStorePathConsumeQueue(ms.config.StorePathRootDir)
+	logicRatio := common.GetDiskPartitionSpaceUsedPercent(storePathLogic)
 	result[CONSUME_QUEUE_DISK_RATIO.String()] = fmt.Sprintf("%f", logicRatio)
 
 	// 延时进度
