@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol/subscription"
 	"github.com/pquerna/ffjson/ffjson"
@@ -49,20 +50,20 @@ func newSubscriptionGroupManager(brokerController *BrokerController) *subscripti
 func (sgm *subscriptionGroupManager) init() {
 	{
 		subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
-		subscriptionGroupConfig.GroupName = TOOLS_CONSUMER_GROUP
-		sgm.subTable.Put(TOOLS_CONSUMER_GROUP, subscriptionGroupConfig)
+		subscriptionGroupConfig.GroupName = basis.TOOLS_CONSUMER_GROUP
+		sgm.subTable.Put(basis.TOOLS_CONSUMER_GROUP, subscriptionGroupConfig)
 	}
 
 	{
 		subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
-		subscriptionGroupConfig.GroupName = FILTERSRV_CONSUMER_GROUP
-		sgm.subTable.Put(FILTERSRV_CONSUMER_GROUP, subscriptionGroupConfig)
+		subscriptionGroupConfig.GroupName = basis.FILTERSRV_CONSUMER_GROUP
+		sgm.subTable.Put(basis.FILTERSRV_CONSUMER_GROUP, subscriptionGroupConfig)
 	}
 
 	{
 		subscriptionGroupConfig := subscription.NewSubscriptionGroupConfig()
-		subscriptionGroupConfig.GroupName = SELF_TEST_CONSUMER_GROUP
-		sgm.subTable.Put(SELF_TEST_CONSUMER_GROUP, subscriptionGroupConfig)
+		subscriptionGroupConfig.GroupName = basis.SELF_TEST_CONSUMER_GROUP
+		sgm.subTable.Put(basis.SELF_TEST_CONSUMER_GROUP, subscriptionGroupConfig)
 	}
 }
 

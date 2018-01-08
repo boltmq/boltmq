@@ -362,7 +362,7 @@ func (clog *commitLog) checkMessageAndReturnSize(byteBuffer *mappedByteBuffer, c
 		keys = propertiesMap[message.PROPERTY_KEYS]
 		tags := propertiesMap[message.PROPERTY_TAGS]
 		if len(tags) > 0 {
-			tagsCode = tagsString2tagsCode(basis.ParseTopicFilterType(sysFlag), tags)
+			tagsCode = basis.TagsString2tagsCode(basis.ParseTopicFilterType(sysFlag), tags)
 		}
 
 		// Timing message processing

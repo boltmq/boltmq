@@ -38,6 +38,7 @@ type BrokerController struct {
 	prcManager                  *producerManager
 	clientHouseKeepingSrv       *clientHouseKeepingService
 	tsCheckSupervisor           *transactionCheckSupervisor
+	pullMsgProcessor            *pullMessageProcessor
 	b2Client                    *broker2Client
 	subGroupManager             *subscriptionGroupManager
 	rblManager                  *rebalanceManager
@@ -65,7 +66,7 @@ type BrokerController struct {
 		//Broker2Client                        *Broker2Client
 		//SubscriptionGroupManager             *SubscriptionGroupManager
 		ConsumerIdsChangeListener            rebalance.ConsumerIdsChangeListener
-		RebalanceLockManager                 *RebalanceLockManager
+		//RebalanceLockManager                 *RebalanceLockManager
 		//BrokerOuterAPI                       *out.BrokerOuterAPI
 		//SlaveSynchronize                     *SlaveSynchronize
 		//MessageStore                         *stgstorelog.DefaultMessageStore
@@ -181,4 +182,11 @@ func (controller *BrokerController) getBrokerAddr() string {
 // Since 2017/9/12
 func (controller *BrokerController) getHAServerAddr() string {
 	return fmt.Sprintf("%s:%d", controller.cfg.Cluster.HaServerIP, controller.storeCfg.HaListenPort)
+}
+
+// getStoreHost 获取StoreHost
+// Author: tianyuliang
+// Since: 2017/9/26
+func (controller *BrokerController) getStoreHost() string {
+	return fmt.Sprintf("%s:%s", controller.cfg.Broker.IP, controller.remotingServer.ListenPort())
 }
