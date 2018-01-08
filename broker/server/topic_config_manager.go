@@ -55,7 +55,7 @@ func (tcm *topicConfigManager) init() {
 
 	// SELF_TEST_TOPIC
 	{
-		topicName := SELF_TEST_TOPIC
+		topicName := basis.SELF_TEST_TOPIC
 		topicConfig := protocol.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
@@ -68,7 +68,7 @@ func (tcm *topicConfigManager) init() {
 		autoCreateTopicEnable := tcm.brokerController.cfg.Broker.AutoCreateTopicEnable
 		logger.Infof("AutoCreateTopicEnable=%t", autoCreateTopicEnable)
 		if autoCreateTopicEnable {
-			topicName := DEFAULT_TOPIC
+			topicName := basis.DEFAULT_TOPIC
 			topicConfig := protocol.NewTopicConfig(topicName)
 			tcm.systemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = tcm.brokerController.cfg.Broker.DefaultTopicQueueNums
@@ -80,7 +80,7 @@ func (tcm *topicConfigManager) init() {
 
 	// BENCHMARK_TOPIC
 	{
-		topicName := BENCHMARK_TOPIC
+		topicName := basis.BENCHMARK_TOPIC
 		topicConfig := protocol.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
@@ -118,7 +118,7 @@ func (tcm *topicConfigManager) init() {
 
 	// OFFSET_MOVED_EVENT
 	{
-		topicName := OFFSET_MOVED_EVENT
+		topicName := basis.OFFSET_MOVED_EVENT
 		topicConfig := protocol.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
@@ -132,7 +132,7 @@ func (tcm *topicConfigManager) isSystemTopic(topic string) bool {
 }
 
 func (tcm *topicConfigManager) isTopicCanSendMessage(topic string) bool {
-	if topic == DEFAULT_TOPIC || topic == tcm.brokerController.cfg.Cluster.Name {
+	if topic == basis.DEFAULT_TOPIC || topic == tcm.brokerController.cfg.Cluster.Name {
 		return false
 	}
 	return true
