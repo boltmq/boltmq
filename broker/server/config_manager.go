@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	"github.com/toolkits/file"
 )
@@ -46,7 +47,7 @@ func (cml *configManagerLoader) load() bool {
 	filePath := cml.cfgManager.configFilePath()
 	if !file.IsExist(filePath) {
 		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
-		ok, err := CreateFile(filePath)
+		ok, err := common.CreateNullFile(filePath)
 		if err != nil {
 			logger.Errorf("create %s failed. err: %s", filePath, err.Error())
 			return false
@@ -79,7 +80,7 @@ func (cml *configManagerLoader) persist() {
 	}
 
 	filePath := cml.cfgManager.configFilePath()
-	err := String2File([]byte(buf), filePath)
+	err := common.String2File([]byte(buf), filePath)
 	if err != nil {
 		logger.Errorf("persist string to file, %s", err)
 	}

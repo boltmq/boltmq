@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	set "github.com/deckarep/golang-set"
 	"github.com/pquerna/ffjson/ffjson"
@@ -216,7 +217,7 @@ func (com *consumerOffsetManager) cloneOffset(srcGroup, destGroup, topic string)
 func (com *consumerOffsetManager) queryMinOffsetInAllGroup(topic, filterGroups string) map[int]int64 {
 	queueMinOffset := make(map[int]int64)
 
-	if !IsBlank(filterGroups) {
+	if !common.IsBlank(filterGroups) {
 		for _, group := range strings.Split(filterGroups, ",") {
 			com.offsets.RemoveByFlag(func(topicAtGroup string, v map[int]int64) bool {
 				topicGroupArr := strings.Split(topicAtGroup, TOPIC_GROUP_SEPARATOR)

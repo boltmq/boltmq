@@ -26,7 +26,6 @@ import (
 	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/boltmq/store"
-	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol/heartbeat"
@@ -191,7 +190,7 @@ func (ms *PersistentMessageStore) Load() bool {
 
 func (ms *PersistentMessageStore) isTempFileExist() bool {
 	fileName := common.GetStorePathAbortFile(ms.config.StorePathRootDir)
-	exist, err := basis.PathExists(fileName)
+	exist, err := common.PathExists(fileName)
 	if err != nil {
 		exist = false
 	}
@@ -201,7 +200,7 @@ func (ms *PersistentMessageStore) isTempFileExist() bool {
 
 func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 	dirLogicDir := common.GetStorePathConsumeQueue(ms.config.StorePathRootDir)
-	exist, err := basis.PathExists(dirLogicDir)
+	exist, err := common.PathExists(dirLogicDir)
 	if err != nil {
 		return false
 	}
@@ -451,13 +450,13 @@ func (ms *PersistentMessageStore) Start() error {
 
 func (ms *PersistentMessageStore) createTempFile() error {
 	abortPath := common.GetStorePathAbortFile(ms.config.StorePathRootDir)
-	storeRootDir := basis.ParentDirectory(abortPath)
-	err := basis.EnsureDir(storeRootDir)
+	storeRootDir := common.ParentDirectory(abortPath)
+	err := common.EnsureDir(storeRootDir)
 	if err != nil {
 		return err
 	}
 
-	exist, err := basis.PathExists(abortPath)
+	exist, err := common.PathExists(abortPath)
 	if err != nil {
 		return err
 	}
@@ -539,7 +538,7 @@ func (ms *PersistentMessageStore) Shutdown() {
 }
 
 func (ms *PersistentMessageStore) deleteFile(fileName string) {
-	exist, err := basis.PathExists(fileName)
+	exist, err := common.PathExists(fileName)
 	if err != nil {
 		logger.Warnf("delete file: %s", err)
 		return

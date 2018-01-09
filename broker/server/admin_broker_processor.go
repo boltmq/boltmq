@@ -641,7 +641,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 	consumeStats := admin.NewConsumeStatsPlus()
 
 	topics := set.NewSet()
-	if IsBlank(requestHeader.Topic) {
+	if common.IsBlank(requestHeader.Topic) {
 		topics = abp.brokerController.csmOffsetManager.whichTopicByConsumer(requestHeader.ConsumerGroup)
 	} else {
 		topics.Add(requestHeader.Topic)
@@ -1076,7 +1076,7 @@ func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *pro
 
 	topics := set.NewSet()
 
-	if IsBlank(requestHeader.Topic) {
+	if common.IsBlank(requestHeader.Topic) {
 		topics = abp.brokerController.csmOffsetManager.whichTopicByConsumer(requestHeader.SrcGroup)
 	} else {
 		topics.Add(requestHeader.Topic)

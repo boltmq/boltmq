@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/logger"
@@ -208,7 +209,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 		}
 
 		clientId := chanInfo.clientId
-		if IsBlank(originClientId) || strings.EqualFold(originClientId, clientId) {
+		if common.IsBlank(originClientId) || strings.EqualFold(originClientId, clientId) {
 			// 不指定 originClientId 则对所有的 client 进行处理；若指定 originClientId 则只对当前
 			// originClientId 进行处理
 			response, err := b2c.brokerController.remotingServer.InvokeSync(chanInfo.ctx, request, 5000)
@@ -229,7 +230,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 			}
 
 			// 若指定 originClientId 相应的 client 处理完成，则退出循环
-			if !IsBlank(originClientId) && strings.EqualFold(originClientId, clientId) {
+			if !common.IsBlank(originClientId) && strings.EqualFold(originClientId, clientId) {
 				break
 			}
 		}

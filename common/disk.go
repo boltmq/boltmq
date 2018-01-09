@@ -18,7 +18,6 @@ import (
 	"os"
 
 	"github.com/boltmq/boltmq/common/statfs"
-	"github.com/boltmq/common/basis"
 )
 
 // 获取磁盘分区空间使用率
@@ -27,7 +26,7 @@ func GetDiskPartitionSpaceUsedPercent(path string) (percent float64) {
 		return -1
 	}
 
-	isExits, err := basis.PathExists(path)
+	isExits, err := PathExists(path)
 	if err != nil {
 		return -1
 	}

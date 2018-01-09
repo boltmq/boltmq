@@ -18,8 +18,8 @@ import (
 	"math"
 	"os"
 
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/store/persistent/mmap"
-	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 )
 
@@ -34,10 +34,10 @@ type storeCheckpoint struct {
 func newStoreCheckpoint(scpPath string) (*storeCheckpoint, error) {
 	scp := new(storeCheckpoint)
 
-	scpPathDir := basis.ParentDirectory(scpPath)
-	basis.EnsureDir(scpPathDir)
+	scpPathDir := common.ParentDirectory(scpPath)
+	common.EnsureDir(scpPathDir)
 
-	exist, err := basis.PathExists(scpPath)
+	exist, err := common.PathExists(scpPath)
 	if err != nil {
 		return nil, err
 	}

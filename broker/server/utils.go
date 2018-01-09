@@ -15,104 +15,13 @@ package server
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/basis"
 	"github.com/pquerna/ffjson/ffjson"
 )
-
-// create2WriteFile 创建文件
-func CreateFile(filePath string) (bool, error) {
-	err := ensureDir(filePath)
-	if err != nil {
-		return false, err
-	}
-
-	_, err = os.Create(filePath)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
-func String2File(data []byte, flPath string) error {
-	filePath := filepath.FromSlash(flPath)
-	tmpFilePath := filePath + ".tmp"
-	bakFilePath := filePath + ".bak"
-
-	err := create2WriteFile(data, tmpFilePath)
-	if err != nil {
-		return err
-	}
-
-	oldData, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	err = create2WriteFile(oldData, bakFilePath)
-	if err != nil {
-		return err
-	}
-
-	// 删除原文件
-	err = os.Remove(filePath)
-	if err != nil {
-		return err
-	}
-
-	// 重命临时文件
-	return os.Rename(tmpFilePath, filePath)
-}
-
-func create2WriteFile(data []byte, filePath string) error {
-	err := ensureDir(filePath)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.Write(data)
-	return err
-}
-
-func ensureDir(filePath string) error {
-	dir := path.Dir(filePath)
-	exist, err := pathExists(dir)
-	if err != nil {
-		return err
-	}
-
-	if exist {
-		return nil
-	}
-
-	return os.MkdirAll(dir, os.ModePerm)
-}
-
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
 
 // min int64 的最小值
 // Author rongzhihong
@@ -122,18 +31,6 @@ func min(a, b int64) int64 {
 		return b
 	}
 	return a
-}
-
-var blankReg = regexp.MustCompile(`\S+?`)
-
-// IsBlank 是否为空
-// Author: rongzhihong
-// Since: 2017/9/19
-func IsBlank(content string) bool {
-	if blankReg.FindString(content) != "" {
-		return false
-	}
-	return true
 }
 
 // Encode Json Encode
