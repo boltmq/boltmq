@@ -68,3 +68,19 @@ func (bs *brokerStatsRelatedStoreService) GetMsgPutTotalTodayNow() int64 {
 func (bs *brokerStatsRelatedStoreService) GetMsgGetTotalTodayNow() int64 {
 	return bs.messageStore.StoreStats().GetGetMessageTransferedMsgCount()
 }
+
+func (bs *brokerStatsRelatedStoreService) GetMsgPutTotalTodayMorning() int64 {
+	return bs.msgPutTotalTodayMorning
+}
+
+func (bs *brokerStatsRelatedStoreService) GetMsgPutTotalYesterdayMorning() int64 {
+	return bs.msgPutTotalYesterdayMorning
+}
+
+func (bs *brokerStatsRelatedStoreService) GetMsgGetTotalTodayMorning() int64 {
+	return bs.msgGetTotalTodayMorning
+}
+
+func (bs *brokerStatsRelatedStoreService) GetMsgGetTotalYesterdayMorning() int64 {
+	return bs.msgGetTotalYesterdayMorning
+}

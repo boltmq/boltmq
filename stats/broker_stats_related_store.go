@@ -18,4 +18,8 @@ type BrokerStatsRelatedStore interface {
 	Record()
 	GetMsgPutTotalTodayNow() int64
 	GetMsgGetTotalTodayNow() int64
+	GetMsgGetTotalTodayMorning() int64
+	GetMsgGetTotalYesterdayMorning() int64
+	GetMsgPutTotalTodayMorning() int64
+	GetMsgPutTotalYesterdayMorning() int64
 }

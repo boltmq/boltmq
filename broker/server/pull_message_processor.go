@@ -375,7 +375,7 @@ func (pmsgp *pullMessageProcessor) generateOffsetMovedEvent(event *protocol.Offs
 // registerConsumeMessageHook 消费消息回调
 // Author rongzhihong
 // Since 2017/9/11
-func (pmsgp *pullMessageProcessor) registerConsumeMessageHook(consumeMessageHookList []trace.ConsumeMessageHook) {
+func (pmsgp *pullMessageProcessor) RegisterConsumeMessageHook(consumeMessageHookList []trace.ConsumeMessageHook) {
 	pmsgp.csmMsgHookList = consumeMessageHookList
 }
 
