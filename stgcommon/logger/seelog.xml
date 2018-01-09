@@ -1,5 +1,0 @@
-<seelog>
-    <outputs>
-        <file path="test.log"/>
-    </outputs>
-</seelog>

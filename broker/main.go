@@ -19,14 +19,11 @@ import (
 	"os"
 	"runtime/debug"
 
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/broker/config"
 	"github.com/boltmq/boltmq/broker/server"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
-)
-
-const (
-	version = "1.0.0"
 )
 
 func main() {
@@ -41,7 +38,7 @@ func main() {
 	}
 
 	if *v {
-		fmt.Println("boltmq broker version:", version)
+		fmt.Println("boltmq broker version:", common.Version)
 		os.Exit(0)
 	}
 	debug.SetMaxThreads(100000)
