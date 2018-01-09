@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/boltmq/boltmq/broker/common/statfs"
+	"github.com/boltmq/boltmq/common/statfs"
 	"github.com/boltmq/common/basis"
 )
 

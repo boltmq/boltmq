@@ -18,7 +18,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/boltmq/boltmq/broker/common"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/utils/system"
 )
 

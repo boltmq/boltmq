@@ -19,9 +19,9 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/broker/config"
 	"github.com/boltmq/boltmq/broker/server"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )

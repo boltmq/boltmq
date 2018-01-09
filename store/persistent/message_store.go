@@ -23,7 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/boltmq/boltmq/broker/common"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/stats"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/basis"

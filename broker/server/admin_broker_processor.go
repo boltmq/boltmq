@@ -18,7 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/boltmq/boltmq/broker/common"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
