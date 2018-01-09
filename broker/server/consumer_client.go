@@ -101,7 +101,7 @@ func (cg *consumerGroupInfo) findSubscriptionData(topic string) *heartbeat.Subsc
 	if sdPlus, ok := value.(*heartbeat.SubscriptionDataPlus); ok {
 		subscriptionData := &heartbeat.SubscriptionData{
 			Topic:           sdPlus.Topic,
-			SUB_ALL:         sdPlus.SUB_ALL,
+			SubAll:          sdPlus.SubAll,
 			SubString:       sdPlus.SubString,
 			SubVersion:      sdPlus.SubVersion,
 			TagsSet:         set.NewSet(sdPlus.TagsSet),

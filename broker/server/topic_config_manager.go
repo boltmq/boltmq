@@ -24,12 +24,13 @@ import (
 	"github.com/boltmq/common/constant"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/protocol/base"
 	set "github.com/deckarep/golang-set"
 )
 
 type topicConfigManager struct {
 	brokerController     *BrokerController
-	tpCfgSerialWrapper   *protocol.TopicConfigSerializeWrapper
+	tpCfgSerialWrapper   *base.TopicConfigSerializeWrapper
 	lockTopicConfigTable sync.Mutex
 	systemTopicList      set.Set
 	cfgManagerLoader     *configManagerLoader
@@ -43,7 +44,7 @@ type topicConfigManager struct {
 func newTopicConfigManager(brokerController *BrokerController) *topicConfigManager {
 	var tcm = new(topicConfigManager)
 	tcm.brokerController = brokerController
-	tcm.tpCfgSerialWrapper = protocol.NewTopicConfigSerializeWrapper()
+	tcm.tpCfgSerialWrapper = base.NewTopicConfigSerializeWrapper()
 	tcm.systemTopicList = set.NewSet()
 	tcm.init()
 	tcm.cfgManagerLoader = newConfigManagerLoader(tcm)
@@ -56,7 +57,7 @@ func (tcm *topicConfigManager) init() {
 	// SELF_TEST_TOPIC
 	{
 		topicName := basis.SELF_TEST_TOPIC
-		topicConfig := protocol.NewTopicConfig(topicName)
+		topicConfig := base.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -69,7 +70,7 @@ func (tcm *topicConfigManager) init() {
 		logger.Infof("AutoCreateTopicEnable=%t", autoCreateTopicEnable)
 		if autoCreateTopicEnable {
 			topicName := basis.DEFAULT_TOPIC
-			topicConfig := protocol.NewTopicConfig(topicName)
+			topicConfig := base.NewTopicConfig(topicName)
 			tcm.systemTopicList.Add(topicConfig)
 			topicConfig.ReadQueueNums = tcm.brokerController.cfg.Broker.DefaultTopicQueueNums
 			topicConfig.WriteQueueNums = tcm.brokerController.cfg.Broker.DefaultTopicQueueNums
@@ -81,7 +82,7 @@ func (tcm *topicConfigManager) init() {
 	// BENCHMARK_TOPIC
 	{
 		topicName := basis.BENCHMARK_TOPIC
-		topicConfig := protocol.NewTopicConfig(topicName)
+		topicConfig := base.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1024
 		topicConfig.WriteQueueNums = 1024
@@ -91,7 +92,7 @@ func (tcm *topicConfigManager) init() {
 	// DefaultCluster
 	{
 		topicName := tcm.brokerController.cfg.Cluster.Name
-		topicConfig := protocol.NewTopicConfig(topicName)
+		topicConfig := base.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if tcm.brokerController.cfg.Broker.ClusterTopicEnable {
@@ -104,7 +105,7 @@ func (tcm *topicConfigManager) init() {
 	// DEFAULT_BROKER
 	{
 		topicName := tcm.brokerController.cfg.Cluster.BrokerName
-		topicConfig := protocol.NewTopicConfig(topicName)
+		topicConfig := base.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		perm := constant.PERM_INHERIT
 		if tcm.brokerController.cfg.Broker.BrokerTopicEnable {
@@ -119,7 +120,7 @@ func (tcm *topicConfigManager) init() {
 	// OFFSET_MOVED_EVENT
 	{
 		topicName := basis.OFFSET_MOVED_EVENT
-		topicConfig := protocol.NewTopicConfig(topicName)
+		topicConfig := base.NewTopicConfig(topicName)
 		tcm.systemTopicList.Add(topicConfig)
 		topicConfig.ReadQueueNums = 1
 		topicConfig.WriteQueueNums = 1
@@ -141,7 +142,7 @@ func (tcm *topicConfigManager) isTopicCanSendMessage(topic string) bool {
 // selectTopicConfig 根据topic查找
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *topicConfigManager) selectTopicConfig(topic string) *protocol.TopicConfig {
+func (tcm *topicConfigManager) selectTopicConfig(topic string) *base.TopicConfig {
 	topicConfig := tcm.tpCfgSerialWrapper.TpConfigTable.Get(topic)
 	if topicConfig != nil {
 		return topicConfig
@@ -153,7 +154,7 @@ func (tcm *topicConfigManager) selectTopicConfig(topic string) *protocol.TopicCo
 // Author gaoyanlei
 // Since 2017/8/10
 func (tcm *topicConfigManager) createTopicInSendMessageMethod(topic, defaultTopic,
-	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *protocol.TopicConfig, err error) {
+	remoteAddress string, clientDefaultTopicQueueNums int32, topicSysFlag int) (topicConfig *base.TopicConfig, err error) {
 
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
@@ -189,7 +190,7 @@ func (tcm *topicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 			}
 			perm := defTopicConfig.Perm
 			perm &= 0xFFFFFFFF ^ constant.PERM_INHERIT
-			topicConfig = &protocol.TopicConfig{
+			topicConfig = &base.TopicConfig{
 				TopicName:      topic,
 				WriteQueueNums: queueNums,
 				ReadQueueNums:  queueNums,
@@ -221,7 +222,7 @@ func (tcm *topicConfigManager) createTopicInSendMessageMethod(topic, defaultTopi
 // Author gaoyanlei
 // Since 2017/8/11
 func (tcm *topicConfigManager) createTopicInSendMessageBackMethod(topic string, clientDefaultTopicQueueNums int32, perm,
-	topicSysFlag int) (topicConfig *protocol.TopicConfig, err error) {
+	topicSysFlag int) (topicConfig *base.TopicConfig, err error) {
 	tcm.lockTopicConfigTable.Lock()
 	defer tcm.lockTopicConfigTable.Unlock()
 
@@ -234,7 +235,7 @@ func (tcm *topicConfigManager) createTopicInSendMessageBackMethod(topic string, 
 	// 是否新创建topic
 	createNew := false
 
-	topicConfig = &protocol.TopicConfig{
+	topicConfig = &base.TopicConfig{
 		TopicName:      topic,
 		WriteQueueNums: clientDefaultTopicQueueNums,
 		ReadQueueNums:  clientDefaultTopicQueueNums,
@@ -256,7 +257,7 @@ func (tcm *topicConfigManager) createTopicInSendMessageBackMethod(topic string, 
 // updateTopicConfig 更新topic信息
 // Author gaoyanlei
 // Since 2017/8/10
-func (tcm *topicConfigManager) updateTopicConfig(topicConfig *protocol.TopicConfig) {
+func (tcm *topicConfigManager) updateTopicConfig(topicConfig *base.TopicConfig) {
 	old := tcm.tpCfgSerialWrapper.TpConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if old != nil {
 		logger.Infof("update topic config, old:%s, new:%s", old, topicConfig)
@@ -295,7 +296,7 @@ func (tcm *topicConfigManager) updateOrderTopicConfig(orderKVTable *protocol.KVT
 		}
 	}
 
-	tcm.tpCfgSerialWrapper.TpConfigTable.ForeachUpdate(func(topic string, topicConfig *protocol.TopicConfig) {
+	tcm.tpCfgSerialWrapper.TpConfigTable.ForeachUpdate(func(topic string, topicConfig *base.TopicConfig) {
 		if !orderTopics.Contains(topic) {
 			if topicConfig != nil && topicConfig.Order {
 				topicConfig.Order = false
@@ -339,8 +340,8 @@ func (tcm *topicConfigManager) deleteTopicConfig(topic string) {
 // buildTopicConfigSerializeWrapper 创建tpCfgSerialWrapper
 // Author gaoyanlei
 // Since 2017/8/11
-func (tcm *topicConfigManager) buildTopicConfigSerializeWrapper() *protocol.TopicConfigSerializeWrapper {
-	topicConfigWrapper := protocol.NewTopicConfigSerializeWrapper()
+func (tcm *topicConfigManager) buildTopicConfigSerializeWrapper() *base.TopicConfigSerializeWrapper {
+	topicConfigWrapper := base.NewTopicConfigSerializeWrapper()
 	topicConfigWrapper.DataVersion = tcm.tpCfgSerialWrapper.DataVersion
 	topicConfigWrapper.TpConfigTable = tcm.tpCfgSerialWrapper.TpConfigTable
 	return topicConfigWrapper

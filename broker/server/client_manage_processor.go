@@ -19,7 +19,8 @@ import (
 	"github.com/boltmq/common/constant"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/body"
+	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/protocol/heartbeat"
 	"github.com/boltmq/common/sysflag"
 )
@@ -103,7 +104,7 @@ func (cmp *clientManageProcessor) heartBeat(ctx core.Context, request *protocol.
 func (cmp *clientManageProcessor) unregisterClient(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 
-	requestHeader := &header.UnRegisterClientRequestHeader{}
+	requestHeader := &head.UnRegisterClientRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -136,10 +137,10 @@ func (cmp *clientManageProcessor) unregisterClient(ctx core.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/14
 func (cmp *clientManageProcessor) queryConsumerOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.QueryConsumerOffsetResponseHeader{}
+	responseHeader := &head.QueryConsumerOffsetResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.QueryConsumerOffsetRequestHeader{}
+	requestHeader := &head.QueryConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -178,7 +179,7 @@ func (cmp *clientManageProcessor) queryConsumerOffset(ctx core.Context, request 
 func (cmp *clientManageProcessor) updateConsumerOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
 
-	requestHeader := &header.UpdateConsumerOffsetRequestHeader{}
+	requestHeader := &head.UpdateConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -215,7 +216,7 @@ func (cmp *clientManageProcessor) updateConsumerOffset(ctx core.Context, request
 // Since 2017/8/25
 func (cmp *clientManageProcessor) getConsumerListByGroup(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
-	requestHeader := &header.GetConsumerListByGroupRequestHeader{}
+	requestHeader := &head.GetConsumersByGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -227,8 +228,11 @@ func (cmp *clientManageProcessor) getConsumerListByGroup(ctx core.Context, reque
 		clientIds := consumerGroupInfo.getAllClientId()
 
 		if clientIds != nil && len(clientIds) > 0 {
-			consumerListBody := &header.GetConsumerListByGroupResponse{ConsumerIdList: clientIds}
-			response.Body = consumerListBody.CustomEncode(consumerListBody)
+			consumerListBody := &body.GetConsumersByGroupResponse{ConsumerIdList: clientIds}
+			response.Body, err = Encode(consumerListBody)
+			if err != nil {
+				return nil, err
+			}
 			response.Code = protocol.SUCCESS
 			response.Remark = ""
 			return response, nil

@@ -29,7 +29,7 @@ import (
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/protocol/heartbeat"
 	"github.com/boltmq/common/sysflag"
 	"github.com/boltmq/common/utils/system"
@@ -86,10 +86,10 @@ func (pmsgp *pullMessageProcessor) executeRequestWhenWakeup(ctx core.Context, re
 }
 
 func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingCommand, ctx core.Context, brokerAllowSuspend bool) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.PullMessageResponseHeader{}
+	responseHeader := &head.PullMessageResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.PullMessageRequestHeader{}
+	requestHeader := &head.PullMessageRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Errorf("Pull Message: Decode Request Throw Error:%s", err.Error())
@@ -356,15 +356,16 @@ func (pmsgp *pullMessageProcessor) generateOffsetMovedEvent(event *protocol.Offs
 	msgInner.SetTags(event.ConsumerGroup)
 	msgInner.SetDelayTimeLevel(0)
 	msgInner.SetKeys(event.ConsumerGroup)
-	msgInner.Body = event.CustomEncode(event)
 	msgInner.Flag = 0
 	msgInner.PropertiesString = message.MessageProperties2String(msgInner.Properties)
 	msgInner.TagsCode = basis.TagsString2tagsCode(basis.SINGLE_TAG, msgInner.GetTags())
 
+	msgInner.Body, _ = Encode(event)
 	msgInner.QueueId = int32(0)
 	msgInner.SysFlag = 0
 	msgInner.BornTimestamp = system.CurrentTimeMillis()
 	msgInner.BornHost = pmsgp.brokerController.getBrokerAddr()
+
 	msgInner.StoreHost = msgInner.BornHost
 
 	msgInner.ReconsumeTimes = 0

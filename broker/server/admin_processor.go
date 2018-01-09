@@ -23,11 +23,13 @@ import (
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/admin"
+	"github.com/boltmq/common/protocol/base"
 	"github.com/boltmq/common/protocol/body"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
+	"github.com/boltmq/common/protocol/stats"
 	"github.com/boltmq/common/protocol/subscription"
 	set "github.com/deckarep/golang-set"
+	"github.com/pquerna/ffjson/ffjson"
 )
 
 // adminBrokerProcessor 管理类请求处理
@@ -129,7 +131,7 @@ func (abp *adminBrokerProcessor) ProcessRequest(ctx core.Context, request *proto
 // Since 2017/8/23
 func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
-	requestHeader := &header.CreateTopicRequestHeader{}
+	requestHeader := &head.CreateTopicRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Errorf("err: %s", err.Error())
@@ -137,12 +139,10 @@ func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request 
 	}
 
 	// Topic名字是否与保留字段冲突
-	topic := requestHeader.Topic
-	logger.Infof("requestHeader.Topic=%s, ClusterName=%s", topic, abp.brokerController.cfg.Cluster.Name)
-	if strings.EqualFold(topic, abp.brokerController.cfg.Cluster.Name) {
-		format := "the topic[%s] is conflict with system reserved words."
-		logger.Infof(format, topic)
-		response.Remark = fmt.Sprintf(format, topic)
+	logger.Infof("requestHeader.Topic=%s, ClusterName=%s", requestHeader.Topic, abp.brokerController.cfg.Cluster.Name)
+	if strings.EqualFold(requestHeader.Topic, abp.brokerController.cfg.Cluster.Name) {
+		logger.Infof("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
+		response.Remark = fmt.Sprintf("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
 		return response, nil
 	}
 
@@ -150,7 +150,7 @@ func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request 
 	writeQueueNums := requestHeader.WriteQueueNums
 	brokerPermission := requestHeader.Perm
 	topicFilterType := requestHeader.TopicFilterType
-	topicConfig := protocol.NewDefaultTopicConfig(topic, readQueueNums, writeQueueNums, brokerPermission, topicFilterType)
+	topicConfig := base.NewDefaultTopicConfig(requestHeader.Topic, readQueueNums, writeQueueNums, brokerPermission, topicFilterType)
 	if requestHeader.TopicSysFlag != 0 {
 		topicConfig.TopicSysFlag = requestHeader.TopicSysFlag
 	}
@@ -164,10 +164,10 @@ func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request 
 }
 
 func (abp *adminBrokerProcessor) getMaxOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.GetMaxOffsetResponseHeader{}
+	responseHeader := &head.GetMaxOffsetResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := header.NewGetMaxOffsetRequestHeader()
+	requestHeader := head.NewGetMaxOffsetRequestHeader()
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -182,7 +182,7 @@ func (abp *adminBrokerProcessor) getMaxOffset(ctx core.Context, request *protoco
 }
 func (abp *adminBrokerProcessor) deleteTopic(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := &protocol.RemotingCommand{}
-	requestHeader := &header.DeleteTopicRequestHeader{}
+	requestHeader := &head.DeleteTopicRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -201,7 +201,7 @@ func (abp *adminBrokerProcessor) deleteTopic(ctx core.Context, request *protocol
 // Author rongzhihong
 // Since 2017/9/19
 func (adp *adminBrokerProcessor) getAllTopicConfig(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.GetAllTopicConfigResponseHeader{}
+	responseHeader := &head.GetAllTopicConfigResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	content := adp.brokerController.tpConfigManager.encode(false)
@@ -248,7 +248,7 @@ func (adp *adminBrokerProcessor) updateBrokerConfig(ctx core.Context, request *p
 // Author rongzhihong
 // Since 2017/9/19
 func (adp *adminBrokerProcessor) getBrokerConfig(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.GetBrokerConfigResponseHeader{}
+	responseHeader := &head.GetBrokerConfigResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	content := adp.brokerController.readConfig()
@@ -266,10 +266,10 @@ func (adp *adminBrokerProcessor) getBrokerConfig(ctx core.Context, request *prot
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) searchOffsetByTimestamp(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.SearchOffsetResponseHeader{}
+	responseHeader := &head.SearchOffsetResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.SearchOffsetRequestHeader{}
+	requestHeader := &head.SearchOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -287,10 +287,10 @@ func (abp *adminBrokerProcessor) searchOffsetByTimestamp(ctx core.Context, reque
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) getMinOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.GetMinOffsetResponseHeader{}
+	responseHeader := &head.GetMinOffsetResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.GetMinOffsetRequestHeader{}
+	requestHeader := &head.GetMinOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -308,10 +308,10 @@ func (abp *adminBrokerProcessor) getMinOffset(ctx core.Context, request *protoco
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) getEarliestMsgStoretime(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.GetEarliestMsgStoretimeResponseHeader{}
+	responseHeader := &head.GetEarliestMsgStoretimeResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.GetEarliestMsgStoretimeRequestHeader{}
+	requestHeader := &head.GetEarliestMsgStoretimeRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -352,7 +352,7 @@ func (abp *adminBrokerProcessor) getBrokerRuntimeInfo(ctx core.Context, request 
 func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestBody := body.NewLockBatchRequestBody()
+	requestBody := body.NewLockBatchRequest()
 	err := Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
@@ -361,7 +361,7 @@ func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol
 	lockOKMQSet := abp.brokerController.rblManager.tryLockBatch(requestBody.ConsumerGroup,
 		requestBody.MQSet, requestBody.ClientId)
 
-	responseBody := body.NewLockBatchResponseBody()
+	responseBody := body.NewLockBatchResponse()
 	responseBody.LockOKMQSet = lockOKMQSet
 
 	content, err := Encode(responseBody)
@@ -381,7 +381,7 @@ func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol
 func (abp *adminBrokerProcessor) unlockBatchMQ(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestBody := body.NewUnlockBatchRequestBody()
+	requestBody := body.NewUnlockBatchRequest()
 	err := Decode(request.Body, requestBody)
 	if err != nil {
 		logger.Error(err)
@@ -464,7 +464,7 @@ func (abp *adminBrokerProcessor) getAllSubscriptionGroup(ctx core.Context, reque
 func (abp *adminBrokerProcessor) deleteSubscriptionGroup(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.DeleteSubscriptionGroupRequestHeader{}
+	requestHeader := &head.DeleteSubscriptionGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -483,7 +483,7 @@ func (abp *adminBrokerProcessor) deleteSubscriptionGroup(ctx core.Context, reque
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
-	requestHeader := &header.GetTopicStatsInfoRequestHeader{}
+	requestHeader := &head.GetTopicStatsInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -497,7 +497,7 @@ func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *pr
 		return response, nil
 	}
 
-	topicStatsTable := admin.NewTopicStatsTablePlus()
+	topicStatsTable := stats.NewTopicStatsTablePlus()
 	var writeQueueNums = int(topicConfig.WriteQueueNums)
 	for i := 0; i < writeQueueNums; i++ {
 		mq := &message.MessageQueue{}
@@ -505,7 +505,7 @@ func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *pr
 		mq.BrokerName = abp.brokerController.cfg.Cluster.BrokerName
 		mq.QueueId = i
 
-		topicOffset := admin.NewTopicOffset()
+		topicOffset := stats.NewTopicOffset()
 		min := abp.brokerController.messageStore.MinOffsetInQueue(topic, int32(i))
 		if min < 0 {
 			min = 0
@@ -528,7 +528,11 @@ func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *pr
 		topicStatsTable.OffsetTable[mqKey] = topicOffset
 	}
 
-	content := topicStatsTable.CustomEncode(topicStatsTable)
+	content, err := ffjson.Marshal(topicStatsTable)
+	if err != nil {
+		return nil, err
+	}
+
 	response.Code = protocol.SUCCESS
 	response.Body = content
 	response.Remark = ""
@@ -542,7 +546,7 @@ func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *pr
 func (abp *adminBrokerProcessor) getConsumerConnectionList(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetConsumerConnectionListRequestHeader{}
+	requestHeader := &head.GetConsumerConnectionsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -591,7 +595,7 @@ func (abp *adminBrokerProcessor) getConsumerConnectionList(ctx core.Context, req
 func (abp *adminBrokerProcessor) getProducerConnectionList(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetProducerConnectionListRequestHeader{}
+	requestHeader := &head.GetProducerConnectionsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -632,13 +636,13 @@ func (abp *adminBrokerProcessor) getProducerConnectionList(ctx core.Context, req
 func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetConsumeStatsRequestHeader{}
+	requestHeader := &head.GetConsumerStatsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
 	}
 
-	consumeStats := admin.NewConsumeStatsPlus()
+	consumeStats := stats.NewConsumeStatsPlus()
 
 	topics := set.NewSet()
 	if common.IsBlank(requestHeader.Topic) {
@@ -676,7 +680,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 				mq.BrokerName = abp.brokerController.cfg.Cluster.BrokerName
 				mq.QueueId = i
 
-				offsetWrapper := &admin.OffsetWrapper{}
+				offsetWrapper := &stats.OffsetWrapper{}
 				brokerOffset := abp.brokerController.messageStore.MaxOffsetInQueue(topic, int32(i))
 				if brokerOffset < 0 {
 					brokerOffset = 0
@@ -770,7 +774,7 @@ func (abp *adminBrokerProcessor) getAllDelayOffset(ctx core.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) resetOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	requestHeader := &header.ResetOffsetRequestHeader{}
+	requestHeader := &head.ResetOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -786,7 +790,7 @@ func (abp *adminBrokerProcessor) resetOffset(ctx core.Context, request *protocol
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) getConsumerStatus(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	requestHeader := &header.GetConsumerStatusRequestHeader{}
+	requestHeader := &head.GetConsumerStatusRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -804,7 +808,7 @@ func (abp *adminBrokerProcessor) getConsumerStatus(ctx core.Context, request *pr
 func (abp *adminBrokerProcessor) queryTopicConsumeByWho(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.QueryTopicConsumeByWhoRequestHeader{}
+	requestHeader := &head.QueryTopicConsumeByWhoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -837,10 +841,10 @@ func (abp *adminBrokerProcessor) queryTopicConsumeByWho(ctx core.Context, reques
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) registerFilterServer(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.RegisterFilterServerResponseHeader{}
+	responseHeader := &head.RegisterFilterServerResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.RegisterFilterServerRequestHeader{}
+	requestHeader := &head.RegisterFilterServerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -862,7 +866,7 @@ func (abp *adminBrokerProcessor) registerFilterServer(ctx core.Context, request 
 func (abp *adminBrokerProcessor) queryConsumeTimeSpan(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.QueryConsumeTimeSpanRequestHeader{}
+	requestHeader := &head.QueryConsumerTimeSpanRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -905,7 +909,7 @@ func (abp *adminBrokerProcessor) queryConsumeTimeSpan(ctx core.Context, request 
 		timeSpanSet.Add(timeSpan)
 	}
 
-	queryConsumeTimeSpanBody := body.NewQueryConsumeTimeSpanBody()
+	queryConsumeTimeSpanBody := body.NewQueryConsumeTimeSpan()
 	queryConsumeTimeSpanBody.ConsumeTimeSpanSet = timeSpanSet
 	content, err := Encode(queryConsumeTimeSpanBody)
 	if err != nil {
@@ -959,7 +963,7 @@ func (abp *adminBrokerProcessor) cleanExpiredConsumeQueue(ctx core.Context, requ
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) getConsumerRunningInfo(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	requestHeader := &header.GetConsumerRunningInfoRequestHeader{}
+	requestHeader := &head.GetConsumerRunningInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -1001,7 +1005,7 @@ func (abp *adminBrokerProcessor) callConsumer(requestCode int32, request *protoc
 func (abp *adminBrokerProcessor) queryCorrectionOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.QueryCorrectionOffsetRequestHeader{}
+	requestHeader := &head.QueryCorrectionOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -1021,7 +1025,7 @@ func (abp *adminBrokerProcessor) queryCorrectionOffset(ctx core.Context, request
 		}
 	}
 
-	correctionBody := body.NewQueryCorrectionOffsetBody()
+	correctionBody := body.NewQueryCorrectionOffset()
 	correctionBody.CorrectionOffsets = correctionOffset
 	content, err := Encode(correctionBody)
 	if err != nil {
@@ -1038,7 +1042,7 @@ func (abp *adminBrokerProcessor) queryCorrectionOffset(ctx core.Context, request
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) consumeMessageDirectly(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	requestHeader := &header.ConsumeMessageDirectlyResultRequestHeader{}
+	requestHeader := &head.ConsumeMessageDirectlyResultRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -1068,7 +1072,7 @@ func (abp *adminBrokerProcessor) consumeMessageDirectly(ctx core.Context, reques
 func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.CloneGroupOffsetRequestHeader{}
+	requestHeader := &head.CloneGroupOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -1117,7 +1121,7 @@ func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *pro
 func (abp *adminBrokerProcessor) ViewBrokerStatsData(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.ViewBrokerStatsDataRequestHeader{}
+	requestHeader := &head.ViewBrokerStatsDataRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)

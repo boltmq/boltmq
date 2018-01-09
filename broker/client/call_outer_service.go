@@ -19,8 +19,13 @@ import (
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/protocol/base"
+	"github.com/boltmq/common/protocol/body"
+	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/protocol/namesrv"
+	"github.com/boltmq/common/protocol/subscription"
 	"github.com/juju/errors"
+	"github.com/pquerna/ffjson/ffjson"
 )
 
 const (
@@ -92,12 +97,16 @@ func (cos *CallOuterService) FetchNameServerAddr() string {
 // Author gaoyanlei
 // Since 2017/8/22
 func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, haServerAddr string, brokerId int64,
-	topicConfigWrapper *protocol.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
-	requestHeader := namesrv.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
+	topicConfigWrapper *base.TopicConfigSerializeWrapper, oneway bool, filterServerList []string) (*namesrv.RegisterBrokerResult, error) {
+	requestHeader := head.NewRegisterBrokerRequestHeader(clusterName, brokerAddr, brokerName, haServerAddr, brokerId)
 	request := protocol.CreateRequestCommand(protocol.REGISTER_BROKER, requestHeader)
 
-	requestBody := namesrv.NewRegisterBrokerBody(topicConfigWrapper, filterServerList)
-	content := requestBody.CustomEncode(requestBody)
+	requestBody := body.NewRegisterBrokerRequest(topicConfigWrapper, filterServerList)
+	content, err := ffjson.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
 	request.Body = content
 
 	if oneway {
@@ -121,7 +130,7 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 		return nil, errors.Errorf("register broker end, but not success. %s", response.String())
 	}
 
-	responseHeader := &namesrv.RegisterBrokerResponseHeader{}
+	responseHeader := &head.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
 		logger.Errorf("err: %s", err.Error())
@@ -130,9 +139,9 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 
 	result := namesrv.NewRegisterBrokerResult(responseHeader.HaServerAddr, responseHeader.MasterAddr)
 	if response.Body != nil && len(response.Body) > 0 {
-		err = result.KvTable.CustomDecode(response.Body, result.KvTable)
+		err = ffjson.Unmarshal(response.Body, result.KvTable)
 		if err != nil {
-			logger.Errorf("sync response REGISTER_BROKER body CustomDecode err: %s", err.Error())
+			logger.Errorf("sync response REGISTER_BROKER body json err: %s", err.Error())
 			return nil, err
 		}
 	}
@@ -144,7 +153,7 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 // Author gaoyanlei
 // Since 2017/8/22
 func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerName,
-	haServerAddr string, brokerId int64, topicConfigWrapper *protocol.TopicConfigSerializeWrapper, oneway bool,
+	haServerAddr string, brokerId int64, topicConfigWrapper *base.TopicConfigSerializeWrapper, oneway bool,
 	filterServerList []string) *namesrv.RegisterBrokerResult {
 	var registerBrokerResult *namesrv.RegisterBrokerResult
 
@@ -172,7 +181,7 @@ func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerNa
 // Author gaoyanlei
 // Since 2017/8/22
 func (cos *CallOuterService) UnRegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName string, brokerId int) error {
-	requestHeader := namesrv.NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName, brokerId)
+	requestHeader := head.NewUnRegisterBrokerRequestHeader(brokerName, brokerAddr, clusterName, brokerId)
 	request := protocol.CreateRequestCommand(protocol.UNREGISTER_BROKER, requestHeader)
 
 	response, err := cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
@@ -210,7 +219,7 @@ func (cos *CallOuterService) UnRegisterBrokerAll(clusterName, brokerAddr, broker
 // GetAllTopicConfig 获取全部topic信息
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) GetAllTopicConfig(brokerAddr string) *protocol.TopicConfigSerializeWrapper {
+func (cos *CallOuterService) GetAllTopicConfig(brokerAddr string) *base.TopicConfigSerializeWrapper {
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_TOPIC_CONFIG)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
@@ -222,10 +231,10 @@ func (cos *CallOuterService) GetAllTopicConfig(brokerAddr string) *protocol.Topi
 		return nil
 	}
 
-	topicConfigWrapper := protocol.NewTopicConfigSerializeWrapper()
-	err = topicConfigWrapper.CustomDecode(response.Body, topicConfigWrapper)
+	topicConfigWrapper := base.NewTopicConfigSerializeWrapper()
+	err = ffjson.Unmarshal(response.Body, topicConfigWrapper)
 	if err != nil {
-		logger.Errorf("topicConfigWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("json err: %s, response.Body=%s", err.Error(), string(response.Body))
 		return nil
 	}
 	return topicConfigWrapper
@@ -247,9 +256,9 @@ func (cos *CallOuterService) GetAllConsumerOffset(brokerAddr string) *namesrv.Co
 	}
 
 	consumerOffsetWrapper := namesrv.NewConsumerOffsetSerializeWrapper()
-	err = consumerOffsetWrapper.CustomDecode(response.Body, consumerOffsetWrapper)
+	err = ffjson.Unmarshal(response.Body, consumerOffsetWrapper)
 	if err != nil {
-		logger.Errorf("consumerOffsetWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("json err: %s, response.Body=%s", err.Error(), string(response.Body))
 		return nil
 	}
 	return consumerOffsetWrapper
@@ -275,7 +284,7 @@ func (cos *CallOuterService) GetAllDelayOffset(brokerAddr string) string {
 // GetAllSubscriptionGroupConfig 获取订阅组配置
 // Author gaoyanlei
 // Since 2017/8/22
-func (cos *CallOuterService) GetAllSubscriptionGroupConfig(brokerAddr string) *namesrv.SubscriptionGroupWrapper {
+func (cos *CallOuterService) GetAllSubscriptionGroupConfig(brokerAddr string) *subscription.SubscriptionGroupWrapper {
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_SUBSCRIPTIONGROUP_CONFIG)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
@@ -287,10 +296,10 @@ func (cos *CallOuterService) GetAllSubscriptionGroupConfig(brokerAddr string) *n
 		return nil
 	}
 
-	subscriptionGroupWrapper := namesrv.NewSubscriptionGroupWrapper()
-	err = subscriptionGroupWrapper.CustomDecode(response.Body, subscriptionGroupWrapper)
+	subscriptionGroupWrapper := subscription.NewSubscriptionGroupWrapper()
+	err = ffjson.Unmarshal(response.Body, subscriptionGroupWrapper)
 	if err != nil {
-		logger.Errorf("subscriptionGroupWrapper.CustomDecode() err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("ffjson err: %s, response.Body=%s", err.Error(), string(response.Body))
 		return nil
 	}
 	return subscriptionGroupWrapper

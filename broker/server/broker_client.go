@@ -24,7 +24,7 @@ import (
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/body"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 )
 
 // broker2Client Broker主动调用客户端接口
@@ -52,7 +52,7 @@ func (b2c *broker2Client) notifyConsumerIdsChanged(ctx core.Context, consumerGro
 		return
 	}
 
-	requestHeader := &header.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
+	requestHeader := &head.NotifyConsumerIdsChangedRequestHeader{ConsumerGroup: consumerGroup}
 	request := protocol.CreateRequestCommand(protocol.NOTIFY_CONSUMER_IDS_CHANGED, requestHeader)
 	request.MarkOnewayRPC()
 	b2c.brokerController.remotingServer.InvokeOneway(ctx, request, 10)
@@ -61,7 +61,7 @@ func (b2c *broker2Client) notifyConsumerIdsChanged(ctx core.Context, consumerGro
 // checkProducerTransactionState Broker主动回查Producer事务状态，Oneway
 // Author rongzhihong
 // Since 2017/9/11
-func (b2c *broker2Client) checkProducerTransactionState(channel core.Context, requestHeader *header.CheckTransactionStateRequestHeader,
+func (b2c *broker2Client) checkProducerTransactionState(channel core.Context, requestHeader *head.CheckTransactionStateRequestHeader,
 	bufferResult store.BufferResult) {
 	request := protocol.CreateRequestCommand(protocol.CHECK_TRANSACTION_STATE, requestHeader)
 	request.Body = bufferResult.Buffer().Bytes()
@@ -113,14 +113,14 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 		}
 	}
 
-	requestHeader := &header.ResetOffsetRequestHeader{}
+	requestHeader := &head.ResetOffsetRequestHeader{}
 	requestHeader.Topic = topic
 	requestHeader.Group = group
 	requestHeader.IsForce = isForce
 	requestHeader.Timestamp = timeStamp
 
 	request := protocol.CreateRequestCommand(protocol.RESET_CONSUMER_CLIENT_OFFSET, requestHeader)
-	resetOffsetBody := body.NewResetOffsetBody()
+	resetOffsetBody := body.NewResetOffset()
 	resetOffsetBody.OffsetTable = offsetTable
 
 	content, err := Encode(resetOffsetBody)
@@ -159,7 +159,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 	}
 
 	response.Code = protocol.SUCCESS
-	resBody := body.NewResetOffsetBody()
+	resBody := body.NewResetOffset()
 	resBody.OffsetTable = offsetTable
 	body, err := Encode(resBody)
 	if err != nil {
@@ -178,7 +178,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) *protocol.RemotingCommand {
 	response := protocol.CreateDefaultResponseCommand()
 
-	requestHeader := &header.GetConsumerStatusRequestHeader{}
+	requestHeader := &head.GetConsumerStatusRequestHeader{}
 	requestHeader.Topic = topic
 	requestHeader.Group = group
 
@@ -219,7 +219,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 			switch response.Code {
 			case protocol.SUCCESS:
 				if response.Body != nil && len(response.Body) > 0 {
-					statusBody := body.NewGetConsumerStatusBody()
+					statusBody := body.NewGetConsumerStatus()
 					Decode(response.Body, statusBody)
 
 					consumerStatusTable[clientId] = statusBody.MessageQueueTable
@@ -236,7 +236,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 		}
 	}
 
-	resBody := body.NewGetConsumerStatusBody()
+	resBody := body.NewGetConsumerStatus()
 	resBody.ConsumerTable = consumerStatusTable
 	content, err := Encode(resBody)
 	if err != nil {

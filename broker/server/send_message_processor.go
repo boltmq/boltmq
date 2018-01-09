@@ -28,7 +28,7 @@ import (
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/sysflag"
 )
 
@@ -78,7 +78,7 @@ func (smp *SendMessageProcessor) ConsumerSendMsgBack(conn core.Context,
 	request *protocol.RemotingCommand) (remotingCommand *protocol.RemotingCommand) {
 	response := &protocol.RemotingCommand{}
 
-	requestHeader := header.NewConsumerSendMsgBackRequestHeader()
+	requestHeader := head.NewConsumerSendMsgBackRequestHeader()
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -254,8 +254,8 @@ func (smp *SendMessageProcessor) ConsumerSendMsgBack(conn core.Context,
 // Author gaoyanlei
 // Since 2017/8/17
 func (smp *SendMessageProcessor) SendMessage(ctx core.Context, request *protocol.RemotingCommand,
-	traceContext *trace.SendMessageContext, requestHeader *header.SendMessageRequestHeader) *protocol.RemotingCommand {
-	responseHeader := new(header.SendMessageResponseHeader)
+	traceContext *trace.SendMessageContext, requestHeader *head.SendMessageRequestHeader) *protocol.RemotingCommand {
+	responseHeader := new(head.SendMessageResponseHeader)
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 	response.Opaque = request.Opaque
 	response.Code = -1
@@ -455,20 +455,20 @@ func newBasicSendMessageProcessor(brokerController *BrokerController) *basicSend
 	}
 }
 
-func (bsmp *basicSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *header.SendMessageRequestHeader {
-	requestHeaderV2 := &header.SendMessageRequestHeaderV2{}
+func (bsmp *basicSendMessageProcessor) parseRequestHeader(request *protocol.RemotingCommand) *head.SendMessageRequestHeader {
+	requestHeaderV2 := &head.SendMessageRequestHeaderV2{}
 
-	var requestHeader *header.SendMessageRequestHeader
+	var requestHeader *head.SendMessageRequestHeader
 
 	if request.Code == protocol.SEND_MESSAGE_V2 {
 		err := request.DecodeCommandCustomHeader(requestHeaderV2)
 		if err != nil {
 			logger.Errorf("error: %s", err.Error())
 		}
-		requestHeader = header.CreateSendMessageRequestHeaderV1(requestHeaderV2)
+		requestHeader = head.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
 	} else if request.Code == protocol.SEND_MESSAGE {
-		requestHeader = &header.SendMessageRequestHeader{}
+		requestHeader = &head.SendMessageRequestHeader{}
 		err := request.DecodeCommandCustomHeader(requestHeader)
 		if err != nil {
 			logger.Errorf("error: %s", err.Error())
@@ -478,7 +478,7 @@ func (bsmp *basicSendMessageProcessor) parseRequestHeader(request *protocol.Remo
 	return requestHeader
 }
 
-func (bsmp *basicSendMessageProcessor) buildMsgContext(ctx core.Context, requestHeader *header.SendMessageRequestHeader) *trace.SendMessageContext {
+func (bsmp *basicSendMessageProcessor) buildMsgContext(ctx core.Context, requestHeader *head.SendMessageRequestHeader) *trace.SendMessageContext {
 	traceContext := &trace.SendMessageContext{}
 	traceContext.ProducerGroup = requestHeader.ProducerGroup
 	traceContext.Topic = requestHeader.Topic
@@ -491,7 +491,7 @@ func (bsmp *basicSendMessageProcessor) buildMsgContext(ctx core.Context, request
 // msgCheck 校验msg
 // Author gaoyanlei
 // Since 2017/8/16
-func (bsmp *basicSendMessageProcessor) msgCheck(ctx core.Context, requestHeader *header.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
+func (bsmp *basicSendMessageProcessor) msgCheck(ctx core.Context, requestHeader *head.SendMessageRequestHeader, response *protocol.RemotingCommand) *protocol.RemotingCommand {
 	// 如果broker没有写权限，并且topic为顺序topic
 	if !bsmp.brokerController.cfg.HasWriteable() && bsmp.brokerController.tpConfigManager.isOrderTopic(requestHeader.Topic) {
 		response.Code = protocol.NO_PERMISSION
@@ -595,7 +595,7 @@ func (bsmp *basicSendMessageProcessor) RegisterSendMessageHook(sendMessageHookLi
 func (bsmp *basicSendMessageProcessor) ExecuteSendMessageHookBefore(ctx core.Context, request *protocol.RemotingCommand, context *trace.SendMessageContext) {
 	if bsmp.HasSendMessageHook() {
 		for _, hook := range bsmp.sendMessageHookList {
-			requestHeader := new(header.SendMessageRequestHeader)
+			requestHeader := new(head.SendMessageRequestHeader)
 			err := request.DecodeCommandCustomHeader(requestHeader)
 			if err != nil {
 				logger.Error(err)
@@ -623,7 +623,7 @@ func (bsmp *basicSendMessageProcessor) ExecuteSendMessageHookAfter(response *pro
 	if bsmp.HasSendMessageHook() {
 		for _, hook := range bsmp.sendMessageHookList {
 			if response != nil {
-				responseHeader := new(header.SendMessageResponseHeader)
+				responseHeader := new(head.SendMessageResponseHeader)
 				err := response.DecodeCommandCustomHeader(responseHeader)
 				if err != nil {
 					logger.Error(err)

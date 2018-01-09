@@ -20,7 +20,7 @@ import (
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 )
 
 // queryMessageProcessor 查询消息请求处理
@@ -57,10 +57,10 @@ func (qmp *queryMessageProcessor) ProcessRequest(ctx core.Context, request *prot
 // Author rongzhihong
 // Since 2017/9/18
 func (qmp *queryMessageProcessor) QueryMessage(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &header.QueryMessageResponseHeader{}
+	responseHeader := &head.QueryMessageResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &header.QueryMessageRequestHeader{}
+	requestHeader := &head.QueryMessageRequestHeader{}
 	err := response.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -98,7 +98,7 @@ func (qmp *queryMessageProcessor) QueryMessage(ctx core.Context, request *protoc
 // Since 2017/9/18
 func (qmp *queryMessageProcessor) ViewMessageById(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
-	requestHeader := &header.ViewMessageRequestHeader{}
+	requestHeader := &head.ViewMessageRequestHeader{}
 
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
