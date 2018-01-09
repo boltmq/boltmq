@@ -22,7 +22,7 @@ import (
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/sysflag"
 )
 
@@ -47,7 +47,7 @@ func newEndTransactionProcessor(brokerController *BrokerController) *endTransact
 // Since 2017/9/18
 func (etp *endTransactionProcessor) ProcessRequest(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
-	requestHeader := &header.EndTransactionRequestHeader{}
+	requestHeader := &head.EndTransactionRequestHeader{}
 
 	// 回查应答
 	if requestHeader.FromTransactionCheck {

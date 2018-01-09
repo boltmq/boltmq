@@ -81,7 +81,7 @@ func (slave *slaveSynchronize) syncConsumerOffset() {
 
 	slave.brokerController.csmOffsetManager.offsets.PutAll(offsetWrapper.OffsetTable)
 	slave.brokerController.csmOffsetManager.cfgManagerLoader.persist()
-	buf := offsetWrapper.CustomEncode(offsetWrapper)
+	buf, _ := Encode(offsetWrapper)
 	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s", slave.masterAddr, string(buf))
 }
 

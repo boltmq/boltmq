@@ -28,6 +28,7 @@ import (
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/protocol/base"
 	"github.com/boltmq/common/utils/system"
 	"github.com/boltmq/common/utils/verify"
 )
@@ -307,7 +308,7 @@ func (controller *BrokerController) unRegisterBrokerAll() {
 func (controller *BrokerController) registerBrokerAll(checkOrderConfig bool, oneway bool) {
 	//logger.Infof("register all broker star, checkOrderConfig=%t, oneWay=%t", checkOrderConfig, oneway)
 	if !controller.cfg.HasWriteable() || !controller.cfg.HasReadable() {
-		controller.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.ForeachUpdate(func(topic string, topicConfig *protocol.TopicConfig) {
+		controller.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.ForeachUpdate(func(topic string, topicConfig *base.TopicConfig) {
 			topicConfig.Perm = controller.cfg.Broker.Permission
 		})
 	}

@@ -15,7 +15,7 @@ package server
 
 import (
 	"github.com/boltmq/common/logger"
-	"github.com/boltmq/common/protocol/header"
+	"github.com/boltmq/common/protocol/head"
 )
 
 type transactionCheckSupervisor struct {
@@ -49,7 +49,7 @@ func (trans *transactionCheckSupervisor) gotoCheck(producerGroupHashCode int, tr
 	}
 
 	// 第三步、向Producer发起请求
-	requestHeader := &header.CheckTransactionStateRequestHeader{}
+	requestHeader := &head.CheckTransactionStateRequestHeader{}
 	requestHeader.CommitLogOffset = commitLogOffset
 	requestHeader.TranStateTableOffset = tranStateTableOffset
 
