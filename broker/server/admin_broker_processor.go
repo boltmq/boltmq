@@ -18,13 +18,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/boltmq/boltmq/broker/common"
 	"github.com/boltmq/boltmq/net/core"
-	"github.com/boltmq/boltmq/stgcommon/admin"
-	"github.com/boltmq/boltmq/stgcommon/mqversion"
-	"github.com/boltmq/boltmq/stgcommon/protocol/header/filtersrv"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
 	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/protocol/admin"
 	"github.com/boltmq/common/protocol/body"
 	"github.com/boltmq/common/protocol/header"
 	"github.com/boltmq/common/protocol/subscription"
@@ -400,8 +399,8 @@ func (abp *adminBrokerProcessor) unlockBatchMQ(ctx core.Context, request *protoc
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) prepareRuntimeInfo() map[string]string {
 	runtimeInfo := abp.brokerController.messageStore.RuntimeInfo()
-	runtimeInfo["brokerVersionDesc"] = mqversion.GetVersionDesc(mqversion.CurrentVersion)
-	runtimeInfo["brokerVersion"] = fmt.Sprintf("%d", mqversion.CurrentVersion)
+	runtimeInfo["brokerVersionDesc"] = common.Version
+	runtimeInfo["brokerVersion"] = fmt.Sprintf("%d", common.Version)
 
 	runtimeInfo["msgPutTotalYesterdayMorning"] = fmt.Sprintf("%d", abp.brokerController.brokerStatsRelatedStore.GetMsgPutTotalYesterdayMorning())
 	runtimeInfo["msgPutTotalTodayMorning"] = fmt.Sprintf("%d", abp.brokerController.brokerStatsRelatedStore.GetMsgPutTotalTodayMorning())
@@ -838,10 +837,10 @@ func (abp *adminBrokerProcessor) queryTopicConsumeByWho(ctx core.Context, reques
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) registerFilterServer(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	responseHeader := &filtersrv.RegisterFilterServerResponseHeader{}
+	responseHeader := &header.RegisterFilterServerResponseHeader{}
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
-	requestHeader := &filtersrv.RegisterFilterServerRequestHeader{}
+	requestHeader := &header.RegisterFilterServerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
 		logger.Error(err)
@@ -979,13 +978,6 @@ func (abp *adminBrokerProcessor) callConsumer(requestCode int32, request *protoc
 		response.Code = protocol.SYSTEM_ERROR
 		format := "The Consumer <%s> <%s> not online"
 		response.Remark = fmt.Sprintf(format, consumerGroup, clientId)
-		return response, nil
-	}
-
-	if chanInfo.version < mqversion.V3_1_8_SNAPSHOT {
-		response.Code = protocol.SYSTEM_ERROR
-		format := "The Consumer <%s> Version <%s> too low to finish, please upgrade it to V3_1_8_SNAPSHOT"
-		response.Remark = fmt.Sprintf(format, clientId, mqversion.GetVersionDesc(int(chanInfo.version)))
 		return response, nil
 	}
 
