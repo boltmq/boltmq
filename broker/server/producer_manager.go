@@ -52,7 +52,7 @@ func (pm *producerManager) generateRandmonNum() int {
 // getgroupChannelTable 获得组通道
 // Author gaoyanlei
 // Since 2017/8/24
-func (pm *producerManager) getgroupChannelTable() *producerGroupConnTable {
+func (pm *producerManager) getGroupChannelTable() *producerGroupConnTable {
 	ngct := newProducerGroupConnTable()
 	pm.groupChannelLock.Lock()
 	defer pm.groupChannelLock.Unlock()

@@ -14,6 +14,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/boltmq/boltmq/broker/client"
@@ -21,11 +22,14 @@ import (
 	"github.com/boltmq/boltmq/broker/trace"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/boltmq/stats"
+	"github.com/boltmq/boltmq/stats/sstats"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/protocol"
+	"github.com/boltmq/common/utils/system"
+	"github.com/boltmq/common/utils/verify"
 )
 
 // BrokerController broker服务控制器
@@ -134,6 +138,169 @@ func (controller *BrokerController) fixConfig() error {
 	return nil
 }
 
+func (controller *BrokerController) init() bool {
+	if controller.remotingServer == nil {
+		controller.remotingServer = remoting.NewNMRemotingServer(
+			controller.cfg.Broker.IP, controller.cfg.Broker.Port)
+	}
+
+	result := controller.tpConfigManager.load()
+	result = result && controller.csmOffsetManager.load()
+	result = result && controller.subGroupManager.load()
+
+	if result {
+		controller.messageStore = persistent.NewMessageStore(controller.storeCfg, controller.brokerStats)
+		if !controller.messageStore.Load() {
+			controller.Shutdown()
+			return false
+		}
+	}
+
+	controller.brokerStatsRelatedStore = sstats.NewBrokerStatsRelatedStore(controller.messageStore)
+	controller.registerProcessor()                    // 注册各类Processor()请求
+	controller.tasks.startBrokerStatsRecordTask()     // 定时统计broker各类信息
+	controller.tasks.startPersistConsumerOffsetTask() // 定时写入ConsumerOffset文件
+	controller.tasks.startScanUnSubscribedTopicTask() // 扫描被删除的Topic，并删除该Topic对应的offset
+	controller.updateNameServerAddr()                 // 更新namesrv地址
+	controller.synchronizeMaster2Slave()              // 定时主从同步
+
+	return true
+}
+
+// registerProcessor 注册提供服务
+// Author gaoyanlei
+// Since 2017/8/25
+func (controller *BrokerController) registerProcessor() {
+	// 客户端管理事件处理器 ClientManageProcessor
+	clientProcessor := newClientManageProcessor(controller)
+	controller.remotingServer.RegisterProcessor(protocol.HEART_BEAT, clientProcessor)                 // 心跳连接
+	controller.remotingServer.RegisterProcessor(protocol.UNREGISTER_CLIENT, clientProcessor)          // 注销client
+	controller.remotingServer.RegisterProcessor(protocol.GET_CONSUMER_LIST_BY_GROUP, clientProcessor) // 获取Consumer列表
+	controller.remotingServer.RegisterProcessor(protocol.QUERY_CONSUMER_OFFSET, clientProcessor)      // 查询ConsumerOffset
+	controller.remotingServer.RegisterProcessor(protocol.UPDATE_CONSUMER_OFFSET, clientProcessor)     // 更新ConsumerOffset
+
+	// 发送消息事件处理器 SendMessageProcessor
+	sendMessageProcessor := NewSendMessageProcessor(controller)
+	sendMessageProcessor.RegisterSendMessageHook(controller.sendMessageHookList)                       // 发送消息回调
+	controller.remotingServer.RegisterProcessor(protocol.SEND_MESSAGE, sendMessageProcessor)           // 未优化过发送消息
+	controller.remotingServer.RegisterProcessor(protocol.SEND_MESSAGE_V2, sendMessageProcessor)        // 优化过发送消息
+	controller.remotingServer.RegisterProcessor(protocol.CONSUMER_SEND_MSG_BACK, sendMessageProcessor) // 消费失败消息
+
+	// 拉取消息事件处理器 PullMessageProcessor
+	controller.remotingServer.RegisterProcessor(protocol.PULL_MESSAGE, controller.pullMsgProcessor) // Broker拉取消息
+	controller.pullMsgProcessor.RegisterConsumeMessageHook(controller.consumeMessageHookList)       // 消费消息回调
+
+	// 查询消息事件处理器 QueryMessageProcessor
+	queryProcessor := newQueryMessageProcessor(controller)
+	controller.remotingServer.RegisterProcessor(protocol.QUERY_MESSAGE, queryProcessor)      // Broker 查询消息
+	controller.remotingServer.RegisterProcessor(protocol.VIEW_MESSAGE_BY_ID, queryProcessor) // Broker 根据消息ID来查询消息
+
+	// 结束事务处理器 EndTransactionProcessor
+	endTransactionProcessor := newEndTransactionProcessor(controller)
+	controller.remotingServer.RegisterProcessor(protocol.END_TRANSACTION, endTransactionProcessor) // Broker Commit或者Rollback事务
+
+	// 默认事件处理器 DefaultProcessor
+	adminProcessor := newAdminBrokerProcessor(controller)
+	controller.remotingServer.SetDefaultProcessor(adminProcessor) // 默认Admin请求
+}
+
+// Shutdown BrokerController停止入口
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) Shutdown() {
+	beginTime := system.CurrentTimeMillis()
+
+	// 1.关闭Broker注册等定时任务
+	controller.tasks.shutdown()
+
+	// 2.注销Broker依赖BrokerOuterAPI提供的服务，所以必须优先注销Broker再关闭BrokerOuterAPI
+	controller.unRegisterBrokerAll()
+
+	if controller.clientHouseKeepingSrv != nil {
+		controller.clientHouseKeepingSrv.shutdown()
+	}
+
+	if controller.pullRequestHoldSrv != nil {
+		controller.pullRequestHoldSrv.shutdown()
+	}
+
+	if controller.remotingServer != nil {
+		controller.remotingServer.Shutdown()
+	}
+
+	if controller.messageStore != nil {
+		controller.messageStore.Shutdown()
+	}
+
+	controller.csmOffsetManager.cfgManagerLoader.persist()
+	controller.tpConfigManager.cfgManagerLoader.persist()
+	controller.subGroupManager.cfgManagerLoader.persist()
+
+	if controller.brokerStats != nil {
+		controller.brokerStats.Shutdown()
+	}
+
+	if controller.filterSrvManager != nil {
+		controller.filterSrvManager.shutdown()
+	}
+
+	if controller.callOuter != nil {
+		controller.callOuter.Shutdown()
+	}
+
+	consumingTimeTotal := system.CurrentTimeMillis() - beginTime
+	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
+}
+
+// updateNameServerAddr 更新Namesrv地址
+// Author: tianyuliang
+// Since: 2017/10/10
+func (controller *BrokerController) updateNameServerAddr() {
+	if len(controller.cfg.Cluster.NameSrvAddrs) > 0 {
+		controller.callOuter.UpdateNameServerAddressList(controller.cfg.Cluster.NameSrvAddrs)
+		return
+	}
+	if controller.cfg.Broker.FetchNameSrvAddrByAddressServer {
+		controller.tasks.startFetchNameServerAddrTask()
+	}
+}
+
+// synchronizeMaster2Slave 定时主从同步
+// Author: tianyuliang
+// Since: 2017/10/10
+func (controller *BrokerController) synchronizeMaster2Slave() {
+	if controller.storeCfg.BrokerRole != persistent.SLAVE {
+		controller.tasks.startPrintMasterAndSlaveDiffTask()
+		return
+	}
+
+	if controller.storeCfg.HaMasterAddress != "" && verify.CheckIpAndPort(controller.storeCfg.HaMasterAddress) {
+		controller.messageStore.UpdateHaMasterAddress(controller.storeCfg.HaMasterAddress)
+		controller.updateMasterHASrvAddrPeriod = false
+	} else {
+		controller.updateMasterHASrvAddrPeriod = true
+	}
+	controller.tasks.startSlaveSynchronizeTask()
+}
+
+// RegisterConsumeMessageHook 注册消费消息的回调
+// Author rongzhihong
+// Since 2017/9/11
+func (controller *BrokerController) RegisterConsumeMessageHook(hook trace.ConsumeMessageHook) {
+	controller.consumeMessageHookList = append(controller.consumeMessageHookList, hook)
+	logger.Infof("register ConsumeMessageHook Hook, %s", hook.HookName())
+}
+
+// unRegisterBrokerAll 注销所有broker
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) unRegisterBrokerAll() {
+	brokerId := int(controller.cfg.Cluster.BrokerId)
+	controller.callOuter.UnRegisterBrokerAll(controller.cfg.Cluster.Name,
+		controller.getBrokerAddr(), controller.cfg.Cluster.BrokerName, brokerId)
+	logger.Info("unRegister all broker successful")
+}
+
 // registerBrokerAll 注册所有broker
 // Author rongzhihong
 // Since 2017/9/12
@@ -189,4 +356,85 @@ func (controller *BrokerController) getHAServerAddr() string {
 // Since: 2017/9/26
 func (controller *BrokerController) getStoreHost() string {
 	return fmt.Sprintf("%s:%s", controller.cfg.Broker.IP, controller.remotingServer.ListenPort())
+}
+
+// Start 控制器的start启动入口
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) Start() {
+	controller.init()
+
+	if controller.messageStore != nil {
+		controller.messageStore.Start()
+	}
+
+	if controller.callOuter != nil {
+		controller.callOuter.Start()
+	}
+
+	if controller.pullRequestHoldSrv != nil {
+		controller.pullRequestHoldSrv.start()
+	}
+
+	// ClientHousekeepingService:1.向RemotingServer注册通道监听器 2.启动定时任务
+	// 提示：必须在RemotingServer之前启动
+	if controller.clientHouseKeepingSrv != nil {
+		controller.clientHouseKeepingSrv.start()
+	}
+
+	go func() {
+		//FIXME: 额外处理"RemotingServer.Stacr()启动后，导致channel缓冲区满，进而引发broker主线程阻塞"情况
+		if controller.remotingServer != nil {
+			controller.remotingServer.Start()
+		}
+	}()
+
+	if controller.filterSrvManager != nil {
+		controller.filterSrvManager.start()
+	}
+
+	if controller.brokerStats != nil {
+		controller.brokerStats.Start()
+	}
+
+	controller.registerBrokerAll(true, false)
+	controller.tasks.startRegisterAllBrokerTask() // 每个Broker会每隔30s向NameSrv更新自身topic信息
+	controller.tasks.startDeleteTopicTask()
+
+	logger.Info("broker controller start successful")
+}
+
+// RegisterSendMessageHook 注册发送消息的回调
+// Author rongzhihong
+// Since 2017/9/11
+func (controller *BrokerController) RegisterSendMessageHook(hook trace.SendMessageHook) {
+	controller.sendMessageHookList = append(controller.sendMessageHookList, hook)
+	logger.Infof("register SendMessageHook Hook, %s", hook.HookName())
+}
+
+// updateAllConfig 更新所有文件
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) updateAllConfig(properties []byte) error {
+	// TODO:
+
+	controller.dataVersion.NextVersion()
+	controller.flushAllConfig()
+
+	return nil
+}
+
+// flushAllConfig 将配置信息刷入文件中
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) flushAllConfig() {
+}
+
+// readConfig 读取所有配置文件信息
+// Author rongzhihong
+// Since 2017/9/12
+func (controller *BrokerController) readConfig() string {
+	// TODO:
+	buf := bytes.NewBuffer([]byte{})
+	return buf.String()
 }

@@ -41,6 +41,7 @@ type BrokerStats interface {
 	IncGroupGetSize(group, topic string, incValue int)
 	IncBrokerPutNums()
 	IncBrokerGetNums(incValue int)
+	IncSendBackNums(group, topic string)
 	TpsGroupGetNums(group, topic string) float64
 	RecordDiskFallBehind(group, topic string, queueId int32, fallBehind int64)
 }

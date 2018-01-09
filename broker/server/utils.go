@@ -21,7 +21,9 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
+	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/basis"
 	"github.com/pquerna/ffjson/ffjson"
 )
@@ -166,6 +168,26 @@ func CallShell(shellString string) error {
 	return nil
 }
 
-func getRetryTopic(consumerGroup string) string {
-	return fmt.Sprintf("%s%s", basis.RETRY_GROUP_TOPIC_PREFIX, consumerGroup)
+func getRetryTopic(path string) string {
+	return fmt.Sprintf("%s%s", basis.RETRY_GROUP_TOPIC_PREFIX, path)
+}
+
+func getDLQTopic(path string) string {
+	return fmt.Sprintf("%s%s", basis.DLQ_GROUP_TOPIC_PREFIX, path)
+}
+
+func parseChannelRemoteAddr(ctx core.Context) string {
+	if ctx == nil {
+		return ""
+	}
+
+	remoteAddr := ctx.RemoteAddr().String()
+	if len(remoteAddr) > 0 {
+		index := strings.LastIndex(remoteAddr, "/")
+		if index >= 0 {
+			return remoteAddr[0:index]
+		}
+	}
+
+	return remoteAddr
 }

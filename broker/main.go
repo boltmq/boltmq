@@ -17,10 +17,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/boltmq/boltmq/broker/config"
 	"github.com/boltmq/boltmq/broker/server"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/utils/system"
 )
 
 const (
@@ -42,6 +44,7 @@ func main() {
 		fmt.Println("boltmq broker version:", version)
 		os.Exit(0)
 	}
+	debug.SetMaxThreads(100000)
 
 	cfg, err := config.ParseConfig(*c)
 	if err != nil {
@@ -63,6 +66,14 @@ func main() {
 		logger.Errorf("create broker controller: %s.", err)
 		return
 	}
-	fmt.Println("->", cfg, controller)
-	//debug.SetMaxThreads(100000)
+
+	// 注册系统信号量通知。
+	system.ExitNotify(func(s os.Signal) {
+		controller.Shutdown()
+		logger.Info("broker exit, save data...")
+		os.Exit(0)
+	})
+
+	// 启动BrokerController
+	controller.Start()
 }

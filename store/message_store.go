@@ -53,5 +53,7 @@ type MessageStore interface {
 	CleanExpiredConsumerQueue()                                                                            // 清除失效的消费队列
 	MessageIds(topic string, queueId int32, minOffset, maxOffset int64, storeHost string) map[string]int64 // 批量获取 messageId
 	CheckInDiskByConsumeOffset(topic string, queueId int32, consumeOffset int64) bool                      //判断消息是否在磁盘
+	EncodeScheduleMsg() string
 	StoreStats() stats.StoreStats
+	BrokerStats() stats.BrokerStats
 }

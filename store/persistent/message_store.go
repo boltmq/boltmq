@@ -1106,6 +1106,14 @@ func (ms *PersistentMessageStore) StoreStats() stats.StoreStats {
 	return ms.storeStats
 }
 
+func (ms *PersistentMessageStore) BrokerStats() stats.BrokerStats {
+	return ms.brokerStats
+}
+
+func (ms *PersistentMessageStore) EncodeScheduleMsg() string {
+	return ms.scheduleMsgService.encodeOffsetTable()
+}
+
 //  CommitLogOffsetInQueue
 // Author: luoji, <gunsluo@gmail.com>
 // Since: 2018-01-02
