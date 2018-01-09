@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/boltmq/common/basis"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )
@@ -166,7 +166,7 @@ func (mfq *mappedFileQueue) deleteExpiredFile(mfs *list.List) {
 // Author: tantexian, <tantexian@qq.com>
 // Since: 2017/8/8
 func (mfq *mappedFileQueue) load() bool {
-	exist, err := basis.PathExists(mfq.storePath)
+	exist, err := common.PathExists(mfq.storePath)
 	if err != nil {
 		logger.Infof("mapped file queue load store path error:", err.Error())
 		return false
@@ -556,7 +556,7 @@ func (mfq *mappedFileQueue) destroy() {
 	mfq.committedWhere = 0
 
 	// delete parent director
-	exist, err := basis.PathExists(mfq.storePath)
+	exist, err := common.PathExists(mfq.storePath)
 	if err != nil {
 		logger.Warn("mapped file queue destroy check store path is exists, error:", err.Error())
 	}
