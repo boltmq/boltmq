@@ -14,7 +14,7 @@
 package server
 
 import (
-	"github.com/boltmq/boltmq/broker/common"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 )
