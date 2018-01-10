@@ -58,7 +58,7 @@ func newDispatchMessageService(putMsgIndexHightWater int32, messageStore *Persis
 }
 
 func (dms *dispatchMessageService) start() {
-	logger.Info("dispatch message service started")
+	logger.Info("dispatch message service started.")
 
 	for {
 		select {
@@ -78,7 +78,7 @@ func (dms *dispatchMessageService) shutdown() {
 func (dms *dispatchMessageService) destroy() {
 	close(dms.closeChan)
 	close(dms.requestsChan)
-	logger.Info("dispatch message service end")
+	logger.Info("dispatch message service end.")
 }
 
 func (dms *dispatchMessageService) putRequest(request *dispatchRequest) {

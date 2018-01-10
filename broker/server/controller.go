@@ -97,7 +97,7 @@ func NewBrokerController(cfg *config.Config) (*BrokerController, error) {
 	controller.updateMasterHASrvAddrPeriod = false
 	if len(controller.cfg.Cluster.NameSrvAddrs) > 0 {
 		controller.callOuter.UpdateNameServerAddressList(controller.cfg.Cluster.NameSrvAddrs)
-		logger.Infof("user specfied name server address: %s", controller.cfg.Cluster.NameSrvAddrs)
+		logger.Infof("user specfied name server address: %s.", controller.cfg.Cluster.NameSrvAddrs)
 	}
 
 	return controller, nil
@@ -402,7 +402,8 @@ func (controller *BrokerController) Start() {
 	controller.tasks.startRegisterAllBrokerTask() // 每个Broker会每隔30s向NameSrv更新自身topic信息
 	controller.tasks.startDeleteTopicTask()
 
-	logger.Info("broker controller start successful")
+	logger.Info("broker controller start success.")
+	select {}
 }
 
 // RegisterSendMessageHook 注册发送消息的回调

@@ -98,7 +98,7 @@ func (ctasks *controllerTasks) startDeleteTopicTask() {
 		}
 	})
 	ctasks.deleteTopicTask.Start()
-	logger.Infof("deleteTopicTask start ok")
+	logger.Infof("delete-topic task start success.")
 }
 
 // startBrokerStatsRecordTask 定时统计broker各类信息
@@ -110,7 +110,7 @@ func (ctasks *controllerTasks) startBrokerStatsRecordTask() {
 		ctasks.brokerController.brokerStatsRelatedStore.Record()
 	})
 	ctasks.brokerStatsRecordTask.Start()
-	logger.Infof("brokerStatsRecordTask start ok")
+	logger.Infof("broker-stats-record task start success.")
 }
 
 // startPersistConsumerOffsetTask 定时写入ConsumerOffset文件
@@ -122,7 +122,7 @@ func (ctasks *controllerTasks) startPersistConsumerOffsetTask() {
 		ctasks.brokerController.csmOffsetManager.cfgManagerLoader.persist()
 	})
 	ctasks.persistConsumerOffsetTask.Start()
-	logger.Infof("persistConsumerOffsetTask start ok")
+	logger.Infof("persist-consumer-offset task start success.")
 }
 
 // startCcanUnSubscribedTopicTask 扫描被删除Topic，并删除该Topic对应的Offset
@@ -133,7 +133,7 @@ func (ctasks *controllerTasks) startScanUnSubscribedTopicTask() {
 		ctasks.brokerController.csmOffsetManager.scanUnsubscribedTopic()
 	})
 	ctasks.scanUnSubscribedTopicTask.Start()
-	logger.Infof("scanUnSubscribedTopicTask start ok")
+	logger.Infof("scan-unsubscribed-topic task start success.")
 }
 
 // startFetchNameServerAddrTask 更新Namesrv地址列表
@@ -144,7 +144,7 @@ func (ctasks *controllerTasks) startFetchNameServerAddrTask() {
 		ctasks.brokerController.callOuter.FetchNameServerAddr()
 	})
 	ctasks.fetchNameServerAddrTask.Start()
-	logger.Infof("fetchNameServerAddrTask start ok")
+	logger.Infof("fetch-name-server-addr task start success.")
 }
 
 // startSlaveSynchronizeTask 启动“Slave同步所有数据”任务
@@ -155,7 +155,7 @@ func (ctasks *controllerTasks) startSlaveSynchronizeTask() {
 		ctasks.brokerController.slaveSync.syncAll()
 	})
 	ctasks.slaveSynchronizeTask.Start()
-	logger.Infof("slaveSynchronizeTask start ok")
+	logger.Infof("slave-synchronize task start success.")
 }
 
 // startPrintMasterAndSlaveDiffTask 启动“输出主从偏移量差值”任务
@@ -169,7 +169,7 @@ func (ctasks *controllerTasks) startPrintMasterAndSlaveDiffTask() {
 		}
 	})
 	ctasks.printMasterAndSlaveDiffTask.Start()
-	logger.Infof("printMasterAndSlaveDiffTask start ok")
+	logger.Infof("print-master-slave-diff task start success.")
 }
 
 // startRegisterAllBrokerTask 注册所有Broker
@@ -180,5 +180,5 @@ func (ctasks *controllerTasks) startRegisterAllBrokerTask() {
 		ctasks.brokerController.registerBrokerAll(true, false)
 	})
 	ctasks.registerAllBrokerTask.Start()
-	logger.Infof("registerAllBrokerTask start ok")
+	logger.Infof("register-broker task start success.")
 }

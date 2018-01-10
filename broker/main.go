@@ -41,15 +41,21 @@ func main() {
 		fmt.Println("boltmq broker version:", common.Version)
 		os.Exit(0)
 	}
-	debug.SetMaxThreads(100000)
 
 	cfg, err := config.ParseConfig(*c)
 	if err != nil {
 		fmt.Printf("load config: %s.\n", err)
-		logger.Errorf("load config: %s.", err)
-		return
+		os.Exit(0)
 	}
-	logger.Info("load config success.")
+
+	if cfg.Log.CfgFilePath != "" {
+		if err := logger.ConfigAsFile(cfg.Log.CfgFilePath); err != nil {
+			fmt.Printf("config %s load failed, %s\n", cfg.Log.CfgFilePath, err)
+			os.Exit(0)
+		}
+		logger.Infof("config %s load success.", cfg.Log.CfgFilePath)
+	}
+	debug.SetMaxThreads(100000)
 
 	if cfg.MQHome == "" {
 		logger.Info("Please set the BOLTMQ_HOME variable in your environment to match the location of the BlotMQ installation.")

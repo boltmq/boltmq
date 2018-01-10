@@ -116,18 +116,17 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 
 	response, err := cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("register broker failed. err: %s, %s", err.Error(), request)
+		logger.Errorf("register broker failed, code: %d, err: %s.", request.Code, err)
 		return nil, err
 	}
 	if response == nil {
-		errMsg := "register broker end, but response nil"
-		logger.Error(errMsg)
-		return nil, errors.Errorf(errMsg)
+		logger.Error("register broker end, but response nil.")
+		return nil, errors.Errorf("register broker end, but response nil.")
 	}
 
 	if response.Code != protocol.SUCCESS {
-		logger.Errorf("register broker end, but not success. %s", response.String())
-		return nil, errors.Errorf("register broker end, but not success. %s", response.String())
+		logger.Errorf("register broker end, but not success, code: %d.", response.Code)
+		return nil, errors.Errorf("register broker end, but not success. code: %d.", response.Code)
 	}
 
 	responseHeader := &head.RegisterBrokerResponseHeader{}
@@ -165,7 +164,7 @@ func (cos *CallOuterService) RegisterBrokerAll(clusterName, brokerAddr, brokerNa
 	for _, nameSrvAddr := range nameServerAddressList {
 		result, err := cos.RegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, haServerAddr, brokerId, topicConfigWrapper, oneway, filterServerList)
 		if err != nil {
-			logger.Errorf("brokerOuterAPI.RegisterBrokerAll() err: %s", err.Error())
+			logger.Errorf("register broker all faild: %s.", err)
 			return nil
 		}
 		if result != nil {

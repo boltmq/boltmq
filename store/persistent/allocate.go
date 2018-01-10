@@ -160,7 +160,7 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 }
 
 func (amfs *allocateMappedFileService) start() {
-	logger.Info("allocate mapped file service started")
+	logger.Info("allocate mapped file service started.")
 	for {
 		if amfs.mmapOperation() {
 

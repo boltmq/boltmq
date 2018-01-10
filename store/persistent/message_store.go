@@ -44,7 +44,7 @@ type consumeQueueTable struct {
 
 func newConsumeQueueTable() *consumeQueueTable {
 	table := new(consumeQueueTable)
-	//table.consumeQueues = make(map[int32]*consumeQueue)
+	table.consumeQueues = make(map[int32]*consumeQueue)
 	return table
 }
 
@@ -135,36 +135,30 @@ func (ms *PersistentMessageStore) Load() bool {
 	var (
 		lastExitOk bool
 		result     = true
-		wg         sync.WaitGroup
 	)
 
 	// load过程依赖此服务
 	if ms.allocateMFileService != nil {
-		wg.Add(1)
 		go func() {
 			ms.allocateMFileService.start()
-			wg.Done()
 		}()
+	} else {
+		logger.Warn("allocate mapped file service not started.")
 	}
 
-	wg.Add(1)
 	go func() {
 		ms.dispatchMsgService.start()
-		wg.Done()
 	}()
 
-	wg.Add(1)
 	go func() {
 		// 因为下面的recover会分发请求到索引服务，如果不启动，分发过程会被流控
 		ms.idxService.start()
-		wg.Done()
 	}()
-	wg.Wait()
 
 	if lastExitOk = !ms.isTempFileExist(); lastExitOk {
-		logger.Info("last shutdown normally")
+		logger.Info("last shutdown normally.")
 	} else {
-		logger.Info("last shutdown abnormally")
+		logger.Info("last shutdown abnormally.")
 	}
 
 	// load 定时进度
@@ -216,7 +210,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 
 	files, err := ioutil.ReadDir(dirLogicDir)
 	if err != nil {
-		logger.Warnf("default message store load consume queue directory %s, error: %s", dirLogicDir, err.Error())
+		logger.Warnf("default message store load consumequeue directory %s, error: %s.", dirLogicDir, err.Error())
 		return false
 	}
 
@@ -229,7 +223,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 		topicDir := fmt.Sprintf("%s%c%s", dirLogicDir, os.PathSeparator, topic)
 		fileQueueIdList, err := ioutil.ReadDir(topicDir)
 		if err != nil {
-			logger.Error("message store load consume queue load topic directory error:", err.Error())
+			logger.Error("message store load consumequeue load topic directory error:", err.Error())
 			return false
 		}
 
@@ -237,7 +231,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 			for _, fileQueueId := range fileQueueIdList {
 				queueId, err := strconv.Atoi(fileQueueId.Name())
 				if err != nil {
-					logger.Error("message store load consume queue parse queue id error:", err.Error())
+					logger.Error("message store load consumequeue parse queue id error:", err.Error())
 					continue
 				}
 
@@ -254,7 +248,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 		}
 	}
 
-	logger.Info("load logics queue all over, OK")
+	logger.Info("load logics queue all over, success.")
 	return true
 }
 

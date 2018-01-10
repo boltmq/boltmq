@@ -91,7 +91,7 @@ func (idx *indexService) load(lastExitOK bool) bool {
 				// TODO
 			}
 
-			logger.Infof("load index file OK, %s", filePath)
+			logger.Infof("load index file %s success.", filePath)
 			idx.indexFileList.PushBack(idxFile)
 		}
 	}
@@ -100,7 +100,7 @@ func (idx *indexService) load(lastExitOK bool) bool {
 }
 
 func (idx *indexService) start() {
-	logger.Info("index service started")
+	logger.Info("index service started.")
 
 	for {
 		select {
@@ -111,7 +111,7 @@ func (idx *indexService) start() {
 		}
 	}
 
-	logger.Info("index service end")
+	logger.Info("index service end.")
 }
 
 func (idx *indexService) buildIndex(request interface{}) {

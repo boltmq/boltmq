@@ -50,7 +50,7 @@ func (chks *clientHouseKeepingService) start() {
 
 	// 定时扫描过期的连接
 	chks.ticker.Start()
-	logger.Infof("clientHouseKeepingService start successful")
+	logger.Infof("client house keeping service start success.")
 }
 
 // shutdown 停止定时扫描过期的连接的服务

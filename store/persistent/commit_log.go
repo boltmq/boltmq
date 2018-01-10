@@ -69,11 +69,10 @@ func newCommitLog(messageStore *PersistentMessageStore) *commitLog {
 
 func (clog *commitLog) load() bool {
 	result := clog.mfq.load()
-
 	if result {
-		logger.Info("load commit log OK")
+		logger.Info("load commitlog completed.")
 	} else {
-		logger.Info("load commit log Failed")
+		logger.Error("load commitlog failed.")
 	}
 
 	return result
@@ -227,7 +226,7 @@ func (clog *commitLog) recoverNormally() {
 			if size > 0 {
 				mappedFileOffset += size
 			} else if size == -1 {
-				logger.Info("recover physics file end, ", mf.fileName)
+				logger.Infof("recover physics file end, %s.", mf.fileName)
 				break
 			} else if size == 0 {
 				index++
@@ -300,7 +299,7 @@ func (clog *commitLog) checkMessageAndReturnSize(byteBuffer *mappedByteBuffer, c
 	case int32(blankMagicCode):
 		return &dispatchRequest{msgSize: 0}
 	default:
-		logger.Warnf("found a illegal magic code MessageMagicCode:%d BlankMagicCode:%d ActualMagicCode:%d",
+		logger.Warnf("found a illegal magic code message magic code:%d, blank magic code:%d, current magic code:%d.",
 			messageMagicCode, blankMagicCode, magicCode)
 		return &dispatchRequest{msgSize: -1}
 	}
@@ -429,7 +428,7 @@ func (clog *commitLog) recoverAbnormally() {
 					mappedFileOffset += size
 					clog.messageStore.putDispatchRequest(disRequest)
 				} else if size == -1 { // Intermediate file read error
-					logger.Info("recover physics file end, ", mf.fileName)
+					logger.Infof("recover physics file end, %s.", mf.fileName)
 					break
 				} else if size == 0 {
 					index++

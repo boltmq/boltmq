@@ -74,7 +74,7 @@ func (fcqs *flushConsumeQueueService) doFlush(retryTimes int32) {
 }
 
 func (fcqs *flushConsumeQueueService) start() {
-	logger.Info("flush consume queue service started")
+	logger.Info("flush consume queue service started.")
 
 	for {
 		if fcqs.stop {
@@ -92,7 +92,7 @@ func (fcqs *flushConsumeQueueService) shutdown() {
 
 	// 正常shutdown时，要保证全部刷盘才退出
 	fcqs.doFlush(int32(RetryTimesOver))
-	logger.Info("flush consume queue service end")
+	logger.Info("flush consume queue service end.")
 }
 
 // cleanConsumeQueueService 清理逻辑文件服务
