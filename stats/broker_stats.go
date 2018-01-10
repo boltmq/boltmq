@@ -89,7 +89,7 @@ func (bss *brokerStatsService) Start() {
 		statsItemSet.allTickers.Start()
 	}
 
-	logger.Info("brokerStatsService start successful")
+	logger.Info("broker stats service start success.")
 }
 
 // Start  brokerStatsService停止入口
@@ -105,7 +105,7 @@ func (bss *brokerStatsService) Shutdown() {
 		statsItemSet.allTickers.Close()
 	}
 
-	logger.Info("brokerStatsService shutdown successful")
+	logger.Info("broker stats service shutdown success.")
 }
 
 // GetStatsItem  根据statsName、statsKey获得统计数据

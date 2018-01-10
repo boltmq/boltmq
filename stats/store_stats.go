@@ -107,7 +107,7 @@ func newStoreStatsService() *storeStatsService {
 }
 
 func (service *storeStatsService) Start() {
-	logger.Info("store stats service started")
+	logger.Info("store stats service started.")
 
 	for {
 		if service.stop {
@@ -119,7 +119,7 @@ func (service *storeStatsService) Start() {
 		service.printTps()
 	}
 
-	logger.Info("store stats service end")
+	logger.Info("store stats service end.")
 }
 
 func (service *storeStatsService) sampling() {

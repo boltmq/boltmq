@@ -56,13 +56,12 @@ func newConsumeQueue(topic string, queueId int32, storePath string, mfSize int64
 
 func (cq *consumeQueue) load() bool {
 	result := cq.mfq.load()
-	resultMsg := "Failed"
+	resultMsg := "failed"
 	if result {
-		resultMsg = "OK"
+		resultMsg = "success"
 	}
 
-	logger.Infof("load consume queue %s-%d %s", cq.topic, cq.queueId, resultMsg)
-
+	logger.Infof("load consumequeue %s-%d %s.", cq.topic, cq.queueId, resultMsg)
 	return result
 }
 
@@ -145,15 +144,15 @@ func (cq *consumeQueue) recover() {
 				)
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &offset); err != nil {
-					logger.Error("consume queue recover mapped file offset error:", err.Error())
+					logger.Error("consumequeue recover mapped file offset error:", err.Error())
 				}
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &size); err != nil {
-					logger.Error("consume queue recover mapped file size error:", err.Error())
+					logger.Error("consumequeue recover mapped file size error:", err.Error())
 				}
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &tagsCode); err != nil {
-					logger.Error("consume queue recover mapped file tags code error:", err.Error())
+					logger.Error("consumequeue recover mapped file tags code error:", err.Error())
 				}
 
 				// 说明当前存储单元有效
@@ -162,7 +161,7 @@ func (cq *consumeQueue) recover() {
 					mfOffset = int64(i) + CQStoreUnitSize
 					cq.maxPhysicOffset = offset
 				} else {
-					logger.Infof("recover current consume queue file over, %s %d %d %d ",
+					logger.Infof("recover current consumequeue file over, %s %d %d %d ",
 						mf.fileName, offset, size, tagsCode)
 					break
 				}
@@ -172,17 +171,17 @@ func (cq *consumeQueue) recover() {
 			if mfOffset == cq.mfSize {
 				index++
 				if index >= mfs.Len() {
-					logger.Info("recover last consume queue file over, last mapped file ", mf.fileName)
+					logger.Infof("recover last consumequeue file over, last mapped file %s.", mf.fileName)
 					break
 				} else {
 					mf = getMappedFileByIndex(mfs, index)
 					byteBuffer = bytes.NewBuffer(mf.byteBuffer.Bytes())
 					processOffset = mf.fileFromOffset
 					mfOffset = 0
-					logger.Info("recover next consume queue file, ", mf.fileName)
+					logger.Infof("recover next consumequeue file, %s.", mf.fileName)
 				}
 			} else {
-				logger.Infof("recover current consume queue queue over %s %d",
+				logger.Infof("recover current consumequeue over %s %d",
 					mf.fileName, processOffset+mfOffset)
 				break
 			}
@@ -295,7 +294,7 @@ func (cq *consumeQueue) putMessagePostionInfoWrapper(offset, size, tagsCode, sto
 		}
 	}
 
-	logger.Errorf("consume queue can not write %s %d", cq.topic, cq.queueId)
+	logger.Errorf("consumequeue can not write %s %d.", cq.topic, cq.queueId)
 	cq.messageStore.runFlags.makeLogicsQueueError()
 }
 
@@ -312,7 +311,7 @@ func (cq *consumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset i
 	expectLogicOffset := cqOffset * CQStoreUnitSize
 	mf, err := cq.mfq.getLastMappedFile(expectLogicOffset)
 	if err != nil {
-		logger.Errorf("consume queue get last mapped file error: %s", err.Error())
+		logger.Errorf("consumequeue get last mapped file error: %s.", err.Error())
 	}
 
 	if mf != nil {

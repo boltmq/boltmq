@@ -64,8 +64,8 @@ func (bootstrap *Bootstrap) Sync() {
 		bootstrap.Fatalf("Error listening on port: %s, %q", addr, e)
 		return
 	}
-	bootstrap.Noticef("listening for connections on %s", net.JoinHostPort(opts.Host, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)))
-	bootstrap.Noticef("bootstrap is ready")
+	bootstrap.Noticef("listening for connections on %s.", net.JoinHostPort(opts.Host, strconv.Itoa(listener.Addr().(*net.TCPAddr).Port)))
+	bootstrap.Noticef("bootstrap is ready.")
 
 	bootstrap.runningMu.Lock()
 	if opts.Port == 0 {

@@ -188,7 +188,7 @@ func (mfq *mappedFileQueue) load() bool {
 				}
 
 				if file == nil {
-					logger.Errorf("mapped file queue load file not exist: ", path)
+					logger.Errorf("mapped file queue load file not exist: %s", path)
 				}
 
 				size := file.Size()
@@ -209,7 +209,7 @@ func (mfq *mappedFileQueue) load() bool {
 				mf.committedPosition = mfq.mappedFileSize
 				mf.byteBuffer.writePos = int(mf.wrotePostion)
 				mfq.mappedFiles.PushBack(mf)
-				logger.Infof("load mapfiled %v success.", mf.fileName)
+				logger.Infof("load mapfiled %s success.", mf.fileName)
 			}
 		}
 	}
@@ -517,7 +517,7 @@ func (mfq *mappedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 				tmps.PushBack(mapFile)
 				mfq.deleteExpiredFile(tmps)
 			} else {
-				logger.Warn("the mappedfile redelete Failed, ", mapFile.fileName)
+				logger.Warn("the mappedfile redelete failed, ", mapFile.fileName)
 			}
 
 			return result

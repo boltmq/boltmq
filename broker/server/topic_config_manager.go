@@ -67,7 +67,7 @@ func (tcm *topicConfigManager) init() {
 	// DEFAULT_TOPIC
 	{
 		autoCreateTopicEnable := tcm.brokerController.cfg.Broker.AutoCreateTopicEnable
-		logger.Infof("AutoCreateTopicEnable=%t", autoCreateTopicEnable)
+		logger.Infof("BoltMQ config set AutoCreateTopicEnable=%t.", autoCreateTopicEnable)
 		if autoCreateTopicEnable {
 			topicName := basis.DEFAULT_TOPIC
 			topicConfig := base.NewTopicConfig(topicName)

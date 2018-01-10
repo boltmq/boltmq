@@ -378,7 +378,7 @@ func newAcceptSocketService(port int32, ha *haService) *acceptSocketService {
 }
 
 func (ass *acceptSocketService) start() {
-	logger.Info("accept socket service started")
+	logger.Info("accept socket service started.")
 
 	for {
 		if ass.stoped {
@@ -402,7 +402,7 @@ func (ass *acceptSocketService) start() {
 	}
 
 	ass.listener.Close()
-	logger.Info("accept socket service end")
+	logger.Info("accept socket service end.")
 }
 
 func (ass *acceptSocketService) shutdown(interrupt bool) {
