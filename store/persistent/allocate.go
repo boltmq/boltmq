@@ -74,7 +74,7 @@ func (amfs *allocateMappedFileService) putRequestAndReturnMappedFile(nextFilePat
 
 	oldValue, err := amfs.requestTable.PutIfAbsent(nextFilePath, nextReq)
 	if err != nil {
-		logger.Info("allocate mapped file service put request error:", err.Error())
+		logger.Errorf("allocate mapped file service put request err: %s.", err)
 		return nil, nil
 	}
 
@@ -84,7 +84,7 @@ func (amfs *allocateMappedFileService) putRequestAndReturnMappedFile(nextFilePat
 
 	nextOldValue, err := amfs.requestTable.PutIfAbsent(nextNextFilePath, nextNextReq)
 	if err != nil {
-		logger.Info("allocate mapped file service put request error:", err.Error())
+		logger.Errorf("allocate mapped file service put request err: %s.", err)
 		return nil, nil
 	}
 
@@ -94,25 +94,24 @@ func (amfs *allocateMappedFileService) putRequestAndReturnMappedFile(nextFilePat
 
 	result, err := amfs.requestTable.Get(nextFilePath)
 	if err != nil {
-		logger.Info("allocate mapped file service get request by file path error:", err.Error())
+		logger.Errorf("allocate mapped file service get request by file path err: %s.", err)
 	}
 
 	if result != nil {
 		request := result.(*allocateRequest)
-
 		select {
 		case <-request.syncChan:
-			logger.Info("sync chan complete")
+			logger.Info("allocate mmap file sync chan complete.")
 			break
 		case <-time.After(WaitTimeOut * time.Millisecond):
-			logger.Warnf("create mmap timeout %s %d", request.filePath, request.fileSize)
+			logger.Warnf("create mmap timeout %s %d.", request.filePath, request.fileSize)
 		}
 
 		amfs.requestTable.Remove(nextFilePath)
 
 		return request.mf, nil
 	} else {
-		logger.Error("find preallocate mmap failed, this never happen")
+		logger.Error("find preallocate mmap failed, this never happen.")
 	}
 
 	return nil, nil
@@ -123,12 +122,12 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 	case request := <-amfs.requestChan:
 		value, err := amfs.requestTable.Get(request.filePath)
 		if err != nil {
-			logger.Info("allocate mapped file service mmapOperation get request error:", err.Error())
+			logger.Errorf("allocate mapped file service mmapOperation get request err: %s.", err)
 			return true
 		}
 
 		if value == nil {
-			logger.Warnf("this mmap request expired, maybe cause timeout %s %s", request.filePath, request.fileSize)
+			logger.Warnf("this mmap request expired, maybe cause timeout %s %s.", request.filePath, request.fileSize)
 			return true
 		}
 
@@ -136,11 +135,11 @@ func (amfs *allocateMappedFileService) mmapOperation() bool {
 			beginTime := system.CurrentTimeMillis()
 			mf, err := newMappedFile(request.filePath, request.fileSize)
 			if mf == nil {
-				logger.Error("New Mapped File")
+				logger.Error("allocate service new mapped file failed.")
 			}
 
 			if err != nil {
-				logger.Warn("allocate mapped file service has exception, maybe by shutdown,error:", err.Error())
+				logger.Warnf("allocate mapped file service has exception, maybe by shutdown. err: %s.", err)
 				return false
 			}
 
@@ -173,7 +172,7 @@ func (amfs *allocateMappedFileService) shutdown() {
 		_, value, ok := iterator.Next()
 		if ok {
 			request := value.(*allocateRequest)
-			logger.Info("delete pre allocated mapped file, ", request.mf.fileName)
+			logger.Infof("delete pre allocated mapped file, %s.", request.mf.fileName)
 			success := request.mf.destroy(1000)
 			if !success {
 				time.Sleep(time.Millisecond * 1)

@@ -90,7 +90,7 @@ func (dms *dispatchMessageService) putRequest(request *dispatchRequest) {
 
 		putMsgIndexHightWater := dms.messageStore.config.PutMsgIndexHightWater
 		if atomic.LoadInt32(&dms.requestSize) > putMsgIndexHightWater {
-			logger.Infof("Message index buffer size %d > high water %d", atomic.LoadInt32(&dms.requestSize),
+			logger.Infof("message index buffer size %d > high water %d.", atomic.LoadInt32(&dms.requestSize),
 				putMsgIndexHightWater)
 			time.Sleep(time.Millisecond * 1)
 		}

@@ -127,7 +127,7 @@ func newPersistentMessageStore(config *Config, brokerStats stats.BrokerStats) *P
 func (ms *PersistentMessageStore) Load() bool {
 	storeCheckpoint, err := newStoreCheckpoint(common.GetStorePathCheckpoint(ms.config.StorePathRootDir))
 	if err != nil {
-		logger.Error("load exception", err.Error())
+		logger.Errorf("persistent msg load exception: %s.", err)
 		return false
 	}
 	ms.steCheckpoint = storeCheckpoint
@@ -200,17 +200,17 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 	}
 
 	if !exist {
-		if err := os.MkdirAll(dirLogicDir, os.FileMode(os.O_CREATE)); err != nil {
+		if err := os.MkdirAll(dirLogicDir, 0755); err != nil {
 			logger.Errorf("create dir [%s] err: %s", dirLogicDir, err)
 			return false
 		}
 
-		logger.Infof("create %s successful", dirLogicDir)
+		logger.Infof("create %s success.", dirLogicDir)
 	}
 
 	files, err := ioutil.ReadDir(dirLogicDir)
 	if err != nil {
-		logger.Warnf("default message store load consumequeue directory %s, error: %s.", dirLogicDir, err.Error())
+		logger.Warnf("message store load consumequeue directory %s, err: %s.", dirLogicDir, err)
 		return false
 	}
 
@@ -223,7 +223,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 		topicDir := fmt.Sprintf("%s%c%s", dirLogicDir, os.PathSeparator, topic)
 		fileQueueIdList, err := ioutil.ReadDir(topicDir)
 		if err != nil {
-			logger.Error("message store load consumequeue load topic directory error:", err.Error())
+			logger.Errorf("message store load consumequeue load topic directory err: %s.", err)
 			return false
 		}
 
@@ -231,7 +231,7 @@ func (ms *PersistentMessageStore) loadConsumeQueue() bool {
 			for _, fileQueueId := range fileQueueIdList {
 				queueId, err := strconv.Atoi(fileQueueId.Name())
 				if err != nil {
-					logger.Error("message store load consumequeue parse queue id error:", err.Error())
+					logger.Errorf("message store load consumequeue parse queue id err: %s.", err)
 					continue
 				}
 
@@ -385,7 +385,7 @@ func (ms *PersistentMessageStore) putMessagePostionInfo(topic string, queueId in
 // Since: 2017/10/23
 func (ms *PersistentMessageStore) GetCommitLogData(offset int64) store.BufferResult {
 	if ms.shutdownFlag {
-		logger.Warn("message store has shutdown, so getPhyQueueData is forbidden")
+		logger.Warn("message store has shutdown, so getPhyQueueData is forbidden.")
 		return nil
 	}
 
@@ -407,7 +407,7 @@ func (ms *PersistentMessageStore) AppendToCommitLog(startOffset int64, data []by
 	if result {
 		ms.reputMsgService.notify()
 	} else {
-		logger.Errorf("appendToPhyQueue failed %d %d", startOffset, len(data))
+		logger.Errorf("append to phy-queue failed %d %d.", startOffset, len(data))
 	}
 
 	return result
@@ -458,7 +458,7 @@ func (ms *PersistentMessageStore) createTempFile() error {
 	if !exist {
 		abortFile, err := os.Create(abortPath)
 		if err != nil {
-			logger.Info("%s crate failed", abortPath)
+			logger.Info("%s create failed.", abortPath)
 		}
 
 		if abortFile != nil {
@@ -534,13 +534,13 @@ func (ms *PersistentMessageStore) Shutdown() {
 func (ms *PersistentMessageStore) deleteFile(fileName string) {
 	exist, err := common.PathExists(fileName)
 	if err != nil {
-		logger.Warnf("delete file: %s", err)
+		logger.Warnf("delete file: %s.", err)
 		return
 	}
 
 	if exist {
 		if err := os.Remove(fileName); err != nil {
-			logger.Errorf("message store delete file %s error: ", fileName, err.Error())
+			logger.Errorf("message store delete file %s err: %s.", fileName, err)
 		}
 	}
 }
@@ -561,7 +561,7 @@ func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.
 	if SLAVE == ms.config.BrokerRole {
 		atomic.AddInt64(&ms.printTimes, 1)
 		if ms.printTimes%50000 == 0 {
-			logger.Warn("message store is slave mode, so putMessage is forbidden")
+			logger.Warn("message store is slave mode, so putMessage is forbidden.")
 		}
 
 		return &store.PutMessageResult{Status: store.SERVICE_NOT_AVAILABLE}
@@ -570,7 +570,7 @@ func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.
 	if !ms.runFlags.isWriteable() {
 		atomic.AddInt64(&ms.printTimes, 1)
 		if ms.printTimes%50000 == 0 {
-			logger.Warn("message store is not writeable, so putMessage is forbidden ", ms.runFlags.flagBits)
+			logger.Warnf("message store is not writeable, so putMessage is forbidden. flag=%d.", ms.runFlags.flagBits)
 		}
 
 		return &store.PutMessageResult{Status: store.SERVICE_NOT_AVAILABLE}
@@ -580,13 +580,13 @@ func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.
 
 	// message topic长度校验
 	if len(msg.Topic) > 127 {
-		logger.Warn("putMessage message topic length too long %d", len(msg.Topic))
+		logger.Warnf("put message topic length too long %d.", len(msg.Topic))
 		return &store.PutMessageResult{Status: store.MESSAGE_ILLEGAL}
 	}
 
 	// message properties长度校验
 	if len(msg.PropertiesString) > 32767 {
-		logger.Warn("putMessage message properties length too long ", len(msg.PropertiesString))
+		logger.Warnf("put message properties length too long, %d.", len(msg.PropertiesString))
 		return &store.PutMessageResult{Status: store.MESSAGE_ILLEGAL}
 	}
 
@@ -596,7 +596,7 @@ func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.
 	// 性能数据统计以及更新存在服务状态
 	eclipseTime := system.CurrentTimeMillis() - beginTime
 	if eclipseTime > 1000 {
-		logger.Warn("putMessage not in lock eclipse time(ms) ", eclipseTime)
+		logger.Warnf("putMessage not in lock eclipse time(ms) %d.", eclipseTime)
 	}
 
 	ms.storeStats.SetPutMessageEntireTimeMax(eclipseTime)
@@ -627,7 +627,7 @@ func (ms *PersistentMessageStore) QueryMessage(topic string, key string, maxNum 
 func (ms *PersistentMessageStore) GetMessage(group string, topic string, queueId int32, offset int64, maxMsgNums int32,
 	subscriptionData *heartbeat.SubscriptionData) *store.GetMessageResult {
 	if ms.shutdownFlag {
-		logger.Warn("message store has shutdown, so getMessage is forbidden")
+		logger.Warn("message store has shutdown, so getMessage is forbidden.")
 		return nil
 	}
 
@@ -684,7 +684,7 @@ func (ms *PersistentMessageStore) GetMessage(group string, topic string, queueId
 
 				for ; int32(i) < bufferConsumeQueue.size && i < MaxFilterMessageCount; i += CQStoreUnitSize {
 					if bufferConsumeQueue.byteBuffer.writePos == 0 {
-						logger.Warnf("message store get message mapped byte buffer is empty")
+						logger.Warnf("message store get message mapped byte buffer is empty.")
 						continue
 					}
 
@@ -738,7 +738,7 @@ func (ms *PersistentMessageStore) GetMessage(group string, topic string, queueId
 							status = store.NO_MATCHED_MESSAGE
 						}
 
-						logger.Infof("message type not matched, client: %#v server: %d", subscriptionData, tagsCode)
+						logger.Infof("message type not matched, client: %#v server: %d.", subscriptionData, tagsCode)
 					}
 				}
 
@@ -836,7 +836,7 @@ func (ms *PersistentMessageStore) lookMessageByOffset(commitLogOffset int64, siz
 		byteBuffers := selectResult.byteBuffer.Bytes()
 		mesageExt, err := message.DecodeMessageExt(byteBuffers, true, false)
 		if err != nil {
-			logger.Error("default message store look message by offset error:", err.Error())
+			logger.Errorf("message store look message by offset err: %s.", err)
 			return nil
 		}
 
@@ -1001,7 +1001,7 @@ func (ms *PersistentMessageStore) CleanExpiredConsumerQueue() {
 					logger.Warnf("maybe consumeQueue was created just now. topic=%s queueId=%d maxPhysicOffset=%d minLogicOffset=%d.",
 						cq.topic, cq.queueId, cq.maxPhysicOffset, cq.minLogicOffset)
 				} else if maxCLOffsetInconsumeQueue < minCommitLogOffset {
-					logger.Infof("cleanExpiredConsumerQueue: %s %d consumer queue destroyed, minCommitLogOffset: %d maxCLOffsetInconsumeQueue: %d",
+					logger.Infof("cleanExpiredConsumerQueue: %s %d consumer queue destroyed, minCommitLogOffset: %d maxCLOffsetInconsumeQueue: %d.",
 						topic, queueId, minCommitLogOffset, maxCLOffsetInconsumeQueue)
 
 					ms.clog.removeQueurFromTopicQueueTable(cq.topic, cq.queueId)
@@ -1012,7 +1012,7 @@ func (ms *PersistentMessageStore) CleanExpiredConsumerQueue() {
 			}
 
 			if len(queueTable.consumeQueues) == 0 {
-				logger.Infof("cleanExpiredConsumerQueue: %s,topic destroyed", topic)
+				logger.Infof("cleanExpiredConsumerQueue: %s, topic destroyed.", topic)
 				delete(ms.consumeTopicTable, topic)
 			}
 		}
@@ -1076,7 +1076,7 @@ func (ms *PersistentMessageStore) MessageIds(topic string, queueId int32, minOff
 					nextOffset++
 
 					if err != nil {
-						logger.Error("message store get message ids create message id error:", err.Error())
+						logger.Errorf("message store get message ids create message id err: %s.", err)
 						break
 					}
 

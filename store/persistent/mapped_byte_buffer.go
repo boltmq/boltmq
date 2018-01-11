@@ -45,8 +45,7 @@ func (mbb *mappedByteBuffer) Bytes() []byte {
 // Write appends the contents of data to the buffer
 func (mbb *mappedByteBuffer) Write(data []byte) (n int, err error) {
 	if mbb.writePos+len(data) > mbb.limit {
-		logger.Errorf("mbb.writePos + len(data)(%v > %v) data: %s", mbb.writePos+len(data), mbb.limit, string(data))
-		//panic(errors.New("m.writePos + len(data)"))
+		logger.Errorf("mbb.writePos + len(data)(%v > %v) data: %s.", mbb.writePos+len(data), mbb.limit, string(data))
 		return 0, errors.New("mbb.writePos + len(data)")
 	}
 	for index, value := range data {

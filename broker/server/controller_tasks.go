@@ -46,39 +46,47 @@ func (ctasks *controllerTasks) shutdown() bool {
 	if ctasks == nil {
 		return false
 	}
+
 	if ctasks.printMasterAndSlaveDiffTask != nil {
 		ctasks.printMasterAndSlaveDiffTask.Stop()
-		logger.Info("printMasterAndSlaveDiffTask stop ok")
+		logger.Info("print-master-slave-diff task stop success.")
 	}
 
 	if ctasks.deleteTopicTask != nil {
 		ctasks.deleteTopicTask.Stop()
-		logger.Info("deleteTopicTask stop ok")
+		logger.Info("delete-topic task stop success.")
 	}
+
 	if ctasks.brokerStatsRecordTask != nil {
 		ctasks.brokerStatsRecordTask.Stop()
-		logger.Info("brokerStatsRecordTask stop ok")
+		logger.Info("broker-stats-record task stop success.")
 	}
+
 	if ctasks.persistConsumerOffsetTask != nil {
 		ctasks.persistConsumerOffsetTask.Stop()
-		logger.Info("persistConsumerOffsetTask stop ok")
+		logger.Info("persist-consumer-offset task stop success.")
 	}
+
 	if ctasks.scanUnSubscribedTopicTask != nil {
 		ctasks.scanUnSubscribedTopicTask.Stop()
-		logger.Info("scanUnSubscribedTopicTask stop ok")
+		logger.Info("scan-unsubscribed-topic task stop success.")
 	}
+
 	if ctasks.fetchNameServerAddrTask != nil {
 		ctasks.fetchNameServerAddrTask.Stop()
-		logger.Info("fetchNameServerAddrTask stop ok")
+		logger.Info("fetch-name-server-addr task stop success.")
 	}
+
 	if ctasks.slaveSynchronizeTask != nil {
 		ctasks.slaveSynchronizeTask.Stop()
-		logger.Info("slaveSynchronizeTask stop ok")
+		logger.Info("slave-synchronize task stop success.")
 	}
+
 	if ctasks.registerAllBrokerTask != nil {
 		ctasks.registerAllBrokerTask.Stop()
-		logger.Info("registerAllBrokerTask stop ok")
+		logger.Info("register-broker task stop success.")
 	}
+
 	return true
 }
 

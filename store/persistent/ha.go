@@ -57,7 +57,7 @@ func newReadSocketService(connection *net.TCPConn, haConn *haConnection) *readSo
 }
 
 func (rss *readSocketService) start() {
-	logger.Info("read socket service started")
+	logger.Info("read socket service started.")
 
 	for {
 		if rss.stoped {
@@ -66,21 +66,21 @@ func (rss *readSocketService) start() {
 
 		ok := rss.processReadEvent()
 		if !ok {
-			logger.Error("read socket service process read event error")
+			logger.Error("read socket service process read event error.")
 			break
 		}
 
 		interval := system.CurrentTimeMillis() - rss.lastReadTimestamp
 		keepingInterval := rss.haConn.ha.messageStore.config.HaHousekeepingInterval
 		if interval > int64(keepingInterval) {
-			logger.Warnf("ha housekeeping, found this connection[%s] expired, %d",
+			logger.Warnf("ha housekeeping, found this connection[%s] expired, %d.",
 				rss.haConn.clientAddress, interval)
 			break
 		}
 	}
 
 	rss.destroy()
-	logger.Info("read socket service end")
+	logger.Info("read socket service end.")
 }
 
 func (rss *readSocketService) shutdown() {
@@ -113,7 +113,7 @@ func (rss *readSocketService) processReadEvent() bool {
 		buffer := make([]byte, ReadSocketMaxBufferSize)
 		readSize, err := rss.connection.Read(buffer)
 		if err != nil {
-			logger.Error("read socket service process read event error:", err.Error())
+			logger.Errorf("read socket service process read event err: %s.", err)
 			return false
 		}
 
@@ -129,7 +129,7 @@ func (rss *readSocketService) processReadEvent() bool {
 				pos := len(readBytes) - (len(readBytes) % 8) - 8
 				err := binary.Read(bytes.NewReader(readBytes[pos:]), binary.BigEndian, &readOffset)
 				if err != nil {
-					logger.Error("read socket service process read event read offset error:", err.Error())
+					logger.Errorf("read socket service process read event read offset err: %s.", err)
 					return false
 				}
 
@@ -137,7 +137,7 @@ func (rss *readSocketService) processReadEvent() bool {
 				rss.haConn.slaveAckOffset = readOffset
 				if rss.haConn.slaveRequestOffset < 0 {
 					rss.haConn.slaveRequestOffset = readOffset
-					logger.Infof("slave[%s] request offset %d", rss.haConn.clientAddress, readOffset)
+					logger.Infof("slave[%s] request offset %d.", rss.haConn.clientAddress, readOffset)
 				}
 
 				rss.haConn.ha.notifyTransferSome(rss.haConn.slaveAckOffset)
@@ -149,7 +149,7 @@ func (rss *readSocketService) processReadEvent() bool {
 				break
 			}
 		} else {
-			logger.Errorf("read socket[%s] < 0", rss.connection.RemoteAddr().String())
+			logger.Errorf("read socket[%s] < 0.", rss.connection.RemoteAddr().String())
 			return false
 		}
 	}
@@ -211,7 +211,7 @@ func (wss *writeSocketService) updateNextTransferOffset() {
 			wss.nextTransferFromWhere = wss.haConn.slaveRequestOffset
 		}
 
-		logger.Infof("master transfer data from %d  to slave[%s], and slave request %d",
+		logger.Infof("master transfer data from %d  to slave[%s], and slave request %d.",
 			wss.nextTransferFromWhere, wss.haConn.clientAddress, wss.haConn.slaveRequestOffset)
 	}
 }
@@ -247,7 +247,7 @@ func (wss *writeSocketService) buildData() {
 	binary.Write(wss.byteBufferHeader, binary.BigEndian, size)
 
 	if wss.bufferResult != nil && resultBuffer != nil && len(resultBuffer) > 0 {
-		logger.Infof("master writer socket service send offset: %d size: %d", thisOffset, size)
+		logger.Infof("master writer socket service send offset: %d size: %d.", thisOffset, size)
 		wss.byteBufferHeader.Write(resultBuffer)
 	}
 
@@ -271,7 +271,7 @@ func (wss *writeSocketService) start() {
 
 			_, err := wss.connection.Write(response)
 			if err != nil {
-				logger.Error("writer socket service write data error,", err.Error())
+				logger.Errorf("writer socket service write data err: %s.", err)
 				wss.shutdown()
 				break
 			}
@@ -285,7 +285,7 @@ func (wss *writeSocketService) start() {
 	}
 
 	wss.destroy()
-	logger.Info("writer socket service end")
+	logger.Info("writer socket service end.")
 }
 
 func (wss *writeSocketService) destroy() {
@@ -363,13 +363,13 @@ func newAcceptSocketService(port int32, ha *haService) *acceptSocketService {
 	serverAddress := fmt.Sprintf(":%d", port)
 	serverAddr, err := net.ResolveTCPAddr("tcp", serverAddress)
 	if err != nil {
-		logger.Error("accept socket service resolve server address error:", err.Error())
+		logger.Errorf("accept socket service resolve server address err: %s.", err)
 		return nil
 	}
 
 	listener, err := net.ListenTCP("tcp", serverAddr)
 	if err != nil {
-		logger.Error("accept socket service listener port error:", err.Error())
+		logger.Errorf("accept socket service listener port err: %s.", err)
 		return nil
 	}
 
@@ -387,11 +387,11 @@ func (ass *acceptSocketService) start() {
 
 		connection, err := ass.listener.AcceptTCP()
 		if err != nil {
-			logger.Error("accept socket service accept error:", err.Error())
+			logger.Errorf("accept socket service accept err: %s.", err)
 			continue
 		}
 
-		logger.Info("haService receive new connection, ", connection.RemoteAddr().String())
+		logger.Infof("haService receive new connection %s.", connection.RemoteAddr().String())
 		haConnection := newHAConnection(ass.ha, connection)
 
 		go func() {
@@ -443,7 +443,7 @@ func (gtService *groupTransferService) doWaitTransfer() {
 		}
 
 		if !transferOK {
-			logger.Warn("transfer message to slave timeout, ", request.nextOffset)
+			logger.Warnf("transfer message to slave timeout, %d.", request.nextOffset)
 		}
 
 		request.wakeupCustomer(transferOK)
@@ -508,7 +508,7 @@ func (client *haClient) updateMasterAddress(newAddr string) {
 	currentAddr := client.masterAddress
 	if currentAddr != newAddr {
 		client.masterAddress = newAddr
-		logger.Infof("update master address, OLD: %s NEW: %s", currentAddr, newAddr)
+		logger.Infof("update master address, OLD: %s NEW: %s.", currentAddr, newAddr)
 	}
 }
 
@@ -533,7 +533,7 @@ func (client *haClient) connectMaster() bool {
 
 		tcpAddress, err := net.ResolveTCPAddr("tcp4", address)
 		if err != nil {
-			logger.Error("ha client connect master resolve tcp address error:", err.Error())
+			logger.Errorf("ha client connect master resolve tcp address err: %s.", err)
 			return false
 		}
 
@@ -543,7 +543,7 @@ func (client *haClient) connectMaster() bool {
 
 		conn, err := net.DialTCP("tcp", nil, tcpAddress)
 		if err != nil {
-			logger.Error("ha client connect master create connection error:", err.Error())
+			logger.Errorf("ha client connect master create connection err: %s.", err)
 			return false
 		}
 
@@ -564,7 +564,7 @@ func (client *haClient) closeMaster() {
 }
 
 func (client *haClient) reportSlaveMaxOffset(maxOffset int64) bool {
-	logger.Info("ha client report slave max offset: ", maxOffset)
+	logger.Infof("ha client report slave max offset: %d.", maxOffset)
 	binary.Write(client.reportOffset, binary.BigEndian, maxOffset)
 
 	for i := 0; i < 3 && client.reportOffset.Len() > 0; i++ {
@@ -572,7 +572,7 @@ func (client *haClient) reportSlaveMaxOffset(maxOffset int64) bool {
 		client.reportOffset.Read(offsetBuffer)
 		_, err := client.connection.Write(offsetBuffer)
 		if err != nil {
-			logger.Error("ha client report slave max offset socket write error: ", err.Error())
+			logger.Errorf("ha client report slave max offset socket write err: %s.", err)
 			return false
 		}
 
@@ -591,7 +591,7 @@ func (client *haClient) reportSlaveMaxOffsetPlus() bool {
 		result := client.reportSlaveMaxOffset(client.currentReportedOffset)
 		if !result {
 			client.closeMaster()
-			logger.Error("ha client report slave max offset plus error, ", client.currentReportedOffset)
+			logger.Errorf("ha client report slave max offset plus error, %s.", client.currentReportedOffset)
 		}
 	}
 
@@ -612,18 +612,18 @@ func (client *haClient) processRead() bool {
 	for {
 		n, err := client.connection.Read(databuf)
 		if err == io.EOF {
-			logger.Infof("connection error: %s", client.connection.RemoteAddr())
+			logger.Infof("connection error: %s.", client.connection.RemoteAddr())
 			return false
 		}
 		if err != nil {
-			logger.Infof("ha client read error: %s", err)
+			logger.Infof("ha client read error: %s.", err)
 			return false
 		}
 
 		// 数据添加到消息缓冲
 		n, err = msgbuf.Write(databuf[:n])
 		if err != nil {
-			logger.Infof("ha client buffer write error: %s\n", err)
+			logger.Infof("ha client buffer write error: %s.", err)
 			return false
 		}
 
@@ -661,13 +661,13 @@ func (client *haClient) handleMessageBody(masterPhyOffset int64, bodySize int32,
 			// 发生重大错误
 			if slavePhyOffset != 0 {
 				if slavePhyOffset != masterPhyOffset {
-					logger.Errorf("master pushed offset not equal the max phy offset in slave, SLAVE: %d MASTER: %d",
+					logger.Errorf("master pushed offset not equal the max phy offset in slave, SLAVE: %d MASTER: %d.",
 						slavePhyOffset, masterPhyOffset)
 					return false
 				}
 			}
 
-			logger.Infof("ha client append to commit log offset:%d size:%d", masterPhyOffset, bodySize)
+			logger.Infof("ha client append to commit log offset:%d size:%d.", masterPhyOffset, bodySize)
 			client.ha.messageStore.AppendToCommitLog(masterPhyOffset, bodyData)
 			client.dispatchPosition += int32(msgHeaderSize) + bodySize
 
@@ -681,7 +681,7 @@ func (client *haClient) handleMessageBody(masterPhyOffset int64, bodySize int32,
 }
 
 func (client *haClient) start() {
-	logger.Info("ha client service started")
+	logger.Info("ha client service started.")
 
 	for {
 		if client.stoped {
@@ -714,7 +714,7 @@ func (client *haClient) start() {
 	}
 
 	client.closeMaster()
-	logger.Info("ha client service end")
+	logger.Info("ha client service end.")
 }
 
 func (client *haClient) shutdown() {

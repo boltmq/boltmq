@@ -51,13 +51,13 @@ func newStoreCheckpoint(scpPath string) (*storeCheckpoint, error) {
 	scp.file = scpFile
 	defer scpFile.Close()
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorf("check point create file err: %s.", err)
 		return nil, err
 	}
 
 	mmapBytes, err := mmap.MapRegion(scp.file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorf("check point mmap err: %s.", err)
 		return nil, err
 	}
 

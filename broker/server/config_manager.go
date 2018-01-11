@@ -49,14 +49,14 @@ func (cml *configManagerLoader) load() bool {
 		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
 		ok, err := common.CreateNullFile(filePath)
 		if err != nil {
-			logger.Errorf("create %s failed. err: %s", filePath, err.Error())
+			logger.Errorf("create %s failed. err: %s.", filePath, err.Error())
 			return false
 		}
 		if !ok {
 			logger.Errorf("create %s failed, unknown reason.", filePath)
 			return false
 		}
-		logger.Infof("create %s successful", filePath)
+		logger.Infof("create %s success.", filePath)
 	}
 
 	buf, err := file.ToBytes(filePath)
@@ -82,6 +82,6 @@ func (cml *configManagerLoader) persist() {
 	filePath := cml.cfgManager.configFilePath()
 	err := common.String2File([]byte(buf), filePath)
 	if err != nil {
-		logger.Errorf("persist string to file, %s", err)
+		logger.Errorf("persist string to file, %s.", err)
 	}
 }

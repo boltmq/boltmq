@@ -137,7 +137,7 @@ func (idx *indexService) buildIndex(request interface{}) {
 			for _, key := range keySet {
 				if len(key) > 0 {
 					for ok := idxFile.putKey(idx.buildKey(msg.topic, key), msg.commitLogOffset, msg.storeTimestamp); !ok; {
-						logger.Warn("index file full, so create another one, ", idxFile.mf.fileName)
+						logger.Warnf("index file full, so create another one, %s.", idxFile.mf.fileName)
 
 						idxFile = idx.retryGetAndCreateIndexFile()
 						if idxFile == nil {
@@ -153,7 +153,7 @@ func (idx *indexService) buildIndex(request interface{}) {
 	}
 
 	if breakdown {
-		logger.Error("build index error, stop building index")
+		logger.Error("build index error, stop building index.")
 	}
 }
 
@@ -176,7 +176,7 @@ func (idx *indexService) retryGetAndCreateIndexFile() *indexFile {
 
 	if idxFile == nil {
 		idx.messageStore.runFlags.makeIndexFileError()
-		logger.Error("mark index file can not build flag")
+		logger.Error("mark index file can not build flag.")
 	}
 
 	return idxFile
@@ -274,7 +274,7 @@ func (idx *indexService) deleteExpiredFiles(fls *list.List) {
 			expiredFile := e.Value.(*indexFile)
 			destroyed := expiredFile.destroy(3000)
 			if !destroyed {
-				logger.Error("deleteExpiredFile destroy failed, ", expiredFile.mf.fileName)
+				logger.Errorf("delete expired file destroy failed, %s.", expiredFile.mf.fileName)
 				break
 			}
 
@@ -370,7 +370,7 @@ func (idxFile *indexFile) flush() {
 		idxFile.byteBuffer.flush()
 		idxFile.mf.release()
 		endTime := time.Now().UnixNano() / 1000000
-		logger.Info("flush index file eclipse time(ms) ", endTime-beginTime)
+		logger.Infof("flush index file eclipse time(ms) %d.", endTime-beginTime)
 	}
 }
 

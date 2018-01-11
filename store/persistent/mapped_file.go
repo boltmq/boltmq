@@ -141,7 +141,7 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 	defer file.Close()
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorf("create mapped file err: %s.", err)
 		return nil, errors.Wrap(err, 0)
 	}
 	mf.file = file
@@ -149,7 +149,7 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	if exist == false {
 		// 如果文件不存在则新建filesize大小文件
 		if err := os.Truncate(filePath, filesize); err != nil {
-			logger.Error("mapped file set file size error:", err.Error())
+			logger.Errorf("mapped file set file size err: %s.", err)
 			return nil, errors.Wrap(err, 0)
 		}
 	}
@@ -159,15 +159,15 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 	// 文件名即offset起始地址
 	offset, err := strconv.ParseInt(fileName, 10, 64)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorf("mapped file name invalid. %s.", err)
 		return nil, errors.Wrap(err, 0)
 	}
 	mf.fileFromOffset = offset
 
 	mmapBytes, err := mmap.MapRegion(file, MMAPED_ENTIRE_FILE, mmap.RDWR, 0, 0)
 	if err != nil {
-		logger.Error(err.Error())
-		//return nil, err
+		logger.Errorf("mapped file mapping err: %s.", err)
+		return nil, err
 	}
 
 	mf.byteBuffer = newMappedByteBuffer(mmapBytes)
@@ -183,7 +183,7 @@ func newMappedFile(filePath string, filesize int64) (*mappedFile, error) {
 // Since: 2017/8/5
 func (mf *mappedFile) appendMessageWithCallBack(msg interface{}, amcb appendMessageCallback) *store.AppendMessageResult {
 	if msg == nil {
-		logger.Error("AppendMessage nil msg error!!!")
+		logger.Error("append message is nil.")
 		return nil
 	}
 
@@ -197,7 +197,7 @@ func (mf *mappedFile) appendMessageWithCallBack(msg interface{}, amcb appendMess
 	}
 
 	// TODO: 上层应用应该保证不会走到这里
-	logger.Errorf("mappedFile.appendMessage return null, wrotePostion:%d fileSize:%d", curPos, mf.fileSize)
+	logger.Errorf("mapped file append message return nil, wrotePostion:%d fileSize:%d.", curPos, mf.fileSize)
 	return &store.AppendMessageResult{Status: store.APPENDMESSAGE_UNKNOWN_ERROR}
 }
 
@@ -211,7 +211,7 @@ func (mf *mappedFile) appendMessage(data []byte) bool {
 	if currPos+int64(len(data)) <= mf.fileSize {
 		n, err := mf.byteBuffer.Write(data)
 		if err != nil {
-			logger.Error("mapped file append message error:", err.Error())
+			logger.Errorf("mapped file append message err: %s.", err)
 			return false
 		}
 		atomic.AddInt64(&mf.wrotePostion, int64(n))
@@ -237,7 +237,7 @@ func (mf *mappedFile) commit(flushLeastPages int32) (flushPosition int64) {
 			mf.rwLock.Unlock()             // 释放锁
 			mf.release()
 		} else {
-			logger.Warn("in commit, hold failed, commit offset = ", atomic.LoadInt64(&mf.committedPosition))
+			logger.Warnf("in commit, hold failed, commitoffset=%s", atomic.LoadInt64(&mf.committedPosition))
 			mf.committedPosition = atomic.LoadInt64(&mf.wrotePostion)
 		}
 	}
@@ -291,10 +291,10 @@ func (mf *mappedFile) destroy(intervalForcibly int64) bool {
 	if mf.isCleanupOver() {
 		mf.unmap()
 		mf.file.Close()
-		logger.Infof("close file %s OK", mf.fileName)
+		logger.Infof("mapped file close success, %s.", mf.fileName)
 
 		if err := os.Remove(mf.file.Name()); err != nil {
-			logger.Errorf("message store delete file %s error: ", mf.file.Name(), err.Error())
+			logger.Errorf("message store delete file %s err: %s.", mf.file.Name(), err)
 			return false
 		}
 	}
@@ -345,10 +345,10 @@ func (mf *mappedFile) selectMappedBufferByPosAndSize(pos int64, size int32) *map
 			byteBuffer.writePos = int(size)
 			return newMappedBufferResult(mf.fileFromOffset+pos, byteBuffer, size, mf)
 		} else {
-			logger.Warn("matched, but hold failed, request pos: %d, fileFromOffset: %d", pos, mf.fileFromOffset)
+			logger.Warnf("matched, but hold failed, request pos: %d, fileFromOffset: %d.", pos, mf.fileFromOffset)
 		}
 	} else {
-		logger.Warnf("selectMappedBuffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d",
+		logger.Warnf("select mapped buffer request pos invalid, request pos: %d, size: %d, fileFromOffset: %d.",
 			pos, size, mf.fileFromOffset)
 	}
 
@@ -371,7 +371,7 @@ func (mf *mappedFile) cleanup(currentRef int64) bool {
 	clean(mf.byteBuffer)
 	// totalMappedVitualMemory
 	// totalmappedFiles
-	logger.Infof("unmap file[REF:%d] %s OK", currentRef, mf.fileName)
+	logger.Infof("unmap file[REF:%d] %s success.", currentRef, mf.fileName)
 
 	return true
 }

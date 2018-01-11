@@ -63,7 +63,7 @@ func (sms *scheduleMessageService) buildRunningStats(stats map[string]string) {
 func (sms *scheduleMessageService) encodeOffsetTable() string {
 	result, err := json.Marshal(sms.offsetTable)
 	if err != nil {
-		logger.Info("schedule message service offset table to json error:", err.Error())
+		logger.Infof("schedule message service offset table to json error: %s.", err)
 		return ""
 	}
 
@@ -96,7 +96,7 @@ func (sms *scheduleMessageService) shutdown() {
 	if sms.ticker != nil {
 		sms.ticker.Stop()
 	}
-	logger.Info("shutdown schedule message service")
+	logger.Info("shutdown schedule message service.")
 }
 
 type runningStats int

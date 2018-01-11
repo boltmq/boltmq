@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 )
 
@@ -41,7 +42,7 @@ func (clock *Clock) scheduleClockUpdating(tick *time.Ticker) {
 		case <-clock.closeChan:
 			tick.Stop()
 			close(clock.closeChan)
-			//logger.Info("close system clock service")
+			logger.Info("system clock service close.")
 			return
 		case <-tick.C:
 			atomic.StoreInt64(&clock.now, system.CurrentTimeMillis())

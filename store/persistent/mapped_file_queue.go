@@ -76,7 +76,7 @@ func (mfq *mappedFileQueue) getMappedFileByTime(timestamp int64) (mf *mappedFile
 		if mf != nil {
 			fileInfo, err := os.Stat(mf.fileName)
 			if err != nil {
-				logger.Warn("mapped file queue get mapped file by time error:", err.Error())
+				logger.Warnf("mapped file queue get mapped file by time error: %s.", err)
 				continue
 			}
 
@@ -154,7 +154,7 @@ func (mfq *mappedFileQueue) deleteExpiredFile(mfs *list.List) {
 				if deleteFile.fileName == file.fileName {
 					success := mfq.mappedFiles.Remove(e)
 					if success == false {
-						logger.Error("deleteExpiredFile remove failed.")
+						logger.Error("delete expired file remove failed.")
 					}
 				}
 			}
@@ -168,40 +168,40 @@ func (mfq *mappedFileQueue) deleteExpiredFile(mfs *list.List) {
 func (mfq *mappedFileQueue) load() bool {
 	exist, err := common.PathExists(mfq.storePath)
 	if err != nil {
-		logger.Infof("mapped file queue load store path error:", err.Error())
+		logger.Infof("mapped file queue load store path error: %s.", err)
 		return false
 	}
 
 	if exist {
 		files, err := listFilesOrDir(mfq.storePath, "FILE")
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorf("mapped file queue list dir err: %s.", err)
 			return false
 		}
 		if len(files) > 0 {
 			// 按照文件名，升序排列
 			sort.Strings(files)
 			for _, path := range files {
-				file, error := os.Stat(path)
-				if error != nil {
-					logger.Errorf("mapped file queue load file %s error: %s", path, error.Error())
+				file, err := os.Stat(path)
+				if err != nil {
+					logger.Errorf("mapped file queue load file %s err: %s.", path, err)
 				}
 
 				if file == nil {
-					logger.Errorf("mapped file queue load file not exist: %s", path)
+					logger.Errorf("mapped file queue load file not exist: %s.", path)
 				}
 
 				size := file.Size()
 				// 校验文件大小是否匹配
 				if size != int64(mfq.mappedFileSize) {
-					logger.Warnf("filesize(%d) mappedFileSize(%d) length not matched message store config value, ignore it", size, mfq.mappedFileSize)
+					logger.Warnf("filesize(%d) mappedfile-size(%d) length not matched message store config value, ignore it.", size, mfq.mappedFileSize)
 					return true
 				}
 
 				// 恢复队列
-				mf, error := newMappedFile(path, int64(mfq.mappedFileSize))
-				if error != nil {
-					logger.Error("mapped file queue load file error:", error.Error())
+				mf, err := newMappedFile(path, int64(mfq.mappedFileSize))
+				if err != nil {
+					logger.Errorf("mapped file queue load file err: %s.", err)
 					return false
 				}
 
@@ -226,9 +226,9 @@ func (mfq *mappedFileQueue) howMuchFallBehind() int64 {
 	}
 	committed := mfq.committedWhere
 	if committed != 0 {
-		mf, error := mfq.getLastMappedFile(0)
-		if error != nil {
-			logger.Error(error.Error())
+		mf, err := mfq.getLastMappedFile(0)
+		if err != nil {
+			logger.Error("mapped file queue get last file err: %s.", err)
 		}
 		return mf.fileFromOffset + mf.wrotePostion - committed
 	}
@@ -263,14 +263,14 @@ func (mfq *mappedFileQueue) getLastMappedFile(startOffset int64) (*mappedFile, e
 			var err error
 			mf, err = mfq.allocateMFStrategy.putRequestAndReturnMappedFile(nextPath, nextNextPath, mfq.mappedFileSize)
 			if err != nil {
-				logger.Errorf("put request and return mapped file, error:%s ", err.Error())
+				logger.Errorf("put request and return mapped file, error: %s.", err)
 				return nil, err
 			}
 		} else {
 			var err error
 			mf, err = newMappedFile(nextPath, mfq.mappedFileSize)
 			if err != nil {
-				logger.Errorf("mapped file create mapped file error: %s", err.Error())
+				logger.Errorf("mapped file create mapped file error: %s.", err)
 				return nil, err
 			}
 		}
@@ -319,7 +319,7 @@ func (mfq *mappedFileQueue) deleteLastMappedFile() {
 		lastMappedFile := last.Value.(*mappedFile)
 		lastMappedFile.destroy(1000)
 		mfq.mappedFiles.Remove(last)
-		logger.Infof("on recover, destroy a logic mapped file %v", lastMappedFile.fileName)
+		logger.Infof("on recover, destroy a logic mapped file %s.", lastMappedFile.fileName)
 	}
 }
 
@@ -395,7 +395,7 @@ func (mfq *mappedFileQueue) deleteExpiredFileByOffset(offset int64, unitsize int
 				// 当前文件是否可以删除
 				destroy = maxOffsetInLogicQueue < offset
 				if destroy {
-					logger.Infof("physic min offset %d, logics in current mappedfile max offset %d, delete it",
+					logger.Infof("physic min offset %d, logics in current mappedfile max offset %d, delete it.",
 						offset, maxOffsetInLogicQueue)
 				}
 			} else {
@@ -452,7 +452,7 @@ func (mfq *mappedFileQueue) getLastMappedFile2() *mappedFile {
 	lastElement := mfq.mappedFiles.Back()
 	result, ok := lastElement.Value.(*mappedFile)
 	if !ok {
-		logger.Info("mappedfile queue get last mapped file type conversion error")
+		logger.Info("mappedfile queue get last mapped file type conversion error.")
 	}
 
 	return result
@@ -467,7 +467,7 @@ func (mfq *mappedFileQueue) findMappedFileByOffset(offset int64, returnFirstOnNo
 	if mf != nil {
 		index := (offset / mfq.mappedFileSize) - (mf.fileFromOffset / mfq.mappedFileSize)
 		if index < 0 || index >= int64(mfq.mappedFiles.Len()) {
-			logger.Warnf("mapped file queue find mapped file by offset, offset not matched, request Offset: %d, index: %d, mappedFileSize: %d, mappedFiles count: %d",
+			logger.Warnf("mapped file queue find mapped file by offset, offset not matched, request Offset: %d, index: %d, mappedFileSize: %d, mappedFiles count: %d.",
 				offset, index, mfq.mappedFileSize, mfq.mappedFiles.Len())
 		}
 
@@ -508,16 +508,16 @@ func (mfq *mappedFileQueue) retryDeleteFirstFile(intervalForcibly int64) bool {
 	mapFile := mfq.getFirstMappedFileOnLock()
 	if mapFile != nil {
 		if !mapFile.isAvailable() {
-			logger.Warn("the mappedfile was destroyed once, but still alive, ", mapFile.fileName)
+			logger.Warnf("the mappedfile was destroyed once, but still alive, %s.", mapFile.fileName)
 
 			result := mapFile.destroy(intervalForcibly)
 			if result {
-				logger.Info("the mappedfile redelete OK, ", mapFile.fileName)
+				logger.Infof("the mappedfile redelete success, %s.", mapFile.fileName)
 				tmps := list.New()
 				tmps.PushBack(mapFile)
 				mfq.deleteExpiredFile(tmps)
 			} else {
-				logger.Warn("the mappedfile redelete failed, ", mapFile.fileName)
+				logger.Warnf("the mappedfile redelete failed, %s.", mapFile.fileName)
 			}
 
 			return result
@@ -546,7 +546,7 @@ func (mfq *mappedFileQueue) destroy() {
 	for element := mfq.mappedFiles.Front(); element != nil; element = element.Next() {
 		mf, ok := element.Value.(*mappedFile)
 		if !ok {
-			logger.Warnf("mapped file queue destroy type conversion error")
+			logger.Warnf("mapped file queue destroy type conversion error.")
 			continue
 		}
 		mf.destroy(1000 * 3)
@@ -558,7 +558,7 @@ func (mfq *mappedFileQueue) destroy() {
 	// delete parent director
 	exist, err := common.PathExists(mfq.storePath)
 	if err != nil {
-		logger.Warn("mapped file queue destroy check store path is exists, error:", err.Error())
+		logger.Warnf("mapped file queue destroy check store path is exists, err: %s.", err)
 	}
 
 	if exist {

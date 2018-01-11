@@ -99,8 +99,8 @@ func (slave *slaveSynchronize) syncDelayOffset() {
 		return
 	}
 
-	fileName := common.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
-	common.String2File([]byte(delayOffset), fileName)
+	filePath := common.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
+	common.String2File([]byte(delayOffset), filePath)
 	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s", slave.masterAddr, delayOffset)
 }
 

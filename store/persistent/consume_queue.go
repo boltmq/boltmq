@@ -144,15 +144,15 @@ func (cq *consumeQueue) recover() {
 				)
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &offset); err != nil {
-					logger.Error("consumequeue recover mapped file offset error:", err.Error())
+					logger.Errorf("consumequeue recover mapped file offset err: %s.", err)
 				}
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &size); err != nil {
-					logger.Error("consumequeue recover mapped file size error:", err.Error())
+					logger.Errorf("consumequeue recover mapped file size err: %s.", err)
 				}
 
 				if err := binary.Read(byteBuffer, binary.BigEndian, &tagsCode); err != nil {
-					logger.Error("consumequeue recover mapped file tags code error:", err.Error())
+					logger.Errorf("consumequeue recover mapped file tags code err: %s.", err)
 				}
 
 				// 说明当前存储单元有效
@@ -161,7 +161,7 @@ func (cq *consumeQueue) recover() {
 					mfOffset = int64(i) + CQStoreUnitSize
 					cq.maxPhysicOffset = offset
 				} else {
-					logger.Infof("recover current consumequeue file over, %s %d %d %d ",
+					logger.Infof("recover current consumequeue file over, %s %d %d %d.",
 						mf.fileName, offset, size, tagsCode)
 					break
 				}
@@ -181,7 +181,7 @@ func (cq *consumeQueue) recover() {
 					logger.Infof("recover next consumequeue file, %s.", mf.fileName)
 				}
 			} else {
-				logger.Infof("recover current consumequeue over %s %d",
+				logger.Infof("recover current consumequeue over %s %d.",
 					mf.fileName, processOffset+mfOffset)
 				break
 			}
@@ -311,7 +311,7 @@ func (cq *consumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset i
 	expectLogicOffset := cqOffset * CQStoreUnitSize
 	mf, err := cq.mfq.getLastMappedFile(expectLogicOffset)
 	if err != nil {
-		logger.Errorf("consumequeue get last mapped file error: %s.", err.Error())
+		logger.Errorf("consumequeue get last mapped file error: %s.", err)
 	}
 
 	if mf != nil {
@@ -319,13 +319,13 @@ func (cq *consumeQueue) putMessagePostionInfo(offset, size, tagsCode, cqOffset i
 		if mf.firstCreateInQueue && cqOffset != 0 && mf.wrotePostion == 0 {
 			cq.minLogicOffset = expectLogicOffset
 			cq.fillPreBlank(mf, expectLogicOffset)
-			logger.Infof("fill pre blank space %s %d %d", mf.fileName, expectLogicOffset, mf.wrotePostion)
+			logger.Infof("fill pre blank space %s %d %d.", mf.fileName, expectLogicOffset, mf.wrotePostion)
 		}
 
 		if cqOffset != 0 {
 			currentLogicOffset := mf.wrotePostion + mf.fileFromOffset
 			if expectLogicOffset != currentLogicOffset {
-				logger.Warnf("logic queue order maybe wrong, expectLogicOffset: %d currentLogicOffset: %d Topic: %s QID: %d Diff: %d",
+				logger.Warnf("logic queue order maybe wrong, expectLogicOffset: %d currentLogicOffset: %d Topic: %s QID: %d Diff: %d.",
 					expectLogicOffset, currentLogicOffset, cq.topic, cq.queueId, expectLogicOffset-currentLogicOffset)
 			}
 		}
