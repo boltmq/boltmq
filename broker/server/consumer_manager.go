@@ -102,7 +102,7 @@ func (cm *consumerManager) unregisterConsumer(group string, chanInfo *channelInf
 			if info.connTable.IsEmpty() {
 				removeOld, _ := cm.consumerTable.Remove(group)
 				if removeOld != nil {
-					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s", group)
+					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s.", group)
 				}
 			}
 			cm.cisListener.ConsumerIdsChanged(group, info.getAllChannel())
@@ -134,7 +134,7 @@ func (cm *consumerManager) scanNotActiveChannel() {
 			}
 			diff := system.CurrentTimeMillis() - chanInfo.lastUpdateTimestamp
 			if diff > cm.channelExpiredTimeout {
-				logger.Warnf("SCAN: remove expired channel from consumerManager consumerTable. channel=%s, consumerGroup=%s",
+				logger.Warnf("SCAN: remove expired channel from consumerManager consumerTable. channel=%s, consumerGroup=%s.",
 					chanInfo.addr, group)
 				chanInfo.ctx.Close()
 				chanIterator.Remove()
@@ -142,7 +142,7 @@ func (cm *consumerManager) scanNotActiveChannel() {
 		}
 
 		if channelInfoTable.IsEmpty() {
-			logger.Warnf("SCAN: remove expired channel from consumerManager consumerTable, all clear, consumerGroup=%s", group)
+			logger.Warnf("SCAN: remove expired channel from consumerManager consumerTable, all clear, consumerGroup=%s.", group)
 			iterator.Remove()
 		}
 	}
@@ -168,11 +168,11 @@ func (cm *consumerManager) doChannelCloseEvent(remoteAddr string, ctx core.Conte
 			if cgi.connTable.IsEmpty() {
 				remove, err := cm.consumerTable.Remove(group)
 				if err != nil {
-					logger.Error(err)
+					logger.Error("doChannel close event err: %s.", err)
 					continue
 				}
 				if remove != nil {
-					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s", group)
+					logger.Infof("unRegister consumer ok, no any connection, and remove consumer group, %s.", group)
 				}
 			}
 			cm.cisListener.ConsumerIdsChanged(group, cgi.getAllChannel())

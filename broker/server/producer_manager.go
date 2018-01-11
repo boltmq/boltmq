@@ -78,7 +78,7 @@ func (pm *producerManager) registerProducer(group string, chanInfo *channelInfo)
 	clientChannelInfoFound, ok := channelTable[chanInfo.ctx.UniqueSocketAddr().String()]
 	if !ok || nil == clientChannelInfoFound {
 		channelTable[chanInfo.ctx.UniqueSocketAddr().String()] = chanInfo
-		logger.Infof("new producer connected, group: %s channel: %s", group, chanInfo.addr)
+		logger.Infof("new producer connected, group: %s channel: %s.", group, chanInfo.addr)
 	}
 
 	if clientChannelInfoFound != nil {
@@ -102,8 +102,8 @@ func (pm *producerManager) registerProducer(group string, chanInfo *channelInfo)
 	bClientChannelInfoFound, _ = contains(channelList, chanInfo)
 	if !bClientChannelInfoFound {
 		channelList.PushBack(chanInfo)
-		format := "new producer connected, group: %s, group.hashcode: %d, %s"
-		logger.Infof(format, group, groupdHashCode, chanInfo)
+		logger.Infof("new producer connected, group: %s, group.hashcode: %d, %s.",
+			group, groupdHashCode, chanInfo)
 	}
 
 	if bClientChannelInfoFound && clientChannelInfoFound != nil {
@@ -122,11 +122,11 @@ func (pm *producerManager) unregisterProducer(group string, chanInfo *channelInf
 	connTable := pm.groupChannelTable.Get(group)
 	if nil != connTable {
 		delete(connTable, chanInfo.ctx.UniqueSocketAddr().String())
-		logger.Infof("unregister a producer %s from groupChannelTable %s", group, chanInfo.addr)
+		logger.Infof("unregister a producer %s from groupChannelTable %s.", group, chanInfo.addr)
 
 		if pm.groupChannelTable.Size() <= 0 {
 			pm.groupChannelTable.Remove(group)
-			logger.Infof("unregister a producer %s from groupChannelTable", group)
+			logger.Infof("unregister a producer %s from group channel table.", group)
 		}
 	}
 
@@ -140,12 +140,12 @@ func (pm *producerManager) unregisterProducer(group string, chanInfo *channelInf
 	if ok && nil != channelList && channelList.Len() > 0 {
 		isRemove := remove(channelList, chanInfo)
 		if isRemove {
-			logger.Infof("unregister a producer[%s] from hashcodeChannelTable %s", group, chanInfo.addr)
+			logger.Infof("unregister a producer[%s] from hashcode channel table %s.", group, chanInfo.addr)
 		}
 
 		if channelList.Len() <= 0 {
 			delete(pm.hashcodeChannelTable, groupHashCode)
-			logger.Infof("unregister a producer group[%s] from hashcodeChannelTable", group)
+			logger.Infof("unregister a producer group[%s] from hashcode channel table.", group)
 		}
 	}
 
@@ -164,7 +164,7 @@ func (pm *producerManager) scanNotActiveChannel() {
 			diff := system.CurrentTimeMillis() - info.lastUpdateTimestamp
 			if diff > pm.channelExpiredTimeout {
 				delete(chlMap, key)
-				logger.Warnf("SCAN: remove expired channel[%s] from producerManager groupChannelTable, producer group name: %s",
+				logger.Warnf("SCAN: remove expired channel[%s] from producerManager groupChannelTable, producer group name: %s.",
 					info.ctx.RemoteAddr(), group)
 				info.ctx.Close()
 			}
@@ -186,8 +186,8 @@ func (pm *producerManager) doChannelCloseEvent(remoteAddr string, ctx core.Conte
 		_, ok := clientChannelInfoTable[ctx.UniqueSocketAddr().String()]
 		if ok {
 			delete(clientChannelInfoTable, ctx.UniqueSocketAddr().String())
-			format := "NETTY EVENT: remove channel[%s] from producerManager groupChannelTable, producer group: %s"
-			logger.Infof(format, remoteAddr, group)
+			logger.Infof("NETTY EVENT: remove channel[%s] from producerManager groupChannelTable, producer group: %s.",
+				remoteAddr, group)
 		}
 		if len(clientChannelInfoTable) <= 0 {
 			delete(pm.groupChannelTable.tables, group)

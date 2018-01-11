@@ -64,7 +64,7 @@ func (ra *BaseRemotingAchieve) RegisterRPCHook(rpcHook RPCHook) {
 
 func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx core.Context) {
 	if ctx == nil {
-		logger.Fatalf("processReceived context is nil")
+		logger.Fatalf("processReceived context is nil.")
 		return
 	}
 
@@ -73,7 +73,7 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx core.Context) 
 		sa := ctx.UniqueSocketAddr()
 		bufs, err := ra.fragmentationActuator.Pack(*sa, buffer)
 		if err != nil {
-			logger.Fatalf("processReceived unPack buffer failed: %v", err)
+			logger.Fatalf("processReceived unPack buffer failed: %s.", err)
 			return
 		}
 
@@ -91,7 +91,7 @@ func (ra *BaseRemotingAchieve) processReceived(buffer []byte, ctx core.Context) 
 		_, err := buf.Write(buffer)
 		// 安全考虑进行拷贝数据，之后使用队列缓存
 		if err != nil {
-			logger.Fatalf("processReceived write buffer failed: %v", err)
+			logger.Fatalf("processReceived write buffer failed: %s.", err)
 			return
 		}
 
@@ -106,7 +106,7 @@ func (ra *BaseRemotingAchieve) processMessageReceived(ctx core.Context, buf *byt
 	// 解析报文
 	remotingCommand, err := protocol.DecodeRemotingCommand(buf)
 	if err != nil {
-		logger.Fatalf("processMessageReceived deconde failed: %v", err)
+		logger.Fatalf("processMessageReceived deconde failed: %s.", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (ra *BaseRemotingAchieve) processRequestCommand(ctx core.Context, remotingC
 		response := protocol.CreateResponseCommand(protocol.REQUEST_CODE_NOT_SUPPORTED, errMsg)
 		response.Opaque = remotingCommand.Opaque
 		ra.sendResponse(response, ctx)
-		logger.Fatalf("processRequestCommand addr[%s] %s", ctx.UniqueSocketAddr(), errMsg)
+		logger.Fatalf("processRequestCommand addr[%s] %s.", ctx.UniqueSocketAddr(), errMsg)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (ra *BaseRemotingAchieve) processRequestCommand(ctx core.Context, remotingC
 		response := protocol.CreateResponseCommand(protocol.SYSTEM_ERROR, err.Error())
 		response.Opaque = remotingCommand.Opaque
 		ra.sendResponse(response, ctx)
-		logger.Fatalf("process request exception %v", err)
+		logger.Fatalf("process request exception %s.", err)
 		return
 	}
 
@@ -187,7 +187,7 @@ func (ra *BaseRemotingAchieve) processResponseCommand(ctx core.Context, response
 	responseFuture, ok := ra.responseTable[response.Opaque]
 	ra.responseTableLock.RUnlock()
 	if !ok {
-		logger.Fatalf("receive response, but not matched any request, %s response Opaque: %d", ctx.UniqueSocketAddr(), response.Opaque)
+		logger.Fatalf("receive response, but not matched any request, %s response Opaque: %d.", ctx.UniqueSocketAddr(), response.Opaque)
 		return
 	}
 
@@ -247,7 +247,7 @@ func (ra *BaseRemotingAchieve) invokeSync(ctx core.Context, request *protocol.Re
 	// 发送请求
 	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeSync->sendRequest failed: %s %v", ctx.UniqueSocketAddr(), err)
+		logger.Fatalf("invokeSync->sendRequest failed: %s %s.", ctx.UniqueSocketAddr(), err)
 		return nil, err
 	}
 	responseFuture.sendRequestOK = true
@@ -274,7 +274,7 @@ func (ra *BaseRemotingAchieve) invokeAsync(ctx core.Context, request *protocol.R
 	// 发送请求
 	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeASync->sendRequest failed: %s %v", ctx.UniqueSocketAddr(), err)
+		logger.Fatalf("invokeASync->sendRequest failed: %s %s.", ctx.UniqueSocketAddr(), err)
 		return err
 	}
 	responseFuture.sendRequestOK = true
@@ -286,7 +286,7 @@ func (ra *BaseRemotingAchieve) invokeOneway(ctx core.Context, request *protocol.
 	// 发送请求
 	err := ra.sendRequest(request, ctx)
 	if err != nil {
-		logger.Fatalf("invokeOneway->sendRequest failed: %s %v", ctx.UniqueSocketAddr(), err)
+		logger.Fatalf("invokeOneway->sendRequest failed: %s %s.", ctx.UniqueSocketAddr(), err)
 		return err
 	}
 
@@ -306,7 +306,7 @@ func (ra *BaseRemotingAchieve) scanResponseTable() {
 		// 超时判断
 		if (responseFuture.beginTimestamp + responseFuture.timeoutMillis + 1000) <= time.Now().Unix()*1000 {
 			seqs = append(seqs, seq)
-			logger.Fatalf("remove time out request: %s", responseFuture.String())
+			logger.Fatalf("remove time out request: %s.", responseFuture)
 		}
 	}
 	ra.responseTableLock.RUnlock()

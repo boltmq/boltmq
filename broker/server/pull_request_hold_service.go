@@ -65,7 +65,7 @@ func (serv *pullRequestHoldService) suspendPullRequest(topic string, queueId int
 	key := serv.buildKey(topic, queueId)
 	mpr, err := serv.pullRequestTable.Get(key)
 	if err != nil {
-		logger.Error(err)
+		logger.Error("suspend pull request err: %s.", err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (serv *pullRequestHoldService) notifyMessageArriving(topic string, queueId 
 	key := serv.buildKey(topic, queueId)
 	mpr, err := serv.pullRequestTable.Get(key)
 	if err != nil {
-		logger.Error(err)
+		logger.Error("notify message arriving err: %s.", err)
 		return
 	}
 	if mpr == nil {

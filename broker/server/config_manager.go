@@ -49,7 +49,7 @@ func (cml *configManagerLoader) load() bool {
 		// 第一次启动服务，如果topic.json、subscriptionGroup.json、consumerOffset.json之类的文件不存在，则创建之
 		ok, err := common.CreateNullFile(filePath)
 		if err != nil {
-			logger.Errorf("create %s failed. err: %s.", filePath, err.Error())
+			logger.Errorf("create %s failed. err: %s.", filePath, err)
 			return false
 		}
 		if !ok {
@@ -61,7 +61,7 @@ func (cml *configManagerLoader) load() bool {
 
 	buf, err := file.ToBytes(filePath)
 	if err != nil {
-		logger.Errorf("read file err: %s", err.Error())
+		logger.Errorf("read file err: %s.", err)
 		return false
 	}
 
@@ -75,7 +75,7 @@ func (cml *configManagerLoader) persist() {
 
 	buf := strings.TrimSpace(cml.cfgManager.encode(true))
 	if buf == "" {
-		logger.Warnf("configManagerLoader nothing to persist")
+		logger.Warnf("configManagerLoader nothing to persist.")
 		return
 	}
 

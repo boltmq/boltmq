@@ -54,7 +54,7 @@ func (etp *endTransactionProcessor) ProcessRequest(ctx core.Context, request *pr
 		switch requestHeader.CommitOrRollback {
 		// 不提交也不回滚
 		case sysflag.TransactionNotType:
-			logger.Warnf("check producer[%s] transaction state, but it's pending status.RequestHeader: %#v Remark: %s",
+			logger.Warnf("check producer[%s] transaction state, but it's pending status.RequestHeader: %#v Remark: %s.",
 				parseChannelRemoteAddr(ctx),
 				requestHeader,
 				request.Remark)
@@ -62,14 +62,14 @@ func (etp *endTransactionProcessor) ProcessRequest(ctx core.Context, request *pr
 
 			// 提交
 		case sysflag.TransactionCommitType:
-			logger.Warnf("check producer[%s] transaction state, the producer commit the message. RequestHeader: %#v Remark: %s",
+			logger.Warnf("check producer[%s] transaction state, the producer commit the message. RequestHeader: %#v Remark: %s.",
 				parseChannelRemoteAddr(ctx),
 				requestHeader,
 				request.Remark)
 
 			// 回滚
 		case sysflag.TransactionRollbackType:
-			logger.Warnf("check producer[%s] transaction state, the producer rollback the message. RequestHeader: %#v Remark: %s",
+			logger.Warnf("check producer[%s] transaction state, the producer rollback the message. RequestHeader: %#v Remark: %s.",
 				parseChannelRemoteAddr(ctx),
 				requestHeader,
 				request.Remark)
@@ -82,7 +82,7 @@ func (etp *endTransactionProcessor) ProcessRequest(ctx core.Context, request *pr
 		switch requestHeader.CommitOrRollback {
 		// 不提交也不回滚
 		case sysflag.TransactionNotType:
-			logger.Warnf("check producer[%s] end transaction in sending message,  and it's pending status.RequestHeader: %#v Remark: %s",
+			logger.Warnf("check producer[%s] end transaction in sending message,  and it's pending status.RequestHeader: %#v Remark: %s.",
 				parseChannelRemoteAddr(ctx),
 				requestHeader,
 				request.Remark)
@@ -91,7 +91,7 @@ func (etp *endTransactionProcessor) ProcessRequest(ctx core.Context, request *pr
 		case sysflag.TransactionCommitType:
 			// to do nothing
 		case sysflag.TransactionRollbackType:
-			logger.Warnf("check producer[%s] end transaction in sending message, rollback the message.RequestHeader: %#v Remark: %s",
+			logger.Warnf("check producer[%s] end transaction in sending message, rollback the message.RequestHeader: %#v Remark: %s.",
 				parseChannelRemoteAddr(ctx),
 				requestHeader,
 				request.Remark)

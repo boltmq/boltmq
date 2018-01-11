@@ -132,7 +132,7 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 	responseHeader := &head.RegisterBrokerResponseHeader{}
 	err = response.DecodeCommandCustomHeader(responseHeader)
 	if err != nil {
-		logger.Errorf("err: %s", err.Error())
+		logger.Errorf("register broker decode header err: %s", err)
 		return nil, err
 	}
 
@@ -140,7 +140,7 @@ func (cos *CallOuterService) RegisterBroker(nameSrvAddr, clusterName, brokerAddr
 	if response.Body != nil && len(response.Body) > 0 {
 		err = ffjson.Unmarshal(response.Body, result.KvTable)
 		if err != nil {
-			logger.Errorf("sync response REGISTER_BROKER body json err: %s", err.Error())
+			logger.Errorf("sync response REGISTER_BROKER body json err: %s.", err)
 			return nil, err
 		}
 	}
@@ -222,18 +222,18 @@ func (cos *CallOuterService) GetAllTopicConfig(brokerAddr string) *base.TopicCon
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_TOPIC_CONFIG)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("GetAllTopicConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request)
+		logger.Errorf("get all topic config err: %s, brokerAddr=%s, %s", err, brokerAddr, request)
 		return nil
 	}
 	if response == nil || response.Code != protocol.SUCCESS {
-		logger.Errorf("GetAllTopicConfig() failed. brokerAddr=%s, response is %s", brokerAddr, response)
+		logger.Errorf("get all topic config failed. brokerAddr=%s, response code is %s.", brokerAddr, response.Code)
 		return nil
 	}
 
 	topicConfigWrapper := base.NewTopicConfigSerializeWrapper()
 	err = ffjson.Unmarshal(response.Body, topicConfigWrapper)
 	if err != nil {
-		logger.Errorf("json err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("get all topic config err: %s, response.Body=%s.", err, string(response.Body))
 		return nil
 	}
 	return topicConfigWrapper
@@ -246,18 +246,18 @@ func (cos *CallOuterService) GetAllConsumerOffset(brokerAddr string) *namesrv.Co
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_CONSUMER_OFFSET)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("GetAllConsumerOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request)
+		logger.Errorf("get all consumer offset err: %s, brokerAddr=%s, %s.", err, brokerAddr, request)
 		return nil
 	}
 	if response == nil || response.Code != protocol.SUCCESS {
-		logger.Errorf("GetAllConsumerOffset() failed. brokerAddr=%s, response is %s", brokerAddr, response)
+		logger.Errorf("get all consumer offset failed. brokerAddr=%s, response code is %d.", brokerAddr, response.Code)
 		return nil
 	}
 
 	consumerOffsetWrapper := namesrv.NewConsumerOffsetSerializeWrapper()
 	err = ffjson.Unmarshal(response.Body, consumerOffsetWrapper)
 	if err != nil {
-		logger.Errorf("json err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("get all consum offset err: %s, response.Body=%s.", err, string(response.Body))
 		return nil
 	}
 	return consumerOffsetWrapper
@@ -270,11 +270,11 @@ func (cos *CallOuterService) GetAllDelayOffset(brokerAddr string) string {
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_DELAY_OFFSET)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("GetAllDelayOffset() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request)
+		logger.Errorf("get all delay offset err: %s, brokerAddr=%s, %s.", err, brokerAddr, request)
 		return ""
 	}
 	if response == nil || response.Code != protocol.SUCCESS {
-		logger.Errorf("GetAllDelayOffset() failed. brokerAddr=%s, response is %s", brokerAddr, response)
+		logger.Errorf("get all delay offset failed. brokerAddr=%s, response code is %d.", brokerAddr, response.Code)
 		return ""
 	}
 	return string(response.Body)
@@ -287,18 +287,18 @@ func (cos *CallOuterService) GetAllSubscriptionGroupConfig(brokerAddr string) *s
 	request := protocol.CreateRequestCommand(protocol.GET_ALL_SUBSCRIPTIONGROUP_CONFIG)
 	response, err := cos.remotingClient.InvokeSync(brokerAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("GetAllSubscriptionGroupConfig() err: %s, brokerAddr=%s, %s", err.Error(), brokerAddr, request)
+		logger.Errorf("get all subscriptionGroup config err: %s, brokerAddr=%s, %s.", err, brokerAddr, request)
 		return nil
 	}
 	if response == nil || response.Code != protocol.SUCCESS {
-		logger.Errorf("GetAllSubscriptionGroupConfig() failed. brokerAddr=%s, response is %s", brokerAddr, response)
+		logger.Errorf("get all subscriptionGroup config failed. brokerAddr=%s, response code is %d.", brokerAddr, response.Code)
 		return nil
 	}
 
 	subscriptionGroupWrapper := subscription.NewSubscriptionGroupWrapper()
 	err = ffjson.Unmarshal(response.Body, subscriptionGroupWrapper)
 	if err != nil {
-		logger.Errorf("ffjson err: %s, response.Body=%s", err.Error(), string(response.Body))
+		logger.Errorf("get all subscriptionGroup config err: %s, response.Body=%s.", err, string(response.Body))
 		return nil
 	}
 	return subscriptionGroupWrapper

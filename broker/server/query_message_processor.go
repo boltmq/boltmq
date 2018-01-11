@@ -63,7 +63,7 @@ func (qmp *queryMessageProcessor) QueryMessage(ctx core.Context, request *protoc
 	requestHeader := &head.QueryMessageRequestHeader{}
 	err := response.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("query message err: %s.", err)
 	}
 
 	response.Opaque = request.Opaque
@@ -102,7 +102,7 @@ func (qmp *queryMessageProcessor) ViewMessageById(ctx core.Context, request *pro
 
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("view message by id err: %s.", err)
 	}
 
 	response.Opaque = request.Opaque
@@ -115,7 +115,7 @@ func (qmp *queryMessageProcessor) ViewMessageById(ctx core.Context, request *pro
 		oneMessageTransfer := pagecache.NewOneMessageTransfer(response, selectMapedBufferResult)
 		_, err = ctx.WriteSerialData(oneMessageTransfer)
 		if err != nil {
-			logger.Errorf("transfer one message by pagecache failed, %s", err.Error())
+			logger.Errorf("transfer one message by pagecache failed, %s.", err)
 		}
 		selectMapedBufferResult.Release()
 		return nil, nil

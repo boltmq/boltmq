@@ -48,7 +48,7 @@ func newBroker2Client(brokerController *BrokerController) *broker2Client {
 // Since 2017/9/11
 func (b2c *broker2Client) notifyConsumerIdsChanged(ctx core.Context, consumerGroup string) {
 	if "" == consumerGroup {
-		logger.Error("notifyConsumerIdsChanged consumerGroup is null")
+		logger.Error("notifyConsumerIdsChanged consumerGroup is nil.")
 		return
 	}
 
@@ -84,7 +84,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 	response := protocol.CreateDefaultResponseCommand()
 	topicConfig := b2c.brokerController.tpConfigManager.selectTopicConfig(topic)
 	if topicConfig == nil {
-		logger.Errorf("[reset-offset] reset offset failed, no topic in this broker. topic=%s", topic)
+		logger.Errorf("[reset-offset] reset offset failed, no topic in this broker. topic=%s.", topic)
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = fmt.Sprintf("[reset-offset] reset offset failed, no topic in this broker. topic=" + topic)
 		return response
@@ -152,7 +152,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 		// Consumer不在线
 		errorInfo := fmt.Sprintf("Consumer not online, so can not reset offset, Group: %s Topic: %s Timestamp: %d",
 			requestHeader.Group, requestHeader.Topic, requestHeader.Timestamp)
-		logger.Error(errorInfo)
+		logger.Error("reset offset err: %s.", errorInfo)
 		response.Code = protocol.CONSUMER_NOT_ONLINE
 		response.Remark = errorInfo
 		return response
@@ -204,7 +204,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 		_, value, _ := iterator.Next()
 		chanInfo, vok := value.(*channelInfo)
 		if !vok {
-			logger.Warnf("The value=%v type is not ChannelInfo", value)
+			logger.Warnf("The value=%v type is not ChannelInfo.", value)
 			continue
 		}
 
@@ -214,7 +214,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 			// originClientId 进行处理
 			response, err := b2c.brokerController.remotingServer.InvokeSync(chanInfo.ctx, request, 5000)
 			if err != nil {
-				logger.Errorf("getConsumeStatus InvokeSync RemoteAddr:%s, error:%s", chanInfo.ctx.UniqueSocketAddr(), err.Error())
+				logger.Errorf("getConsumeStatus InvokeSync RemoteAddr: %s, err: %s.", chanInfo.ctx.UniqueSocketAddr(), err)
 			}
 			switch response.Code {
 			case protocol.SUCCESS:
@@ -223,8 +223,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 					Decode(response.Body, statusBody)
 
 					consumerStatusTable[clientId] = statusBody.MessageQueueTable
-					logger.Infof(
-						"[get-consumer-status] get consumer status success. topic=%s, group=%s, channelRemoteAddr=%s",
+					logger.Infof("[get-consumer-status] get consumer status success. topic=%s, group=%s, channelRemoteAddr=%s.",
 						topic, group, clientId)
 				}
 			}

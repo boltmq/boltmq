@@ -82,7 +82,7 @@ func (rblm *rebalanceManager) tryLock(group string, mq *message.MessageQueue, cl
 			lockEntry = rebalance.NewLockEntry()
 			lockEntry.ClientId = clientId
 			groupValue.Put(mq, lockEntry)
-			logger.Infof("tryLock, message queue not locked, I got it. Group: %s NewClientId: %s %s", group, clientId, mq)
+			logger.Infof("tryLock, message queue not locked, I got it. Group: %s New-ClientId: %s %s.", group, clientId, mq)
 		}
 
 		if lockEntry.IsLocked(clientId) {
@@ -97,13 +97,13 @@ func (rblm *rebalanceManager) tryLock(group string, mq *message.MessageQueue, cl
 			lockEntry.ClientId = clientId
 			lockEntry.LastUpdateTimestamp = system.CurrentTimeMillis()
 
-			logger.Warnf("tryLock, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %s",
+			logger.Warnf("tryLock, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %s.",
 				group, oldClientId, clientId, mq)
 			return true
 		}
 
 		// 锁被别的Client占用
-		logger.Warnf("tryLock, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %s",
+		logger.Warnf("tryLock, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %s.",
 			group, oldClientId, clientId, mq)
 		return false
 
@@ -148,7 +148,7 @@ func (rblm *rebalanceManager) tryLockBatch(group string, mqs set.Set, clientId s
 					lockEntry.ClientId = clientId
 					groupValue.Put(mq, lockEntry)
 
-					logger.Infof("tryLockBatch, message queue not locked, I got it. Group: %s NewClientId: %s %s",
+					logger.Infof("tryLockBatch, message queue not locked, I got it. Group: %s NewClientId: %s %s.",
 						group, clientId, mq)
 				}
 
@@ -165,7 +165,7 @@ func (rblm *rebalanceManager) tryLockBatch(group string, mqs set.Set, clientId s
 				if lockEntry.IsExpired() {
 					lockEntry.ClientId = clientId
 					lockEntry.LastUpdateTimestamp = system.CurrentTimeMillis()
-					logger.Warnf("tryLockBatch, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %#v",
+					logger.Warnf("tryLockBatch, message queue lock expired, I got it. Group: %s OldClientId: %s NewClientId: %s %#v.",
 						group, oldClientId, clientId, mq)
 
 					lockedMqs.Add(mq)
@@ -173,7 +173,7 @@ func (rblm *rebalanceManager) tryLockBatch(group string, mqs set.Set, clientId s
 				}
 
 				// 锁被别的Client占用
-				logger.Warnf("tryLockBatch, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %#v",
+				logger.Warnf("tryLockBatch, message queue locked by other client. Group: %s OtherClientId: %s NewClientId: %s %#v.",
 					group, oldClientId, clientId, mq)
 			}
 		}
@@ -197,18 +197,18 @@ func (rblm *rebalanceManager) unlockBatch(group string, mqs set.Set, clientId st
 				if nil != lockEntry {
 					if strings.EqualFold(lockEntry.ClientId, clientId) {
 						groupValue.Remove(mq)
-						logger.Infof("unlockBatch, Group: %s %#v %s", group, mq, clientId)
+						logger.Infof("unlockBatch, Group: %s %#v %s.", group, mq, clientId)
 
 					} else {
-						logger.Warnf("unlockBatch, but mq locked by other client: %s, Group: %s %#v %s",
+						logger.Warnf("unlockBatch, but mq locked by other client: %s, Group: %s %#v %s.",
 							lockEntry.ClientId, group, mq, clientId)
 					}
 				} else {
-					logger.Warnf("unlockBatch, but mq not locked, Group: %s %#v %s", group, mq, clientId)
+					logger.Warnf("unlockBatch, but mq not locked, Group: %s %#v %s.", group, mq, clientId)
 				}
 			}
 		}
 	} else {
-		logger.Warnf("unlockBatch, group not exist, Group: %s %s", group, clientId)
+		logger.Warnf("unlockBatch, group not exist, Group: %s %s.", group, clientId)
 	}
 }

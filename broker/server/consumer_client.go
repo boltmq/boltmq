@@ -128,8 +128,8 @@ func (cg *consumerGroupInfo) updateChannel(infoNew *channelInfo, consumeType hea
 	if infoOld == nil || err != nil {
 		prev, err := cg.connTable.Put(infoNew.ctx.UniqueSocketAddr().String(), infoNew)
 		if prev == nil || err != nil {
-			logger.Infof("new consumer connected, group: %s, consumeType:%v, messageModel:%v, channel: %s", cg.groupName, consumeType,
-				messageModel, infoNew.ctx.UniqueSocketAddr().String())
+			logger.Infof("new consumer connected, group: %s, consumeType:%v, messageModel:%v, channel: %s",
+				cg.groupName, consumeType, messageModel, infoNew.ctx.UniqueSocketAddr())
 			updated = true
 		}
 		infoOld = infoNew
@@ -161,12 +161,12 @@ func (cg *consumerGroupInfo) doChannelCloseEvent(remoteAddr string, ctx core.Con
 
 	info, err := cg.connTable.Remove(ctx.UniqueSocketAddr().String())
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("doChannel close event err: %s.", err)
 		return false
 	}
 	if info != nil {
-		logger.Warnf("NETTY EVENT: remove not active channel[%s] from consumerGroupInfo groupChannelTable, consumer group: %s",
-			ctx.UniqueSocketAddr().String(), cg.groupName)
+		logger.Warnf("remove not active channel[%s] from consumer groupInfo groupChannelTable, consumer group: %s.",
+			ctx.UniqueSocketAddr(), cg.groupName)
 		return true
 	}
 	return false
@@ -210,7 +210,7 @@ func (cg *consumerGroupInfo) unregisterChannel(chanInfo *channelInfo) {
 
 	old, _ := cg.connTable.Remove(chanInfo.ctx.UniqueSocketAddr().String())
 	if old != nil {
-		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v", cg.groupName, old)
+		logger.Infof("unregister a consumer[%s] from consumerGroupInfo %v.", cg.groupName, old)
 	}
 }
 
@@ -227,7 +227,7 @@ func (cg *consumerGroupInfo) updateSubscription(subList []heartbeat.Subscription
 			prev, _ := cg.subscriptionTable.Put(sub.Topic, &sub)
 			if prev == nil {
 				updated = true
-				logger.Infof("subscription changed, add new topic, group: %s %#v", cg.groupName, sub)
+				logger.Infof("subscription changed, add new topic, group: %s %#v.", cg.groupName, sub)
 			}
 			continue
 		}
@@ -235,7 +235,7 @@ func (cg *consumerGroupInfo) updateSubscription(subList []heartbeat.Subscription
 		if oldSub, ok := old.(*heartbeat.SubscriptionDataPlus); ok {
 			if sub.SubVersion > oldSub.SubVersion {
 				if cg.consumeType == heartbeat.CONSUME_PASSIVELY {
-					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v", cg.groupName, oldSub, sub)
+					logger.Infof("subscription changed, group: %s OLD: %#v NEW: %#v.", cg.groupName, oldSub, sub)
 				}
 				cg.subscriptionTable.Put(sub.Topic, &sub)
 			}
@@ -254,7 +254,7 @@ func (cg *consumerGroupInfo) updateSubscription(subList []heartbeat.Subscription
 		}
 
 		if !exist {
-			logger.Warnf("subscription changed, group: %s remove topic %s %v", cg.groupName, oldTopic, oldValue)
+			logger.Warnf("subscription changed, group: %s remove topic %s %v.", cg.groupName, oldTopic, oldValue)
 			subIt.Remove()
 			updated = true
 		}
