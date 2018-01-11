@@ -98,7 +98,7 @@ func (com *consumerOffsetManager) scanUnsubscribedTopic() {
 
 		// 当前订阅关系里面没有group-topic订阅关系（消费端当前是停机的状态）并且offset落后很多,则删除消费进度
 		if findSubscriptionData == nil && hasBehindMuchThanData {
-			logger.Warnf("remove topic offset, %s", topic)
+			logger.Warnf("remove topic offset, %s.", topic)
 			return true
 		}
 		return false

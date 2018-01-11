@@ -15,7 +15,6 @@ package server
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/boltmq/boltmq/broker/server/longpolling"
 	"github.com/boltmq/boltmq/broker/server/pagecache"
@@ -64,7 +63,7 @@ func (pmsgp *pullMessageProcessor) executeRequestWhenWakeup(ctx core.Context, re
 		//logger.Info("....唤醒HoldPullRequest: ExtFields:%v, Opaque:%d", request.ExtFields, request.Opaque)
 		response, err := pmsgp.processRequest(request, ctx, false)
 		if err != nil {
-			logger.Errorf("executeRequestWhenWakeup run, throw error:%s", err.Error())
+			logger.Errorf("executeRequestWhenWakeup run, throw error: %s.", err)
 			return
 		}
 		if response == nil {
@@ -79,8 +78,8 @@ func (pmsgp *pullMessageProcessor) executeRequestWhenWakeup(ctx core.Context, re
 		response.MarkResponseType()
 		_, err = ctx.WriteSerialData(response)
 		if err != nil {
-			format := "pullMessageHold response to %s failed. error:%s. ### request:%s, ### response:%s"
-			logger.Errorf(format, ctx.RemoteAddr().String(), err.Error(), request, response)
+			logger.Errorf("pullMessageHold response to %s failed. error:%s. ### request:%s, ### response:%s.",
+				ctx.RemoteAddr(), err, request, response)
 		}
 	}()
 }
@@ -92,7 +91,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 	requestHeader := &head.PullMessageRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Errorf("Pull Message: Decode Request Throw Error:%s", err.Error())
+		logger.Errorf("pull message: decode request throw error: %s.", err)
 	}
 
 	response.Opaque = request.Opaque
@@ -146,19 +145,22 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 
 	// 检查队列有效性
 	if requestHeader.QueueId < 0 || requestHeader.QueueId >= topicConfig.ReadQueueNums {
-		errorInfo := "queueId[" + strconv.Itoa(int(requestHeader.QueueId)) + "] is illagal,Topic :" + requestHeader.Topic + " topicConfig.readQueueNums: " + strconv.Itoa(int(topicConfig.ReadQueueNums))
-		logger.Warn(errorInfo)
 		response.Code = protocol.SYSTEM_ERROR
-		response.Remark = errorInfo
+		response.Remark = fmt.Sprintf("queueId[%d] is illagal, topic: %s, read queue nums: %d.",
+			requestHeader.QueueId, requestHeader.Topic, topicConfig.ReadQueueNums)
+		logger.Warnf(response.Remark)
+
 		return response, nil
 	}
+
 	// 订阅关系处理
 	subscriptionData := &heartbeat.SubscriptionData{}
 	if hasSubscriptionFlag {
 		var err error
 		subscriptionData, err = filter.BuildSubscriptionData4Ponit(requestHeader.ConsumerGroup, requestHeader.Topic, requestHeader.Subscription)
 		if err != nil {
-			logger.Warnf("parse the consumer's subscription %s failed, group: %s", requestHeader.Subscription, requestHeader.ConsumerGroup)
+			logger.Warnf("parse the consumer's subscription %s failed, group: %s.",
+				requestHeader.Subscription, requestHeader.ConsumerGroup)
 			response.Code = protocol.SUBSCRIPTION_PARSE_FAILED
 			response.Remark = "parse the consumer's subscription failed"
 			return response, nil
@@ -167,7 +169,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 		// 如果没有获取到维护的consumerGroup信息，则返回
 		consumerGroupInfo := pmsgp.brokerController.csmManager.getConsumerGroupInfo(requestHeader.ConsumerGroup)
 		if nil == consumerGroupInfo {
-			logger.Warnf("the consumer's group info not exist, group: %s", requestHeader.ConsumerGroup)
+			logger.Warnf("the consumer's group info not exist, group: %s.", requestHeader.ConsumerGroup)
 			response.Code = protocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's group info not exist"
 			return response, nil
@@ -181,7 +183,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 
 		subscriptionData = consumerGroupInfo.findSubscriptionData(requestHeader.Topic)
 		if nil == subscriptionData {
-			logger.Warnf("the consumer's subscription not exist, group: %s", requestHeader.ConsumerGroup)
+			logger.Warnf("the consumer's subscription not exist, group: %s.", requestHeader.ConsumerGroup)
 			response.Code = protocol.SUBSCRIPTION_NOT_EXIST
 			response.Remark = "the consumer's subscription not exist"
 			return response, nil
@@ -189,7 +191,8 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 
 		// 判断Broker的订阅关系版本是否最新
 		if subscriptionData.SubVersion < requestHeader.SubVersion {
-			logger.Warnf("the broker's subscription is not latest, group: %s %s", requestHeader.ConsumerGroup, subscriptionData.SubString)
+			logger.Warnf("the broker's subscription is not latest, group: %s %s.",
+				requestHeader.ConsumerGroup, subscriptionData.SubString)
 			response.Code = protocol.SUBSCRIPTION_NOT_LATEST
 			response.Remark = "the consumer's subscription not latestGetMessageResult"
 			return response, nil
@@ -241,8 +244,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 			if 0 != requestHeader.QueueOffset {
 				response.Code = protocol.PULL_OFFSET_MOVED
 				// XXX: warn and notify me
-				logger.Warnf("the broker store no queue data, "+
-					"fix the request offset %d to %d, Topic: %s QueueId: %d Consumer Group: %s",
+				logger.Warnf("the broker store no queue data, fix the request offset %d to %d, Topic: %s QueueId: %d Consumer Group: %s.",
 					requestHeader.QueueOffset,
 					getMessageResult.NextBeginOffset,
 					requestHeader.Topic,
@@ -258,12 +260,14 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 			response.Code = protocol.PULL_NOT_FOUND
 		case store.OFFSET_OVERFLOW_BADLY:
 			response.Code = protocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MaxOffset, ctx.LocalAddr().String())
+			logger.Infof("the request offset: %d over flow badly, broker max offset: %d, consumer: %s.",
+				requestHeader.QueueOffset, getMessageResult.MaxOffset, ctx.LocalAddr().String())
 		case store.OFFSET_OVERFLOW_ONE:
 			response.Code = protocol.PULL_NOT_FOUND
 		case store.OFFSET_TOO_SMALL:
 			response.Code = protocol.PULL_OFFSET_MOVED
-			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s", requestHeader.QueueOffset, getMessageResult.MinOffset, ctx.LocalAddr().String())
+			logger.Infof("the request offset: %d too small, broker min offset: %d, consumer: %s.",
+				requestHeader.QueueOffset, getMessageResult.MinOffset, ctx.LocalAddr().String())
 		default:
 		}
 
@@ -277,7 +281,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 			manyMessageTransfer := pagecache.NewManyMessageTransfer(response, getMessageResult)
 			_, err = ctx.WriteSerialData(manyMessageTransfer)
 			if err != nil {
-				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s",
+				logger.Errorf("transfer many message by pagecache failed, RemoteAddr:%s, Error:%s.",
 					ctx.RemoteAddr().String(), err.Error())
 			}
 			getMessageResult.Release()
@@ -320,7 +324,7 @@ func (pmsgp *pullMessageProcessor) processRequest(request *protocol.RemotingComm
 				response.Code = protocol.PULL_RETRY_IMMEDIATELY
 			}
 
-			logger.Warnf("PULL_OFFSET_MOVED:topic=%s, groupId=%d, clientId=%d, offset=%d, suggestBrokerId=%d",
+			logger.Warnf("PULL_OFFSET_MOVED:topic=%s, groupId=%d, clientId=%d, offset=%d, suggestBrokerId=%d.",
 				requestHeader.Topic, requestHeader.ConsumerGroup, requestHeader.QueueOffset, responseHeader.SuggestWhichBrokerId)
 		default:
 		}

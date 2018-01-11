@@ -100,7 +100,7 @@ func (sgm *subscriptionGroupManager) decode(buf []byte) {
 		return
 	}
 	if err := ffjson.Unmarshal(buf, sgm.subTable); err != nil {
-		logger.Errorf("subscriptionGroupManager.Decode() err: %s, buf = %s", err.Error(), string(buf))
+		logger.Errorf("subscriptionGroupManager.Decode() err: %s, buf = %s.", err, string(buf))
 	}
 }
 

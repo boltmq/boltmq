@@ -84,7 +84,7 @@ func (cmp *clientManageProcessor) heartBeat(ctx core.Context, request *protocol.
 		changed := cmp.brokerController.csmManager.registerConsumer(consumerData.GroupName, chanInfo,
 			consumerData.ConsumeType, consumerData.MessageModel, consumerData.ConsumeFromWhere, consumerData.SubscriptionDataSet)
 		if changed {
-			logger.Infof("registerConsumer info changed: RemoteAddr:%s, consumerData:%v", ctx.RemoteAddr().String(), consumerData)
+			logger.Infof("registerConsumer info changed: RemoteAddr:%s, consumerData:%v.", ctx.RemoteAddr(), consumerData)
 		}
 	}
 
@@ -107,7 +107,7 @@ func (cmp *clientManageProcessor) unregisterClient(ctx core.Context, request *pr
 	requestHeader := &head.UnRegisterClientRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("unregisterClient err: %s.", err)
 	}
 
 	chanInfo := newChannelInfo(ctx, requestHeader.ClientID, request.Language, ctx.LocalAddr().String(), request.Version)
@@ -143,7 +143,7 @@ func (cmp *clientManageProcessor) queryConsumerOffset(ctx core.Context, request 
 	requestHeader := &head.QueryConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Error("query consumer offset err: %s.", err)
 	}
 
 	offset := cmp.brokerController.csmOffsetManager.queryOffset(requestHeader.ConsumerGroup, requestHeader.Topic, int(requestHeader.QueueId))
@@ -182,7 +182,7 @@ func (cmp *clientManageProcessor) updateConsumerOffset(ctx core.Context, request
 	requestHeader := &head.UpdateConsumerOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("update consumer offset err: %s.", err)
 	}
 
 	// 消息轨迹：记录已经消费成功并提交 offset 的消息记录
@@ -219,7 +219,7 @@ func (cmp *clientManageProcessor) getConsumerListByGroup(ctx core.Context, reque
 	requestHeader := &head.GetConsumersByGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Error("get consumer list by group err: %s.", err)
 		return nil, err
 	}
 
@@ -237,10 +237,10 @@ func (cmp *clientManageProcessor) getConsumerListByGroup(ctx core.Context, reque
 			response.Remark = ""
 			return response, nil
 		} else {
-			logger.Warnf("getAllClientId failed, %s %s", requestHeader.ConsumerGroup, ctx.RemoteAddr().String())
+			logger.Warnf("get all clientId failed, %s %s.", requestHeader.ConsumerGroup, ctx.RemoteAddr())
 		}
 	} else {
-		logger.Warnf("getConsumerGroupInfo failed, %s %s", requestHeader.ConsumerGroup, ctx.RemoteAddr().String())
+		logger.Warnf("getConsumerGroupInfo failed, %s %s.", requestHeader.ConsumerGroup, ctx.RemoteAddr())
 	}
 
 	response.Code = protocol.SYSTEM_ERROR

@@ -102,7 +102,7 @@ func (ctasks *controllerTasks) startDeleteTopicTask() {
 		topics := ctasks.brokerController.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.Keys()
 		removedTopicCount := ctasks.brokerController.messageStore.CleanUnusedTopic(topics)
 		if removedTopicCount > 0 {
-			logger.Infof("deleteTopicTask removed topic count: %d", removedTopicCount)
+			logger.Infof("delete topic task removed topic count: %d.", removedTopicCount)
 		}
 	})
 	ctasks.deleteTopicTask.Start()
@@ -173,7 +173,7 @@ func (ctasks *controllerTasks) startPrintMasterAndSlaveDiffTask() {
 	ctasks.printMasterAndSlaveDiffTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
 		diff := ctasks.brokerController.messageStore.SlaveFallBehindMuch()
 		if diff > 0 {
-			logger.Infof("slave fall behind master, how much: %d bytes", diff) // warn and notify me
+			logger.Infof("slave fall behind master, how much: %d bytes.", diff) // warn and notify me
 		}
 	})
 	ctasks.printMasterAndSlaveDiffTask.Start()

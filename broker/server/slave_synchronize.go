@@ -82,7 +82,7 @@ func (slave *slaveSynchronize) syncConsumerOffset() {
 	slave.brokerController.csmOffsetManager.offsets.PutAll(offsetWrapper.OffsetTable)
 	slave.brokerController.csmOffsetManager.cfgManagerLoader.persist()
 	buf, _ := Encode(offsetWrapper)
-	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s", slave.masterAddr, string(buf))
+	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s.", slave.masterAddr, string(buf))
 }
 
 // syncTopicConfig 同步定时偏移量信息
@@ -95,13 +95,13 @@ func (slave *slaveSynchronize) syncDelayOffset() {
 
 	delayOffset := slave.brokerController.callOuter.GetAllDelayOffset(slave.masterAddr)
 	if delayOffset == "" {
-		logger.Infof("update slave delay offset from master, but delayOffset is empty. masterAddr=%s", slave.masterAddr)
+		logger.Infof("update slave delay offset from master, but delayOffset is empty. masterAddr=%s.", slave.masterAddr)
 		return
 	}
 
 	filePath := common.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
 	common.String2File([]byte(delayOffset), filePath)
-	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s", slave.masterAddr, delayOffset)
+	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s.", slave.masterAddr, delayOffset)
 }
 
 // syncTopicConfig 同步订阅信息
@@ -126,7 +126,7 @@ func (slave *slaveSynchronize) syncSubscriptionGroupConfig() {
 		subscriptionGroupManager.cfgManagerLoader.persist()
 
 		buf := subscriptionGroupManager.encode(false)
-		logger.Infof("syncSubscriptionGroupConfig --> %s", buf)
-		logger.Infof("update slave subscription group from master, %s", slave.masterAddr)
+		logger.Infof("sync subscription group config --> %s", string(buf))
+		logger.Infof("update slave subscription group from master, %s.", slave.masterAddr)
 	}
 }

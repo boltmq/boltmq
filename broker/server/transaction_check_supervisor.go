@@ -35,7 +35,7 @@ func (trans *transactionCheckSupervisor) gotoCheck(producerGroupHashCode int, tr
 	// 第一步、查询Producer
 	clientChannelInfo := trans.brokerController.prcManager.pickProducerChannelRandomly(producerGroupHashCode)
 	if clientChannelInfo == nil {
-		logger.Warnf("check a producer transaction state, but not find any channel of this group[%d]",
+		logger.Warnf("check a producer transaction state, but not find any channel of this group[%d].",
 			producerGroupHashCode)
 		return
 	}
@@ -43,7 +43,7 @@ func (trans *transactionCheckSupervisor) gotoCheck(producerGroupHashCode int, tr
 	// 第二步、查询消息
 	selectMapedBufferResult := trans.brokerController.messageStore.SelectOneMessageByOffsetAndSize(commitLogOffset, int32(msgSize))
 	if selectMapedBufferResult == nil {
-		logger.Warnf("check a producer transaction state, but not find message by commitLogOffset: %d, msgSize: %d",
+		logger.Warnf("check a producer transaction state, but not find message by commitLogOffset: %d, msgSize: %d.",
 			commitLogOffset, msgSize)
 		return
 	}

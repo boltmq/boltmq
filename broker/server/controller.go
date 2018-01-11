@@ -250,7 +250,7 @@ func (controller *BrokerController) Shutdown() {
 	}
 
 	consumingTimeTotal := system.CurrentTimeMillis() - beginTime
-	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d", consumingTimeTotal)
+	logger.Infof("broker controller shutdown successful, consuming time total(ms): %d.", consumingTimeTotal)
 }
 
 // updateNameServerAddr 更新Namesrv地址
@@ -289,7 +289,7 @@ func (controller *BrokerController) synchronizeMaster2Slave() {
 // Since 2017/9/11
 func (controller *BrokerController) RegisterConsumeMessageHook(hook trace.ConsumeMessageHook) {
 	controller.consumeMessageHookList = append(controller.consumeMessageHookList, hook)
-	logger.Infof("register ConsumeMessageHook Hook, %s", hook.HookName())
+	logger.Infof("register ConsumeMessageHook Hook, %s.", hook.HookName())
 }
 
 // unRegisterBrokerAll 注销所有broker
@@ -410,7 +410,7 @@ func (controller *BrokerController) Start() {
 // Since 2017/9/11
 func (controller *BrokerController) RegisterSendMessageHook(hook trace.SendMessageHook) {
 	controller.sendMessageHookList = append(controller.sendMessageHookList, hook)
-	logger.Infof("register SendMessageHook Hook, %s", hook.HookName())
+	logger.Infof("register SendMessageHook Hook, %s.", hook.HookName())
 }
 
 // updateAllConfig 更新所有文件

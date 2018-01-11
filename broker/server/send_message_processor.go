@@ -81,7 +81,7 @@ func (smp *SendMessageProcessor) ConsumerSendMsgBack(conn core.Context,
 	requestHeader := head.NewConsumerSendMsgBackRequestHeader()
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("consumer send msg back err: %s.", err)
 	}
 
 	// 消息轨迹：记录消费失败的消息
@@ -463,7 +463,7 @@ func (bsmp *basicSendMessageProcessor) parseRequestHeader(request *protocol.Remo
 	if request.Code == protocol.SEND_MESSAGE_V2 {
 		err := request.DecodeCommandCustomHeader(requestHeaderV2)
 		if err != nil {
-			logger.Errorf("error: %s", err.Error())
+			logger.Errorf("parse request header err: %s.", err)
 		}
 		requestHeader = head.CreateSendMessageRequestHeaderV1(requestHeaderV2)
 
@@ -471,7 +471,7 @@ func (bsmp *basicSendMessageProcessor) parseRequestHeader(request *protocol.Remo
 		requestHeader = &head.SendMessageRequestHeader{}
 		err := request.DecodeCommandCustomHeader(requestHeader)
 		if err != nil {
-			logger.Errorf("error: %s", err.Error())
+			logger.Errorf("parse request header err: %s.", err)
 		}
 	}
 
@@ -556,7 +556,7 @@ func (bsmp *basicSendMessageProcessor) msgCheck(ctx core.Context, requestHeader 
 		format := "request queueId[%d] is illagal, %s producer: %s"
 		errorInfo := fmt.Sprintf(format, queueIdInt, topicConfig, parseChannelRemoteAddr(ctx))
 
-		logger.Warn(errorInfo)
+		logger.Warn("msg check err: %s.", errorInfo)
 		response.Remark = errorInfo
 		response.Code = protocol.SYSTEM_ERROR
 		return response
@@ -569,7 +569,7 @@ func DoResponse(ctx core.Context,
 	if !request.IsOnewayRPC() {
 		_, err := ctx.WriteSerialData(response)
 		if err != nil {
-			logger.Errorf("SendMessageProcessor process request over, but response failed:%s", err.Error())
+			logger.Errorf("send message processor request over, but response failed: %s.", err)
 			return
 		}
 	}
@@ -598,7 +598,7 @@ func (bsmp *basicSendMessageProcessor) ExecuteSendMessageHookBefore(ctx core.Con
 			requestHeader := new(head.SendMessageRequestHeader)
 			err := request.DecodeCommandCustomHeader(requestHeader)
 			if err != nil {
-				logger.Error(err)
+				logger.Errorf("execute send message hook before err: %s.", err)
 				continue
 			}
 
@@ -626,7 +626,7 @@ func (bsmp *basicSendMessageProcessor) ExecuteSendMessageHookAfter(response *pro
 				responseHeader := new(head.SendMessageResponseHeader)
 				err := response.DecodeCommandCustomHeader(responseHeader)
 				if err != nil {
-					logger.Error(err)
+					logger.Errorf("execute send message hook after err: %s.", err)
 					continue
 				}
 				if responseHeader != nil {

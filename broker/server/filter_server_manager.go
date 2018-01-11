@@ -71,7 +71,7 @@ func (fsm *filterServerManager) shutdown() {
 	if fsm.ticker != nil {
 		fsm.ticker.Stop()
 	}
-	logger.Info("filterServerManager shutdown success")
+	logger.Info("filterServerManager shutdown success.")
 }
 
 // createFilterServer 创建FilterServer
@@ -85,7 +85,7 @@ func (fsm *filterServerManager) createFilterServer() {
 	for index = 0; index < more; index++ {
 		err := CallShell(cmd)
 		if err != nil {
-			logger.Errorf("callShell: %s, %s.", cmd, err.Error())
+			logger.Errorf("callShell: %s, %s.", cmd, err)
 		}
 	}
 }
@@ -117,7 +117,7 @@ func (fsm *filterServerManager) buildStartCommand() string {
 func (fsm *filterServerManager) registerFilterServer(ctx core.Context, filterServerAddr string) {
 	bean, err := fsm.filterServerTable.Get(ctx.UniqueSocketAddr().String())
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("register filter server err: %s.", err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (fsm *filterServerManager) registerFilterServer(ctx core.Context, filterSer
 		fsi.filterServerAddr = filterServerAddr
 		fsi.lastUpdateTimestamp = system.CurrentTimeMillis()
 		fsm.filterServerTable.Put(ctx.UniqueSocketAddr().String(), fsi)
-		logger.Infof("Receive a New Filter Server %v", filterServerAddr)
+		logger.Infof("Receive a New Filter Server %s.", filterServerAddr)
 		return
 	}
 
@@ -152,7 +152,7 @@ func (fsm *filterServerManager) scanNotActiveChannel() {
 
 		currentTimeMillis := system.CurrentTimeMillis()
 		if (currentTimeMillis - timestamp) > fsm.filterSrvMaxIdleTimeMills {
-			logger.Infof("The Filter Server %v expired, remove it", key)
+			logger.Infof("The Filter Server %v expired, remove it.", key)
 			it.Remove()
 			if channel, ok := key.(core.Context); ok {
 				channel.Close()
@@ -171,11 +171,12 @@ func (fsm *filterServerManager) doChannelCloseEvent(remoteAddr string, ctx core.
 
 	old, err := fsm.filterServerTable.Remove(ctx.UniqueSocketAddr().String())
 	if err != nil {
-		logger.Errorf("The Filter Server Remove conn, throw:%s", err.Error())
+		logger.Errorf("The Filter Server Remove conn, throw: %s.", err)
 	}
 
 	if value, ok := old.(*filterServerInfo); ok {
-		logger.Warnf("The Filter Server %s connection %s closed, remove it", value.filterServerAddr, remoteAddr)
+		logger.Warnf("The Filter Server %s connection %s closed, remove it.",
+			value.filterServerAddr, remoteAddr)
 	}
 }
 

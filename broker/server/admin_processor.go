@@ -29,6 +29,7 @@ import (
 	"github.com/boltmq/common/protocol/stats"
 	"github.com/boltmq/common/protocol/subscription"
 	set "github.com/deckarep/golang-set"
+	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
 )
 
@@ -134,12 +135,11 @@ func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request 
 	requestHeader := &head.CreateTopicRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Errorf("err: %s", err.Error())
+		logger.Errorf("update and create topic err: %s.", err)
 		return response, err
 	}
 
 	// Topic名字是否与保留字段冲突
-	logger.Infof("requestHeader.Topic=%s, ClusterName=%s", requestHeader.Topic, abp.brokerController.cfg.Cluster.Name)
 	if strings.EqualFold(requestHeader.Topic, abp.brokerController.cfg.Cluster.Name) {
 		logger.Infof("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
 		response.Remark = fmt.Sprintf("the topic[%s] is conflict with system reserved words.", requestHeader.Topic)
@@ -159,7 +159,8 @@ func (abp *adminBrokerProcessor) updateAndCreateTopic(ctx core.Context, request 
 
 	response.Code = protocol.SUCCESS
 	response.Remark = ""
-	logger.Infof("updateAndCreateTopic successful")
+
+	logger.Infof("update and create topic success, topic=%s, cluster name=%s.", requestHeader.Topic, abp.brokerController.cfg.Cluster.Name)
 	return response, nil
 }
 
@@ -170,7 +171,7 @@ func (abp *adminBrokerProcessor) getMaxOffset(ctx core.Context, request *protoco
 	requestHeader := head.NewGetMaxOffsetRequestHeader()
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, err
 	}
 
 	offset := abp.brokerController.messageStore.MaxOffsetInQueue(requestHeader.Topic, int32(requestHeader.QueueId))
@@ -185,13 +186,13 @@ func (abp *adminBrokerProcessor) deleteTopic(ctx core.Context, request *protocol
 	requestHeader := &head.DeleteTopicRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, err
 	}
 
 	abp.brokerController.tpConfigManager.deleteTopicConfig(requestHeader.Topic)
 	abp.brokerController.tasks.startDeleteTopicTask()
 
-	logger.Infof("deleteTopic called by %v", ctx.LocalAddr().String())
+	logger.Infof("delete topic called by %s.", ctx.LocalAddr())
 	response.Code = protocol.SUCCESS
 	response.Remark = ""
 	return response, nil
@@ -205,7 +206,7 @@ func (adp *adminBrokerProcessor) getAllTopicConfig(ctx core.Context, request *pr
 	response := protocol.CreateDefaultResponseCommand(responseHeader)
 
 	content := adp.brokerController.tpConfigManager.encode(false)
-	logger.Infof("all topic config is %s", content)
+	logger.Infof("all topic config is %s.", content)
 
 	if content != "" && len(content) > 0 {
 		response.Body = []byte(content)
@@ -214,7 +215,7 @@ func (adp *adminBrokerProcessor) getAllTopicConfig(ctx core.Context, request *pr
 		return response, nil
 	}
 
-	logger.Errorf("no topic in this broker, client: %s", ctx.RemoteAddr().String())
+	logger.Errorf("no topic in this broker, client: %s.", ctx.RemoteAddr())
 	response.Code = protocol.SYSTEM_ERROR
 	response.Remark = "no topic in this broker"
 	return response, nil
@@ -225,17 +226,15 @@ func (adp *adminBrokerProcessor) getAllTopicConfig(ctx core.Context, request *pr
 // Since 2017/9/19
 func (adp *adminBrokerProcessor) updateBrokerConfig(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
-	logger.Infof("updateBrokerConfig called by %s", parseChannelRemoteAddr(ctx))
-
 	content := request.Body
-	logger.Infof("BrokerConfig:%s", string(content))
+	logger.Infof("update broker config called by %s. content :%s.", parseChannelRemoteAddr(ctx), content)
 	if content != nil {
-		logger.Infof("updateBrokerConfig, new config: %s, client: %s", string(content), ctx.RemoteAddr().String())
+		logger.Infof("update broker config, new config: %s, client: %s.", string(content), ctx.RemoteAddr())
 		adp.brokerController.updateAllConfig(content)
 	} else {
-		logger.Error("string2Properties error")
+		logger.Error("update broker config, content is nil.")
 		response.Code = protocol.SYSTEM_ERROR
-		response.Remark = "string2Properties error"
+		response.Remark = "content is nil"
 		return response, nil
 	}
 
@@ -272,7 +271,7 @@ func (abp *adminBrokerProcessor) searchOffsetByTimestamp(ctx core.Context, reque
 	requestHeader := &head.SearchOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	offset := abp.brokerController.messageStore.OffsetInQueueByTime(requestHeader.Topic, requestHeader.QueueId, requestHeader.Timestamp)
@@ -293,7 +292,7 @@ func (abp *adminBrokerProcessor) getMinOffset(ctx core.Context, request *protoco
 	requestHeader := &head.GetMinOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	offset := abp.brokerController.messageStore.MinOffsetInQueue(requestHeader.Topic, requestHeader.QueueId)
@@ -314,7 +313,7 @@ func (abp *adminBrokerProcessor) getEarliestMsgStoretime(ctx core.Context, reque
 	requestHeader := &head.GetEarliestMsgStoretimeRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	timestamp := abp.brokerController.messageStore.EarliestMessageTime(requestHeader.Topic, requestHeader.QueueId)
@@ -355,7 +354,7 @@ func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol
 	requestBody := body.NewLockBatchRequest()
 	err := Decode(request.Body, requestBody)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	lockOKMQSet := abp.brokerController.rblManager.tryLockBatch(requestBody.ConsumerGroup,
@@ -384,7 +383,7 @@ func (abp *adminBrokerProcessor) unlockBatchMQ(ctx core.Context, request *protoc
 	requestBody := body.NewUnlockBatchRequest()
 	err := Decode(request.Body, requestBody)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	abp.brokerController.rblManager.unlockBatch(requestBody.ConsumerGroup, requestBody.MQSet, requestBody.ClientId)
@@ -421,12 +420,11 @@ func (abp *adminBrokerProcessor) prepareRuntimeInfo() map[string]string {
 func (abp *adminBrokerProcessor) updateAndCreateSubscriptionGroup(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	response := protocol.CreateDefaultResponseCommand()
 
-	logger.Infof("updateAndCreateSubscriptionGroup called by %s", parseChannelRemoteAddr(ctx))
-
+	logger.Infof("update and create subscription group called by %s.", parseChannelRemoteAddr(ctx))
 	config := &subscription.SubscriptionGroupConfig{}
 	err := Decode(request.Body, config)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	if config != nil {
@@ -452,7 +450,7 @@ func (abp *adminBrokerProcessor) getAllSubscriptionGroup(ctx core.Context, reque
 		return response, nil
 	}
 
-	logger.Errorf("No subscription group in this broker, client: %s", ctx.RemoteAddr().String())
+	logger.Errorf("No subscription group in this broker, client: %s.", ctx.RemoteAddr())
 	response.Code = protocol.SYSTEM_ERROR
 	response.Remark = "No subscription group in this broker"
 	return response, nil
@@ -467,10 +465,10 @@ func (abp *adminBrokerProcessor) deleteSubscriptionGroup(ctx core.Context, reque
 	requestHeader := &head.DeleteSubscriptionGroupRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
-	logger.Infof("deleteSubscriptionGroup called by %s", parseChannelRemoteAddr(ctx))
+	logger.Infof("delete subscription group called by %s.", parseChannelRemoteAddr(ctx))
 	abp.brokerController.subGroupManager.deleteSubscriptionGroupConfig(requestHeader.GroupName)
 
 	response.Code = protocol.SUCCESS
@@ -486,7 +484,7 @@ func (abp *adminBrokerProcessor) getTopicStatsInfo(ctx core.Context, request *pr
 	requestHeader := &head.GetTopicStatsInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	topic := requestHeader.Topic
@@ -549,7 +547,7 @@ func (abp *adminBrokerProcessor) getConsumerConnectionList(ctx core.Context, req
 	requestHeader := &head.GetConsumerConnectionsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	cgi := abp.brokerController.csmManager.getConsumerGroupInfo(requestHeader.ConsumerGroup)
@@ -598,7 +596,7 @@ func (abp *adminBrokerProcessor) getProducerConnectionList(ctx core.Context, req
 	requestHeader := &head.GetProducerConnectionsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	channelInfoHashMap := abp.brokerController.prcManager.getGroupChannelTable().Get(requestHeader.ProducerGroup)
@@ -639,7 +637,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 	requestHeader := &head.GetConsumerStatsRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	consumeStats := stats.NewConsumeStatsPlus()
@@ -657,7 +655,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 
 			topicConfig := abp.brokerController.tpConfigManager.selectTopicConfig(topic)
 			if nil == topicConfig {
-				logger.Warnf("consumeStats, topic config not exist, %s", topic)
+				logger.Warnf("consumeStats, topic config not exist, %s.", topic)
 				continue
 			}
 
@@ -667,7 +665,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 				// 如果Consumer在线，而且这个topic没有被订阅，那么就跳过
 				if nil == findSubscriptionData && abp.brokerController.csmManager.findSubscriptionDataCount(
 					requestHeader.ConsumerGroup) > 0 {
-					logger.Warnf("consumeStats, the consumer group[%s], topic[%s] not exist",
+					logger.Warnf("consumeStats, the consumer group[%s], topic[%s] not exist.",
 						requestHeader.ConsumerGroup, topic)
 					continue
 				}
@@ -738,7 +736,7 @@ func (abp *adminBrokerProcessor) getAllConsumerOffset(ctx core.Context, request 
 	if content != "" && len(content) > 0 {
 		response.Body = []byte(content)
 	} else {
-		logger.Errorf("No consumer offset in this broker, client: %s", ctx.RemoteAddr().String())
+		logger.Errorf("No consumer offset in this broker, client: %s.", ctx.RemoteAddr())
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = "No consumer offset in this broker"
 		return response, nil
@@ -759,7 +757,7 @@ func (abp *adminBrokerProcessor) getAllDelayOffset(ctx core.Context, request *pr
 	if len(content) > 0 {
 		response.Body = []byte(content)
 	} else {
-		logger.Errorf("No delay offset in this broker, client: %s", ctx.RemoteAddr().String())
+		logger.Errorf("No delay offset in this broker, client: %s.", ctx.RemoteAddr())
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = "No delay offset in this broker"
 		return response, nil
@@ -777,10 +775,10 @@ func (abp *adminBrokerProcessor) resetOffset(ctx core.Context, request *protocol
 	requestHeader := &head.ResetOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
-	logger.Infof("[reset-offset] reset offset started by %s. topic=%s, group=%s, timestamp=%s, isForce=%v",
+	logger.Infof("[reset-offset] reset offset started by %s. topic=%s, group=%s, timestamp=%s, isForce=%t.",
 		parseChannelRemoteAddr(ctx), requestHeader.Topic, requestHeader.Group, requestHeader.Timestamp, requestHeader.IsForce)
 
 	return abp.brokerController.b2Client.resetOffset(requestHeader.Topic, requestHeader.Group, requestHeader.Timestamp, requestHeader.IsForce), nil
@@ -793,7 +791,7 @@ func (abp *adminBrokerProcessor) getConsumerStatus(ctx core.Context, request *pr
 	requestHeader := &head.GetConsumerStatusRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	logger.Infof("[get-consumer-status] get consumer status by %s. topic=%s, group=%s",
@@ -811,7 +809,7 @@ func (abp *adminBrokerProcessor) queryTopicConsumeByWho(ctx core.Context, reques
 	requestHeader := &head.QueryTopicConsumeByWhoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	// 从订阅关系查询topic被谁消费，只查询在线
@@ -847,7 +845,7 @@ func (abp *adminBrokerProcessor) registerFilterServer(ctx core.Context, request 
 	requestHeader := &head.RegisterFilterServerRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	abp.brokerController.filterSrvManager.registerFilterServer(ctx, requestHeader.FilterServerAddr)
@@ -869,7 +867,7 @@ func (abp *adminBrokerProcessor) queryConsumeTimeSpan(ctx core.Context, request 
 	requestHeader := &head.QueryConsumerTimeSpanRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	topic := requestHeader.Topic
@@ -949,9 +947,8 @@ func (abp *adminBrokerProcessor) getSystemTopicListFromBroker(ctx core.Context, 
 // Author rongzhihong
 // Since 2017/9/19
 func (abp *adminBrokerProcessor) cleanExpiredConsumeQueue(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
-	logger.Warn("invoke cleanExpiredConsumeQueue start.")
+	//logger.Warn("invoke cleanExpiredConsumeQueue start.")
 	abp.brokerController.messageStore.CleanExpiredConsumerQueue()
-	logger.Warn("invoke cleanExpiredConsumeQueue end.")
 
 	response := protocol.CreateDefaultResponseCommand()
 	response.Code = protocol.SUCCESS
@@ -966,8 +963,9 @@ func (abp *adminBrokerProcessor) getConsumerRunningInfo(ctx core.Context, reques
 	requestHeader := &head.GetConsumerRunningInfoRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
+
 	return abp.callConsumer(protocol.GET_CONSUMER_RUNNING_INFO, request, requestHeader.ConsumerGroup, requestHeader.ClientId)
 }
 
@@ -1008,7 +1006,7 @@ func (abp *adminBrokerProcessor) queryCorrectionOffset(ctx core.Context, request
 	requestHeader := &head.QueryCorrectionOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	correctionOffset := abp.brokerController.csmOffsetManager.queryMinOffsetInAllGroup(requestHeader.Topic, requestHeader.FilterGroups)
@@ -1045,15 +1043,16 @@ func (abp *adminBrokerProcessor) consumeMessageDirectly(ctx core.Context, reques
 	requestHeader := &head.ConsumeMessageDirectlyResultRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	request.ExtFields["brokerName"] = abp.brokerController.cfg.Cluster.BrokerName
 	messageId, err := message.DecodeMessageId(requestHeader.MsgId)
 	if err != nil {
-		logger.Error(err)
-		return nil, nil
+		//return nil, nil
+		return nil, errors.Wrap(err, 0)
 	}
+
 	bufferResult := abp.brokerController.messageStore.SelectOneMessageByOffset(int64(messageId.Offset))
 	if nil != bufferResult {
 		length := bufferResult.Size()
@@ -1075,7 +1074,7 @@ func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *pro
 	requestHeader := &head.CloneGroupOffsetRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	topics := set.NewSet()
@@ -1090,7 +1089,7 @@ func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *pro
 		if topic, ok := item.(string); ok {
 			topicConfig := abp.brokerController.tpConfigManager.selectTopicConfig(topic)
 			if nil == topicConfig {
-				logger.Warnf("[cloneGroupOffset], topic config not exist, %s", topic)
+				logger.Warnf("[cloneGroupOffset], topic config not exist, %s.", topic)
 				continue
 			}
 
@@ -1100,8 +1099,8 @@ func (abp *adminBrokerProcessor) cloneGroupOffset(ctx core.Context, request *pro
 				findSubscriptionData := abp.brokerController.csmManager.findSubscriptionData(requestHeader.SrcGroup, topic)
 				subscriptionDataCount := abp.brokerController.csmManager.findSubscriptionDataCount(requestHeader.SrcGroup)
 				if nil == findSubscriptionData && subscriptionDataCount > 0 {
-					format := "[cloneGroupOffset], the consumer group[%s], topic[%s] not exist"
-					logger.Warnf(format, requestHeader.SrcGroup, topic)
+					logger.Warnf("[cloneGroupOffset], the consumer group[%s], topic[%s] not exist.",
+						requestHeader.SrcGroup, topic)
 					continue
 				}
 			}
@@ -1124,7 +1123,7 @@ func (abp *adminBrokerProcessor) ViewBrokerStatsData(ctx core.Context, request *
 	requestHeader := &head.ViewBrokerStatsDataRequestHeader{}
 	err := request.DecodeCommandCustomHeader(requestHeader)
 	if err != nil {
-		logger.Error(err)
+		return nil, errors.Wrap(err, 0)
 	}
 
 	statsItem := abp.brokerController.messageStore.BrokerStats().GetStatsItem(requestHeader.StatsName, requestHeader.StatsKey)
