@@ -85,7 +85,7 @@ func String2File(data []byte, flPath string) error {
 }
 
 func create2WriteFile(data []byte, filePath string) error {
-	err := EnsureDir(filePath)
+	err := EnsureDir(filepath.Dir(filePath))
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func create2WriteFile(data []byte, filePath string) error {
 
 // CreateNullFile 创建文件
 func CreateNullFile(filePath string) (bool, error) {
-	err := EnsureDir(filePath)
+	err := EnsureDir(filepath.Dir(filePath))
 	if err != nil {
 		return false, err
 	}

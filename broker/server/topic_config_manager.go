@@ -67,7 +67,7 @@ func (tcm *topicConfigManager) init() {
 	// DEFAULT_TOPIC
 	{
 		autoCreateTopicEnable := tcm.brokerController.cfg.Broker.AutoCreateTopicEnable
-		logger.Infof("BoltMQ config set AutoCreateTopicEnable=%t.", autoCreateTopicEnable)
+		logger.Infof("BoltMQ set config: AutoCreateTopicEnable=%t.", autoCreateTopicEnable)
 		if autoCreateTopicEnable {
 			topicName := basis.DEFAULT_TOPIC
 			topicConfig := base.NewTopicConfig(topicName)
@@ -260,9 +260,9 @@ func (tcm *topicConfigManager) createTopicInSendMessageBackMethod(topic string, 
 func (tcm *topicConfigManager) updateTopicConfig(topicConfig *base.TopicConfig) {
 	old := tcm.tpCfgSerialWrapper.TpConfigTable.Put(topicConfig.TopicName, topicConfig)
 	if old != nil {
-		logger.Infof("update topic config, old:%s, new:%s", old, topicConfig)
+		logger.Infof("update topic config, old:%s, new:%s.", old, topicConfig)
 	} else {
-		logger.Infof("create new topic: %s", topicConfig)
+		logger.Infof("create new topic: %s.", topicConfig)
 	}
 	tcm.tpCfgSerialWrapper.DataVersion.NextVersion()
 	tcm.cfgManagerLoader.persist()
@@ -273,7 +273,7 @@ func (tcm *topicConfigManager) updateTopicConfig(topicConfig *base.TopicConfig) 
 // Since 2017/8/11
 func (tcm *topicConfigManager) updateOrderTopicConfig(orderKVTable *protocol.KVTable) {
 	if orderKVTable == nil || orderKVTable.Table == nil {
-		logger.Info("orderKVTable or orderKVTable.Table is nil")
+		logger.Info("orderKVTable or orderKVTable.Table is nil.")
 		return
 	}
 
@@ -291,7 +291,7 @@ func (tcm *topicConfigManager) updateOrderTopicConfig(orderKVTable *protocol.KVT
 			if topicConfig != nil && !topicConfig.Order {
 				topicConfig.Order = true
 				isChange = true
-				logger.Infof("update order topic config, topic=%s, order=%v", value, true)
+				logger.Infof("update order topic config, topic=%s, order=%t.", value, true)
 			}
 		}
 	}
@@ -301,7 +301,7 @@ func (tcm *topicConfigManager) updateOrderTopicConfig(orderKVTable *protocol.KVT
 			if topicConfig != nil && topicConfig.Order {
 				topicConfig.Order = false
 				isChange = true
-				logger.Infof("update order topic config, topic=%s, order=%v", topic, true)
+				logger.Infof("update order topic config, topic=%s, order=%t.", topic, true)
 			}
 		}
 	})
@@ -329,11 +329,11 @@ func (tcm *topicConfigManager) isOrderTopic(topic string) bool {
 func (tcm *topicConfigManager) deleteTopicConfig(topic string) {
 	value := tcm.tpCfgSerialWrapper.TpConfigTable.Remove(topic)
 	if value != nil {
-		logger.Infof("delete topic config OK, %s", value)
+		logger.Infof("delete topic config success, topic=%s.", value)
 		tcm.tpCfgSerialWrapper.DataVersion.NextVersion()
 		tcm.cfgManagerLoader.persist()
 	} else {
-		logger.Infof("delete topic config failed, topic: %s not exist", topic)
+		logger.Infof("delete topic config failed, topic=%s not exist.", topic)
 	}
 }
 
@@ -360,17 +360,17 @@ func (tcm *topicConfigManager) encode(prettyFormat bool) string {
 
 func (tcm *topicConfigManager) decode(content []byte) {
 	if content == nil || len(content) <= 0 {
-		logger.Errorf("topicConfigManager.Decode() param content is nil")
+		logger.Errorf("topic config manager decode param content is nil.")
 		return
 	}
 	if tcm == nil || tcm.tpCfgSerialWrapper == nil || tcm.tpCfgSerialWrapper.TpConfigTable == nil {
-		logger.Errorf("topicConfigManager.TopicConfigTable is nil")
+		logger.Errorf("topic config manager decode param configTable is nil.")
 		return
 	}
 
 	err := json.Unmarshal(content, tcm.tpCfgSerialWrapper)
 	if err != nil {
-		logger.Errorf("tpCfgSerialWrapper.Decode() err: %s", err.Error())
+		logger.Errorf("topic config serial wrapper decode err: %s.", err)
 		return
 	}
 }

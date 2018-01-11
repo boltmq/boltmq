@@ -299,7 +299,6 @@ func (controller *BrokerController) unRegisterBrokerAll() {
 	brokerId := int(controller.cfg.Cluster.BrokerId)
 	controller.callOuter.UnRegisterBrokerAll(controller.cfg.Cluster.Name,
 		controller.getBrokerAddr(), controller.cfg.Cluster.BrokerName, brokerId)
-	logger.Info("unRegister all broker successful")
 }
 
 // registerBrokerAll 注册所有broker

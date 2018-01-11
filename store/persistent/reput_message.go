@@ -94,7 +94,7 @@ func (rmsg *reputMessageService) doReput() {
 }
 
 func (rmsg *reputMessageService) start() {
-	logger.Info("reput message service started")
+	logger.Info("reput message service started.")
 
 	for {
 		if rmsg.stoped {

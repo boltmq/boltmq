@@ -59,7 +59,7 @@ func (chks *clientHouseKeepingService) start() {
 func (chks *clientHouseKeepingService) shutdown() {
 	if chks.ticker != nil {
 		chks.ticker.Stop()
-		logger.Infof("clientHouseKeepingService shutdown successful")
+		logger.Infof("client house keeping service shutdown success.")
 	}
 }
 

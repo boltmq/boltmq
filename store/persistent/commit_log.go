@@ -105,12 +105,12 @@ func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageR
 	case store.END_OF_FILE:
 		mf, err = clog.mfq.getLastMappedFile(int64(0))
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorf("put message get last mapped file err: %s.", err)
 			return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED, Result: result}
 		}
 
 		if mf == nil {
-			logger.Errorf("create mapped file2 error, topic:%s clientAddr:%s", msg.Topic, msg.BornHost)
+			logger.Errorf("create mapped file2 error, topic:%s clientAddr:%s.", msg.Topic, msg.BornHost)
 			return &store.PutMessageResult{Status: store.CREATE_MAPPED_FILE_FAILED, Result: result}
 		}
 
@@ -144,7 +144,7 @@ func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageR
 	clog.mutex.Unlock()
 
 	if eclipseTimeInLock > 1000 {
-		logger.Warn("putMessage in lock eclipse time(ms) ", eclipseTimeInLock)
+		logger.Warnf("putMessage in lock eclipse time(ms) %d.", eclipseTimeInLock)
 	}
 
 	putMessageResult := &store.PutMessageResult{Status: store.PUTMESSAGE_PUT_OK, Result: result}
@@ -162,7 +162,7 @@ func (clog *commitLog) putMessage(msg *store.MessageExtInner) *store.PutMessageR
 
 				flushOk := request.waitForFlush(int64(clog.messageStore.config.SyncFlushTimeout))
 				if flushOk == false {
-					logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s",
+					logger.Errorf("do groupcommit, wait for flush failed, topic: %s tags: %s client address: %s.",
 						msg.Topic, msg.GetTags(), msg.BornHost)
 					putMessageResult.Status = store.FLUSH_DISK_TIMEOUT
 				}
@@ -231,7 +231,7 @@ func (clog *commitLog) recoverNormally() {
 			} else if size == 0 {
 				index++
 				if index >= mappedFiles.Len() {
-					logger.Info("recover last 3 physics file over, last mapped file ", mf.fileName)
+					logger.Infof("recover last 3 physics file over, last mapped file %s.", mf.fileName)
 					break
 				} else {
 					mf = getMappedFileByIndex(mappedFiles, index)
@@ -329,7 +329,7 @@ func (clog *commitLog) checkMessageAndReturnSize(byteBuffer *mappedByteBuffer, c
 			if checkCRC {
 				crc, _ := codec.Crc32(bodyContent)
 				if int32(crc) != bodyCRC {
-					logger.Warnf("CRC check failed crc:%d, bodyCRC:%d", crc, bodyCRC)
+					logger.Warnf("CRC check failed crc:%d, bodyCRC:%d.", crc, bodyCRC)
 					return &dispatchRequest{msgSize: -1}
 				}
 			}
@@ -434,7 +434,7 @@ func (clog *commitLog) recoverAbnormally() {
 					index++
 
 					if index >= mappedFiles.Len() { // The current branch under normal circumstances should
-						logger.Info("recover physics file over, last mapped file ", mf.fileName)
+						logger.Infof("recover physics file over, last mapped file %s.", mf.fileName)
 						break
 					} else {
 						i := 0
@@ -445,7 +445,7 @@ func (clog *commitLog) recoverAbnormally() {
 								mappedByteBuffer.writePos = mf.byteBuffer.writePos
 								processOffset = mf.fileFromOffset
 								mappedFileOffset = 0
-								logger.Info("recover next physics file,", mf.fileName)
+								logger.Infof("recover next physics file, %s.", mf.fileName)
 								break
 							}
 
@@ -493,13 +493,13 @@ func (clog *commitLog) isMappedFileMatchedRecover(mf *mappedFile) bool {
 	if clog.messageStore.config.MessageIndexEnable &&
 		clog.messageStore.config.MessageIndexSafe {
 		if storeTimestamp <= clog.messageStore.steCheckpoint.getMinTimestampIndex() {
-			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+			logger.Infof("find check timestamp, %d %s.", storeTimestamp,
 				timeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
 			return true
 		}
 	} else {
 		if storeTimestamp <= clog.messageStore.steCheckpoint.getMinTimestamp() {
-			logger.Infof("find check timestamp, %d %s", storeTimestamp,
+			logger.Infof("find check timestamp, %d %s.", storeTimestamp,
 				timeMillisecondToHumanString(time.Unix(storeTimestamp, 0)))
 			return true
 		}
@@ -539,7 +539,7 @@ func (clog *commitLog) appendData(startOffset int64, data []byte) bool {
 
 	mf, err := clog.mfq.getLastMappedFile(startOffset)
 	if err != nil {
-		logger.Error("commit log append data get last mapped file error:", err.Error())
+		logger.Errorf("commit log append data get last mapped file err: %s.", err)
 		return false
 	}
 
@@ -548,7 +548,7 @@ func (clog *commitLog) appendData(startOffset int64, data []byte) bool {
 		mf.appendMessage(data[:size])
 		mf, err = clog.mfq.getLastMappedFile(startOffset + int64(size))
 		if err != nil {
-			logger.Error("commit log append data get last mapped file error:", err.Error())
+			logger.Errorf("commit log append data get last mapped file err: %s.", err)
 			return false
 		}
 
@@ -716,7 +716,7 @@ func (gcs *groupCommitService) shutdown() {
 	gcs.swapRequests()
 	gcs.doCommit()
 
-	logger.Info("group commit service end")
+	logger.Info("group commit service end.")
 }
 
 type flushRealTimeService struct {
@@ -741,7 +741,7 @@ func newFlushRealTimeService(clog *commitLog) *flushRealTimeService {
 }
 
 func (fts *flushRealTimeService) start() {
-	logger.Info("flush real time service started")
+	logger.Info("flush real time service started.")
 
 	for {
 		if fts.stoped {
@@ -783,7 +783,7 @@ func (fts *flushRealTimeService) start() {
 }
 
 func (fts *flushRealTimeService) printFlushProgress() {
-	logger.Info("how much disk fall behind memory, ", fts.clog.mfq.howMuchFallBehind())
+	logger.Infof("how much disk fall behind memory, %d.", fts.clog.mfq.howMuchFallBehind())
 }
 
 func (fts *flushRealTimeService) waitForRunning(interval int64) {
@@ -812,15 +812,15 @@ func (fts *flushRealTimeService) destroy() {
 	for i := 0; i < FlushRetryTimesOver && !result; i++ {
 		result = fts.clog.mfq.commit(0)
 		if result {
-			logger.Infof("flush real time service shutdown, retry %d times OK", i+1)
+			logger.Infof("flush real time service shutdown, retry %d times success.", i+1)
 		} else {
-			logger.Infof("flush real time service shutdown, retry %d times Not OK", i+1)
+			logger.Infof("flush real time service shutdown, retry %d times failed.", i+1)
 		}
 
 	}
 
 	fts.printFlushProgress()
-	logger.Info("flush real time service end")
+	logger.Info("flush real time service end.")
 }
 
 func (fts *flushRealTimeService) shutdown() {
@@ -902,7 +902,7 @@ func (damcb *defaultAppendMessageCallback) doAppend(fileFromOffset int64, byteBu
 
 	// Exceeds the maximum message
 	if msgLen > damcb.maxMessageSize {
-		logger.Errorf("message size exceeded, msg total size: %d, msg body size: %d, maxMessageSize: %d",
+		logger.Errorf("message size exceeded, msg total size: %d, msg body size: %d, maxMessageSize: %d.",
 			msgLen, bodyContentLength, damcb.maxMessageSize)
 
 		return &store.AppendMessageResult{Status: store.MESSAGE_SIZE_EXCEEDED}
@@ -994,7 +994,7 @@ func (damcb *defaultAppendMessageCallback) doAppend(fileFromOffset int64, byteBu
 func (damcb *defaultAppendMessageCallback) hostStringToBytes(hostAddr string) []byte {
 	host, port, err := message.SplitHostPort(hostAddr)
 	if err != nil {
-		logger.Warnf("parse message %s error: %s", hostAddr, err.Error())
+		logger.Warnf("parse message %s err: %s.", hostAddr, err)
 		return make([]byte, 8)
 	}
 
@@ -1061,7 +1061,7 @@ func (ccls *cleanCommitLogService) parseFloatProperty(propertyName string, defau
 
 	result, err := strconv.ParseFloat(value, 64)
 	if err != nil {
-		logger.Warnf("parse property(%s) error:%s, set default value %f", propertyName, err.Error(), defaultValue)
+		logger.Warnf("parse property(%s) set default value %f, err: %s.", propertyName, defaultValue, err)
 		result = defaultValue
 	}
 
@@ -1093,7 +1093,7 @@ func (ccls *cleanCommitLogService) deleteExpiredFiles() {
 
 		// 是否立刻强制删除文件
 		cleanAtOnce := ccls.messageStore.config.CleanFileForciblyEnable && ccls.cleanImmediately
-		logger.Infof("begin to delete before %d hours file. timeup: %t spacefull: %t manualDeleteFileSeveralTimes: %d cleanAtOnce: %t",
+		logger.Infof("begin to delete before %d hours file. timeup: %t spacefull: %t manualDeleteFileSeveralTimes: %d cleanAtOnce: %t.",
 			fileReservedTime, timeup, spacefull, ccls.manualDeleteFileSeveralTimes, cleanAtOnce)
 
 		// 小时转化成毫秒
@@ -1116,7 +1116,7 @@ func (ccls *cleanCommitLogService) deleteExpiredFiles() {
 func (ccls *cleanCommitLogService) isTimeToDelete() bool {
 	when := ccls.messageStore.config.DeleteWhen
 	if isItTimeToDo(when) {
-		logger.Info("it's time to reclaim disk space, ", when)
+		logger.Infof("it's time to reclaim disk space, %s.", when)
 		return true
 	}
 
@@ -1149,7 +1149,7 @@ func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
 	if physicRatio > ccls.diskSpaceWarningLevelRatio {
 		diskFull := ccls.messageStore.runFlags.getAndMakeDiskFull()
 		if diskFull {
-			logger.Errorf("physic disk maybe full soon %f, so mark disk full", physicRatio)
+			logger.Errorf("physic disk maybe full soon %f, so mark disk full.", physicRatio)
 			// TODO System.gc()
 		}
 
@@ -1159,12 +1159,12 @@ func (ccls *cleanCommitLogService) checkCommitLogFileSpace() bool {
 	} else {
 		diskOK := ccls.messageStore.runFlags.getAndMakeDiskOK()
 		if !diskOK {
-			logger.Infof("physic disk space OK %f, so mark disk ok", physicRatio)
+			logger.Infof("physic disk space OK %f, so mark disk ok.", physicRatio)
 		}
 	}
 
 	if physicRatio < 0 || physicRatio > ratio {
-		logger.Info("physic disk maybe full soon, so reclaim space, ", physicRatio)
+		logger.Infof("physic disk maybe full soon, so reclaim space, %f.", physicRatio)
 		return true
 	}
 
@@ -1181,7 +1181,7 @@ func (ccls *cleanCommitLogService) checkConsumeQueueFileSpace() bool {
 	if logicsRatio > ccls.diskSpaceWarningLevelRatio {
 		diskFull := ccls.messageStore.runFlags.getAndMakeDiskFull()
 		if diskFull {
-			logger.Errorf("logics disk maybe full soon %f, so mark disk full", logicsRatio)
+			logger.Errorf("logics disk maybe full soon %f, so mark disk full.", logicsRatio)
 			// TODO System.gc()
 		}
 
@@ -1191,12 +1191,12 @@ func (ccls *cleanCommitLogService) checkConsumeQueueFileSpace() bool {
 	} else {
 		diskOK := ccls.messageStore.runFlags.getAndMakeDiskOK()
 		if !diskOK {
-			logger.Infof("logics disk space OK %f, so mark disk ok", logicsRatio)
+			logger.Infof("logics disk space OK %f, so mark disk ok.", logicsRatio)
 		}
 	}
 
 	if logicsRatio < 0 || logicsRatio > ratio {
-		logger.Info("logics disk maybe full soon, so reclaim space, ", logicsRatio)
+		logger.Infof("logics disk maybe full soon, so reclaim space, %f.", logicsRatio)
 		return true
 	}
 

@@ -185,18 +185,19 @@ func (cos *CallOuterService) UnRegisterBroker(nameSrvAddr, clusterName, brokerAd
 
 	response, err := cos.remotingClient.InvokeSync(nameSrvAddr, request, timeout)
 	if err != nil {
-		logger.Errorf("unRegisterBroker err: %s, the request is %s", err.Error(), request)
+		logger.Errorf("unregister broker the request code is %d, err: %s.", request.Code, err)
 		return err
 	}
 	if response == nil {
-		logger.Errorf("unRegisterBroker failed: the response is nil")
-		return errors.Errorf("unRegisterBroker failed: the response is nil")
+		logger.Errorf("unregister broker failed: the response is nil.")
+		return errors.Errorf("unregister broker failed: the response is nil.")
 	}
 	if response.Code != protocol.SUCCESS {
-		logger.Errorf("unRegisterBroker failed, Code: %d.", response.Code)
-		return errors.Errorf("unRegisterBroker failed, Code: %d.", response.Code)
+		logger.Errorf("unregister broker failed, Code: %d.", response.Code)
+		return errors.Errorf("unregister broker failed, Code: %d.", response.Code)
 	}
 
+	logger.Infof("unregister broker to name server %s success.", nameSrvAddr)
 	return nil
 }
 
@@ -211,7 +212,6 @@ func (cos *CallOuterService) UnRegisterBrokerAll(clusterName, brokerAddr, broker
 
 	for _, nameSrvAddr := range nameServerAddressList {
 		cos.UnRegisterBroker(nameSrvAddr, clusterName, brokerAddr, brokerName, brokerId)
-		logger.Infof("unregister all broker to name server %s OK", nameSrvAddr)
 	}
 }
 
