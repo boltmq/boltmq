@@ -30,6 +30,7 @@ import (
 
 func main() {
 	c := flag.String("c", "", "broker config file, default etc/broker.toml")
+	p := flag.String("p", "broker.pid", "pid file, default broker.pid")
 	h := flag.Bool("h", false, "help")
 	f := flag.Bool("f", false, "run front terminal")
 	v := flag.Bool("v", false, "version")
@@ -46,7 +47,7 @@ func main() {
 	}
 
 	if !*f {
-		dctx, err := runDaemon()
+		dctx, err := runDaemon(*p)
 		if err != nil {
 			os.Exit(0)
 		}
@@ -100,9 +101,9 @@ func main() {
 	controller.Start()
 }
 
-func runDaemon() (*daemon.Context, error) {
+func runDaemon(pidfile string) (*daemon.Context, error) {
 	cntxt := &daemon.Context{
-		PidFileName: "broker.pid",
+		PidFileName: pidfile,
 		PidFilePerm: 0644,
 		LogFileName: "",
 		LogFilePerm: 0640,
