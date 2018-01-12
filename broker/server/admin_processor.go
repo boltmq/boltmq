@@ -225,19 +225,18 @@ func (adp *adminBrokerProcessor) getAllTopicConfig(ctx core.Context, request *pr
 // Author rongzhihong
 // Since 2017/9/19
 func (adp *adminBrokerProcessor) updateBrokerConfig(ctx core.Context, request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
+	logger.Infof("update broker config called by %s.", parseChannelRemoteAddr(ctx))
+
 	response := protocol.CreateDefaultResponseCommand()
-	content := request.Body
-	logger.Infof("update broker config called by %s. content :%s.", parseChannelRemoteAddr(ctx), content)
-	if content != nil {
-		logger.Infof("update broker config, new config: %s, client: %s.", string(content), ctx.RemoteAddr())
-		adp.brokerController.updateAllConfig(content)
-	} else {
+	if request.Body == nil {
 		logger.Error("update broker config, content is nil.")
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = "content is nil"
 		return response, nil
 	}
 
+	logger.Infof("update broker config, new config: %s, client: %s.", string(request.Body), ctx.RemoteAddr())
+	adp.brokerController.updateAllConfig(request.Body)
 	response.Code = protocol.SUCCESS
 	response.Remark = ""
 	return response, nil

@@ -416,8 +416,8 @@ func (controller *BrokerController) RegisterSendMessageHook(hook trace.SendMessa
 // updateAllConfig 更新所有文件
 // Author rongzhihong
 // Since 2017/9/12
-func (controller *BrokerController) updateAllConfig(properties []byte) error {
-	// TODO:
+func (controller *BrokerController) updateAllConfig(cbuf []byte) error {
+	// TODO: 根据实际要修改的参数进行确定。
 
 	controller.dataVersion.NextVersion()
 	controller.flushAllConfig()

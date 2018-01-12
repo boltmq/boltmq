@@ -24,11 +24,14 @@ import (
 	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
+	"github.com/juju/errors"
+	daemon "github.com/sevlyar/go-daemon"
 )
 
 func main() {
 	c := flag.String("c", "", "broker config file, default etc/broker.toml")
 	h := flag.Bool("h", false, "help")
+	f := flag.Bool("f", false, "run front terminal")
 	v := flag.Bool("v", false, "version")
 
 	flag.Parse()
@@ -42,6 +45,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	if !*f {
+		dctx, err := runDaemon()
+		if err != nil {
+			os.Exit(0)
+		}
+		defer dctx.Release()
+	}
+
 	cfg, err := config.ParseConfig(*c)
 	if err != nil {
 		fmt.Printf("load config: %s.\n", err)
@@ -49,9 +60,16 @@ func main() {
 	}
 
 	if cfg.Log.CfgFilePath != "" {
-		if err := logger.ConfigAsFile(cfg.Log.CfgFilePath); err != nil {
-			fmt.Printf("config %s load failed, %s\n", cfg.Log.CfgFilePath, err)
-			os.Exit(0)
+		if !*f {
+			if err := logger.ConfigAsFile(cfg.Log.CfgFilePath); err != nil {
+				fmt.Printf("config %s load failed, %s\n", cfg.Log.CfgFilePath, err)
+				os.Exit(0)
+			}
+		} else {
+			if err := logger.ConfigAsBytes([]byte(config.DefaultFrontLogXmlCfg)); err != nil {
+				fmt.Printf("front log config load failed, %s\n", err)
+				os.Exit(0)
+			}
 		}
 		logger.Infof("config %s load success.", cfg.Log.CfgFilePath)
 	}
@@ -74,9 +92,32 @@ func main() {
 	system.ExitNotify(func(s os.Signal) {
 		controller.Shutdown()
 		logger.Info("broker exit, save data...")
+		logger.Flush()
 		os.Exit(0)
 	})
 
 	// 启动BrokerController
 	controller.Start()
+}
+
+func runDaemon() (*daemon.Context, error) {
+	cntxt := &daemon.Context{
+		PidFileName: "broker.pid",
+		PidFilePerm: 0644,
+		LogFileName: "",
+		LogFilePerm: 0640,
+		WorkDir:     "./",
+		Umask:       027,
+		Args:        nil,
+	}
+
+	d, err := cntxt.Reborn()
+	if err != nil {
+		return nil, err
+	}
+	if d != nil {
+		return nil, errors.Errorf("child process not nil.")
+	}
+
+	return cntxt, nil
 }
