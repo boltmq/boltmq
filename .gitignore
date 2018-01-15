@@ -11,3 +11,6 @@
 .idea/*
 
 bin/
+broker/broker
+namesrver/etc/seelog-nsrv.xml
+namesrver/namesrver

@@ -1,3 +1,2 @@
 etc/broker.toml
-etc/seelog.xml
-./broker
+etc/seelog-broker.xml
