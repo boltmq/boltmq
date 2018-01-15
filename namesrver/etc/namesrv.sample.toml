@@ -6,6 +6,9 @@
 # namesrv's listen addr. default: :9876.
 listen=":9876"
 
+# namesrv's k-v config file path. default: nsrv-kv.json.
+kv_config_path="nsrv-kv.json"
+
 [log]
 # log's config file path. default: etc/seelog-nsrv.xml.
 config_file_path="etc/seelog-nsrv.xml"

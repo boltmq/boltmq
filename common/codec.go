@@ -11,20 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package config
+package common
 
-type Config struct {
-	NameSrv NameSrvConfig `toml:"namesrv"` // 参数配置
-	Log     LogConfig     `toml:"log"`     // 日志
+import "github.com/pquerna/ffjson/ffjson"
+
+// Encode Json Encode
+// Author: rongzhihong
+// Since: 2017/9/19
+func Encode(v interface{}) ([]byte, error) {
+	return ffjson.Marshal(v)
 }
 
-// NameSrvConfig namesrv相关配置
-type NameSrvConfig struct {
-	Listen    string `toml:"listen"`         // 监听端口
-	KVCfgPath string `toml:"kv_config_path"` // kv文件存储路径
-}
-
-// LogConfig 日志配置
-type LogConfig struct {
-	CfgFilePath string `toml:"config_file_path"` // 日志配置文件路径
+// Decode Json Decode
+// Author: rongzhihong
+// Since: 2017/9/19
+func Decode(data []byte, v interface{}) error {
+	return ffjson.Unmarshal(data, v)
 }

@@ -332,7 +332,7 @@ func (abp *adminBrokerProcessor) getBrokerRuntimeInfo(ctx core.Context, request 
 
 	kvTable := &protocol.KVTable{}
 	kvTable.Table = runtimeInfo
-	content, err := Encode(kvTable)
+	content, err := common.Encode(kvTable)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol
 	response := protocol.CreateDefaultResponseCommand()
 
 	requestBody := body.NewLockBatchRequest()
-	err := Decode(request.Body, requestBody)
+	err := common.Decode(request.Body, requestBody)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
@@ -362,7 +362,7 @@ func (abp *adminBrokerProcessor) lockBatchMQ(ctx core.Context, request *protocol
 	responseBody := body.NewLockBatchResponse()
 	responseBody.LockOKMQSet = lockOKMQSet
 
-	content, err := Encode(responseBody)
+	content, err := common.Encode(responseBody)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (abp *adminBrokerProcessor) unlockBatchMQ(ctx core.Context, request *protoc
 	response := protocol.CreateDefaultResponseCommand()
 
 	requestBody := body.NewUnlockBatchRequest()
-	err := Decode(request.Body, requestBody)
+	err := common.Decode(request.Body, requestBody)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
@@ -421,7 +421,7 @@ func (abp *adminBrokerProcessor) updateAndCreateSubscriptionGroup(ctx core.Conte
 
 	logger.Infof("update and create subscription group called by %s.", parseChannelRemoteAddr(ctx))
 	config := &subscription.SubscriptionGroupConfig{}
-	err := Decode(request.Body, config)
+	err := common.Decode(request.Body, config)
 	if err != nil {
 		return nil, errors.Wrap(err, 0)
 	}
@@ -570,7 +570,7 @@ func (abp *adminBrokerProcessor) getConsumerConnectionList(ctx core.Context, req
 			}
 		}
 
-		content, err := Encode(bodydata)
+		content, err := common.Encode(bodydata)
 		if err != nil {
 			return nil, err
 		}
@@ -611,7 +611,7 @@ func (abp *adminBrokerProcessor) getProducerConnectionList(ctx core.Context, req
 			bodydata.ConnectionSet.Add(connection)
 		}
 
-		content, err := Encode(bodydata)
+		content, err := common.Encode(bodydata)
 		if err != nil {
 			return nil, err
 		}
@@ -713,7 +713,7 @@ func (abp *adminBrokerProcessor) getConsumeStats(ctx core.Context, request *prot
 	consumeTpsMath, _ := strconv.ParseFloat(consumeTpsStr, 64)
 	consumeStats.ConsumeTps = consumeTpsMath
 
-	content, err := Encode(consumeStats)
+	content, err := common.Encode(consumeStats)
 	if err != nil {
 		return nil, err
 	}
@@ -822,7 +822,7 @@ func (abp *adminBrokerProcessor) queryTopicConsumeByWho(ctx core.Context, reques
 
 	groupList := body.NewGroupList()
 	groupList.GroupList = groups
-	content, err := Encode(groupList)
+	content, err := common.Encode(groupList)
 	if err != nil {
 		return nil, err
 	}
@@ -908,7 +908,7 @@ func (abp *adminBrokerProcessor) queryConsumeTimeSpan(ctx core.Context, request 
 
 	queryConsumeTimeSpanBody := body.NewQueryConsumeTimeSpan()
 	queryConsumeTimeSpanBody.ConsumeTimeSpanSet = timeSpanSet
-	content, err := Encode(queryConsumeTimeSpanBody)
+	content, err := common.Encode(queryConsumeTimeSpanBody)
 	if err != nil {
 		return nil, err
 	}
@@ -930,7 +930,7 @@ func (abp *adminBrokerProcessor) getSystemTopicListFromBroker(ctx core.Context, 
 
 	topicList := body.NewTopicList()
 	topicList.TopicList = topics
-	content, err := Encode(topicList)
+	content, err := common.Encode(topicList)
 	if err != nil {
 		return nil, err
 	}
@@ -1024,7 +1024,7 @@ func (abp *adminBrokerProcessor) queryCorrectionOffset(ctx core.Context, request
 
 	correctionBody := body.NewQueryCorrectionOffset()
 	correctionBody.CorrectionOffsets = correctionOffset
-	content, err := Encode(correctionBody)
+	content, err := common.Encode(correctionBody)
 	if err != nil {
 		return nil, err
 	}
@@ -1163,7 +1163,7 @@ func (abp *adminBrokerProcessor) ViewBrokerStatsData(ctx core.Context, request *
 		brokerStatsData.StatsDay = item
 	}
 
-	content, err := Encode(brokerStatsData)
+	content, err := common.Encode(brokerStatsData)
 	if err != nil {
 		return nil, err
 	}
