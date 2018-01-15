@@ -15,6 +15,7 @@ package server
 
 import (
 	"github.com/boltmq/boltmq/broker/trace"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/constant"
 	"github.com/boltmq/common/logger"
@@ -229,7 +230,7 @@ func (cmp *clientManageProcessor) getConsumerListByGroup(ctx core.Context, reque
 
 		if clientIds != nil && len(clientIds) > 0 {
 			consumerListBody := &body.GetConsumersByGroupResponse{ConsumerIdList: clientIds}
-			response.Body, err = Encode(consumerListBody)
+			response.Body, err = common.Encode(consumerListBody)
 			if err != nil {
 				return nil, err
 			}

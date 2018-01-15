@@ -123,7 +123,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 	resetOffsetBody := body.NewResetOffset()
 	resetOffsetBody.OffsetTable = offsetTable
 
-	content, err := Encode(resetOffsetBody)
+	content, err := common.Encode(resetOffsetBody)
 	if err != nil {
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = err.Error()
@@ -161,7 +161,7 @@ func (b2c *broker2Client) resetOffset(topic, group string, timeStamp int64, isFo
 	response.Code = protocol.SUCCESS
 	resBody := body.NewResetOffset()
 	resBody.OffsetTable = offsetTable
-	body, err := Encode(resBody)
+	body, err := common.Encode(resBody)
 	if err != nil {
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = err.Error()
@@ -220,7 +220,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 			case protocol.SUCCESS:
 				if response.Body != nil && len(response.Body) > 0 {
 					statusBody := body.NewGetConsumerStatus()
-					Decode(response.Body, statusBody)
+					common.Decode(response.Body, statusBody)
 
 					consumerStatusTable[clientId] = statusBody.MessageQueueTable
 					logger.Infof("[get-consumer-status] get consumer status success. topic=%s, group=%s, channelRemoteAddr=%s.",
@@ -237,7 +237,7 @@ func (b2c *broker2Client) getConsumeStatus(topic, group, originClientId string) 
 
 	resBody := body.NewGetConsumerStatus()
 	resBody.ConsumerTable = consumerStatusTable
-	content, err := Encode(resBody)
+	content, err := common.Encode(resBody)
 	if err != nil {
 		response.Code = protocol.SYSTEM_ERROR
 		response.Remark = err.Error()

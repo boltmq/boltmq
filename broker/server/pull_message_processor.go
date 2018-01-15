@@ -19,6 +19,7 @@ import (
 	"github.com/boltmq/boltmq/broker/server/longpolling"
 	"github.com/boltmq/boltmq/broker/server/pagecache"
 	"github.com/boltmq/boltmq/broker/trace"
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/boltmq/store/persistent"
@@ -364,7 +365,7 @@ func (pmsgp *pullMessageProcessor) generateOffsetMovedEvent(event *protocol.Offs
 	msgInner.PropertiesString = message.MessageProperties2String(msgInner.Properties)
 	msgInner.TagsCode = basis.TagsString2tagsCode(basis.SINGLE_TAG, msgInner.GetTags())
 
-	msgInner.Body, _ = Encode(event)
+	msgInner.Body, _ = common.Encode(event)
 	msgInner.QueueId = int32(0)
 	msgInner.SysFlag = 0
 	msgInner.BornTimestamp = system.CurrentTimeMillis()

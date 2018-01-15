@@ -20,7 +20,6 @@ import (
 
 	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/basis"
-	"github.com/pquerna/ffjson/ffjson"
 )
 
 // min int64 的最小值
@@ -31,20 +30,6 @@ func min(a, b int64) int64 {
 		return b
 	}
 	return a
-}
-
-// Encode Json Encode
-// Author: rongzhihong
-// Since: 2017/9/19
-func Encode(v interface{}) ([]byte, error) {
-	return ffjson.Marshal(v)
-}
-
-// Decode Json Decode
-// Author: rongzhihong
-// Since: 2017/9/19
-func Decode(data []byte, v interface{}) error {
-	return ffjson.Unmarshal(data, v)
 }
 
 // callShell 执行命令
