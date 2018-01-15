@@ -12,8 +12,8 @@ compile:
 
 config:
 	@mkdir -p $(OUTDIR)/etc
-	@cp -f $(BRKDIR)/etc/broker_sample.toml $(OUTDIR)/etc/broker.toml 
-	@cp -f $(BRKDIR)/etc/seelog.sample.xml $(OUTDIR)/etc/seelog.xml
+	@cp -f $(BRKDIR)/etc/broker.sample.toml $(OUTDIR)/etc/broker.toml 
+	@cp -f $(BRKDIR)/etc/seelog.sample.xml $(OUTDIR)/etc/seelog-broker.xml
 	@mkdir -p $(OUTDIR)/logs
 	@echo "move config file to $(OUTDIR)/etc, if you need you can edit it."
 
