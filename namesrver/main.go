@@ -17,20 +17,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime/debug"
 
-	"github.com/boltmq/boltmq/broker/config"
-	"github.com/boltmq/boltmq/broker/server"
 	"github.com/boltmq/boltmq/common"
+	"github.com/boltmq/boltmq/namesrver/config"
 	"github.com/boltmq/common/logger"
-	"github.com/boltmq/common/utils/system"
 	"github.com/juju/errors"
 	daemon "github.com/sevlyar/go-daemon"
 )
 
 func main() {
-	c := flag.String("c", "", "broker config file, default etc/broker.toml")
-	p := flag.String("p", "broker.pid", "pid file, default broker.pid")
+	c := flag.String("c", "", "namesrver config file, default etc/namesrv.toml")
+	p := flag.String("p", "namesrv.pid", "pid file, default namesrv.pid")
 	h := flag.Bool("h", false, "help")
 	f := flag.Bool("f", false, "run front terminal")
 	v := flag.Bool("v", false, "version")
@@ -42,7 +39,7 @@ func main() {
 	}
 
 	if *v {
-		fmt.Println("boltmq broker version:", common.Version)
+		fmt.Println("boltmq namesrv version:", common.Version)
 		os.Exit(0)
 	}
 
@@ -74,31 +71,6 @@ func main() {
 		}
 		logger.Infof("config %s load success.", cfg.Log.CfgFilePath)
 	}
-	debug.SetMaxThreads(100000)
-
-	if cfg.MQHome == "" {
-		logger.Info("Please set the BOLTMQ_HOME variable in your environment to match the location of the BlotMQ installation.")
-		return
-	}
-	logger.Infof("Please reset the BOLTMQ_HOME:%s variable in your environment, if it is incorrect.", cfg.MQHome)
-
-	controller, err := server.NewBrokerController(cfg)
-	if err != nil {
-		fmt.Printf("create broker controller: %s.\n", err)
-		logger.Errorf("create broker controller: %s.", err)
-		return
-	}
-
-	// 注册系统信号量通知。
-	system.ExitNotify(func(s os.Signal) {
-		controller.Shutdown()
-		logger.Info("broker exit, save data...")
-		logger.Flush()
-		os.Exit(0)
-	})
-
-	// 启动BrokerController
-	controller.Start()
 }
 
 func runDaemon(pidfile string) (*daemon.Context, error) {

@@ -1,0 +1,11 @@
+# This is namesrver config file, a TOML document.
+# namesrv:  namesrver's param configuration
+# log:     broker's log configuration
+
+[namesrv]
+# namesrv's listen addr. default: :9876.
+listen=":9876"
+
+[log]
+# log's config file path. default: etc/seelog-nsrv.xml.
+config_file_path="etc/seelog-nsrv.xml"

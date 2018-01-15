@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/utils/encoding"
 	"github.com/boltmq/common/utils/system"
@@ -39,7 +40,7 @@ func ParseConfig(path string) (*Config, error) {
 		cfg Config
 	)
 
-	path = getConfigEnvValue(path, envBoltMQBrokerConfigPath)
+	path = common.GetConfigEnvValue(path, common.EnvBoltMQBrokerConfigPath)
 	if err := encoding.DecodeToml(path, &cfg); err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ var defaultConfig = &Config{
 		FlushDiskType:    "SYNC_FLUSH",
 	},
 	Log: LogConfig{
-		CfgFilePath: "etc/seelog.xml",
+		CfgFilePath: "etc/seelog-broker.xml",
 	},
 }
 
@@ -141,7 +142,7 @@ func defaultRootDir() string {
 }
 
 func getNameSrvAddrs() []string {
-	vals := getConfigEnvValue("", envNameSrvAddrs)
+	vals := common.GetConfigEnvValue("", common.EnvNameSrvAddrs)
 	return strings.Split(vals, ";")
 }
 
@@ -198,7 +199,7 @@ func isIntranetIpv4(ip string) bool {
 }
 
 func getMQHome() string {
-	mqHome := getConfigEnvValue("", envBoltMQHome)
+	mqHome := common.GetConfigEnvValue("", common.EnvBoltMQHome)
 	if mqHome != "" {
 		return mqHome
 	}

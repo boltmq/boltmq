@@ -95,5 +95,5 @@ flush_disk_type="SYNC_FLUSH"
 file_reserved_time=48
 
 [log]
-# log's config file path. default: etc/seelog.xml.
-config_file_path="etc/seelog.xml"
+# log's config file path. default: etc/seelog-broker.xml.
+config_file_path="etc/seelog-broker.xml"

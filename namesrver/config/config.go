@@ -13,13 +13,17 @@
 // limitations under the License.
 package config
 
-var DefaultFrontLogXmlCfg = `
-<seelog minlevel="trace" maxlevel="critical">
-	<outputs formatid="main">
-        <console/>
-	</outputs>
-	<formats>
-		<format id="main" format="%Date(2006-01-02 15:04:05.000000) [%LEV] %Msg%n"/>
-	</formats>
-</seelog>
-`
+type Config struct {
+	NameSrv NameSrvConfig `toml:"namesrv"` // 参数配置
+	Log     LogConfig     `toml:"log"`     // 日志
+}
+
+// NameSrvConfig namesrv相关配置
+type NameSrvConfig struct {
+	Listen string `toml:"listen"` // 监听端口
+}
+
+// LogConfig 日志配置
+type LogConfig struct {
+	CfgFilePath string `toml:"config_file_path"` // 日志配置文件路径
+}
