@@ -15,3 +15,4 @@ broker/broker
 namesrver/etc/seelog-nsrv.xml
 namesrver/namesrver
 namesrver/etc/namesrv.toml
+namesrver/namesrv
