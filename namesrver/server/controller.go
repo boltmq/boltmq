@@ -15,36 +15,57 @@ package server
 
 import (
 	"github.com/boltmq/boltmq/namesrver/config"
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
+	"github.com/go-errors/errors"
 )
 
 type NameSrvController struct {
 	cfg                  *config.Config
-	remotingServer       remoting.RemotingServer   // 远程请求server端
-	riManager            *routeInfoManager         // topic路由管理器
-	kvCfgManager         *kvConfigManager          // kv管理器
-	houseKeepingListener core.EventListener        // 扫描不活跃连接
-	requestProcessor     remoting.RequestProcessor // 默认请求处理器
-	tasks                *controllerTask           // Namesrv定时器服务
+	remotingServer       remoting.RemotingServer       // 远程请求server端
+	riManager            *routeInfoManager             // topic路由管理器
+	kvCfgManager         *kvConfigManager              // kv管理器
+	houseKeepingListener remoting.ContextEventListener // 扫描不活跃连接
+	requestProcessor     remoting.RequestProcessor     // 默认请求处理器
+	tasks                *controllerTask               // Namesrv定时器服务
 }
 
 // NewNamesrvController 初始化默认的NamesrvController
 // Author: tianyuliang
 // Since: 2017/9/12
-func NewNamesrvController(cfg *config.Config, remotingServer remoting.RemotingServer) *NameSrvController {
+func NewNamesrvController(cfg *config.Config) *NameSrvController {
 	controller := &NameSrvController{
-		cfg:            cfg,
-		remotingServer: remotingServer,
-		riManager:      newRouteInfoManager(),
+		cfg:       cfg,
+		riManager: newRouteInfoManager(),
 	}
+
+	remotingServer := remoting.NewNMRemotingServer(cfg.NameSrv.Host, cfg.NameSrv.Port)
+	controller.remotingServer = remotingServer
 
 	controller.tasks = newControllerTask(controller)
 	controller.kvCfgManager = newKVConfigManager(controller)
 	controller.houseKeepingListener = newBrokerHouseKeepingListener(controller)
 	return controller
+}
+
+// Load 加载NamesrvController必要的资源
+func (controller *NameSrvController) Load() error {
+	err := controller.kvCfgManager.load()
+	if err != nil {
+		return errors.Wrap(err, 0)
+	}
+
+	// 注册默认DefaultRequestProcessor，只要start启动就开始处理请求
+	controller.registerProcessor()
+
+	// 注册broker连接的监听器
+	controller.remotingServer.SetContextEventListener(controller.houseKeepingListener)
+
+	// 启动tasks任务
+	controller.runTasks()
+
+	return nil
 }
 
 // Start 启动Namesrv控制服务
@@ -79,64 +100,35 @@ func (controller *NameSrvController) Shutdown() {
 	logger.Info("namesrv controller shutdown success, consuming time total(ms): %d", consumingTimeTotal)
 }
 
-// RegisterProcessor 注册默认的请求处理器
+// runTasks 启动tasks任务
 // Author: tianyuliang
 // Since: 2017/9/14
-func (controller *NameSrvController) RegisterProcessor() error {
-	processor := newDefaultRequestProcessor(controller)
-	controller.remotingServer.SetDefaultProcessor(processor)
-	return nil
-}
-
-/*
-// initialize 初始化NamesrvController必要的资源
-// Author: tianyuliang
-// Since: 2017/9/14
-func (controller *NameSrvController) initialize() bool {
-	// (1)加载kvConfig.json至KVConfigManager的configTable，即持久化转移到内存
-	err := controller.kvCfgManager.load()
-	if err != nil {
-		logger.Error("%s", err.Error())
-		return false
-	}
-
-	// (2)注册默认DefaultRequestProcessor，只要start启动就开始处理请求
-	controller.registerProcessor()
-
-	// (3)注册broker连接的监听器
-	controller.registerContextListener()
-
-	// (4)启动tasks任务
-	controller.starttasks()
-
-	return true
-}
-
-
-
-
-
-// starttasks 启动tasks任务
-// Author: tianyuliang
-// Since: 2017/9/14
-func (controller *NameSrvController) starttasks() {
+func (controller *NameSrvController) runTasks() {
 	go func() {
 		// 启动(延迟5秒执行)第一个定时任务：每隔10秒扫描出(2分钟扫描间隔)不活动的broker，然后从routeInfo中删除
 		controller.tasks.scanBrokerTask.Start()
 		logger.Info("start scanBrokerTask ok")
 
 		// 启动(延迟1分钟执行)第二个定时任务：每隔10分钟打印NameServer全局配置,即KVConfigManager.configTable变量的内容
-		controller.tasks.printNamesrvTask.Start()
+		controller.tasks.printNameSrvTask.Start()
 		logger.Info("start printNamesrvTask ok")
 	}()
 }
 
-// registerContextListener 注册监听器，监听broker对应的net.conn连接的Close()、Idel()、Error()等状态变化
+// RegisterProcessor 注册默认的请求处理器
 // Author: tianyuliang
-// Since: 2017/9/18
-func (controller *NameSrvController) registerContextListener() {
-	controller.remotingServer.RegisterContextListener(controller.houseKeepingListener)
+// Since: 2017/9/14
+func (controller *NameSrvController) registerProcessor() error {
+	processor := newDefaultRequestProcessor(controller)
+	controller.remotingServer.SetDefaultProcessor(processor)
+	return nil
 }
+
+//func (controller *NameSrvController) registerContextListener() {
+//controller.remotingServer.SetContextEventListener(controller.houseKeepingListener)
+//}
+
+/*
 
 // registerShutdownHook 注册Shutdown钩子
 // Author: tianyuliang

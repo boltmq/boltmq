@@ -20,8 +20,10 @@ import (
 
 	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/boltmq/namesrver/config"
+	"github.com/boltmq/boltmq/namesrver/server"
 	"github.com/boltmq/common/logger"
-	"github.com/juju/errors"
+	"github.com/boltmq/common/utils/system"
+	"github.com/go-errors/errors"
 	daemon "github.com/sevlyar/go-daemon"
 )
 
@@ -71,6 +73,24 @@ func main() {
 		}
 		logger.Infof("config %s load success.", cfg.Log.CfgFilePath)
 	}
+
+	// 构建NamesrvController
+	controller := server.NewNamesrvController(cfg)
+	if err := controller.Load(); err != nil {
+		controller.Shutdown()
+		logger.Errorf("controller load failed, %s.", err)
+		os.Exit(0)
+	}
+
+	// 注册系统信号量通知。
+	system.ExitNotify(func(s os.Signal) {
+		controller.Shutdown()
+		logger.Info("name serve exit...")
+		logger.Flush()
+		os.Exit(0)
+	})
+
+	controller.Start()
 }
 
 func runDaemon(pidfile string) (*daemon.Context, error) {

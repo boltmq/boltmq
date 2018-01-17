@@ -26,7 +26,7 @@ type brokerHouseKeepingListener struct {
 // newBrokerHouseKeepingListener 初始化Broker活动检测服务
 // Author: tianyuliang
 // Since: 2017/9/6
-func newBrokerHouseKeepingListener(controller *NameSrvController) core.EventListener {
+func newBrokerHouseKeepingListener(controller *NameSrvController) *brokerHouseKeepingListener {
 	listener := new(brokerHouseKeepingListener)
 	listener.controller = controller
 	return listener

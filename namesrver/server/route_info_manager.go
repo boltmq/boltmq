@@ -213,7 +213,7 @@ func (rim *routeInfoManager) registerBroker(clusterName, brokerAddr, brokerName 
 }
 
 // isBrokerTopicConfigChanged 判断Topic配置信息是否发生变更
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) isBrokerTopicConfigChanged(brokerAddr string, dataVersion *basis.DataVersion) bool {
 	prev, ok := rim.brokerLiveTable[brokerAddr]
@@ -228,7 +228,7 @@ func (rim *routeInfoManager) isBrokerTopicConfigChanged(brokerAddr string, dataV
 // 返回值:
 // 	对应Broker上待处理的Topic个数
 //
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) wipeWritePermOfBrokerByLock(brokerName string) int {
 	wipeTopicCount := 0
@@ -243,7 +243,7 @@ func (rim *routeInfoManager) wipeWritePermOfBrokerByLock(brokerName string) int 
 // 返回值：
 // 	对应Broker上待处理的Topic个数
 //
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) wipeWritePermOfBroker(brokerName string) int {
 	wipeTopicCount := 0
@@ -278,7 +278,7 @@ func (rim *routeInfoManager) wipeWritePermOfBroker(brokerName string) int {
 // B. NameSrv也就收到3个RegisterBroker请求
 // C. 相应的该topic对应的QueueDataList里面，也就3个QueueData对象
 //
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) createAndUpdateQueueData(brokerName string, topicConfig *base.TopicConfig) {
 	topic := strings.TrimSpace(topicConfig.TopicName)
@@ -489,7 +489,7 @@ func (rim *routeInfoManager) pickupTopicRouteData(topic string) *base.TopicRoute
 // (1)NameServer会每10s，扫描一次这个brokerLiveTable变量
 // (2)如果发现上次更新时间距离当前时间超过了2分钟，则认为此broker死亡
 //
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) scanNotActiveBroker() {
 	if rim.brokerLiveTable == nil || len(rim.brokerLiveTable) == 0 {
@@ -521,7 +521,7 @@ func (rim *routeInfoManager) scanNotActiveBroker() {
 }
 
 // onChannelDestroy Channel被关闭、Channel出现异常、Channe的Idle时间超时
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) onChannelDestroy(remoteAddr string, ctx core.Context) {
 	// 加读锁，寻找断开连接的Broker
@@ -635,7 +635,7 @@ func (rim *routeInfoManager) onChannelDestroy(remoteAddr string, ctx core.Contex
 }
 
 // printAllPeriodically 定期打印当前类的数据结构(常用于业务调试)
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) printAllPeriodically() {
 	rim.rwLock.RLock()
@@ -819,7 +819,7 @@ func (rim *routeInfoManager) getUnitTopicList() []byte {
 }
 
 // getHasUnitSubTopicList 获取中心向单元同步的所有topic列表
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) getHasUnitSubTopicList() []byte {
 	topicList := body.NewTopicList()
@@ -842,7 +842,7 @@ func (rim *routeInfoManager) getHasUnitSubTopicList() []byte {
 }
 
 // GetHasUnitSubUnUnitTopicList 获取含有单元化订阅组的 非单元化Topic列表
-// Author: tianyuliang, <tianyuliang@gome.com.cn>
+// Author: tianyuliang
 // Since: 2017/9/6
 func (rim *routeInfoManager) getHasUnitSubUnUnitTopicList() []byte {
 	topicList := body.NewTopicList()
