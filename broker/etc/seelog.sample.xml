@@ -1,0 +1,8 @@
+<seelog type="asynctimer" asyncinterval="5000000" minlevel="trace" maxlevel="critical">
+	<outputs formatid="main">
+        <rollingfile type="date" filename="logs/broker.log" datepattern="20060102" maxrolls="7" />
+	</outputs>
+	<formats>
+		<format id="main" format="%Date(2006-01-02 15:04:05.000000) [%LEV] %Msg%n"/>
+	</formats>
+</seelog>

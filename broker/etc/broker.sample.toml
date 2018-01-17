@@ -1,0 +1,99 @@
+# This is broker config file, a TOML document.
+# clusetr: broker's cluster configuration
+# broker:  broker's param configuration
+# log:     broker's log configuration
+# store:   broker's store configuration
+
+[cluster]
+# cluster's name.name must be the same in cluster. 
+name="BoltMQCluster"
+
+# broker's id. master: zero salve: non-zero. 
+broker_id=0
+
+# broker's name. master and salve have the same broker name. 
+broker_name="broker-node"
+
+# broker's role. role: SYNC_MASTER, SLAVE.
+broker_role="SYNC_MASTER"
+
+# namesrv addrs
+#namesrv_addrs=["127.0.0.1:9876"]
+
+# ha server ip
+#ha_server_ip="127.0.0.1"
+
+[broker]
+# broker's port. default: 11911.
+#port=11911
+
+# broker ip, default: use local addr expect lookback addr
+#ip="127.0.0.1"
+
+# delete when, when to trigger the deletion of invalid message.
+delete_when=04
+
+# auto create topic in broker. default: false
+auto_create_topic_enable=false
+
+#broker permission, don't release the comment.
+#permission=6
+
+#default topic queue nums, default: 8
+#default_topic_queue_nums=8
+
+#cluster topic enable, to create a cluster topic when startup. default: true
+#cluster_topic_enable=true
+
+#broker topic enable, to create a broker topic when startup. default: true
+#broker_topic_enable=true
+
+#auto create subscription group by send message. default: true
+#auto_create_subscription_group=true
+
+#flush consumer offset interval. default: 5000
+#flush_consumer_offset_interval=5000
+
+#flush consumer offset history interval. default: 60000
+#flush_consumer_offset_history_interval=60000
+
+#reject transaction message. default: false 
+#reject_transaction_message=false
+
+#fetch namesrv addr by address server. default: false 
+#fetch_namesrv_addr_by_address_server=false
+
+#send thread pool queue capacity. default: 100000
+#send_thread_pool_queue_capacity=100000
+
+#pull thread pool queue capacity. default: 100000 
+#pull_thread_pool_queue_capacity=100000
+
+#filter server nums. default: 0 
+#filter_server_nums=0
+
+#long polling enable. default: true 
+#long_polling_enable=true
+
+#short polling timemills. default: 1000 mills 
+#short_polling_timemills=1000
+
+#notify consumer ids changed enable. default: true 
+#notify_consumer_ids_changed_enable=true
+
+#offset check in slave. default: true 
+#offset_check_in_slave=true
+
+[store]
+# boltmq's store root dir. default: $HOME/store.
+root_dir="{{HOME}}/store"
+
+# message flush disk type. type: SYNC_FLUSH, ASYNC_FLUSH
+flush_disk_type="SYNC_FLUSH"
+
+# msg file reserved time, default: 48 hours.
+file_reserved_time=48
+
+[log]
+# log's config file path. default: etc/seelog-broker.xml.
+config_file_path="etc/seelog-broker.xml"

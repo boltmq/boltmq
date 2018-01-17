@@ -1,0 +1,17 @@
+# This is namesrver config file, a TOML document.
+# namesrv:  namesrver's param configuration
+# log:     broker's log configuration
+
+[namesrv]
+# namesrv's listen addr. default: 0.0.0.0.
+host="0.0.0.0"
+
+# namesrv's listen port. default: 9876.
+port=9876
+
+# namesrv's k-v config file path. default: nsrv-kv.json.
+kv_config_path="nsrv-kv.json"
+
+[log]
+# log's config file path. default: etc/seelog-nsrv.xml.
+config_file_path="etc/seelog-nsrv.xml"
