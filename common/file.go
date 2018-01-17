@@ -114,3 +114,13 @@ func CreateNullFile(filePath string) (bool, error) {
 
 	return true, nil
 }
+
+// File2String 读取文件内容
+func File2String(filePath string) (data string, err error) {
+	bf, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bf), nil
+}
