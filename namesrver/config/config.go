@@ -20,7 +20,8 @@ type Config struct {
 
 // NameSrvConfig namesrv相关配置
 type NameSrvConfig struct {
-	Listen    string `toml:"listen"`         // 监听端口
+	Host      string `toml:"host"`           // 监听地址
+	Port      int    `toml:"port"`           // 监听端口
 	KVCfgPath string `toml:"kv_config_path"` // kv文件存储路径
 }
 

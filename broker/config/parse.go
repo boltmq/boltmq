@@ -25,8 +25,8 @@ import (
 	"github.com/boltmq/common/utils/encoding"
 	"github.com/boltmq/common/utils/system"
 	"github.com/flosch/pongo2"
+	"github.com/go-errors/errors"
 	"github.com/imdario/mergo"
-	"github.com/juju/errors"
 )
 
 const (

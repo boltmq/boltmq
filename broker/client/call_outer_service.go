@@ -24,7 +24,7 @@ import (
 	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/protocol/namesrv"
 	"github.com/boltmq/common/protocol/subscription"
-	"github.com/juju/errors"
+	"github.com/go-errors/errors"
 	"github.com/pquerna/ffjson/ffjson"
 )
 

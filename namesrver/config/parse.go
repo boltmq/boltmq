@@ -39,7 +39,8 @@ func ParseConfig(path string) (*Config, error) {
 
 var defaultConfig = &Config{
 	NameSrv: NameSrvConfig{
-		Listen: ":9876",
+		Host: "0.0.0.0",
+		Port: 9876,
 	},
 	Log: LogConfig{
 		CfgFilePath: "etc/seelog-nsrv.xml",

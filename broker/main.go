@@ -24,7 +24,7 @@ import (
 	"github.com/boltmq/boltmq/common"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
-	"github.com/juju/errors"
+	"github.com/go-errors/errors"
 	daemon "github.com/sevlyar/go-daemon"
 )
 
