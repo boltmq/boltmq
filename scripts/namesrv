@@ -16,8 +16,8 @@
 
 # OPTIONS:
 #   -f: start in foreground
-#   -p <filename>: log the pid to a file (useful to kill it later, default broker.pid)
-#   -c <filename>: broker config file (default etc/broker.toml)
+#   -p <filename>: log the pid to a file (useful to kill it later, default namesrv.pid)
+#   -c <filename>: namesrv config file (default etc/namesrv.toml)
 #   -v: print version string and exit
 
 # CONTROLLING STARTUP:
@@ -30,7 +30,7 @@
 # NB: Developers should be aware that this script should remain compatible with
 # POSIX sh and Solaris sh. This means, in particular, no $(( )) and no $( ).
 curdir="$(cd `dirname $0`; pwd)" 
-service_name=broker
+service_name=namesrv
 launch_service_bin=$curdir/service/${service_name}d
 isstartup="y"
 
@@ -48,7 +48,7 @@ launch_service()
         cfgpath="$curdir/etc/$service_name.toml"
     fi
 
-    $launch_service_bin $foreground -c $cfgpath -p $pidpath
+    $launch_service_bin "$foreground -c $cfgpath -p $pidpath" 
     echo "$service_name startup, please wait a few minutes."
 
     return $?

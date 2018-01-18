@@ -231,7 +231,7 @@ func (kvCfg *kvConfigManager) load() error {
 		if !ok {
 			return fmt.Errorf("create %s failed, but err is nil", cfgName)
 		}
-		logger.Info("create %s success", cfgName)
+		logger.Infof("create %s success", cfgName)
 	}
 
 	// 读取kvConfig.json文件内容，并打印日志
@@ -243,7 +243,7 @@ func (kvCfg *kvConfigManager) load() error {
 	if val == "" {
 		val = "is empty"
 	}
-	logger.Info("read %s success. content %s", cfgName, val)
+	logger.Infof("read %s success. content %s", cfgName, val)
 
 	if strings.TrimSpace(content) != "" {
 		// kvConfig.json文件内容有数据，则反序列化为KVConfigSerializeWrapper

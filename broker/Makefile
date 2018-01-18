@@ -1,13 +1,13 @@
 .PHONY: all deps compile test cover clean
 
 OUTDIR=.
-OUTBIN=broker
+OUTBIN=brokerd
 
 all:compile
 
 compile:
 	@go build -o $(OUTDIR)/$(OUTBIN) main.go
-	@echo "broker compile success -> $(OUTDIR)/$(OUTBIN)."
+	@echo "compile success [broker] -> $(OUTDIR)/$(OUTBIN)."
 
 deps:
 	@go get -v ./... 

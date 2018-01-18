@@ -1,13 +1,13 @@
 .PHONY: all deps compile test cover clean
 
 OUTDIR=.
-OUTBIN=name-server
+OUTBIN=namesrvd
 
 all:compile
 
 compile:
 	@go build -o $(OUTDIR)/$(OUTBIN) main.go
-	@echo "namesrv compile success -> $(OUTDIR)/$(OUTBIN)."
+	@echo "compile success [namesrv] -> $(OUTDIR)/$(OUTBIN)."
 
 deps:
 	@go get -v ./... 
