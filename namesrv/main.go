@@ -19,8 +19,8 @@ import (
 	"os"
 
 	"github.com/boltmq/boltmq/common"
-	"github.com/boltmq/boltmq/namesrver/config"
-	"github.com/boltmq/boltmq/namesrver/server"
+	"github.com/boltmq/boltmq/namesrv/config"
+	"github.com/boltmq/boltmq/namesrv/server"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"
 	"github.com/go-errors/errors"

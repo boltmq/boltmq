@@ -14,7 +14,7 @@
 package server
 
 import (
-	"github.com/boltmq/boltmq/namesrver/config"
+	"github.com/boltmq/boltmq/namesrv/config"
 	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/utils/system"

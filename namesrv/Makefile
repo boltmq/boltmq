@@ -1,7 +1,7 @@
 .PHONY: all deps compile test cover clean
 
 OUTDIR=.
-OUTBIN=namesrv
+OUTBIN=name-server
 
 all:compile
 
