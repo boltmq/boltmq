@@ -1,4 +1,4 @@
-# BoltMQ
+# BoltMQ [![Build Status](https://travis-ci.org/gunsluo/common.svg?branch=master)](https://travis-ci.org/gunsluo/common) [![Go Report Card](https://goreportcard.com/badge/github.com/boltmq/boltmq)](https://goreportcard.com/report/github.com/boltmq/boltmq)
 BoltMQ is a distributed queue, writern on Go. it is based on apache open source project: [Apache RocketMQ](https://github.com/apache/rocketmq).
 
 ### Features
