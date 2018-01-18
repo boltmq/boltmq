@@ -22,7 +22,7 @@ git clone https://github.com/boltmq/boltmq.git
 
 ### Getting started
 
-####Installing
+#### Installing
 
 To start using BoltMQ, install Go and run:
 ```Go
@@ -30,7 +30,7 @@ make deps
 make
 ```
 
-####Config it
+#### Config it
 
 first, config broker or namesrv.
 ```Go
@@ -39,9 +39,9 @@ vim broker.toml
 vim namesrv.toml
 ```
 
-####Running
+#### Running
 
-run as front
+run as frontend
 ```Go
 bin/broker -f
 bin/namesrv -f

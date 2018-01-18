@@ -1,0 +1,25 @@
+language: go
+
+go:
+  - master
+
+notifications:
+  email:
+    recipients:
+      - gunsluo@gmail.com
+  on_success: change
+  on_failure: always
+
+sudo: false
+
+install:
+  - make deps
+
+before_install: 
+
+script:
+  - make
+
+before_deploy: 
+
+deploy: 
