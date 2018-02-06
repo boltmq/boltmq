@@ -41,17 +41,12 @@ vim namesrv.toml
 
 #### Running
 
-run as frontend
-```Go
-bin/broker -f
-bin/namesrv -f
-```
+* -c set config file path 
+* -p set pid file path, default .
+* -f run as frontend 
 
-run as deamon
-```Go
-bin/broker
-bin/namesrv
-```
+E.g
+run as frontend, use `bin/broker -f` `bin/namesrv -f`, usually development env & debug.
 
 
 ### Contributing
