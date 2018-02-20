@@ -14,8 +14,8 @@
 package server
 
 import (
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/core"
 )
 
 // brokerHouseKeepingListener Broker活动检测服务

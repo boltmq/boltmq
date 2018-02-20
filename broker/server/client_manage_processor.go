@@ -16,9 +16,9 @@ package server
 import (
 	"github.com/boltmq/boltmq/broker/trace"
 	"github.com/boltmq/boltmq/common"
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/constant"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/body"
 	"github.com/boltmq/common/protocol/head"

@@ -16,7 +16,7 @@ package main
 import (
 	"log"
 
-	"github.com/boltmq/boltmq/net/core"
+	"github.com/boltmq/common/net/core"
 )
 
 type serveEventListener struct {

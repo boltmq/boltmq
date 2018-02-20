@@ -16,8 +16,8 @@ package client
 import (
 	"strings"
 
-	"github.com/boltmq/boltmq/net/remoting"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/remoting"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/base"
 	"github.com/boltmq/common/protocol/body"

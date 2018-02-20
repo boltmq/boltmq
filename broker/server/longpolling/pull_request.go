@@ -14,7 +14,7 @@
 package longpolling
 
 import (
-	"github.com/boltmq/boltmq/net/core"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol"
 )
 

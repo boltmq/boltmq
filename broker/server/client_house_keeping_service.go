@@ -16,8 +16,8 @@ package server
 import (
 	"time"
 
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/utils/system"
 )
 

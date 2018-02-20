@@ -22,9 +22,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/boltmq/boltmq/net/remoting"
+	"github.com/boltmq/common/net/remoting"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/namesrv"
+	"github.com/boltmq/common/protocol/head"
 )
 
 var (
@@ -63,8 +63,8 @@ func synctest(addr string, gonum, sendnum, sendsize int) {
 	)
 
 	// 请求的custom header
-	topicStatisInfoRequestHeader := &namesrv.GetTopicStatisInfoRequestHeader{}
-	topicStatisInfoRequestHeader.Topic = "testTopic"
+	topicStatsInfoRequestHeader := &head.GetTopicStatsInfoRequestHeader{}
+	topicStatsInfoRequestHeader.Topic = "testTopic"
 	body := newbytes(sendsize)
 
 	// 同步消息
@@ -74,7 +74,7 @@ func synctest(addr string, gonum, sendnum, sendsize int) {
 	for ii := 0; ii < gonum; ii++ {
 		go func() {
 			for i := 0; i < sendnum; i++ {
-				request := protocol.CreateRequestCommand(protocol.GET_TOPIC_STATS_INFO, topicStatisInfoRequestHeader)
+				request := protocol.CreateRequestCommand(protocol.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
 				request.Body = body
 				response, err := remotingClient.InvokeSync(addr, request, 3000)
 				if err != nil {

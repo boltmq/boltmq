@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol/heartbeat"
 	"github.com/boltmq/common/utils/system"
 	set "github.com/deckarep/golang-set"

@@ -16,11 +16,11 @@ package server
 import (
 	"strings"
 
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/boltmq/store"
 	"github.com/boltmq/common/basis"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/head"
 	"github.com/boltmq/common/sysflag"

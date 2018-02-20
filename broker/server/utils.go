@@ -18,8 +18,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/basis"
+	"github.com/boltmq/common/net/core"
 )
 
 // min int64 的最小值

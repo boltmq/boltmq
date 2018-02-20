@@ -16,10 +16,10 @@ package main
 import (
 	"log"
 
-	"github.com/boltmq/boltmq/net/core"
-	"github.com/boltmq/boltmq/net/remoting"
+	"github.com/boltmq/common/net/core"
+	"github.com/boltmq/common/net/remoting"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/namesrv"
+	"github.com/boltmq/common/protocol/head"
 )
 
 var (
@@ -33,12 +33,12 @@ func (processor *GetTopicStatisInfoProcessor) ProcessRequest(ctx core.Context,
 	request *protocol.RemotingCommand) (*protocol.RemotingCommand, error) {
 	//fmt.Printf("GetTopicStatisInfoProcessor %d %d\n", request.Code, request.Opaque)
 
-	topicStatisInfoRequestHeader := &namesrv.GetTopicStatisInfoRequestHeader{}
-	err := request.DecodeCommandCustomHeader(topicStatisInfoRequestHeader)
+	topicStatsInfoRequestHeader := &head.GetTopicStatsInfoRequestHeader{}
+	err := request.DecodeCommandCustomHeader(topicStatsInfoRequestHeader)
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("DeprotocolCommandCustomHeader %v\n", topicStatisInfoRequestHeader)
+	//fmt.Printf("DeprotocolCommandCustomHeader %v\n", topicStatsInfoRequestHeader)
 
 	response := protocol.CreateResponseCommand(protocol.SUCCESS, "success")
 	response.Opaque = request.Opaque

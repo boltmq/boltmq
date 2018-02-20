@@ -17,7 +17,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/boltmq/boltmq/net/core"
+	"github.com/boltmq/common/net/core"
 )
 
 type clientEventListener struct {

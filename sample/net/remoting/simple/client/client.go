@@ -17,9 +17,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/boltmq/boltmq/net/remoting"
+	"github.com/boltmq/common/net/remoting"
 	"github.com/boltmq/common/protocol"
-	"github.com/boltmq/common/protocol/namesrv"
+	"github.com/boltmq/common/protocol/head"
 )
 
 var (
@@ -40,11 +40,11 @@ func main() {
 	)
 
 	// 请求的custom header
-	topicStatisInfoRequestHeader := &namesrv.GetTopicStatisInfoRequestHeader{}
-	topicStatisInfoRequestHeader.Topic = "testTopic"
+	topicStatsInfoRequestHeader := &head.GetTopicStatsInfoRequestHeader{}
+	topicStatsInfoRequestHeader.Topic = "testTopic"
 
 	// 同步消息
-	request = protocol.CreateRequestCommand(protocol.GET_TOPIC_STATS_INFO, topicStatisInfoRequestHeader)
+	request = protocol.CreateRequestCommand(protocol.GET_TOPIC_STATS_INFO, topicStatsInfoRequestHeader)
 	response, err = remotingClient.InvokeSync(addr, request, 3000)
 	if err != nil {
 		fmt.Printf("Send Mssage[Sync] failed: %s\n", err)

@@ -19,9 +19,9 @@ import (
 	"strings"
 
 	"github.com/boltmq/boltmq/common"
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
 	"github.com/boltmq/common/message"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/base"
 	"github.com/boltmq/common/protocol/body"

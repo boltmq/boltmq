@@ -17,8 +17,8 @@ import (
 	"fmt"
 
 	"github.com/boltmq/boltmq/broker/server/pagecache"
-	"github.com/boltmq/boltmq/net/core"
 	"github.com/boltmq/common/logger"
+	"github.com/boltmq/common/net/core"
 	"github.com/boltmq/common/protocol"
 	"github.com/boltmq/common/protocol/head"
 )
