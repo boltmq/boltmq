@@ -30,8 +30,8 @@ type controllerTasks struct {
 	persistConsumerOffsetTask   *system.Ticker
 	scanUnSubscribedTopicTask   *system.Ticker
 	fetchNameServerAddrTask     *system.Ticker
-	slaveSynchronizeTask        *system.Ticker
-	printMasterAndSlaveDiffTask *system.Ticker
+	subordinateSynchronizeTask        *system.Ticker
+	printMainAndSubordinateDiffTask *system.Ticker
 	registerAllBrokerTask       *system.Ticker
 }
 
@@ -47,9 +47,9 @@ func (ctasks *controllerTasks) shutdown() bool {
 		return false
 	}
 
-	if ctasks.printMasterAndSlaveDiffTask != nil {
-		ctasks.printMasterAndSlaveDiffTask.Stop()
-		logger.Info("print-master-slave-diff task stop success.")
+	if ctasks.printMainAndSubordinateDiffTask != nil {
+		ctasks.printMainAndSubordinateDiffTask.Stop()
+		logger.Info("print-main-subordinate-diff task stop success.")
 	}
 
 	if ctasks.deleteTopicTask != nil {
@@ -77,9 +77,9 @@ func (ctasks *controllerTasks) shutdown() bool {
 		logger.Info("fetch-name-server-addr task stop success.")
 	}
 
-	if ctasks.slaveSynchronizeTask != nil {
-		ctasks.slaveSynchronizeTask.Stop()
-		logger.Info("slave-synchronize task stop success.")
+	if ctasks.subordinateSynchronizeTask != nil {
+		ctasks.subordinateSynchronizeTask.Stop()
+		logger.Info("subordinate-synchronize task stop success.")
 	}
 
 	if ctasks.registerAllBrokerTask != nil {
@@ -155,29 +155,29 @@ func (ctasks *controllerTasks) startFetchNameServerAddrTask() {
 	logger.Infof("fetch-name-server-addr task start success.")
 }
 
-// startSlaveSynchronizeTask 启动“Slave同步所有数据”任务
+// startSubordinateSynchronizeTask 启动“Subordinate同步所有数据”任务
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startSlaveSynchronizeTask() {
-	ctasks.slaveSynchronizeTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
-		ctasks.brokerController.slaveSync.syncAll()
+func (ctasks *controllerTasks) startSubordinateSynchronizeTask() {
+	ctasks.subordinateSynchronizeTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
+		ctasks.brokerController.subordinateSync.syncAll()
 	})
-	ctasks.slaveSynchronizeTask.Start()
-	logger.Infof("slave-synchronize task start success.")
+	ctasks.subordinateSynchronizeTask.Start()
+	logger.Infof("subordinate-synchronize task start success.")
 }
 
-// startPrintMasterAndSlaveDiffTask 启动“输出主从偏移量差值”任务
+// startPrintMainAndSubordinateDiffTask 启动“输出主从偏移量差值”任务
 // Author: tianyuliang
 // Since: 2017/10/10
-func (ctasks *controllerTasks) startPrintMasterAndSlaveDiffTask() {
-	ctasks.printMasterAndSlaveDiffTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
-		diff := ctasks.brokerController.messageStore.SlaveFallBehindMuch()
+func (ctasks *controllerTasks) startPrintMainAndSubordinateDiffTask() {
+	ctasks.printMainAndSubordinateDiffTask = system.NewTicker(false, 10*time.Second, 1*time.Minute, func() {
+		diff := ctasks.brokerController.messageStore.SubordinateFallBehindMuch()
 		if diff > 0 {
-			logger.Infof("slave fall behind master, how much: %d bytes.", diff) // warn and notify me
+			logger.Infof("subordinate fall behind main, how much: %d bytes.", diff) // warn and notify me
 		}
 	})
-	ctasks.printMasterAndSlaveDiffTask.Start()
-	logger.Infof("print-master-slave-diff task start success.")
+	ctasks.printMainAndSubordinateDiffTask.Start()
+	logger.Infof("print-main-subordinate-diff task start success.")
 }
 
 // startRegisterAllBrokerTask 注册所有Broker

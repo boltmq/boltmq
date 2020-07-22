@@ -133,14 +133,14 @@ func (rss *readSocketService) processReadEvent() bool {
 					return false
 				}
 
-				// 处理Slave的请求
-				rss.haConn.slaveAckOffset = readOffset
-				if rss.haConn.slaveRequestOffset < 0 {
-					rss.haConn.slaveRequestOffset = readOffset
-					logger.Infof("slave[%s] request offset %d.", rss.haConn.clientAddress, readOffset)
+				// 处理Subordinate的请求
+				rss.haConn.subordinateAckOffset = readOffset
+				if rss.haConn.subordinateRequestOffset < 0 {
+					rss.haConn.subordinateRequestOffset = readOffset
+					logger.Infof("subordinate[%s] request offset %d.", rss.haConn.clientAddress, readOffset)
 				}
 
-				rss.haConn.ha.notifyTransferSome(rss.haConn.slaveAckOffset)
+				rss.haConn.ha.notifyTransferSome(rss.haConn.subordinateAckOffset)
 			}
 
 		} else if readSize == 0 {
@@ -188,31 +188,31 @@ func newWriteSocketService(connection *net.TCPConn, haConn *haConnection) *write
 
 func (wss *writeSocketService) updateNextTransferOffset() {
 	// 第一次传输，需要计算从哪里开始
-	// Slave如果本地没有数据，请求的Offset为0，那么master则从物理文件最后一个文件开始传送数据
+	// Subordinate如果本地没有数据，请求的Offset为0，那么main则从物理文件最后一个文件开始传送数据
 	if -1 == wss.nextTransferFromWhere {
-		if 0 == wss.haConn.slaveRequestOffset {
-			var masterOffset int64 = 0
+		if 0 == wss.haConn.subordinateRequestOffset {
+			var mainOffset int64 = 0
 
 			switch wss.haConn.ha.messageStore.config.SyncMethod {
 			case SYNCHRONIZATION_FULL:
-				masterOffset = wss.haConn.ha.messageStore.clog.getMinOffset()
+				mainOffset = wss.haConn.ha.messageStore.clog.getMinOffset()
 			case SYNCHRONIZATION_LAST:
-				masterOffset = wss.haConn.ha.messageStore.clog.getMaxOffset()
+				mainOffset = wss.haConn.ha.messageStore.clog.getMaxOffset()
 				commitLogFileSize := wss.haConn.ha.messageStore.config.MappedFileSizeCommitLog
-				masterOffset = masterOffset - (masterOffset % int64(commitLogFileSize))
+				mainOffset = mainOffset - (mainOffset % int64(commitLogFileSize))
 			}
 
-			if masterOffset < 0 {
-				masterOffset = 0
+			if mainOffset < 0 {
+				mainOffset = 0
 			}
 
-			wss.nextTransferFromWhere = masterOffset
+			wss.nextTransferFromWhere = mainOffset
 		} else {
-			wss.nextTransferFromWhere = wss.haConn.slaveRequestOffset
+			wss.nextTransferFromWhere = wss.haConn.subordinateRequestOffset
 		}
 
-		logger.Infof("master transfer data from %d  to slave[%s], and slave request %d.",
-			wss.nextTransferFromWhere, wss.haConn.clientAddress, wss.haConn.slaveRequestOffset)
+		logger.Infof("main transfer data from %d  to subordinate[%s], and subordinate request %d.",
+			wss.nextTransferFromWhere, wss.haConn.clientAddress, wss.haConn.subordinateRequestOffset)
 	}
 }
 
@@ -247,7 +247,7 @@ func (wss *writeSocketService) buildData() {
 	binary.Write(wss.byteBufferHeader, binary.BigEndian, size)
 
 	if wss.bufferResult != nil && resultBuffer != nil && len(resultBuffer) > 0 {
-		logger.Infof("master writer socket service send offset: %d size: %d.", thisOffset, size)
+		logger.Infof("main writer socket service send offset: %d size: %d.", thisOffset, size)
 		wss.byteBufferHeader.Write(resultBuffer)
 	}
 
@@ -314,8 +314,8 @@ type haConnection struct {
 	clientAddress      string
 	wss                *writeSocketService
 	rss                *readSocketService
-	slaveRequestOffset int64 // Slave请求从哪里开始拉数据
-	slaveAckOffset     int64 // Slave收到数据后，应答Offset
+	subordinateRequestOffset int64 // Subordinate请求从哪里开始拉数据
+	subordinateAckOffset     int64 // Subordinate收到数据后，应答Offset
 }
 
 func newHAConnection(ha *haService, connection *net.TCPConn) *haConnection {
@@ -325,8 +325,8 @@ func newHAConnection(ha *haService, connection *net.TCPConn) *haConnection {
 	haConn.clientAddress = connection.RemoteAddr().String()
 	haConn.wss = newWriteSocketService(connection, haConn)
 	haConn.rss = newReadSocketService(connection, haConn)
-	haConn.slaveRequestOffset = -1
-	haConn.slaveAckOffset = -1
+	haConn.subordinateRequestOffset = -1
+	haConn.subordinateAckOffset = -1
 	atomic.AddInt32(&haConn.ha.connectionCount, 1)
 	return haConn
 }
@@ -436,14 +436,14 @@ func (gtService *groupTransferService) putRequest(request *groupCommitRequest) {
 func (gtService *groupTransferService) doWaitTransfer() {
 	select {
 	case request := <-gtService.requestChan:
-		transferOK := atomic.LoadInt64(&gtService.ha.push2SlaveMaxOffset) >= request.nextOffset
+		transferOK := atomic.LoadInt64(&gtService.ha.push2SubordinateMaxOffset) >= request.nextOffset
 		for i := 0; !transferOK && i < 5; i++ {
 			gtService.notifyTransferObject.WaitTimeout(1000 * time.Millisecond)
-			transferOK = atomic.LoadInt64(&gtService.ha.push2SlaveMaxOffset) >= request.nextOffset
+			transferOK = atomic.LoadInt64(&gtService.ha.push2SubordinateMaxOffset) >= request.nextOffset
 		}
 
 		if !transferOK {
-			logger.Warnf("transfer message to slave timeout, %d.", request.nextOffset)
+			logger.Warnf("transfer message to subordinate timeout, %d.", request.nextOffset)
 		}
 
 		request.wakeupCustomer(transferOK)
@@ -476,13 +476,13 @@ func (gtService *groupTransferService) shutdown() {
 // Author zhoufei
 // Since 2017/10/18
 type haClient struct {
-	masterAddress         string        // 主节点IP:PORT
-	reportOffset          *bytes.Buffer // 向Master汇报Slave最大Offset
+	mainAddress         string        // 主节点IP:PORT
+	reportOffset          *bytes.Buffer // 向Main汇报Subordinate最大Offset
 	connection            *net.TCPConn
 	lastWriteTimestamp    int64
 	currentReportedOffset int64
 	dispatchPosition      int32
-	byteBufferRead        *bytes.Buffer // 从Master接收数据Buffer
+	byteBufferRead        *bytes.Buffer // 从Main接收数据Buffer
 	ha                    *haService
 	mutex                 sync.Mutex
 	stoped                bool
@@ -502,13 +502,13 @@ func newHAClient(ha *haService) *haClient {
 	return client
 }
 
-func (client *haClient) updateMasterAddress(newAddr string) {
+func (client *haClient) updateMainAddress(newAddr string) {
 	client.mutex.Lock()
 	defer client.mutex.Unlock()
-	currentAddr := client.masterAddress
+	currentAddr := client.mainAddress
 	if currentAddr != newAddr {
-		client.masterAddress = newAddr
-		logger.Infof("update master address, OLD: %s NEW: %s.", currentAddr, newAddr)
+		client.mainAddress = newAddr
+		logger.Infof("update main address, OLD: %s NEW: %s.", currentAddr, newAddr)
 	}
 }
 
@@ -523,9 +523,9 @@ func (client *haClient) isTimeToReportOffset() bool {
 	return needHeart
 }
 
-func (client *haClient) connectMaster() bool {
+func (client *haClient) connectMain() bool {
 	if nil == client.connection {
-		address := client.masterAddress
+		address := client.mainAddress
 
 		if address == "" {
 			return false
@@ -533,7 +533,7 @@ func (client *haClient) connectMaster() bool {
 
 		tcpAddress, err := net.ResolveTCPAddr("tcp4", address)
 		if err != nil {
-			logger.Errorf("ha client connect master resolve tcp address err: %s.", err)
+			logger.Errorf("ha client connect main resolve tcp address err: %s.", err)
 			return false
 		}
 
@@ -543,7 +543,7 @@ func (client *haClient) connectMaster() bool {
 
 		conn, err := net.DialTCP("tcp", nil, tcpAddress)
 		if err != nil {
-			logger.Errorf("ha client connect master create connection err: %s.", err)
+			logger.Errorf("ha client connect main create connection err: %s.", err)
 			return false
 		}
 
@@ -554,7 +554,7 @@ func (client *haClient) connectMaster() bool {
 	return true
 }
 
-func (client *haClient) closeMaster() {
+func (client *haClient) closeMain() {
 	if nil != client.connection {
 		client.connection.Close()
 		client.connection = nil
@@ -563,8 +563,8 @@ func (client *haClient) closeMaster() {
 	}
 }
 
-func (client *haClient) reportSlaveMaxOffset(maxOffset int64) bool {
-	logger.Infof("ha client report slave max offset: %d.", maxOffset)
+func (client *haClient) reportSubordinateMaxOffset(maxOffset int64) bool {
+	logger.Infof("ha client report subordinate max offset: %d.", maxOffset)
 	binary.Write(client.reportOffset, binary.BigEndian, maxOffset)
 
 	for i := 0; i < 3 && client.reportOffset.Len() > 0; i++ {
@@ -572,7 +572,7 @@ func (client *haClient) reportSlaveMaxOffset(maxOffset int64) bool {
 		client.reportOffset.Read(offsetBuffer)
 		_, err := client.connection.Write(offsetBuffer)
 		if err != nil {
-			logger.Errorf("ha client report slave max offset socket write err: %s.", err)
+			logger.Errorf("ha client report subordinate max offset socket write err: %s.", err)
 			return false
 		}
 
@@ -582,16 +582,16 @@ func (client *haClient) reportSlaveMaxOffset(maxOffset int64) bool {
 	return !(client.reportOffset.Len() > 0)
 }
 
-func (client *haClient) reportSlaveMaxOffsetPlus() bool {
+func (client *haClient) reportSubordinateMaxOffsetPlus() bool {
 	result := true
 
 	currentPhyOffset := client.ha.messageStore.MaxPhyOffset()
 	if currentPhyOffset > client.currentReportedOffset {
 		client.currentReportedOffset = currentPhyOffset
-		result := client.reportSlaveMaxOffset(client.currentReportedOffset)
+		result := client.reportSubordinateMaxOffset(client.currentReportedOffset)
 		if !result {
-			client.closeMaster()
-			logger.Errorf("ha client report slave max offset plus error, %s.", client.currentReportedOffset)
+			client.closeMain()
+			logger.Errorf("ha client report subordinate max offset plus error, %s.", client.currentReportedOffset)
 		}
 	}
 
@@ -649,29 +649,29 @@ func (client *haClient) processRead() bool {
 	return true
 }
 
-func (client *haClient) handleMessageBody(masterPhyOffset int64, bodySize int32, msgbuf *bytes.Buffer) bool {
+func (client *haClient) handleMessageBody(mainPhyOffset int64, bodySize int32, msgbuf *bytes.Buffer) bool {
 	if bodySize > 0 {
 		msgHeaderSize := 8 + 4
 		bodyData := make([]byte, bodySize)
 		msgbuf.Read(bodyData)
 
 		if len(bodyData) > 0 {
-			slavePhyOffset := client.ha.messageStore.MaxPhyOffset()
+			subordinatePhyOffset := client.ha.messageStore.MaxPhyOffset()
 
 			// 发生重大错误
-			if slavePhyOffset != 0 {
-				if slavePhyOffset != masterPhyOffset {
-					logger.Errorf("master pushed offset not equal the max phy offset in slave, SLAVE: %d MASTER: %d.",
-						slavePhyOffset, masterPhyOffset)
+			if subordinatePhyOffset != 0 {
+				if subordinatePhyOffset != mainPhyOffset {
+					logger.Errorf("main pushed offset not equal the max phy offset in subordinate, SLAVE: %d MASTER: %d.",
+						subordinatePhyOffset, mainPhyOffset)
 					return false
 				}
 			}
 
-			logger.Infof("ha client append to commit log offset:%d size:%d.", masterPhyOffset, bodySize)
-			client.ha.messageStore.AppendToCommitLog(masterPhyOffset, bodyData)
+			logger.Infof("ha client append to commit log offset:%d size:%d.", mainPhyOffset, bodySize)
+			client.ha.messageStore.AppendToCommitLog(mainPhyOffset, bodyData)
 			client.dispatchPosition += int32(msgHeaderSize) + bodySize
 
-			if !client.reportSlaveMaxOffsetPlus() {
+			if !client.reportSubordinateMaxOffsetPlus() {
 				return false
 			}
 		}
@@ -688,20 +688,20 @@ func (client *haClient) start() {
 			break
 		}
 
-		connected := client.connectMaster()
+		connected := client.connectMain()
 		if connected {
 			reported := client.isTimeToReportOffset()
 			if reported {
-				result := client.reportSlaveMaxOffset(client.currentReportedOffset)
+				result := client.reportSubordinateMaxOffset(client.currentReportedOffset)
 				if !result {
-					client.closeMaster()
+					client.closeMain()
 				}
 			}
 
 			time.Sleep(1000 * time.Millisecond)
 
 			if !client.processRead() {
-				client.closeMaster()
+				client.closeMain()
 			}
 
 		} else {
@@ -713,7 +713,7 @@ func (client *haClient) start() {
 		close(client.responseChan)
 	}
 
-	client.closeMaster()
+	client.closeMain()
 	logger.Info("ha client service end.")
 }
 
@@ -727,13 +727,13 @@ func (client *haClient) shutdown() {
 type haService struct {
 	messageStore        *PersistentMessageStore         // 顶层存储对象
 	connectionCount     int32                           // 客户端连接计数
-	push2SlaveMaxOffset int64                           // 写入到Slave的最大Offset
+	push2SubordinateMaxOffset int64                           // 写入到Subordinate的最大Offset
 	connectionList      *list.List                      // 存储客户端连接
 	connectionElements  map[*haConnection]*list.Element // 存储客户端元素
 	acceptSktService    *acceptSocketService            // 接收新的Socket连接服务
 	waitNotify          *system.WaitNotify              // TODO 异步通知
 	gtService           *groupTransferService           // 主从复制通知服务
-	client              *haClient                       // Slave订阅对象
+	client              *haClient                       // Subordinate订阅对象
 	mutex               sync.Mutex
 }
 
@@ -743,7 +743,7 @@ func newHAService(messageStore *PersistentMessageStore) *haService {
 	ha.connectionList = list.New()
 	ha.connectionElements = make(map[*haConnection]*list.Element)
 	ha.messageStore = messageStore
-	ha.push2SlaveMaxOffset = 0
+	ha.push2SubordinateMaxOffset = 0
 	ha.acceptSktService = newAcceptSocketService(messageStore.config.HaListenPort, ha)
 	ha.gtService = newGroupTransferService(ha)
 	ha.client = newHAClient(ha)
@@ -762,9 +762,9 @@ func (ha *haService) destroyConnections() {
 	ha.connectionList = list.New()
 }
 
-func (ha *haService) updateMasterAddress(newAddr string) {
+func (ha *haService) updateMainAddress(newAddr string) {
 	if ha.client != nil {
-		ha.client.updateMasterAddress(newAddr)
+		ha.client.updateMainAddress(newAddr)
 	}
 }
 
@@ -783,13 +783,13 @@ func (ha *haService) removeConnection(haConn *haConnection) {
 }
 
 func (ha *haService) notifyTransferSome(offset int64) {
-	for value := atomic.LoadInt64(&ha.push2SlaveMaxOffset); offset > value; {
-		ok := atomic.CompareAndSwapInt64(&ha.push2SlaveMaxOffset, value, offset)
+	for value := atomic.LoadInt64(&ha.push2SubordinateMaxOffset); offset > value; {
+		ok := atomic.CompareAndSwapInt64(&ha.push2SubordinateMaxOffset, value, offset)
 		if ok {
 			ha.gtService.notifyTransferSome()
 			break
 		} else {
-			value = atomic.LoadInt64(&ha.push2SlaveMaxOffset)
+			value = atomic.LoadInt64(&ha.push2SubordinateMaxOffset)
 		}
 	}
 }
