@@ -91,8 +91,8 @@ type GetMessageResult struct {
 	// ByteBuffer 总字节数
 	BufferTotalSize int
 
-	// 是否建议从slave拉消息
-	SuggestPullingFromSlave bool
+	// 是否建议从subordinate拉消息
+	SuggestPullingFromSubordinate bool
 }
 
 // GetMessageCount 获取message个数

@@ -51,12 +51,12 @@ type BrokerController struct {
 	subGroupManager             *subscriptionGroupManager
 	rblManager                  *rebalanceManager
 	callOuter                   *client.CallOuterService
-	slaveSync                   *slaveSynchronize
+	subordinateSync                   *subordinateSynchronize
 	messageStore                store.MessageStore
 	remotingClient              remoting.RemotingClient
 	remotingServer              remoting.RemotingServer
 	tpConfigManager             *topicConfigManager
-	updateMasterHASrvAddrPeriod bool
+	updateMainHASrvAddrPeriod bool
 	filterSrvManager            *filterServerManager
 	sendMessageHookList         []trace.SendMessageHook
 	consumeMessageHookList      []trace.ConsumeMessageHook
@@ -92,9 +92,9 @@ func NewBrokerController(cfg *config.Config) (*BrokerController, error) {
 	controller.callOuter = client.NewCallOuterService(controller.remotingClient)
 	controller.filterSrvManager = newFilterServerManager(controller)
 	controller.tasks = newControllerTasks(controller)
-	controller.slaveSync = newSlaveSynchronize(controller)
+	controller.subordinateSync = newSubordinateSynchronize(controller)
 	controller.brokerStats = stats.NewBrokerStats(controller.cfg.Cluster.Name)
-	controller.updateMasterHASrvAddrPeriod = false
+	controller.updateMainHASrvAddrPeriod = false
 	if len(controller.cfg.Cluster.NameSrvAddrs) > 0 {
 		controller.callOuter.UpdateNameServerAddressList(controller.cfg.Cluster.NameSrvAddrs)
 		logger.Infof("user specfied name server address: %s.", controller.cfg.Cluster.NameSrvAddrs)
@@ -116,7 +116,7 @@ func (controller *BrokerController) fixConfig() error {
 		controller.storeCfg.FlushDisk = flushDisk
 	}
 
-	// 如果是slave，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
+	// 如果是subordinate，修改默认值（修改命中消息在内存的最大比例40为30【40-10】）
 	if controller.storeCfg.BrokerRole == persistent.SLAVE {
 		ratio := controller.storeCfg.AccessMessageInMemoryMaxRatio - 10
 		controller.storeCfg.AccessMessageInMemoryMaxRatio = ratio
@@ -132,8 +132,8 @@ func (controller *BrokerController) fixConfig() error {
 	}
 
 	controller.storeCfg.HaListenPort = int32(controller.cfg.Broker.Port + 1)
-	if controller.cfg.Broker.HaMasterAddress != "" {
-		controller.storeCfg.HaMasterAddress = controller.cfg.Broker.HaMasterAddress // HA功能配置此项
+	if controller.cfg.Broker.HaMainAddress != "" {
+		controller.storeCfg.HaMainAddress = controller.cfg.Broker.HaMainAddress // HA功能配置此项
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func (controller *BrokerController) init() bool {
 	controller.tasks.startPersistConsumerOffsetTask() // 定时写入ConsumerOffset文件
 	controller.tasks.startScanUnSubscribedTopicTask() // 扫描被删除的Topic，并删除该Topic对应的offset
 	controller.updateNameServerAddr()                 // 更新namesrv地址
-	controller.synchronizeMaster2Slave()              // 定时主从同步
+	controller.synchronizeMain2Subordinate()              // 定时主从同步
 
 	return true
 }
@@ -266,22 +266,22 @@ func (controller *BrokerController) updateNameServerAddr() {
 	}
 }
 
-// synchronizeMaster2Slave 定时主从同步
+// synchronizeMain2Subordinate 定时主从同步
 // Author: tianyuliang
 // Since: 2017/10/10
-func (controller *BrokerController) synchronizeMaster2Slave() {
+func (controller *BrokerController) synchronizeMain2Subordinate() {
 	if controller.storeCfg.BrokerRole != persistent.SLAVE {
-		controller.tasks.startPrintMasterAndSlaveDiffTask()
+		controller.tasks.startPrintMainAndSubordinateDiffTask()
 		return
 	}
 
-	if controller.storeCfg.HaMasterAddress != "" && verify.CheckIpAndPort(controller.storeCfg.HaMasterAddress) {
-		controller.messageStore.UpdateHaMasterAddress(controller.storeCfg.HaMasterAddress)
-		controller.updateMasterHASrvAddrPeriod = false
+	if controller.storeCfg.HaMainAddress != "" && verify.CheckIpAndPort(controller.storeCfg.HaMainAddress) {
+		controller.messageStore.UpdateHaMainAddress(controller.storeCfg.HaMainAddress)
+		controller.updateMainHASrvAddrPeriod = false
 	} else {
-		controller.updateMasterHASrvAddrPeriod = true
+		controller.updateMainHASrvAddrPeriod = true
 	}
-	controller.tasks.startSlaveSynchronizeTask()
+	controller.tasks.startSubordinateSynchronizeTask()
 }
 
 // RegisterConsumeMessageHook 注册消费消息的回调
@@ -324,11 +324,11 @@ func (controller *BrokerController) registerBrokerAll(checkOrderConfig bool, one
 		controller.filterSrvManager.buildNewFilterServerList())
 
 	if result != nil {
-		if controller.updateMasterHASrvAddrPeriod && result.HaServerAddr != "" {
-			controller.messageStore.UpdateHaMasterAddress(result.HaServerAddr)
+		if controller.updateMainHASrvAddrPeriod && result.HaServerAddr != "" {
+			controller.messageStore.UpdateHaMainAddress(result.HaServerAddr)
 		}
 
-		controller.slaveSync.masterAddr = result.MasterAddr
+		controller.subordinateSync.mainAddr = result.MainAddr
 
 		if checkOrderConfig {
 			controller.tpConfigManager.updateOrderTopicConfig(result.KvTable)

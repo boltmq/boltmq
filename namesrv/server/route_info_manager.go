@@ -120,8 +120,8 @@ func (rim *routeInfoManager) getAllTopicList() []byte {
 // (2)注册完成后，返回给Broker端主用Broker的地址和主用Broker的HA服务地址
 //
 // 返回值：
-// (1)如果是slave，则返回master的ha地址
-// (2)如果是master,那么返回值为空字符串
+// (1)如果是subordinate，则返回main的ha地址
+// (2)如果是main,那么返回值为空字符串
 //
 func (rim *routeInfoManager) registerBroker(clusterName, brokerAddr, brokerName string, brokerId int64,
 	haServerAddr string, topicConfigWrapper *base.TopicConfigSerializeWrapper,
@@ -199,11 +199,11 @@ func (rim *routeInfoManager) registerBroker(clusterName, brokerAddr, brokerName 
 
 	// 找到该BrokerName下面的主节点
 	if brokerId != basis.MASTER_ID {
-		if masterAddr, ok := brokerData.BrokerAddrs[basis.MASTER_ID]; ok && masterAddr != "" {
-			if brokerLiveInfo, ok := rim.brokerLiveTable[masterAddr]; ok {
+		if mainAddr, ok := brokerData.BrokerAddrs[basis.MASTER_ID]; ok && mainAddr != "" {
+			if brokerLiveInfo, ok := rim.brokerLiveTable[mainAddr]; ok {
 				// Broker主节点地址: 从brokerLiveTable中获取BrokerLiveInfo对象，取该对象的HaServerAddr值
 				result.HaServerAddr = brokerLiveInfo.HaServerAddr
-				result.MasterAddr = masterAddr
+				result.MainAddr = mainAddr
 			}
 		}
 	}
@@ -269,12 +269,12 @@ func (rim *routeInfoManager) wipeWritePermOfBroker(brokerName string) int {
 // createAndUpdateQueueData 创建或更新Topic的队列数据
 //
 // 业务逻辑:
-// (1)每来一个Master，创建一个QueueData对象
+// (1)每来一个Main，创建一个QueueData对象
 // (2)如果是新建topic，就是添加QueueData对象
 // (3)如果是修改topic，就是把旧的QueueData删除，加入新的
 //
 // 例如：
-// A. 假设对于1个topic，有3个Master
+// A. 假设对于1个topic，有3个Main
 // B. NameSrv也就收到3个RegisterBroker请求
 // C. 相应的该topic对应的QueueDataList里面，也就3个QueueData对象
 //
@@ -563,7 +563,7 @@ func (rim *routeInfoManager) onChannelDestroy(remoteAddr string, ctx core.Contex
 			if brokerNameFound == "" {
 				if brokerData != nil {
 
-					// 3.1 遍历Master/Slave，删除brokerAddr
+					// 3.1 遍历Main/Subordinate，删除brokerAddr
 					if brokerData.BrokerAddrs != nil && len(brokerData.BrokerAddrs) > 0 {
 						brokerAddrs := brokerData.BrokerAddrs
 						for brokerId, brokerAddr := range brokerAddrs {

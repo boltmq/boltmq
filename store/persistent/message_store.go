@@ -163,7 +163,7 @@ func (ms *PersistentMessageStore) Load() bool {
 
 	// load 定时进度
 	// 这个步骤要放置到最前面，从CommitLog里Recover定时消息需要依赖加载的定时级别参数
-	// slave依赖scheduleMessageService做定时消息的恢复
+	// subordinate依赖scheduleMessageService做定时消息的恢复
 	if nil != ms.scheduleMsgService {
 		result = result && ms.scheduleMsgService.load()
 	}
@@ -421,7 +421,7 @@ func (ms *PersistentMessageStore) Start() error {
 	go ms.clog.start()
 	go ms.storeStats.Start()
 
-	// slave不启动scheduleMessageService避免对消费队列的并发操作
+	// subordinate不启动scheduleMessageService避免对消费队列的并发操作
 	if ms.scheduleMsgService != nil && SLAVE != ms.config.BrokerRole {
 		ms.scheduleMsgService.start()
 	}
@@ -561,7 +561,7 @@ func (ms *PersistentMessageStore) PutMessage(msg *store.MessageExtInner) *store.
 	if SLAVE == ms.config.BrokerRole {
 		atomic.AddInt64(&ms.printTimes, 1)
 		if ms.printTimes%50000 == 0 {
-			logger.Warn("message store is slave mode, so putMessage is forbidden.")
+			logger.Warn("message store is subordinate mode, so putMessage is forbidden.")
 		}
 
 		return &store.PutMessageResult{Status: store.SERVICE_NOT_AVAILABLE}
@@ -746,7 +746,7 @@ func (ms *PersistentMessageStore) GetMessage(group string, topic string, queueId
 
 				diff := ms.clog.mfq.getMaxOffset() - maxPhyOffsetPulling
 				memory := int64(TotalPhysicalMemorySize * (ms.config.AccessMessageInMemoryMaxRatio / 100.0))
-				getResult.SuggestPullingFromSlave = diff > memory
+				getResult.SuggestPullingFromSubordinate = diff > memory
 			} else {
 				status = store.OFFSET_FOUND_NULL
 				nextBeginOffset = cq.rollNextFile(offset)
@@ -1019,21 +1019,21 @@ func (ms *PersistentMessageStore) CleanExpiredConsumerQueue() {
 	}
 }
 
-// UpdateHaMasterAddress 更新HaMaster地址
+// UpdateHaMainAddress 更新HaMain地址
 // Author: zhoufei
 // Since: 2017/9/21
-func (ms *PersistentMessageStore) UpdateHaMasterAddress(newAddr string) {
+func (ms *PersistentMessageStore) UpdateHaMainAddress(newAddr string) {
 	if ms.ha != nil {
-		ms.ha.updateMasterAddress(newAddr)
+		ms.ha.updateMainAddress(newAddr)
 	}
 }
 
-// SlaveFallBehindMuch Slave落后Master多少byte
+// SubordinateFallBehindMuch Subordinate落后Main多少byte
 // Author: zhoufei
 // Since: 2017/9/21
-func (ms *PersistentMessageStore) SlaveFallBehindMuch() int64 {
+func (ms *PersistentMessageStore) SubordinateFallBehindMuch() int64 {
 	if ms.ha != nil {
-		return ms.clog.getMaxOffset() - ms.ha.push2SlaveMaxOffset
+		return ms.clog.getMaxOffset() - ms.ha.push2SubordinateMaxOffset
 	}
 	return 0
 }

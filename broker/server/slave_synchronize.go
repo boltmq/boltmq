@@ -19,114 +19,114 @@ import (
 	"github.com/boltmq/common/logger"
 )
 
-// slaveSynchronize Slave从Master同步信息（非消息）
+// subordinateSynchronize Subordinate从Main同步信息（非消息）
 // Author gaoyanlei
 // Since 2017/8/10
-type slaveSynchronize struct {
+type subordinateSynchronize struct {
 	brokerController *BrokerController
-	masterAddr       string
+	mainAddr       string
 }
 
-// newSlaveSynchronize 初始化SubscriptionGroupManager
+// newSubordinateSynchronize 初始化SubscriptionGroupManager
 // Author gaoyanlei
 // Since 2017/8/9
-func newSlaveSynchronize(brokerController *BrokerController) *slaveSynchronize {
-	var slave = new(slaveSynchronize)
-	slave.brokerController = brokerController
-	return slave
+func newSubordinateSynchronize(brokerController *BrokerController) *subordinateSynchronize {
+	var subordinate = new(subordinateSynchronize)
+	subordinate.brokerController = brokerController
+	return subordinate
 }
 
-func (slave *slaveSynchronize) syncAll() {
-	slave.syncTopicConfig()
-	slave.syncConsumerOffset()
-	slave.syncDelayOffset()
-	slave.syncSubscriptionGroupConfig()
+func (subordinate *subordinateSynchronize) syncAll() {
+	subordinate.syncTopicConfig()
+	subordinate.syncConsumerOffset()
+	subordinate.syncDelayOffset()
+	subordinate.syncSubscriptionGroupConfig()
 }
 
 // syncTopicConfig 同步Topic信息
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *slaveSynchronize) syncTopicConfig() {
-	if slave.masterAddr == "" {
+func (subordinate *subordinateSynchronize) syncTopicConfig() {
+	if subordinate.mainAddr == "" {
 		return
 	}
 
-	topicWrapper := slave.brokerController.callOuter.GetAllTopicConfig(slave.masterAddr)
+	topicWrapper := subordinate.brokerController.callOuter.GetAllTopicConfig(subordinate.mainAddr)
 	if topicWrapper == nil || topicWrapper.DataVersion == nil {
 		return
 	}
 
-	if topicWrapper.DataVersion != slave.brokerController.tpConfigManager.dataVersion {
+	if topicWrapper.DataVersion != subordinate.brokerController.tpConfigManager.dataVersion {
 		dataVersion := basis.DataVersion{Timestamp: topicWrapper.DataVersion.Timestamp, Counter: topicWrapper.DataVersion.Counter}
-		slave.brokerController.tpConfigManager.dataVersion.AssignNewOne(dataVersion)
+		subordinate.brokerController.tpConfigManager.dataVersion.AssignNewOne(dataVersion)
 		topicConfigs := topicWrapper.TpConfigTable.TopicConfigs
 
-		slave.brokerController.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.ClearAndPutAll(topicConfigs)
-		slave.brokerController.tpConfigManager.cfgManagerLoader.persist()
+		subordinate.brokerController.tpConfigManager.tpCfgSerialWrapper.TpConfigTable.ClearAndPutAll(topicConfigs)
+		subordinate.brokerController.tpConfigManager.cfgManagerLoader.persist()
 	}
 }
 
 // syncTopicConfig 同步消费偏移量信息
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *slaveSynchronize) syncConsumerOffset() {
-	if slave.masterAddr == "" {
+func (subordinate *subordinateSynchronize) syncConsumerOffset() {
+	if subordinate.mainAddr == "" {
 		return
 	}
 
-	offsetWrapper := slave.brokerController.callOuter.GetAllConsumerOffset(slave.masterAddr)
+	offsetWrapper := subordinate.brokerController.callOuter.GetAllConsumerOffset(subordinate.mainAddr)
 	if offsetWrapper == nil || offsetWrapper.OffsetTable == nil {
 		return
 	}
 
-	slave.brokerController.csmOffsetManager.offsets.PutAll(offsetWrapper.OffsetTable)
-	slave.brokerController.csmOffsetManager.cfgManagerLoader.persist()
+	subordinate.brokerController.csmOffsetManager.offsets.PutAll(offsetWrapper.OffsetTable)
+	subordinate.brokerController.csmOffsetManager.cfgManagerLoader.persist()
 	buf, _ := common.Encode(offsetWrapper)
-	logger.Infof("update slave consumer offset from master. masterAddr=%s, offsetTable=%s.", slave.masterAddr, string(buf))
+	logger.Infof("update subordinate consumer offset from main. mainAddr=%s, offsetTable=%s.", subordinate.mainAddr, string(buf))
 }
 
 // syncTopicConfig 同步定时偏移量信息
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *slaveSynchronize) syncDelayOffset() {
-	if slave.masterAddr == "" {
+func (subordinate *subordinateSynchronize) syncDelayOffset() {
+	if subordinate.mainAddr == "" {
 		return
 	}
 
-	delayOffset := slave.brokerController.callOuter.GetAllDelayOffset(slave.masterAddr)
+	delayOffset := subordinate.brokerController.callOuter.GetAllDelayOffset(subordinate.mainAddr)
 	if delayOffset == "" {
-		logger.Infof("update slave delay offset from master, but delayOffset is empty. masterAddr=%s.", slave.masterAddr)
+		logger.Infof("update subordinate delay offset from main, but delayOffset is empty. mainAddr=%s.", subordinate.mainAddr)
 		return
 	}
 
-	filePath := common.GetDelayOffsetStorePath(slave.brokerController.storeCfg.StorePathRootDir)
+	filePath := common.GetDelayOffsetStorePath(subordinate.brokerController.storeCfg.StorePathRootDir)
 	common.String2File([]byte(delayOffset), filePath)
-	logger.Infof("update slave delay offset from master. masterAddr=%s, delayOffset=%s.", slave.masterAddr, delayOffset)
+	logger.Infof("update subordinate delay offset from main. mainAddr=%s, delayOffset=%s.", subordinate.mainAddr, delayOffset)
 }
 
 // syncTopicConfig 同步订阅信息
 // Author rongzhihong
 // Since 2017/9/18
-func (slave *slaveSynchronize) syncSubscriptionGroupConfig() {
-	if slave.masterAddr == "" {
+func (subordinate *subordinateSynchronize) syncSubscriptionGroupConfig() {
+	if subordinate.mainAddr == "" {
 		return
 	}
-	subscriptionWrapper := slave.brokerController.callOuter.GetAllSubscriptionGroupConfig(slave.masterAddr)
+	subscriptionWrapper := subordinate.brokerController.callOuter.GetAllSubscriptionGroupConfig(subordinate.mainAddr)
 	if subscriptionWrapper == nil {
 		return
 	}
 
-	slaveDataVersion := slave.brokerController.subGroupManager.subTable.DataVersion
-	if slaveDataVersion.Timestamp != subscriptionWrapper.DataVersion.Timestamp ||
-		slaveDataVersion.Counter != subscriptionWrapper.DataVersion.Counter {
+	subordinateDataVersion := subordinate.brokerController.subGroupManager.subTable.DataVersion
+	if subordinateDataVersion.Timestamp != subscriptionWrapper.DataVersion.Timestamp ||
+		subordinateDataVersion.Counter != subscriptionWrapper.DataVersion.Counter {
 		dataVersion := basis.DataVersion{Timestamp: subscriptionWrapper.DataVersion.Timestamp, Counter: subscriptionWrapper.DataVersion.Counter}
-		subscriptionGroupManager := slave.brokerController.subGroupManager
+		subscriptionGroupManager := subordinate.brokerController.subGroupManager
 		subscriptionGroupManager.subTable.DataVersion.AssignNewOne(dataVersion)
 		subscriptionGroupManager.subTable.ClearAndPutAll(subscriptionWrapper.SubscriptionGroupTable)
 		subscriptionGroupManager.cfgManagerLoader.persist()
 
 		buf := subscriptionGroupManager.encode(false)
 		logger.Infof("sync subscription group config --> %s", string(buf))
-		logger.Infof("update slave subscription group from master, %s.", slave.masterAddr)
+		logger.Infof("update subordinate subscription group from main, %s.", subordinate.mainAddr)
 	}
 }
